@@ -94,7 +94,7 @@ if git diff --cached --quiet; then
 else
   msg="auto-sync: $(date '+%Y-%m-%d %H:%M:%S') [${REASON}]"
   if [ "$REASON" = "daily" ]; then
-    msg="daily backup: $(date '+%Y-%m-%d') 17:00"
+    msg="daily backup: $(date "+%Y-%m-%d") 17:00 Asia/Shanghai 17:00"
   fi
   git commit -m "$msg" >>"$LOG_DIR/git_sync.log" 2>&1
   log "已提交: $msg"
