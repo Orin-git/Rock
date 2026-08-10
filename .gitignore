@@ -11,3 +11,5 @@ __pycache__/
 # auto git sync
 .git_sync_request
 .git_sync.lock
+.git_sync_status
+.git_sync_progress

@@ -10,10 +10,15 @@ SYNC="${REPO}/scripts/git_sync.sh"
 [ -x "$SYNC" ] || exit 0
 
 reason="docker-request"
+req_id=""
 if grep -q '^reason=' "$REQUEST" 2>/dev/null; then
   reason="$(grep '^reason=' "$REQUEST" | tail -1 | cut -d= -f2-)"
   reason="docker-${reason}"
 fi
+if grep -q '^request_id=' "$REQUEST" 2>/dev/null; then
+  req_id="$(grep '^request_id=' "$REQUEST" | tail -1 | cut -d= -f2-)"
+fi
 
 rm -f "$REQUEST"
-exec "$SYNC" "$reason"
+# 第二参数传 request_id，便于写回 status 匹配
+exec "$SYNC" "$reason" "$req_id"
