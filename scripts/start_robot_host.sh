@@ -5,7 +5,7 @@ set -eo pipefail
 CONTAINER="${XW_CONTAINER:-ros2_humble_dev}"
 USE_SIM_HW="${USE_SIM_HW:-true}"
 USE_WEB="${USE_WEB:-true}"
-USE_FOXGLOVE="${USE_FOXGLOVE:-false}"
+USE_FOXGLOVE="${USE_FOXGLOVE:-true}"
 PROFILE="${PROFILE:-normal}"
 
 # Wait for Docker daemon

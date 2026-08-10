@@ -9,11 +9,9 @@ FROM ros:humble
 ENV XW_WS=/ros2_ws
 WORKDIR /ros2_ws
 
-# Phase0 packages need only base ROS; install extras as needed:
-# RUN apt-get update && apt-get install -y \
-#   ros-humble-foxglove-bridge \
-#   ros-humble-nav2-bringup \
-#   ros-humble-slam-toolbox \
-#   && rm -rf /var/lib/apt/lists/*
+# Optional Foxglove WebSocket bridge (RViz-class viz in browser / desktop)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-foxglove-bridge \
+  && rm -rf /var/lib/apt/lists/*
 
 CMD ["bash"]

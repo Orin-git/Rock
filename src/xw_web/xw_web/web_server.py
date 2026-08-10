@@ -6,19 +6,101 @@ from __future__ import annotations
 import functools
 import json
 import os
+import socket
 import threading
+import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.qos import (
+    DurabilityPolicy,
+    HistoryPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+)
+from rosidl_runtime_py.utilities import get_message
 
 from xw_interfaces.msg import RobotState, TaskProgress, TaskResult
 from xw_interfaces.srv import MapManage, SetMode
+
+# Heavy / binary message types: only expose metadata to avoid CPU spikes.
+_HEAVY_TYPES = frozenset(
+    {
+        'sensor_msgs/msg/Image',
+        'sensor_msgs/msg/CompressedImage',
+        'sensor_msgs/msg/PointCloud2',
+        'sensor_msgs/msg/PointCloud',
+        'nav_msgs/msg/OccupancyGrid',
+        'sensor_msgs/msg/LaserScan',
+        'sensor_msgs/msg/MultiEchoLaserScan',
+        'visualization_msgs/msg/MarkerArray',
+        'tf2_msgs/msg/TFMessage',
+    }
+)
+
+_TOPIC_HINTS: Dict[str, str] = {
+    '/xw/robot_state': '机器人总状态：模式、急停、安全闸、定位、电池摘要',
+    '/xw/power': '电源状态：电量、电压、充电/回充对接',
+    '/xw/event': '系统事件流（Supervisor 广播）',
+    '/xw/task/progress': '任务进度：能力会话当前阶段',
+    '/xw/task/result': '任务结果：成功/失败码与说明',
+    '/xw/cmd/teleop': '网页遥控速度指令（→ 仲裁）',
+    '/xw/cmd/motion': '点动（角度/距离）速度指令',
+    '/xw/cmd/follow': '跟随会话速度指令',
+    '/xw/cmd/gated': '仲裁后送入安全门的速度',
+    '/cmd_vel': '安全门输出 → 底盘最终速度',
+    '/scan': '激光雷达扫描（原始）',
+    'scan': '激光雷达扫描（原始）',
+    '/odom': '里程计位姿与速度',
+    'odom': '里程计位姿与速度',
+    '/emergency_stop': '急停布尔量',
+    'emergency_stop': '急停布尔量',
+    '/safety_status': '安全闸通过状态',
+    'safety_status': '安全闸通过状态',
+    '/obstacle_status': '障碍描述文本',
+    'obstacle_status': '障碍描述文本',
+    '/ultrasonic_array': '超声波测距阵列',
+    '/xw/slam/enable': '建图会话使能',
+    '/xw/nav/enable': '导航会话使能',
+    '/xw/follow/enable': '跟随会话使能',
+    '/xw/fall/enable': '跌倒巡视会话使能',
+    '/xw/goal_pose': '导航目标位姿',
+    '/xw/perception/tracks': '人体跟踪检测结果',
+    '/xw/perception/fall': '跌倒感知状态',
+    '/xw/fall/status': '跌倒会话状态',
+    '/xw/motion/status': '点动执行状态',
+    '/map': '占用栅格地图',
+    '/tf': '动态坐标变换',
+    '/tf_static': '静态坐标变换',
+    '/robot_description': '机器人 URDF 描述',
+    '/joint_states': '关节状态',
+    '/parameter_events': '参数变更事件（系统）',
+    '/rosout': 'ROS 日志流',
+}
+
+_NODE_HINTS: Dict[str, str] = {
+    'xw_supervisor': '总控：模式切换、状态汇总、会话使能',
+    'xw_web_bridge': '网页 HTTP 桥（本节点）',
+    'xw_map_manager': '地图/航点存储与管理',
+    'xw_cmd_arbiter': '多路速度指令仲裁',
+    'xw_safety_gate': '激光/超声安全门，输出 cmd_vel',
+    'xw_chassis': '底盘驱动、里程计、电源、急停',
+    'xw_motion': '角度/距离点动',
+    'xw_slam_session': '建图会话',
+    'xw_nav_session': '导航会话',
+    'xw_follow_session': '跟随会话',
+    'xw_fall_session': '跌倒巡视会话',
+    'xw_perception': '感知（人体/跌倒）',
+    'xw_sensors': '传感器桩/桥接',
+    'xw_health': '话题健康监测',
+    'robot_state_publisher': '根据 URDF 发布 TF',
+}
 
 
 def _state_to_dict(msg: RobotState) -> Dict[str, Any]:
@@ -40,6 +122,87 @@ def _state_to_dict(msg: RobotState) -> Dict[str, Any]:
             'detail': msg.power.detail,
         },
     }
+
+
+def _topic_hint(name: str) -> str:
+    if name in _TOPIC_HINTS:
+        return _TOPIC_HINTS[name]
+    base = name.split('/')[-1]
+    if base and f'/{base}' in _TOPIC_HINTS:
+        return _TOPIC_HINTS[f'/{base}']
+    if name.startswith('/xw/cmd/'):
+        return '速度指令通道（进入仲裁器）'
+    if name.startswith('/xw/session/'):
+        return '能力会话控制相关话题'
+    if name.startswith('/xw/'):
+        return '小维业务话题'
+    return '系统/通用话题'
+
+
+def _node_hint(name: str) -> str:
+    short = name.split('/')[-1]
+    if short in _NODE_HINTS:
+        return _NODE_HINTS[short]
+    if short.startswith('xw_'):
+        return '小维栈节点'
+    if 'lifecycle' in short:
+        return '生命周期管理节点'
+    return 'ROS 节点'
+
+
+def _jsonable(obj: Any, *, depth: int = 0, max_depth: int = 6, max_list: int = 24) -> Any:
+    """Convert ROS msg / nested structures to JSON-safe data with hard caps."""
+    if depth > max_depth:
+        return '…'
+    if obj is None or isinstance(obj, (bool, int, float)):
+        return obj
+    if isinstance(obj, str):
+        return obj if len(obj) <= 400 else obj[:400] + f'…(+{len(obj) - 400})'
+    if isinstance(obj, bytes):
+        return f'<bytes len={len(obj)}>'
+    if isinstance(obj, (list, tuple)):
+        n = len(obj)
+        head = [_jsonable(x, depth=depth + 1, max_depth=max_depth, max_list=max_list) for x in obj[:max_list]]
+        if n > max_list:
+            head.append(f'…(+{n - max_list} items)')
+        return head
+    # ROS message or simple object
+    slots = getattr(obj, 'get_fields_and_field_types', None)
+    if callable(slots):
+        out: Dict[str, Any] = {}
+        for field in slots().keys():
+            try:
+                out[field] = _jsonable(getattr(obj, field), depth=depth + 1, max_depth=max_depth, max_list=max_list)
+            except Exception as exc:  # noqa: BLE001
+                out[field] = f'<err {exc}>'
+        return out
+    if isinstance(obj, dict):
+        return {
+            str(k): _jsonable(v, depth=depth + 1, max_depth=max_depth, max_list=max_list)
+            for k, v in list(obj.items())[:80]
+        }
+    return str(obj)[:200]
+
+
+def _watch_qos(msg_type_name: str) -> QoSProfile:
+    # Prefer low-cost depth-1; sensor types use sensor data profile.
+    if msg_type_name.startswith('sensor_msgs/') or msg_type_name in (
+        'nav_msgs/msg/Odometry',
+        'tf2_msgs/msg/TFMessage',
+    ):
+        q = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+        )
+        return q
+    return QoSProfile(
+        history=HistoryPolicy.KEEP_LAST,
+        depth=1,
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.VOLATILE,
+    )
 
 
 class BridgeNode(Node):
@@ -66,12 +229,29 @@ class BridgeNode(Node):
         }
         self._tasks: List[str] = []
 
+        # On-demand single-topic probe (only one active subscription at a time).
+        self._watch_topic: Optional[str] = None
+        self._watch_type: Optional[str] = None
+        self._watch_sub = None
+        self._watch_data: Any = None
+        self._watch_recv_count = 0
+        self._watch_last_recv = 0.0
+        self._watch_started = 0.0
+        self._watch_error: Optional[str] = None
+        self._watch_heavy = False
+        self._watch_lease_until = 0.0
+        self._watch_min_interval = 0.25  # seconds between accepted samples
+        self._last_graph_cache: Dict[str, Any] = {'topics': [], 'nodes': [], 'ts': 0.0}
+        self._graph_min_interval = 2.0
+
         self.create_subscription(RobotState, '/xw/robot_state', self._on_state, 10)
         self.create_subscription(TaskProgress, '/xw/task/progress', self._on_progress, 10)
         self.create_subscription(TaskResult, '/xw/task/result', self._on_result, 10)
         self._teleop_pub = self.create_publisher(Twist, '/xw/cmd/teleop', 10)
         self._set_mode = self.create_client(SetMode, '/xw/supervisor/set_mode')
         self._map_mgr = self.create_client(MapManage, '/xw/map/manage')
+        # Reclaim idle watchers without a UI peek.
+        self.create_timer(5.0, self._watch_housekeep)
         domain = os.environ.get('ROS_DOMAIN_ID', '?')
         self.get_logger().info(f'web ROS bridge ready (DOMAIN={domain})')
 
@@ -96,8 +276,6 @@ class BridgeNode(Node):
         map_mgr = self._map_mgr.service_is_ready()
         with self._lock:
             st = dict(self._state)
-        # robot_state is always latched/republished only when supervisor lives;
-        # if mode_name still default "waiting" detail and no services → stack not full.
         stack_up = bool(supervisor and map_mgr)
         return {
             'supervisor_up': bool(supervisor),
@@ -107,8 +285,39 @@ class BridgeNode(Node):
             'detail': st.get('detail', ''),
         }
 
+    def foxglove_status(self) -> Dict[str, Any]:
+        """TCP probe of foxglove_bridge WebSocket port (default 8765)."""
+        port = int(os.environ.get('FOXGLOVE_PORT', '8765') or 8765)
+        host = os.environ.get('FOXGLOVE_PROBE_HOST', '127.0.0.1')
+        up = False
+        err = ''
+        try:
+            with socket.create_connection((host, port), timeout=0.35):
+                up = True
+        except OSError as exc:
+            err = str(exc)
+        pkg = False
+        try:
+            for base in (
+                Path('/opt/ros/humble/share/foxglove_bridge'),
+                Path(os.environ.get('ROS_DISTRO', 'humble') and f'/opt/ros/{os.environ.get("ROS_DISTRO", "humble")}/share/foxglove_bridge'),
+            ):
+                if base.is_dir():
+                    pkg = True
+                    break
+        except Exception:  # noqa: BLE001
+            pkg = False
+        return {
+            'port': port,
+            'up': up,
+            'package_hint': pkg,
+            'ws_url_hint': f'ws://<board-ip>:{port}',
+            'error': err if not up else '',
+        }
+
     def snapshot(self) -> Dict[str, Any]:
         svc = self.service_status()
+        fox = self.foxglove_status()
         with self._lock:
             return {
                 'ok': True,
@@ -117,6 +326,8 @@ class BridgeNode(Node):
                 'ros_domain_id': os.environ.get('ROS_DOMAIN_ID', ''),
                 'robot_id': os.environ.get('ROBOT_ID', ''),
                 'services': svc,
+                'foxglove': fox,
+                'watching': self._watch_topic,
             }
 
     def publish_teleop(self, linear_x: float, angular_z: float) -> Dict[str, Any]:
@@ -174,6 +385,267 @@ class BridgeNode(Node):
             'data_json': res.data_json,
         }
 
+    # ── Graph listing (metadata only — no message subscriptions) ──────────
+
+    def list_graph(self, force: bool = False) -> Dict[str, Any]:
+        now = time.monotonic()
+        with self._lock:
+            cache = self._last_graph_cache
+            if not force and (now - float(cache.get('ts') or 0.0)) < self._graph_min_interval:
+                return {
+                    'ok': True,
+                    'topics': list(cache.get('topics') or []),
+                    'nodes': list(cache.get('nodes') or []),
+                    'cached': True,
+                    'watching': self._watch_topic,
+                }
+
+        try:
+            topic_names = self.get_topic_names_and_types()
+            node_names = self.get_node_names_and_namespaces()
+        except Exception as exc:  # noqa: BLE001
+            return {'ok': False, 'message': str(exc), 'topics': [], 'nodes': []}
+
+        topics: List[Dict[str, Any]] = []
+        for name, types in sorted(topic_names, key=lambda x: x[0]):
+            if name.startswith('/_'):
+                continue
+            t0 = types[0] if types else ''
+            topics.append(
+                {
+                    'name': name,
+                    'types': list(types),
+                    'hint': _topic_hint(name),
+                    'heavy': t0 in _HEAVY_TYPES,
+                }
+            )
+
+        nodes: List[Dict[str, Any]] = []
+        seen = set()
+        for n, ns in sorted(node_names, key=lambda x: (x[1], x[0])):
+            full = f'{ns.rstrip("/")}/{n}' if ns and ns != '/' else f'/{n}'
+            if full in seen:
+                continue
+            seen.add(full)
+            nodes.append({'name': full, 'short': n, 'namespace': ns or '/', 'hint': _node_hint(n)})
+
+        with self._lock:
+            self._last_graph_cache = {'topics': topics, 'nodes': nodes, 'ts': now}
+            watching = self._watch_topic
+
+        return {
+            'ok': True,
+            'topics': topics,
+            'nodes': nodes,
+            'cached': False,
+            'watching': watching,
+        }
+
+    # ── On-demand topic probe ─────────────────────────────────────────────
+
+    def _watch_housekeep(self) -> None:
+        with self._lock:
+            topic = self._watch_topic
+            lease = self._watch_lease_until
+        if topic and time.monotonic() > lease:
+            self.get_logger().info(f'watch lease expired for {topic}')
+            self.unwatch_topic()
+
+    def _destroy_watch_sub(self) -> None:
+        sub = self._watch_sub
+        self._watch_sub = None
+        if sub is not None:
+            try:
+                self.destroy_subscription(sub)
+            except Exception:  # noqa: BLE001
+                pass
+
+    def unwatch_topic(self) -> Dict[str, Any]:
+        with self._lock:
+            self._destroy_watch_sub()
+            self._watch_topic = None
+            self._watch_type = None
+            self._watch_data = None
+            self._watch_recv_count = 0
+            self._watch_last_recv = 0.0
+            self._watch_started = 0.0
+            self._watch_error = None
+            self._watch_heavy = False
+            self._watch_lease_until = 0.0
+        return {'ok': True, 'watching': None}
+
+    def watch_topic(self, topic: str, type_name: str = '', lease_sec: float = 45.0) -> Dict[str, Any]:
+        topic = (topic or '').strip()
+        if not topic:
+            return {'ok': False, 'message': 'topic required'}
+        if not topic.startswith('/'):
+            topic = '/' + topic
+
+        # Resolve type from graph if not provided.
+        if not type_name:
+            for name, types in self.get_topic_names_and_types():
+                if name == topic and types:
+                    type_name = types[0]
+                    break
+        if not type_name:
+            return {'ok': False, 'message': f'unknown topic or type: {topic}'}
+
+        heavy = type_name in _HEAVY_TYPES
+        try:
+            msg_cls = get_message(type_name)
+        except Exception as exc:  # noqa: BLE001
+            return {'ok': False, 'message': f'cannot load type {type_name}: {exc}'}
+
+        with self._lock:
+            if self._watch_topic == topic and self._watch_type == type_name and self._watch_sub is not None:
+                self._watch_lease_until = time.monotonic() + max(10.0, float(lease_sec))
+                return {
+                    'ok': True,
+                    'topic': topic,
+                    'type': type_name,
+                    'heavy': heavy,
+                    'hint': _topic_hint(topic),
+                    'reused': True,
+                }
+            self._destroy_watch_sub()
+            self._watch_topic = topic
+            self._watch_type = type_name
+            self._watch_data = None
+            self._watch_recv_count = 0
+            self._watch_last_recv = 0.0
+            self._watch_started = time.monotonic()
+            self._watch_error = None
+            self._watch_heavy = heavy
+            self._watch_lease_until = time.monotonic() + max(10.0, float(lease_sec))
+
+            def _cb(msg: Any, _topic: str = topic) -> None:
+                now = time.monotonic()
+                with self._lock:
+                    if self._watch_topic != _topic:
+                        return
+                    if now - self._watch_last_recv < self._watch_min_interval:
+                        return  # drop excess samples — save CPU
+                    self._watch_last_recv = now
+                    self._watch_recv_count += 1
+                    if self._watch_heavy:
+                        self._watch_data = self._summarize_heavy(msg, type_name)
+                    else:
+                        self._watch_data = _jsonable(msg)
+
+            try:
+                qos = _watch_qos(type_name)
+                # Fall back: for latched topics sensor profile may miss — try sensor then default.
+                try:
+                    self._watch_sub = self.create_subscription(msg_cls, topic, _cb, qos)
+                except Exception:
+                    self._watch_sub = self.create_subscription(msg_cls, topic, _cb, 1)
+            except Exception as exc:  # noqa: BLE001
+                self._watch_error = str(exc)
+                self._watch_sub = None
+                return {'ok': False, 'message': f'subscribe failed: {exc}'}
+
+        return {
+            'ok': True,
+            'topic': topic,
+            'type': type_name,
+            'heavy': heavy,
+            'hint': _topic_hint(topic),
+            'reused': False,
+            'note': 'depth=1 · sample≤4Hz · auto-unsub ~lease' if not heavy else 'heavy type: summary only · sample≤4Hz',
+        }
+
+    def _summarize_heavy(self, msg: Any, type_name: str) -> Dict[str, Any]:
+        summary: Dict[str, Any] = {'_type': type_name, '_note': '大消息，仅摘要（避免 CPU 峰值）'}
+        if type_name == 'sensor_msgs/msg/LaserScan':
+            ranges = list(getattr(msg, 'ranges', []) or [])
+            finite = [r for r in ranges if r == r and 0.0 < r < 1e6]  # not NaN
+            summary.update(
+                {
+                    'frame_id': getattr(getattr(msg, 'header', None), 'frame_id', ''),
+                    'angle_min': float(getattr(msg, 'angle_min', 0.0)),
+                    'angle_max': float(getattr(msg, 'angle_max', 0.0)),
+                    'range_min': float(getattr(msg, 'range_min', 0.0)),
+                    'range_max': float(getattr(msg, 'range_max', 0.0)),
+                    'n_ranges': len(ranges),
+                    'min_valid': min(finite) if finite else None,
+                    'max_valid': max(finite) if finite else None,
+                    'sample_ranges': [round(float(r), 3) if r == r else None for r in ranges[:: max(1, len(ranges) // 16)][:16]],
+                }
+            )
+            return summary
+        if type_name == 'nav_msgs/msg/OccupancyGrid':
+            info = getattr(msg, 'info', None)
+            data = list(getattr(msg, 'data', []) or [])
+            summary.update(
+                {
+                    'frame_id': getattr(getattr(msg, 'header', None), 'frame_id', ''),
+                    'width': int(getattr(info, 'width', 0) or 0),
+                    'height': int(getattr(info, 'height', 0) or 0),
+                    'resolution': float(getattr(info, 'resolution', 0.0) or 0.0),
+                    'n_cells': len(data),
+                }
+            )
+            return summary
+        if type_name in ('sensor_msgs/msg/Image', 'sensor_msgs/msg/CompressedImage'):
+            summary.update(
+                {
+                    'frame_id': getattr(getattr(msg, 'header', None), 'frame_id', ''),
+                    'width': int(getattr(msg, 'width', 0) or 0),
+                    'height': int(getattr(msg, 'height', 0) or 0),
+                    'encoding': str(getattr(msg, 'encoding', '') or getattr(msg, 'format', '')),
+                    'data_len': len(getattr(msg, 'data', b'') or b''),
+                }
+            )
+            return summary
+        if type_name in ('sensor_msgs/msg/PointCloud2', 'sensor_msgs/msg/PointCloud'):
+            summary.update(
+                {
+                    'frame_id': getattr(getattr(msg, 'header', None), 'frame_id', ''),
+                    'width': int(getattr(msg, 'width', 0) or 0),
+                    'height': int(getattr(msg, 'height', 0) or 0),
+                    'point_step': int(getattr(msg, 'point_step', 0) or 0),
+                    'data_len': len(getattr(msg, 'data', b'') or b''),
+                }
+            )
+            return summary
+        if type_name == 'tf2_msgs/msg/TFMessage':
+            transforms = list(getattr(msg, 'transforms', []) or [])
+            sample = []
+            for t in transforms[:12]:
+                sample.append(
+                    {
+                        'parent': getattr(t.header, 'frame_id', ''),
+                        'child': getattr(t, 'child_frame_id', ''),
+                    }
+                )
+            summary.update({'n_transforms': len(transforms), 'sample': sample})
+            return summary
+        # generic heavy: only field names + short scalars
+        return _jsonable(msg, max_depth=3, max_list=8)
+
+    def peek_topic(self, renew_lease_sec: float = 45.0) -> Dict[str, Any]:
+        now = time.monotonic()
+        with self._lock:
+            if not self._watch_topic:
+                return {'ok': True, 'watching': None, 'data': None}
+            self._watch_lease_until = now + max(10.0, float(renew_lease_sec))
+            elapsed = max(1e-3, now - (self._watch_started or now))
+            hz = self._watch_recv_count / elapsed if self._watch_recv_count else 0.0
+            age = (now - self._watch_last_recv) if self._watch_last_recv else None
+            return {
+                'ok': True,
+                'watching': self._watch_topic,
+                'type': self._watch_type,
+                'heavy': self._watch_heavy,
+                'hint': _topic_hint(self._watch_topic or ''),
+                'recv_count': self._watch_recv_count,
+                'approx_hz': round(hz, 2),
+                'age_sec': round(age, 3) if age is not None else None,
+                'error': self._watch_error,
+                'data': self._watch_data,
+                'waiting': self._watch_data is None and not self._watch_error,
+            }
+
 
 class ApiHandler(SimpleHTTPRequestHandler):
     bridge: Optional[BridgeNode] = None
@@ -193,7 +665,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
         return
 
     def _json(self, code: int, obj: Dict[str, Any]) -> None:
-        body = json.dumps(obj, ensure_ascii=False).encode('utf-8')
+        body = json.dumps(obj, ensure_ascii=False, default=str).encode('utf-8')
         self.send_response(code)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))
@@ -211,7 +683,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return {}
 
     def do_GET(self) -> None:  # noqa: N802
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
+        qs = parse_qs(parsed.query)
         if path == '/api/health':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'bridge': False})
@@ -223,12 +697,26 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     'bridge': True,
                     'ros_domain_id': snap.get('ros_domain_id'),
                     'services': snap.get('services'),
+                    'foxglove': snap.get('foxglove'),
                 },
             )
         if path == '/api/state':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.snapshot())
+        if path == '/api/foxglove':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, {'ok': True, **self.bridge.foxglove_status()})
+        if path == '/api/graph':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            force = (qs.get('force') or ['0'])[0] in ('1', 'true', 'yes')
+            return self._json(200, self.bridge.list_graph(force=force))
+        if path == '/api/topic/peek':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.peek_topic())
         return super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
@@ -264,6 +752,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     str(data.get('data_json') or ''),
                 ),
             )
+        if path == '/api/topic/watch':
+            return self._json(
+                200,
+                self.bridge.watch_topic(
+                    str(data.get('topic') or ''),
+                    str(data.get('type') or ''),
+                    float(data.get('lease_sec') or 45.0),
+                ),
+            )
+        if path == '/api/topic/unwatch':
+            return self._json(200, self.bridge.unwatch_topic())
         return self._json(404, {'ok': False, 'message': 'not found'})
 
 

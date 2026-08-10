@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>可视化 · 小维二代</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body class="viz-body">
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a href="/">总览</a>
+      <a href="/pages/topics.html">话题</a>
+      <a class="active" href="/pages/viz.html">可视化</a>
+      <a href="/pages/teleop.html">遥控</a>
+      <a href="/pages/mapping.html">建图</a>
+      <a href="/pages/navigation.html">导航</a>
+      <a href="/pages/maps.html">地图</a>
+      <a href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路…</div>
+  </header>
+  <main class="viz-main">
+    <section class="hero">
+      <div class="tag">FOXGLOVE · RViz-CLASS</div>
+      <h1>三维可视化</h1>
+      <p class="muted">
+        <b>Foxglove Studio</b> 是机器人可视化工具，能力接近 RViz2：3D、激光、TF、图像、Plot 等。
+        本机跑 <code>foxglove_bridge</code>（端口 8765）把 ROS 话题桥到 WebSocket；浏览器/桌面端连上即可看图。
+      </p>
+    </section>
+
+    <div class="section-title">Bridge</div>
+    <section class="panel">
+      <div class="viz-status-row">
+        <div>
+          <h2>Foxglove Bridge 状态</h2>
+          <p class="probe-meta" id="foxMeta">检测中…</p>
+          <p class="muted" id="foxDetail" style="margin:0.4rem 0 0;font-size:0.8rem">—</p>
+        </div>
+        <div class="btn-row" style="margin:0">
+          <button type="button" id="btnRefresh">刷新状态</button>
+          <button type="button" class="secondary" id="btnCopy">复制 WS 地址</button>
+        </div>
+      </div>
+      <label>WebSocket 地址（本机桥）</label>
+      <input id="wsUrl" type="text" readonly />
+      <div class="btn-row">
+        <button type="button" id="btnOpenWeb">在新标签打开 Foxglove</button>
+        <button type="button" class="secondary" id="btnLoadEmbed">页内嵌入 / 重载</button>
+        <a class="btn secondary" id="linkDesktop" href="https://foxglove.dev/download" target="_blank" rel="noopener">下载桌面端</a>
+      </div>
+      <p class="muted" style="font-size:0.78rem;margin:0">
+        推荐：同一局域网用 <b>桌面端</b> 连接上面 WS（最稳，等同常用 RViz2 体验）。
+        浏览器版若无法连上本机 <code>ws://</code>，多为 HTTPS 页面禁止混合内容，请用桌面端或新标签在连好后操作。
+      </p>
+    </section>
+
+    <div class="section-title">Studio</div>
+    <section class="viz-frame-wrap panel">
+      <div class="viz-frame-bar">
+        <span id="embedLabel">Foxglove 嵌入视图</span>
+        <span class="pill warn" id="embedPill">未加载</span>
+      </div>
+      <iframe
+        id="foxFrame"
+        class="viz-frame"
+        title="Foxglove Studio"
+        allow="clipboard-read; clipboard-write; fullscreen"
+        referrerpolicy="no-referrer-when-downgrade"
+      ></iframe>
+      <p class="muted" style="font-size:0.75rem;margin:0.55rem 0 0">
+        首次使用可能需登录 Foxglove 账号（个人免费）。布局建议：3D + LaserScan(<code>/scan</code>) + TF + Raw Messages。
+      </p>
+    </section>
+  </main>
+  <script type="module">
+    import { connect, fetchFoxgloveStatus } from '/js/api.js';
+    import '/js/app.js';
+
+    connect();
+
+    const foxMeta = document.getElementById('foxMeta');
+    const foxDetail = document.getElementById('foxDetail');
+    const wsUrl = document.getElementById('wsUrl');
+    const foxFrame = document.getElementById('foxFrame');
+    const embedPill = document.getElementById('embedPill');
+
+    function boardHost() {
+      return location.hostname || '127.0.0.1';
+    }
+
+    function wsFromStatus(j) {
+      const port = j.port || 8765;
+      return `ws://${boardHost()}:${port}`;
+    }
+
+    function studioUrl(ws) {
+      // Official deep-link: open Foxglove WebSocket data source
+      const u = new URL('https://app.foxglove.dev/');
+      u.searchParams.set('ds', 'foxglove-websocket');
+      u.searchParams.set('ds.url', ws);
+      return u.toString();
+    }
+
+    async function refresh() {
+      const j = await fetchFoxgloveStatus();
+      const ws = wsFromStatus(j);
+      wsUrl.value = ws;
+      if (j.up) {
+        foxMeta.textContent = `在线 · 端口 ${j.port}`;
+        foxMeta.style.color = 'var(--ok)';
+        foxDetail.textContent = 'foxglove_bridge 已监听，可打开 Studio 订阅 /scan · /odom · /tf · /xw/* 等（白名单内）。';
+      } else {
+        foxMeta.textContent = `离线 · 端口 ${j.port || 8765}`;
+        foxMeta.style.color = 'var(--bad)';
+        foxDetail.textContent =
+          j.error
+            ? `探测失败: ${j.error}。请确认已安装 ros-humble-foxglove-bridge，且 launch 使用 use_foxglove:=true。`
+            : 'Bridge 未就绪。';
+      }
+      return j;
+    }
+
+    function loadEmbed() {
+      const ws = wsUrl.value || `ws://${boardHost()}:8765`;
+      foxFrame.src = studioUrl(ws);
+      embedPill.textContent = '已加载';
+      embedPill.className = 'pill on';
+    }
+
+    document.getElementById('btnRefresh').onclick = () => refresh();
+    document.getElementById('btnCopy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(wsUrl.value);
+        foxDetail.textContent = '已复制 WS 地址';
+      } catch (_) {
+        wsUrl.select();
+        foxDetail.textContent = '请手动复制输入框中的地址';
+      }
+    };
+    document.getElementById('btnOpenWeb').onclick = () => {
+      window.open(studioUrl(wsUrl.value), '_blank', 'noopener');
+    };
+    document.getElementById('btnLoadEmbed').onclick = loadEmbed;
+
+    refresh().then((j) => {
+      // Auto-embed only when bridge is up (still may require Foxglove login).
+      if (j.up) loadEmbed();
+    });
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

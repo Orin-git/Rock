@@ -18,7 +18,8 @@ ros2 launch xw_bringup robot.launch.py
 ```
 
 - Web: `http://<board-ip>:9000`
-- Foxglove: `ws://<board-ip>:8765` (if `foxglove_bridge` installed)
+- 可视化页: `http://<board-ip>:9000/pages/viz.html`（Foxglove 入口）
+- Foxglove Bridge: `ws://<board-ip>:8765`（需 `ros-humble-foxglove-bridge`，launch 默认 `use_foxglove:=true`）
 
 ## Quick checks
 

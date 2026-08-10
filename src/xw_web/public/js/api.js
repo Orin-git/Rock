@@ -169,3 +169,63 @@ export async function mapManage(operation, map_name = '', extra = {}) {
     return { ok: false, map_list: [] };
   }
 }
+
+/** ROS graph metadata only (no message traffic). */
+export async function fetchGraph(force = false) {
+  try {
+    const q = force ? '?force=1' : '';
+    const r = await fetch(`${apiBase()}/api/graph${q}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    return await r.json();
+  } catch (_) {
+    return { ok: false, topics: [], nodes: [], message: 'bridge offline' };
+  }
+}
+
+/** Start single on-demand topic probe (replaces any previous watch). */
+export async function watchTopic(topic, type = '') {
+  try {
+    const r = await fetch(`${apiBase()}/api/topic/watch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, type, lease_sec: 45 }),
+    });
+    return await r.json();
+  } catch (_) {
+    return { ok: false, message: 'watch failed' };
+  }
+}
+
+export async function unwatchTopic() {
+  try {
+    const r = await fetch(`${apiBase()}/api/topic/unwatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    return await r.json();
+  } catch (_) {
+    return { ok: false };
+  }
+}
+
+export async function peekTopic() {
+  try {
+    const r = await fetch(`${apiBase()}/api/topic/peek`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    return await r.json();
+  } catch (_) {
+    return { ok: false, watching: null, data: null };
+  }
+}
+
+/** Foxglove bridge TCP probe (port 8765). */
+export async function fetchFoxgloveStatus() {
+  try {
+    const r = await fetch(`${apiBase()}/api/foxglove`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    return await r.json();
+  } catch (_) {
+    return { ok: false, up: false, port: 8765, error: 'bridge offline' };
+  }
+}

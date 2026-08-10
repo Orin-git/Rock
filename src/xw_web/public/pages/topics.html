@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>话题与节点 · 小维二代</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a href="/">总览</a>
+      <a class="active" href="/pages/topics.html">话题</a>
+      <a href="/pages/viz.html">可视化</a>
+      <a href="/pages/teleop.html">遥控</a>
+      <a href="/pages/mapping.html">建图</a>
+      <a href="/pages/navigation.html">导航</a>
+      <a href="/pages/maps.html">地图</a>
+      <a href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="tag">ROS GRAPH · ON DEMAND</div>
+      <h1>话题与节点</h1>
+      <p class="muted">默认只列名与说明，<b>不订阅数据</b>。点击话题后才临时接入该路，并限制采样频率；离开或点「停止监听」后自动断开，避免占满 CPU。</p>
+    </section>
+
+    <div class="section-title">Probe</div>
+    <section class="panel probe-panel">
+      <div class="probe-head">
+        <div>
+          <h2>当前监听</h2>
+          <p class="probe-meta" id="probeMeta">未监听任何话题</p>
+        </div>
+        <div class="btn-row" style="margin:0">
+          <button type="button" class="secondary" id="btnRefresh">刷新图</button>
+          <button type="button" class="secondary" id="btnUnwatch" disabled>停止监听</button>
+        </div>
+      </div>
+      <p class="probe-hint" id="probeHint">点击下方话题开始查看消息摘要。</p>
+      <pre class="log probe-log" id="probeData">—</pre>
+    </section>
+
+    <div class="section-title">Topics <span class="section-count" id="topicCount">0</span></div>
+    <div class="tool-bar">
+      <input id="topicFilter" type="search" placeholder="过滤话题名 / 说明…" />
+      <label class="check-inline"><input type="checkbox" id="xwOnly" checked /> 优先 /xw</label>
+    </div>
+    <section class="list-panel" id="topicList">
+      <p class="muted pad">加载图…</p>
+    </section>
+
+    <div class="section-title">Nodes <span class="section-count" id="nodeCount">0</span></div>
+    <section class="list-panel" id="nodeList">
+      <p class="muted pad">加载节点…</p>
+    </section>
+  </main>
+  <script type="module">
+    import {
+      connect,
+      fetchGraph,
+      watchTopic,
+      unwatchTopic,
+      peekTopic,
+    } from '/js/api.js';
+    import '/js/app.js';
+
+    connect();
+
+    const topicList = document.getElementById('topicList');
+    const nodeList = document.getElementById('nodeList');
+    const topicFilter = document.getElementById('topicFilter');
+    const xwOnly = document.getElementById('xwOnly');
+    const probeMeta = document.getElementById('probeMeta');
+    const probeHint = document.getElementById('probeHint');
+    const probeData = document.getElementById('probeData');
+    const btnUnwatch = document.getElementById('btnUnwatch');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const topicCount = document.getElementById('topicCount');
+    const nodeCount = document.getElementById('nodeCount');
+
+    let topics = [];
+    let nodes = [];
+    let activeTopic = null;
+    let peekTimer = null;
+    let graphTimer = null;
+
+    function setProbeIdle(msg) {
+      activeTopic = null;
+      btnUnwatch.disabled = true;
+      probeMeta.textContent = msg || '未监听任何话题';
+      probeHint.textContent = '点击下方话题开始查看消息摘要。';
+      probeData.textContent = '—';
+      document.querySelectorAll('.row-item.active').forEach((el) => el.classList.remove('active'));
+    }
+
+    function renderTopics() {
+      const q = (topicFilter.value || '').trim().toLowerCase();
+      const preferXw = xwOnly.checked;
+      let list = topics.slice();
+      if (preferXw) {
+        list = [
+          ...list.filter((t) => t.name.startsWith('/xw')),
+          ...list.filter((t) => !t.name.startsWith('/xw')),
+        ];
+      }
+      if (q) {
+        list = list.filter(
+          (t) =>
+            t.name.toLowerCase().includes(q) ||
+            (t.hint || '').toLowerCase().includes(q) ||
+            (t.types || []).join(' ').toLowerCase().includes(q),
+        );
+      }
+      topicCount.textContent = String(topics.length);
+      if (!list.length) {
+        topicList.innerHTML = '<p class="muted pad">无匹配话题</p>';
+        return;
+      }
+      topicList.innerHTML = list
+        .map((t) => {
+          const types = (t.types || []).join(', ');
+          const heavy = t.heavy ? '<span class="chip heavy">大消息</span>' : '';
+          const on = activeTopic === t.name ? ' active' : '';
+          return `<button type="button" class="row-item${on}" data-topic="${escapeAttr(t.name)}" data-type="${escapeAttr((t.types || [])[0] || '')}">
+            <div class="row-main">
+              <span class="row-name">${escapeHtml(t.name)}</span>
+              ${heavy}
+            </div>
+            <div class="row-type">${escapeHtml(types || '—')}</div>
+            <div class="row-hint">${escapeHtml(t.hint || '')}</div>
+          </button>`;
+        })
+        .join('');
+      topicList.querySelectorAll('.row-item').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          startWatch(btn.dataset.topic, btn.dataset.type);
+        });
+      });
+    }
+
+    function renderNodes() {
+      nodeCount.textContent = String(nodes.length);
+      if (!nodes.length) {
+        nodeList.innerHTML = '<p class="muted pad">暂无节点（Domain 或服务未起）</p>';
+        return;
+      }
+      nodeList.innerHTML = nodes
+        .map(
+          (n) => `<div class="row-item static">
+            <div class="row-main"><span class="row-name">${escapeHtml(n.name)}</span></div>
+            <div class="row-hint">${escapeHtml(n.hint || '')}</div>
+          </div>`,
+        )
+        .join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+    function escapeAttr(s) {
+      return escapeHtml(s).replace(/'/g, '&#39;');
+    }
+
+    async function loadGraph(force = false) {
+      const j = await fetchGraph(force);
+      if (!j.ok) {
+        topicList.innerHTML = `<p class="muted pad">图不可用：${escapeHtml(j.message || '桥离线')}</p>`;
+        return;
+      }
+      topics = j.topics || [];
+      nodes = j.nodes || [];
+      renderTopics();
+      renderNodes();
+    }
+
+    async function startWatch(topic, type) {
+      stopPeekLoop();
+      const j = await watchTopic(topic, type);
+      if (!j.ok) {
+        setProbeIdle(`监听失败：${j.message || 'error'}`);
+        return;
+      }
+      activeTopic = j.topic || topic;
+      btnUnwatch.disabled = false;
+      probeMeta.textContent = `${activeTopic}  ·  ${j.type || type || '—'}`;
+      probeHint.textContent = j.note || j.hint || '正在等待首帧…';
+      probeData.textContent = j.heavy
+        ? '大消息话题：仅显示摘要元数据。'
+        : '等待消息…（若长时间无数据，可能是无发布者或 QoS 不匹配）';
+      renderTopics();
+      startPeekLoop();
+    }
+
+    async function stopWatch() {
+      stopPeekLoop();
+      await unwatchTopic();
+      setProbeIdle();
+      renderTopics();
+    }
+
+    function startPeekLoop() {
+      stopPeekLoop();
+      const tick = async () => {
+        if (!activeTopic) return;
+        const j = await peekTopic();
+        if (!j.ok || !j.watching) {
+          if (activeTopic) setProbeIdle('监听已结束');
+          return;
+        }
+        const bits = [
+          j.watching,
+          j.type || '',
+          j.approx_hz != null ? `~${j.approx_hz} Hz` : '',
+          j.recv_count != null ? `n=${j.recv_count}` : '',
+          j.age_sec != null ? `age=${j.age_sec}s` : '',
+          j.heavy ? 'SUMMARY' : '',
+        ].filter(Boolean);
+        probeMeta.textContent = bits.join('  ·  ');
+        if (j.error) {
+          probeHint.textContent = j.error;
+        } else if (j.waiting) {
+          probeHint.textContent = '已订阅，等待首帧…';
+        } else {
+          probeHint.textContent = j.hint || '';
+        }
+        if (j.data != null) {
+          try {
+            probeData.textContent = JSON.stringify(j.data, null, 2);
+          } catch (_) {
+            probeData.textContent = String(j.data);
+          }
+        }
+      };
+      tick();
+      // ~2 Hz UI refresh; backend already rate-limits samples.
+      peekTimer = setInterval(tick, 500);
+    }
+
+    function stopPeekLoop() {
+      if (peekTimer) {
+        clearInterval(peekTimer);
+        peekTimer = null;
+      }
+    }
+
+    topicFilter.addEventListener('input', renderTopics);
+    xwOnly.addEventListener('change', renderTopics);
+    btnRefresh.addEventListener('click', () => loadGraph(true));
+    btnUnwatch.addEventListener('click', stopWatch);
+
+    // Graph only while page open; slow refresh keeps CPU low.
+    loadGraph(true);
+    graphTimer = setInterval(() => loadGraph(false), 4000);
+
+    window.addEventListener('pagehide', () => {
+      stopPeekLoop();
+      if (graphTimer) clearInterval(graphTimer);
+      unwatchTopic();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopPeekLoop();
+        unwatchTopic().then(() => setProbeIdle('页面隐藏，已自动停止监听'));
+      }
+    });
+  </script>
+</body>
+</html>
