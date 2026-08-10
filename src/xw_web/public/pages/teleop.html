@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>遥控 · 小维二代</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a href="/">总览</a>
+      <a class="active" href="/pages/teleop.html">遥控</a>
+      <a href="/pages/mapping.html">建图</a>
+      <a href="/pages/navigation.html">导航</a>
+      <a href="/pages/maps.html">地图</a>
+      <a href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="tag">MANUAL DRIVE</div>
+      <h1>遥控与点动</h1>
+      <p class="muted">速度经 /xw/cmd/teleop → 仲裁 → 安全门 → /cmd_vel</p>
+    </section>
+    <div class="section-title">Joystick</div>
+    <section class="panel">
+      <h2>速度矢量</h2>
+      <div class="joystick-wrap" id="stick"><div class="knob" id="knob"></div></div>
+      <p class="muted" id="vel" style="font-family:var(--font-mono)">vx=0.00 wz=0.00</p>
+      <div class="btn-row"><button class="secondary" id="stop">急停归零</button></div>
+    </section>
+    <div class="section-title">Jog</div>
+    <section class="panel">
+      <h2>定距点动</h2>
+      <label>角度 (°)</label>
+      <input id="ang" type="number" value="0" step="5" />
+      <label>距离 (m)</label>
+      <input id="dist" type="number" value="0.3" step="0.1" />
+      <div class="btn-row"><button id="jog">执行</button></div>
+      <p class="muted" style="font-family:var(--font-mono);font-size:0.75rem">ros2 service call /xw/motion/command …</p>
+    </section>
+  </main>
+  <script type="module">
+    import { connect, publishTeleop } from '/js/api.js';
+    import '/js/app.js';
+    connect();
+    const stick = document.getElementById('stick');
+    const knob = document.getElementById('knob');
+    const vel = document.getElementById('vel');
+    let active = false;
+    function setKnob(nx, ny) {
+      const r = 78;
+      knob.style.transform = `translate(calc(-50% + ${nx * r}px), calc(-50% + ${ny * r}px))`;
+      const vx = -ny * 0.35, wz = -nx * 0.8;
+      vel.textContent = `vx=${vx.toFixed(2)} wz=${wz.toFixed(2)}`;
+      publishTeleop(vx, wz);
+    }
+    function fromEvent(e) {
+      const rect = stick.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      let dx = (t.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+      let dy = (t.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+      const mag = Math.hypot(dx, dy) || 1;
+      if (mag > 1) { dx /= mag; dy /= mag; }
+      setKnob(dx, dy);
+    }
+    stick.addEventListener('pointerdown', (e) => { active = true; stick.setPointerCapture(e.pointerId); fromEvent(e); });
+    stick.addEventListener('pointermove', (e) => { if (active) fromEvent(e); });
+    const end = () => { active = false; setKnob(0, 0); publishTeleop(0, 0); };
+    stick.addEventListener('pointerup', end);
+    stick.addEventListener('pointercancel', end);
+    document.getElementById('stop').onclick = end;
+    document.getElementById('jog').onclick = () => {
+      alert(`容器内执行:\nros2 service call /xw/motion/command xw_interfaces/srv/MotionCommand "{angle_deg: ${document.getElementById('ang').value}, distance_m: ${document.getElementById('dist').value}, command_id: 'ui'}"`);
+    };
+  </script>
+</body>
+</html>

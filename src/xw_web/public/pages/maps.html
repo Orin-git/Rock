@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>地图 · 小维二代</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a href="/">总览</a>
+      <a href="/pages/teleop.html">遥控</a>
+      <a href="/pages/mapping.html">建图</a>
+      <a href="/pages/navigation.html">导航</a>
+      <a class="active" href="/pages/maps.html">地图</a>
+      <a href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="tag">MAP STORE</div>
+      <h1>地图管理</h1>
+      <p class="muted">经 /api/map → /xw/map/manage · 文件 $XW_MAPS</p>
+    </section>
+    <section class="panel">
+      <h2>CRUD</h2>
+      <label>地图名</label>
+      <input id="name" value="room_a" />
+      <div class="btn-row">
+        <button id="list">刷新列表</button>
+        <button id="save">保存占位</button>
+        <button class="secondary" id="del">删除</button>
+      </div>
+      <pre id="log" class="log"></pre>
+    </section>
+  </main>
+  <script type="module">
+    import { connect, mapManage, onTask } from '/js/api.js';
+    import '/js/app.js';
+    connect();
+    const log = document.getElementById('log');
+    onTask((l) => { log.textContent = l + '\n' + log.textContent; });
+    document.getElementById('list').onclick = async () => {
+      const j = await mapManage(2);
+      log.textContent = JSON.stringify(j, null, 2) + '\n' + log.textContent;
+    };
+    document.getElementById('save').onclick = () => mapManage(1, document.getElementById('name').value);
+    document.getElementById('del').onclick = () => mapManage(4, document.getElementById('name').value);
+  </script>
+</body>
+</html>

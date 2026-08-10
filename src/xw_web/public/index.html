@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>小维二代 · COMMAND</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a class="active" href="/">总览</a>
+      <a href="/pages/teleop.html">遥控</a>
+      <a href="/pages/mapping.html">建图</a>
+      <a href="/pages/navigation.html">导航</a>
+      <a href="/pages/maps.html">地图</a>
+      <a href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路检测…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="tag">SERVICE ROBOT · OPS CONSOLE</div>
+      <h1>任务指挥中枢</h1>
+      <p class="muted">分层 ROS 2 基座 · Domain 实时同步 · 安全运动单出口<br/>
+        状态来自机器人 HTTP 桥（/api），启动 launch 后即连通。</p>
+    </section>
+    <div class="section-title">Live Telemetry</div>
+    <section class="grid">
+      <div class="stat"><h2>运行模式</h2><p id="mode">—</p><div class="sub" id="modeSub">waiting</div></div>
+      <div class="stat"><h2>安全闸</h2><p id="safety">—</p><div class="sub">lidar + ultra</div></div>
+      <div class="stat"><h2>能量舱</h2><p id="power">—</p><div class="meter"><i id="powerBar"></i></div></div>
+      <div class="stat"><h2>急停</h2><p id="estop">—</p><div class="sub" id="profile">profile —</div></div>
+    </section>
+    <div class="section-title">Mission Feed</div>
+    <section class="panel">
+      <h2>Event stream</h2>
+      <pre id="tasklog" class="log">系统待机…</pre>
+    </section>
+  </main>
+  <script type="module">
+    import { connect, onState, onTask } from '/js/api.js';
+    import '/js/app.js';
+    connect();
+    onState((s) => {
+      document.getElementById('mode').textContent = s.mode_name || s.mode;
+      document.getElementById('modeSub').textContent = s.detail || '—';
+      document.getElementById('safety').textContent = s.safety_ok ? 'CLEAR' : 'HOLD';
+      document.getElementById('estop').textContent = s.emergency_stop ? 'ACTIVE' : 'READY';
+      const pct = s.power?.battery_percent ?? 0;
+      document.getElementById('power').textContent = `${Number(pct).toFixed(0)}%`;
+      document.getElementById('powerBar').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+      document.getElementById('profile').textContent = `profile ${s.profile || '—'}`;
+    });
+    onTask((line) => {
+      const el = document.getElementById('tasklog');
+      if (el.textContent === '系统待机…') el.textContent = '';
+      el.textContent = line + '\n' + el.textContent;
+    });
+  </script>
+</body>
+</html>

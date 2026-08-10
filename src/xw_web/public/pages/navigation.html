@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>导航 · 小维二代</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a href="/">总览</a>
+      <a href="/pages/teleop.html">遥控</a>
+      <a href="/pages/mapping.html">建图</a>
+      <a class="active" href="/pages/navigation.html">导航</a>
+      <a href="/pages/maps.html">地图</a>
+      <a href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="tag">NAV SESSION</div>
+      <h1>导航任务</h1>
+      <p class="muted">mode=2 · Nav2 真实规划将在 Phase2 接入</p>
+    </section>
+    <section class="panel">
+      <h2>会话</h2>
+      <label>地图名</label>
+      <input id="map" value="default" />
+      <div class="btn-row">
+        <button id="start">进入导航</button>
+        <button class="secondary" id="stop">结束</button>
+      </div>
+      <label>目标 x / y</label>
+      <div class="btn-row" style="align-items:center">
+        <input id="gx" type="number" value="1.0" step="0.1" style="max-width:120px" />
+        <input id="gy" type="number" value="0.0" step="0.1" style="max-width:120px" />
+        <button class="secondary" id="goal">CLI 目标提示</button>
+      </div>
+      <pre id="log" class="log"></pre>
+    </section>
+  </main>
+  <script type="module">
+    import { connect, setMode, onTask } from '/js/api.js';
+    import '/js/app.js';
+    connect();
+    const log = document.getElementById('log');
+    onTask((l) => { log.textContent = l + '\n' + log.textContent; });
+    document.getElementById('start').onclick = () => setMode(2, { map_name: document.getElementById('map').value });
+    document.getElementById('stop').onclick = () => setMode(0, {});
+    document.getElementById('goal').onclick = () => {
+      const x = document.getElementById('gx').value, y = document.getElementById('gy').value;
+      log.textContent = `ros2 topic pub --once /xw/goal_pose geometry_msgs/PoseStamped "{header:{frame_id:'map'},pose:{position:{x:${x},y:${y}}}}"\n` + log.textContent;
+    };
+  </script>
+</body>
+</html>

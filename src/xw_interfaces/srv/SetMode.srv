@@ -1,0 +1,8 @@
+# mode: 0 IDLE 1 MAPPING 2 NAVIGATING 3 FOLLOWING 4 FALL_DETECT
+uint8 mode
+string payload_json
+string command_id
+---
+bool success
+string message
+uint8 active_mode

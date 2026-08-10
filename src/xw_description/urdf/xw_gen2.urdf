@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<robot name="xw_gen2">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.45 0.35 0.18"/>
+      </geometry>
+      <material name="body">
+        <color rgba="0.2 0.2 0.25 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.45 0.35 0.18"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="lidar_link"/>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.22" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_front_link"/>
+  <joint name="camera_front_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_front_link"/>
+    <origin xyz="0.18 0 0.25" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_rear_link"/>
+  <joint name="camera_rear_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_rear_link"/>
+    <origin xyz="-0.18 0 0.25" rpy="0 0 3.14159"/>
+  </joint>
+
+  <link name="ultrasonic_front_link"/>
+  <joint name="ultrasonic_front_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_front_link"/>
+    <origin xyz="0.22 0 0.08" rpy="0 0 0"/>
+  </joint>
+</robot>

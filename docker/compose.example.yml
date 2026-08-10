@@ -1,0 +1,14 @@
+# Optional reference: run stack (host network) — prefer existing ros2_humble_dev
+services:
+  xw_gen2:
+    image: ros:humble
+    network_mode: host
+    privileged: true
+    volumes:
+      - /dev:/dev
+      - ../:/ros2_ws
+      # - ../../vs_ws1:/vs_ws1:ro
+    environment:
+      - XW_WS=/ros2_ws
+      - ROS_DOMAIN_ID=99
+    command: bash -lc "source /ros2_ws/scripts/ros_env.sh && ros2 launch xw_bringup robot.launch.py"

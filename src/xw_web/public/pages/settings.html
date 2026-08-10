@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>设置 · 小维二代</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a href="/">总览</a>
+      <a href="/pages/teleop.html">遥控</a>
+      <a href="/pages/mapping.html">建图</a>
+      <a href="/pages/navigation.html">导航</a>
+      <a href="/pages/maps.html">地图</a>
+      <a class="active" href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="tag">SYSTEM</div>
+      <h1>运行与能力</h1>
+      <p class="muted">工作区 /ros2_ws · Web :9000 · ROS_DOMAIN_ID=99（默认）</p>
+    </section>
+    <section class="panel">
+      <h2>模式快捷</h2>
+      <div class="btn-row">
+        <button id="follow">人体跟随</button>
+        <button id="fall">跌倒检测</button>
+        <button class="secondary" id="idle">回 IDLE</button>
+      </div>
+      <pre id="log" class="log"></pre>
+    </section>
+    <section class="panel" style="margin-top:1rem">
+      <h2>Docker 命令提示</h2>
+      <pre class="log">source /ros2_ws/scripts/ros_env.sh
+ros2 topic list
+ros2 node list
+htop   # 容器内 apt install -y htop</pre>
+    </section>
+  </main>
+  <script type="module">
+    import { connect, setMode, onTask } from '/js/api.js';
+    import '/js/app.js';
+    connect();
+    const log = document.getElementById('log');
+    onTask((l) => { log.textContent = l + '\n' + log.textContent; });
+    document.getElementById('follow').onclick = () => setMode(3, {});
+    document.getElementById('fall').onclick = () => setMode(4, {});
+    document.getElementById('idle').onclick = () => setMode(0, {});
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+---
+bool success
+string message
+xw_interfaces/RobotState state

@@ -1,0 +1,6 @@
+safety_distance: 0.35
+front_angle_deg: 40.0
+ultrasonic_stop_m: 0.25
+use_lidar: true
+use_ultrasonic: true
+use_depth: false

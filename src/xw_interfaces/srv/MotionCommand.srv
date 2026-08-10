@@ -1,0 +1,8 @@
+string command_id
+# yaw degrees (positive = left/CCW)
+float32 angle_deg
+# forward distance meters
+float32 distance_m
+---
+bool success
+string message

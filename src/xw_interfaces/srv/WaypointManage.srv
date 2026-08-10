@@ -1,0 +1,11 @@
+# 1 save 2 load 3 delete 4 rename 5 list
+uint8 operation
+string map_name
+string waypoint_name
+string new_name
+string data_json
+---
+bool success
+string message
+string[] names
+string data_json

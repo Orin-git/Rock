@@ -1,0 +1,10 @@
+# 1 save 2 list 3 rename 4 delete 5 get 6 update 7 get_keepout 8 update_keepout
+uint8 operation
+string map_name
+string new_name
+string data_json
+---
+bool success
+string message
+string[] map_list
+string data_json

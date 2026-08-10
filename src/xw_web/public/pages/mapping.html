@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>建图 · 小维二代</title>
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <nav>
+      <a href="/">总览</a>
+      <a href="/pages/teleop.html">遥控</a>
+      <a class="active" href="/pages/mapping.html">建图</a>
+      <a href="/pages/navigation.html">导航</a>
+      <a href="/pages/maps.html">地图</a>
+      <a href="/pages/settings.html">设置</a>
+    </nav>
+    <div id="conn" class="pill off">链路…</div>
+  </header>
+  <main>
+    <section class="hero">
+      <div class="tag">SLAM SESSION</div>
+      <h1>建图任务</h1>
+      <p class="muted">Supervisor mode=1 · 真正 SLAM 将在 Phase2 接入</p>
+    </section>
+    <section class="panel">
+      <h2>会话控制</h2>
+      <div class="btn-row">
+        <button id="start">开始建图</button>
+        <button class="secondary" id="stop">结束</button>
+        <button class="secondary" id="save">保存占位图</button>
+      </div>
+      <pre id="log" class="log"></pre>
+    </section>
+  </main>
+  <script type="module">
+    import { connect, setMode, mapManage, onTask } from '/js/api.js';
+    import '/js/app.js';
+    connect();
+    const log = document.getElementById('log');
+    onTask((l) => { log.textContent = l + '\n' + log.textContent; });
+    document.getElementById('start').onclick = () => setMode(1, {});
+    document.getElementById('stop').onclick = () => setMode(0, {});
+    document.getElementById('save').onclick = () => mapManage(1, 'map_' + Date.now());
+  </script>
+</body>
+</html>

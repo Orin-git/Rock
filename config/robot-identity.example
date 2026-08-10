@@ -1,0 +1,4 @@
+# Example robot identity (copy to /etc/robot-identity or source from workspace)
+ROBOT_ID=rbt-rock5t-dev
+ROS_DOMAIN_ID=99
+# VISION_DOMAIN_ID reserved for later multi-domain

@@ -1,0 +1,7 @@
+bool start
+string payload_json
+string command_id
+---
+bool success
+string message
+string state
