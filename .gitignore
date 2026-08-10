@@ -1,7 +1,13 @@
+# Colcon / ROS 2
 build/
 install/
 log/
+logs/
 *.pyc
 __pycache__/
 .vscode/
 *.user
+
+# auto git sync
+.git_sync_request
+.git_sync.lock
