@@ -17,21 +17,25 @@
       <a href="/pages/maps.html">地图</a>
       <a href="/pages/settings.html">设置</a>
     </nav>
+    <div id="domainBadge" class="pill domain-badge off">DOMAIN —</div>
+    <div id="svcBadge" class="pill off">服务…</div>
     <div id="conn" class="pill off">链路检测…</div>
   </header>
   <main>
     <section class="hero">
       <div class="tag">SERVICE ROBOT · OPS CONSOLE</div>
       <h1>任务指挥中枢</h1>
-      <p class="muted">分层 ROS 2 基座 · Domain 实时同步 · 安全运动单出口<br/>
-        状态来自机器人 HTTP 桥（/api），启动 launch 后即连通。</p>
+      <p class="muted">右上角 <b>DOMAIN</b> 与 <b>服务状态</b> 用于判断机器人是否已启动。<br/>
+        Domain 正确且「服务已启动」= Supervisor / Map 已就绪。</p>
     </section>
     <div class="section-title">Live Telemetry</div>
     <section class="grid">
+      <div class="stat"><h2>ROS Domain</h2><p id="domain">—</p><div class="sub" id="robotId">robot —</div></div>
       <div class="stat"><h2>运行模式</h2><p id="mode">—</p><div class="sub" id="modeSub">waiting</div></div>
       <div class="stat"><h2>安全闸</h2><p id="safety">—</p><div class="sub">lidar + ultra</div></div>
       <div class="stat"><h2>能量舱</h2><p id="power">—</p><div class="meter"><i id="powerBar"></i></div></div>
       <div class="stat"><h2>急停</h2><p id="estop">—</p><div class="sub" id="profile">profile —</div></div>
+      <div class="stat"><h2>服务健康</h2><p id="stack">—</p><div class="sub" id="stackSub">supervisor / map</div></div>
     </section>
     <div class="section-title">Mission Feed</div>
     <section class="panel">
@@ -40,9 +44,18 @@
     </section>
   </main>
   <script type="module">
-    import { connect, onState, onTask } from '/js/api.js';
+    import { connect, onState, onTask, onMeta } from '/js/api.js';
     import '/js/app.js';
     connect();
+    onMeta((m) => {
+      document.getElementById('domain').textContent = m.ros_domain_id || '—';
+      document.getElementById('robotId').textContent = m.robot_id ? `id ${m.robot_id}` : 'robot —';
+      const up = m.services?.stack_up;
+      document.getElementById('stack').textContent = up ? 'ONLINE' : 'DOWN';
+      const sup = m.services?.supervisor_up ? 'sup:ok' : 'sup:--';
+      const map = m.services?.map_manager_up ? 'map:ok' : 'map:--';
+      document.getElementById('stackSub').textContent = `${sup} / ${map}`;
+    });
     onState((s) => {
       document.getElementById('mode').textContent = s.mode_name || s.mode;
       document.getElementById('modeSub').textContent = s.detail || '—';

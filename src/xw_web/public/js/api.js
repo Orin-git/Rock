@@ -2,6 +2,7 @@
 
 const stateListeners = [];
 const taskListeners = [];
+const metaListeners = [];
 
 let connected = false;
 let pollTimer = null;
@@ -17,6 +18,12 @@ let state = {
   profile: 'normal',
 };
 
+let meta = {
+  ros_domain_id: '',
+  robot_id: '',
+  services: { stack_up: false, supervisor_up: false },
+};
+
 function apiBase() {
   return `${window.location.protocol}//${window.location.host}`;
 }
@@ -27,6 +34,35 @@ function setConn(on, label) {
   if (!el) return;
   el.className = on ? 'pill on' : 'pill off';
   el.textContent = label || (on ? '链路在线' : '链路离线');
+}
+
+function updateDomainUi() {
+  const d = meta.ros_domain_id || '—';
+  const stack = meta.services?.stack_up;
+  const el = document.getElementById('domainBadge');
+  if (el) {
+    el.textContent = `DOMAIN ${d}`;
+    el.className = 'pill domain-badge ' + (stack ? 'on' : connected ? 'warn' : 'off');
+    el.title = stack
+      ? '机器人服务已就绪（Supervisor / Map）'
+      : connected
+        ? '网页桥在线，但核心服务未就绪'
+        : '服务未启动';
+  }
+  const svc = document.getElementById('svcBadge');
+  if (svc) {
+    if (!connected) {
+      svc.textContent = '服务离线';
+      svc.className = 'pill off';
+    } else if (stack) {
+      svc.textContent = '服务已启动';
+      svc.className = 'pill on';
+    } else {
+      svc.textContent = '服务启动中…';
+      svc.className = 'pill warn';
+    }
+  }
+  metaListeners.forEach((fn) => fn(meta));
 }
 
 function emitState(s) {
@@ -52,11 +88,20 @@ async function fetchState() {
     if (Array.isArray(j.tasks)) {
       j.tasks.slice().reverse().forEach((t) => emitTask(t));
     }
-    const domain = j.ros_domain_id ? ` · D${j.ros_domain_id}` : '';
-    setConn(true, `ROS 桥在线${domain}`);
+    meta = {
+      ros_domain_id: j.ros_domain_id || '',
+      robot_id: j.robot_id || '',
+      services: j.services || { stack_up: false },
+    };
+    const d = meta.ros_domain_id ? `D${meta.ros_domain_id}` : '?';
+    const svc = meta.services?.stack_up ? '栈就绪' : '栈未全起';
+    setConn(true, `桥在线 · ${d} · ${svc}`);
+    updateDomainUi();
     return true;
   } catch (_) {
-    setConn(false, '桥未就绪 · 请启动 launch');
+    setConn(false, '桥未就绪 · 服务未启动');
+    meta = { ros_domain_id: '', robot_id: '', services: { stack_up: false } };
+    updateDomainUi();
     return false;
   }
 }
@@ -73,6 +118,11 @@ export function onState(fn) {
 
 export function onTask(fn) {
   taskListeners.push(fn);
+}
+
+export function onMeta(fn) {
+  metaListeners.push(fn);
+  fn(meta);
 }
 
 export function isConnected() {

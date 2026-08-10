@@ -313,3 +313,21 @@ label {
   .top { flex-wrap: wrap; }
   .brand span { display: none; }
 }
+
+.pill.warn {
+  color: var(--amber);
+  border-color: rgba(255, 176, 32, 0.5);
+  box-shadow: 0 0 12px rgba(255, 176, 32, 0.15);
+}
+.domain-badge {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  min-width: 6.5rem;
+  text-align: center;
+}
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}

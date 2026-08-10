@@ -56,3 +56,18 @@ ros2 topic echo /xw/robot_state
 ```
 
 网页打开 `http://<板子IP>:9000`，右上角应显示 **ROS 桥在线 · D99**（不再依赖 Foxglove 8765）。
+
+## 开机自启（Web + 全栈）
+
+宿主机执行一次：
+
+```bash
+bash /home/radxa/ros2_ws/scripts/install_autostart.sh
+```
+
+之后每次开机：Docker 容器 + `xw-robot.service` 自动 `ros2 launch`，网页 `http://<IP>:9000`。
+
+```bash
+systemctl status xw-robot
+journalctl -u xw-robot -f
+```

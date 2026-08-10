@@ -90,13 +90,33 @@ class BridgeNode(Node):
     def _on_result(self, msg: TaskResult) -> None:
         self._push_task(f'[result] {msg.capability} code={msg.code} {msg.message}')
 
+    def service_status(self) -> Dict[str, Any]:
+        """Quick view of whether core ROS services are up (for web domain hub)."""
+        supervisor = self._set_mode.service_is_ready()
+        map_mgr = self._map_mgr.service_is_ready()
+        with self._lock:
+            st = dict(self._state)
+        # robot_state is always latched/republished only when supervisor lives;
+        # if mode_name still default "waiting" detail and no services → stack not full.
+        stack_up = bool(supervisor and map_mgr)
+        return {
+            'supervisor_up': bool(supervisor),
+            'map_manager_up': bool(map_mgr),
+            'stack_up': stack_up,
+            'mode_name': st.get('mode_name', ''),
+            'detail': st.get('detail', ''),
+        }
+
     def snapshot(self) -> Dict[str, Any]:
+        svc = self.service_status()
         with self._lock:
             return {
                 'ok': True,
                 'state': dict(self._state),
                 'tasks': list(self._tasks[:40]),
                 'ros_domain_id': os.environ.get('ROS_DOMAIN_ID', ''),
+                'robot_id': os.environ.get('ROBOT_ID', ''),
+                'services': svc,
             }
 
     def publish_teleop(self, linear_x: float, angular_z: float) -> Dict[str, Any]:
@@ -193,7 +213,18 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
         if path == '/api/health':
-            return self._json(200, {'ok': True, 'bridge': self.bridge is not None})
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'bridge': False})
+            snap = self.bridge.snapshot()
+            return self._json(
+                200,
+                {
+                    'ok': True,
+                    'bridge': True,
+                    'ros_domain_id': snap.get('ros_domain_id'),
+                    'services': snap.get('services'),
+                },
+            )
         if path == '/api/state':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
