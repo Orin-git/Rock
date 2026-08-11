@@ -95,9 +95,17 @@ ros2 launch xw_bringup robot.launch.py
 
 - **P0（当前）**：mock 栈 + FSM + Web SPA  
 - **P1**：真底盘 / 雷达 / 超声  
-- **P2**：SLAM + Nav2  
+- **P2**：手推建图已落地（`slam_toolbox` + `/map` 画布 + `{map}_pointList/charger`）；Nav2 仍待接入  
 - **P3**：双深度相机 + 跟随/跌倒算法  
 - **P4**：回充 / 压测 / 可选 Gateway  
+
+### 手推建图要点
+
+- `set_mode(1)` → `xw_slam_session` 自管启停 `async_slam_toolbox_node`，抓取 `map→base_link` 起点  
+- 保存：`/xw/map/manage` op=1 → `map_saver_cli` → upsert `waypoints/{name}_pointList.yaml` 的 `charger`（yaw = tf_yaw+π）  
+- 未保存停止 → `autosave_YYYYMMDD_HHMMSS`  
+- Web：`/pages/mapping.html`（Foxglove `/map`+`/scan`），`/pages/maps.html`（批量 CRUD，级联 pointList）  
+- HTTP：`POST /api/map`、`POST /api/waypoint`  
 
 ## 8. 验收（容器内）
 

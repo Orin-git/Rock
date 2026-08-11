@@ -5,6 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>地图 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
+  <style>
+    .map-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.7rem 0.9rem;
+      box-shadow: var(--shadow);
+    }
+    .map-item-main {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      min-width: 0;
+      flex: 1;
+    }
+    .map-item-main input[type="checkbox"] {
+      width: auto;
+      max-width: none;
+      accent-color: var(--accent);
+    }
+    .map-item-name {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--accent);
+      word-break: break-all;
+      font-weight: 500;
+    }
+    .map-item-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+    .map-item-meta.has-wp { color: var(--ok); }
+    .map-item-meta.no-wp { color: var(--amber); }
+    .map-item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .batch-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .batch-bar .muted { margin: 0; font-size: 0.82rem; }
+    .index-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
   <header class="top">
@@ -25,32 +91,241 @@
     <section class="hero">
       <div class="tag">MAP STORE</div>
       <h1>地图管理</h1>
-      <p class="muted">经 /api/map → /xw/map/manage · 文件 $XW_MAPS</p>
+      <p class="muted">
+        列表 / 重命名 / 删除 / 批量删除 / 批量保留 · 经
+        <code>/api/map</code> · 关联航点
+        <code>{name}_pointList</code>
+      </p>
     </section>
+
+    <div class="section-title">Maps <span class="section-count" id="mapCount">0</span></div>
     <section class="panel">
-      <h2>CRUD</h2>
-      <label>地图名</label>
-      <input id="name" value="room_a" />
-      <div class="btn-row">
-        <button id="list">刷新列表</button>
-        <button id="save">保存占位</button>
-        <button class="secondary" id="del">删除</button>
+      <div class="batch-bar">
+        <label class="check-inline">
+          <input type="checkbox" id="selectAll" /> 全选
+        </label>
+        <button type="button" id="refresh">刷新</button>
+        <button type="button" class="secondary" id="batchDelete">批量删除</button>
+        <button type="button" class="secondary" id="batchKeep">批量保留</button>
+        <p class="muted" id="batchHint">未选中</p>
       </div>
+      <div class="list-panel" id="mapList">
+        <p class="muted pad">加载中…</p>
+      </div>
+    </section>
+
+    <div class="section-title">Log</div>
+    <section class="panel">
       <pre id="log" class="log"></pre>
     </section>
   </main>
+
   <script type="module">
-    import { connect, mapManage, onTask } from '/js/api.js';
+    import { connect, mapManage, waypointManage, onTask } from '/js/api.js';
     import '/js/app.js';
+
     connect();
-    const log = document.getElementById('log');
-    onTask((l) => { log.textContent = l + '\n' + log.textContent; });
-    document.getElementById('list').onclick = async () => {
-      const j = await mapManage(2);
-      log.textContent = JSON.stringify(j, null, 2) + '\n' + log.textContent;
+
+    const logEl = document.getElementById('log');
+    const mapListEl = document.getElementById('mapList');
+    const mapCountEl = document.getElementById('mapCount');
+    const batchHint = document.getElementById('batchHint');
+    const selectAllEl = document.getElementById('selectAll');
+
+    let currentMaps = [];
+    let pointListSet = new Set();
+    let busy = false;
+
+    function pushLog(line) {
+      logEl.textContent = line + '\n' + logEl.textContent;
+    }
+
+    onTask((l) => pushLog(l));
+
+    function pointListNameFor(mapName) {
+      if (!mapName) return '';
+      return mapName.endsWith('_pointList') ? mapName : `${mapName}_pointList`;
+    }
+
+    function getSelected() {
+      return Array.from(document.querySelectorAll('.map-item-checkbox:checked')).map(
+        (cb) => cb.dataset.mapName
+      );
+    }
+
+    function updateBatchHint() {
+      const n = getSelected().length;
+      const total = currentMaps.length;
+      batchHint.textContent = n ? `已选 ${n} / ${total}` : total ? `未选中（共 ${total}）` : '暂无地图';
+      selectAllEl.checked = total > 0 && n === total;
+      selectAllEl.indeterminate = n > 0 && n < total;
+    }
+
+    async function loadPointLists() {
+      const j = await waypointManage(5);
+      const names = j.names || (Array.isArray(j.map_list) ? j.map_list : []);
+      pointListSet = new Set(names || []);
+    }
+
+    function renderList() {
+      mapCountEl.textContent = String(currentMaps.length);
+      mapListEl.innerHTML = '';
+      if (!currentMaps.length) {
+        mapListEl.innerHTML = '<p class="muted pad">暂无地图文件</p>';
+        updateBatchHint();
+        return;
+      }
+
+      currentMaps.forEach((name, index) => {
+        const wp = pointListNameFor(name);
+        const hasWp = pointListSet.has(wp);
+
+        const row = document.createElement('div');
+        row.className = 'map-item';
+
+        const main = document.createElement('div');
+        main.className = 'map-item-main';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'map-item-checkbox';
+        cb.dataset.mapName = name;
+        cb.addEventListener('change', updateBatchHint);
+
+        const badge = document.createElement('span');
+        badge.className = 'index-badge';
+        badge.textContent = String(index + 1);
+
+        const info = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'map-item-name';
+        title.textContent = name;
+        const meta = document.createElement('div');
+        meta.className = 'map-item-meta ' + (hasWp ? 'has-wp' : 'no-wp');
+        meta.textContent = hasWp
+          ? `关联航点：${wp}`
+          : `无关联 ${wp}（保存建图时会自动创建）`;
+        info.appendChild(title);
+        info.appendChild(meta);
+
+        main.appendChild(cb);
+        main.appendChild(badge);
+        main.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'map-item-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.type = 'button';
+        renameBtn.className = 'secondary';
+        renameBtn.textContent = '重命名';
+        renameBtn.onclick = () => renameMap(name);
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'secondary';
+        delBtn.textContent = '删除';
+        delBtn.onclick = () => deleteOne(name);
+
+        actions.appendChild(renameBtn);
+        actions.appendChild(delBtn);
+        row.appendChild(main);
+        row.appendChild(actions);
+        mapListEl.appendChild(row);
+      });
+
+      updateBatchHint();
+    }
+
+    async function refresh() {
+      pushLog('>> 刷新地图列表');
+      const [mapsRes] = await Promise.all([mapManage(2), loadPointLists().catch(() => {})]);
+      currentMaps = mapsRes.map_list || [];
+      if (!mapsRes.ok && !currentMaps.length) {
+        pushLog(`!! 列表失败：${mapsRes.message || 'bridge offline'}`);
+      }
+      renderList();
+    }
+
+    async function renameMap(oldName) {
+      const next = prompt('请输入新的地图名称：', oldName);
+      if (next === null) return;
+      const newName = next.trim();
+      if (!newName || newName === oldName) return;
+      pushLog(`>> 重命名 ${oldName} → ${newName}`);
+      const j = await mapManage(3, oldName, { new_name: newName });
+      pushLog(j.ok ? `<< ${j.message || 'renamed'}` : `!! ${j.message || 'rename failed'}`);
+      await refresh();
+    }
+
+    async function deleteOne(name) {
+      if (!confirm(`确定删除地图「${name}」及其关联 ${pointListNameFor(name)}？\n此操作不可撤销。`)) {
+        return;
+      }
+      pushLog(`>> 删除 ${name}`);
+      const j = await mapManage(4, name);
+      pushLog(j.ok ? `<< ${j.message || 'deleted'}` : `!! ${j.message || 'delete failed'}`);
+      await refresh();
+    }
+
+    async function deleteSequentially(names) {
+      if (busy || !names.length) return;
+      busy = true;
+      let okN = 0;
+      const failed = [];
+      for (let i = 0; i < names.length; i++) {
+        pushLog(`>> 批量删除 (${i + 1}/${names.length}) ${names[i]}`);
+        const j = await mapManage(4, names[i]);
+        if (j.ok) okN++;
+        else failed.push(`${names[i]}: ${j.message || 'fail'}`);
+      }
+      busy = false;
+      if (!failed.length) pushLog(`<< 成功删除 ${okN} 个`);
+      else pushLog(`!! 成功 ${okN}，失败 ${failed.length}：${failed.join('; ')}`);
+      await refresh();
+    }
+
+    document.getElementById('refresh').onclick = () => refresh();
+    selectAllEl.addEventListener('change', () => {
+      const on = selectAllEl.checked;
+      document.querySelectorAll('.map-item-checkbox').forEach((cb) => {
+        cb.checked = on;
+      });
+      updateBatchHint();
+    });
+
+    document.getElementById('batchDelete').onclick = () => {
+      const selected = getSelected();
+      if (!selected.length) {
+        alert('请先勾选要删除的地图');
+        return;
+      }
+      if (!confirm(`确定删除选中的 ${selected.length} 个地图？\n此操作不可撤销。`)) return;
+      deleteSequentially(selected);
     };
-    document.getElementById('save').onclick = () => mapManage(1, document.getElementById('name').value);
-    document.getElementById('del').onclick = () => mapManage(4, document.getElementById('name').value);
+
+    document.getElementById('batchKeep').onclick = () => {
+      const selected = getSelected();
+      if (!selected.length) {
+        alert('请先勾选要保留的地图');
+        return;
+      }
+      const toDelete = currentMaps.filter((n) => selected.indexOf(n) === -1);
+      if (!toDelete.length) {
+        alert('没有需要删除的地图（已全选保留）');
+        return;
+      }
+      if (
+        !confirm(
+          `将保留 ${selected.length} 个地图，删除其余 ${toDelete.length} 个。\n此操作不可撤销。`
+        )
+      ) {
+        return;
+      }
+      deleteSequentially(toDelete);
+    };
+
+    refresh();
   </script>
 </body>
 </html>

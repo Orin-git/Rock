@@ -170,6 +170,22 @@ export async function mapManage(operation, map_name = '', extra = {}) {
   }
 }
 
+/** Waypoint / pointList manage → /api/waypoint → /xw/waypoint/manage */
+export async function waypointManage(operation, map_name = '', extra = {}) {
+  try {
+    const r = await fetch(`${apiBase()}/api/waypoint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operation, map_name, ...extra }),
+    });
+    const j = await r.json();
+    emitTask(`waypoint op=${operation}: ${j.message || ''}`);
+    return j;
+  } catch (_) {
+    return { ok: false, names: [], data_json: '' };
+  }
+}
+
 /** ROS graph metadata only (no message traffic). */
 export async function fetchGraph(force = false) {
   try {

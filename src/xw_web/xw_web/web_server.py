@@ -27,7 +27,7 @@ from rclpy.qos import (
 from rosidl_runtime_py.utilities import get_message
 
 from xw_interfaces.msg import RobotState, TaskProgress, TaskResult
-from xw_interfaces.srv import MapManage, SetMode
+from xw_interfaces.srv import MapManage, SetMode, WaypointManage
 
 # Heavy / binary message types: only expose metadata to avoid CPU spikes.
 _HEAVY_TYPES = frozenset(
@@ -250,6 +250,7 @@ class BridgeNode(Node):
         self._teleop_pub = self.create_publisher(Twist, '/xw/cmd/teleop', 10)
         self._set_mode = self.create_client(SetMode, '/xw/supervisor/set_mode')
         self._map_mgr = self.create_client(MapManage, '/xw/map/manage')
+        self._wp_mgr = self.create_client(WaypointManage, '/xw/map/waypoint')
         # Reclaim idle watchers without a UI peek.
         self.create_timer(5.0, self._watch_housekeep)
         domain = os.environ.get('ROS_DOMAIN_ID', '?')
@@ -370,7 +371,8 @@ class BridgeNode(Node):
         req.new_name = new_name
         req.data_json = data_json
         fut = self._map_mgr.call_async(req)
-        for _ in range(60):
+        # SAVE runs map_saver_cli — allow up to ~25s
+        for _ in range(500):
             if fut.done():
                 break
             threading.Event().wait(0.05)
@@ -382,6 +384,38 @@ class BridgeNode(Node):
             'ok': bool(res.success),
             'message': res.message,
             'map_list': list(res.map_list),
+            'data_json': res.data_json,
+        }
+
+    def waypoint_manage(
+        self,
+        operation: int,
+        map_name: str = '',
+        waypoint_name: str = '',
+        new_name: str = '',
+        data_json: str = '',
+    ) -> Dict[str, Any]:
+        if not self._wp_mgr.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'waypoint service unavailable', 'names': []}
+        req = WaypointManage.Request()
+        req.operation = int(operation)
+        req.map_name = map_name
+        req.waypoint_name = waypoint_name
+        req.new_name = new_name
+        req.data_json = data_json
+        fut = self._wp_mgr.call_async(req)
+        for _ in range(160):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'waypoint timeout', 'names': []}
+        res = fut.result()
+        self._push_task(f'[waypoint] op={operation} {res.message}')
+        return {
+            'ok': bool(res.success),
+            'message': res.message,
+            'names': list(res.names),
             'data_json': res.data_json,
         }
 
@@ -748,6 +782,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.bridge.map_manage(
                     int(data.get('operation', 2)),
                     str(data.get('map_name') or ''),
+                    str(data.get('new_name') or ''),
+                    str(data.get('data_json') or ''),
+                ),
+            )
+        if path == '/api/waypoint':
+            return self._json(
+                200,
+                self.bridge.waypoint_manage(
+                    int(data.get('operation', 5)),
+                    str(data.get('map_name') or ''),
+                    str(data.get('waypoint_name') or ''),
                     str(data.get('new_name') or ''),
                     str(data.get('data_json') or ''),
                 ),

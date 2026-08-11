@@ -1,0 +1,9 @@
+# Query current SLAM session state (start pose / save flag)
+---
+bool active
+bool has_start_pose
+float64 start_x
+float64 start_y
+float64 start_yaw
+bool saved_once
+string message

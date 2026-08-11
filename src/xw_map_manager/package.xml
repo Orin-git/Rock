@@ -3,12 +3,16 @@
 <package format="3">
   <name>xw_map_manager</name>
   <version>0.1.0</version>
-  <description>Map and waypoint file store</description>
+  <description>Map and waypoint file store (gen1-compatible)</description>
   <maintainer email="dev@xiaowei.local">xiaowei</maintainer>
   <license>Apache-2.0</license>
   <buildtool_depend>ament_python</buildtool_depend>
   <depend>rclpy</depend>
   <depend>xw_interfaces</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <export>
     <build_type>ament_python</build_type>
   </export>

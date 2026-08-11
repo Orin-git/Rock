@@ -3,13 +3,17 @@
 <package format="3">
   <name>xw_slam_session</name>
   <version>0.1.0</version>
-  <description>SLAM session skeleton</description>
+  <description>SLAM session: slam_toolbox lifecycle + start pose</description>
   <maintainer email="dev@xiaowei.local">xiaowei</maintainer>
   <license>Apache-2.0</license>
   <buildtool_depend>ament_python</buildtool_depend>
   <depend>rclpy</depend>
   <depend>xw_interfaces</depend>
   <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>ament_index_python</depend>
+  <exec_depend>slam_toolbox</exec_depend>
   <export>
     <build_type>ament_python</build_type>
   </export>

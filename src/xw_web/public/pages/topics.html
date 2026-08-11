@@ -25,10 +25,10 @@
     <section class="hero">
       <div class="tag">ROS GRAPH · ON DEMAND</div>
       <h1>话题与节点</h1>
-      <p class="muted">默认只列名与说明，<b>不订阅数据</b>。点击话题后才临时接入该路，并限制采样频率；离开或点「停止监听」后自动断开，避免占满 CPU。</p>
+      <p class="muted">点击话题后按 <code>ros2 topic echo</code> 方式显示该话题消息内容；离开或停止监听后自动断开。</p>
     </section>
 
-    <div class="section-title">Probe</div>
+    <div class="section-title">Echo</div>
     <section class="panel probe-panel">
       <div class="probe-head">
         <div>
@@ -40,8 +40,7 @@
           <button type="button" class="secondary" id="btnUnwatch" disabled>停止监听</button>
         </div>
       </div>
-      <p class="probe-hint" id="probeHint">点击下方话题开始查看消息摘要。</p>
-      <pre class="log probe-log" id="probeData">—</pre>
+      <pre class="log probe-log" id="probeData">点击下方话题开始 echo…</pre>
     </section>
 
     <div class="section-title">Topics <span class="section-count" id="topicCount">0</span></div>
@@ -75,7 +74,6 @@
     const topicFilter = document.getElementById('topicFilter');
     const xwOnly = document.getElementById('xwOnly');
     const probeMeta = document.getElementById('probeMeta');
-    const probeHint = document.getElementById('probeHint');
     const probeData = document.getElementById('probeData');
     const btnUnwatch = document.getElementById('btnUnwatch');
     const btnRefresh = document.getElementById('btnRefresh');
@@ -92,9 +90,21 @@
       activeTopic = null;
       btnUnwatch.disabled = true;
       probeMeta.textContent = msg || '未监听任何话题';
-      probeHint.textContent = '点击下方话题开始查看消息摘要。';
-      probeData.textContent = '—';
+      probeData.textContent = '点击下方话题开始 echo…';
       document.querySelectorAll('.row-item.active').forEach((el) => el.classList.remove('active'));
+    }
+
+    function renderData(data) {
+      if (data == null) return;
+      if (typeof data === 'string') {
+        probeData.textContent = data;
+        return;
+      }
+      try {
+        probeData.textContent = JSON.stringify(data, null, 2);
+      } catch (_) {
+        probeData.textContent = String(data);
+      }
     }
 
     function renderTopics() {
@@ -191,10 +201,9 @@
       activeTopic = j.topic || topic;
       btnUnwatch.disabled = false;
       probeMeta.textContent = `${activeTopic}  ·  ${j.type || type || '—'}`;
-      probeHint.textContent = j.note || j.hint || '正在等待首帧…';
       probeData.textContent = j.heavy
-        ? '大消息话题：仅显示摘要元数据。'
-        : '等待消息…（若长时间无数据，可能是无发布者或 QoS 不匹配）';
+        ? '该话题数据过大，仅显示摘要…'
+        : '等待消息…';
       renderTopics();
       startPeekLoop();
     }
@@ -215,28 +224,13 @@
           if (activeTopic) setProbeIdle('监听已结束');
           return;
         }
-        const bits = [
-          j.watching,
-          j.type || '',
-          j.approx_hz != null ? `~${j.approx_hz} Hz` : '',
-          j.recv_count != null ? `n=${j.recv_count}` : '',
-          j.age_sec != null ? `age=${j.age_sec}s` : '',
-          j.heavy ? 'SUMMARY' : '',
-        ].filter(Boolean);
-        probeMeta.textContent = bits.join('  ·  ');
+        probeMeta.textContent = `${j.watching}  ·  ${j.type || ''}`;
         if (j.error) {
-          probeHint.textContent = j.error;
+          probeData.textContent = String(j.error);
         } else if (j.waiting) {
-          probeHint.textContent = '已订阅，等待首帧…';
-        } else {
-          probeHint.textContent = j.hint || '';
-        }
-        if (j.data != null) {
-          try {
-            probeData.textContent = JSON.stringify(j.data, null, 2);
-          } catch (_) {
-            probeData.textContent = String(j.data);
-          }
+          probeData.textContent = '已订阅，等待首帧…';
+        } else if (j.data != null) {
+          renderData(j.data);
         }
       };
       tick();

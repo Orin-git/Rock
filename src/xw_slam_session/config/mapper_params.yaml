@@ -1,0 +1,75 @@
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: false
+
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+
+    scan_topic: /scan
+    mode: mapping
+
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    map_start_at_dock: false
+    map_start_pose: [0.0, 0.0, 0.0]
+
+    debug_logging: false
+    throttle_scans: 2
+
+    transform_publish_period: 0.12
+    transform_timeout: 1.0
+    tf_buffer_duration: 120.0
+    scan_queue_size: 20
+    map_update_interval: 1.0
+
+    resolution: 0.05
+    min_laser_range: 0.2
+    max_laser_range: 8.0
+
+    minimum_time_interval: 0.18
+    stack_size_to_use: 40000000
+    enable_interactive_mode: false
+
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.1
+    minimum_travel_heading: 0.1
+
+    scan_buffer_size: 5
+    scan_buffer_maximum_scan_distance: 6.5
+
+    link_match_minimum_response_fine: 0.54
+    link_scan_maximum_distance: 0.65
+
+    do_loop_closing: true
+    loop_search_maximum_distance: 6.0
+    loop_match_minimum_chain_size: 8
+    loop_match_maximum_variance_coarse: 2.2
+    loop_match_minimum_response_coarse: 0.30
+    loop_match_minimum_response_fine: 0.52
+
+    correlation_search_space_dimension: 0.58
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.075
+
+    loop_search_space_dimension: 9.0
+    loop_search_space_resolution: 0.045
+    loop_search_space_smear_deviation: 0.04
+
+    distance_variance_penalty: 0.72
+    angle_variance_penalty: 3.2
+    fine_search_angle_offset: 0.00349
+    coarse_search_angle_offset: 0.15
+    coarse_angle_resolution: 0.022
+    minimum_angle_penalty: 1.5
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true
+
+    min_pass_through: 3
+    occupancy_threshold: 0.35

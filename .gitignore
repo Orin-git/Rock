@@ -8,6 +8,11 @@ __pycache__/
 .vscode/
 *.user
 
+# core dumps (often root-owned; break git add -A)
+core
+core.*
+*.core
+
 # auto git sync
 .git_sync_request
 .git_sync.lock

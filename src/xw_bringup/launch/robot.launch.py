@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Gen2 system bringup: mock-capable layered stack."""
+"""Gen2 system bringup: mock-capable layered stack.
+
+Real lidar starts after XW_LIDAR_START_DELAY seconds so Web/Foxglove come up first.
+RPLidar motor inrush can brown-out the board — never respawn it in a tight loop.
+"""
 
 import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo, TimerAction
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -14,9 +18,14 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description() -> LaunchDescription:
     use_sim = LaunchConfiguration('use_sim_hw')
+    use_sim_lidar = LaunchConfiguration('use_sim_lidar')
     use_web = LaunchConfiguration('use_web')
     use_foxglove = LaunchConfiguration('use_foxglove')
     profile = LaunchConfiguration('profile')
+    lidar_port = LaunchConfiguration('lidar_port')
+    lidar_baudrate = LaunchConfiguration('lidar_baudrate')
+
+    lidar_delay = float(os.environ.get('XW_LIDAR_START_DELAY', '25'))
 
     desc_share = get_package_share_directory('xw_description')
     urdf_path = os.path.join(desc_share, 'urdf', 'xw_gen2.urdf')
@@ -25,9 +34,15 @@ def generate_launch_description() -> LaunchDescription:
 
     web_share = get_package_share_directory('xw_web')
     web_public = os.path.join(web_share, 'public')
+    maps_dir = os.environ.get('XW_MAPS', '/ros2_ws/maps')
 
     nodes = [
-        LogInfo(msg=['[xw_bringup] profile=', profile, ' use_sim_hw=', use_sim]),
+        LogInfo(msg=[
+            '[xw_bringup] profile=', profile,
+            ' use_sim_hw=', use_sim,
+            ' use_sim_lidar=', use_sim_lidar,
+            f' lidar_delay={lidar_delay}s',
+        ]),
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
@@ -46,14 +61,30 @@ def generate_launch_description() -> LaunchDescription:
             package='xw_sensors',
             executable='sensors_stub_node',
             name='xw_sensors_stub',
-            condition=IfCondition(use_sim),
+            condition=IfCondition(use_sim_lidar),
             output='screen',
         ),
         Node(package='xw_cmd_arbiter', executable='cmd_arbiter_node', name='xw_cmd_arbiter', output='screen'),
         Node(package='xw_safety_gate', executable='safety_gate_node', name='xw_safety_gate', output='screen'),
         Node(package='xw_motion', executable='motion_node', name='xw_motion', output='screen'),
-        Node(package='xw_map_manager', executable='map_manager_node', name='xw_map_manager', output='screen'),
-        Node(package='xw_slam_session', executable='slam_session_node', name='xw_slam_session', output='screen'),
+        Node(
+            package='xw_map_manager',
+            executable='map_manager_node',
+            name='xw_map_manager',
+            parameters=[{'maps_dir': maps_dir}],
+            output='screen',
+        ),
+        Node(
+            package='xw_slam_session',
+            executable='slam_session_node',
+            name='xw_slam_session',
+            parameters=[{
+                'maps_dir': maps_dir,
+                'base_frame': 'base_link',
+                'map_frame': 'map',
+            }],
+            output='screen',
+        ),
         Node(package='xw_nav_session', executable='nav_session_node', name='xw_nav_session', output='screen'),
         Node(package='xw_follow_session', executable='follow_session_node', name='xw_follow_session', output='screen'),
         Node(package='xw_fall_session', executable='fall_session_node', name='xw_fall_session', output='screen'),
@@ -62,7 +93,7 @@ def generate_launch_description() -> LaunchDescription:
             package='xw_supervisor',
             executable='supervisor_node',
             name='xw_supervisor',
-            parameters=[{'profile': profile, 'run_mode': 1}],  # profile is string Substitution ok
+            parameters=[{'profile': profile, 'run_mode': 1}],
             output='screen',
         ),
         Node(package='xw_health', executable='topic_health_node', name='xw_topic_health', output='screen'),
@@ -73,10 +104,11 @@ def generate_launch_description() -> LaunchDescription:
             parameters=[{'port': 9000, 'web_root': web_public}],
             condition=IfCondition(use_web),
             output='screen',
+            respawn=True,
+            respawn_delay=3.0,
         ),
     ]
 
-    # Optional foxglove_bridge if installed; do not fail bringup if missing
     foxglove = ExecuteProcess(
         cmd=[
             'bash', '-lc',
@@ -96,11 +128,43 @@ def generate_launch_description() -> LaunchDescription:
         condition=IfCondition(use_foxglove),
     )
 
+    delayed_lidar = TimerAction(
+        period=lidar_delay,
+        actions=[
+            LogInfo(msg=[f'[xw_bringup] starting real rplidar after {lidar_delay:.0f}s delay']),
+            Node(
+                package='rplidar_ros',
+                executable='rplidar_node',
+                name='rplidar_node',
+                condition=UnlessCondition(use_sim_lidar),
+                parameters=[{
+                    'channel_type': 'serial',
+                    'serial_port': lidar_port,
+                    'serial_baudrate': ParameterValue(lidar_baudrate, value_type=int),
+                    'frame_id': 'lidar_link',
+                    'topic_name': 'scan',
+                    'inverted': False,
+                    'angle_compensate': True,
+                    'scan_mode': 'Standard',
+                    'enable_filter': False,
+                }],
+                output='screen',
+                respawn=False,
+            ),
+        ],
+    )
+
     return LaunchDescription([
-        DeclareLaunchArgument('use_sim_hw', default_value='true'),
+        DeclareLaunchArgument('use_sim_hw', default_value='true',
+                              description='Simulate chassis odometry (independent of lidar)'),
+        DeclareLaunchArgument('use_sim_lidar', default_value='false',
+                              description='If true, stub /scan; if false, delayed rplidar_ros'),
+        DeclareLaunchArgument('lidar_port', default_value='/dev/radar'),
+        DeclareLaunchArgument('lidar_baudrate', default_value='1000000'),
         DeclareLaunchArgument('use_web', default_value='true'),
         DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('profile', default_value='normal'),
         *nodes,
         foxglove,
+        delayed_lidar,
     ])

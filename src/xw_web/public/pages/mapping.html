@@ -5,6 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>建图 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
+  <style>
+    .map-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+      gap: 1rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .map-layout { grid-template-columns: 1fr; }
+    }
+    #map-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-height: min(72vh, 720px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #1e2230;
+      box-shadow: var(--shadow);
+    }
+    #map-canvas, #overlay-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #overlay-canvas { pointer-events: none; }
+    .map-meta {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin: 0.55rem 0 0;
+    }
+    .side-stack { display: flex; flex-direction: column; gap: 0.9rem; }
+    .side-stack .joystick-wrap {
+      width: min(220px, 100%);
+      height: min(220px, 70vw);
+      margin: 0.6rem auto;
+    }
+    .map-name-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+    }
+    .map-name-row input { flex: 1; min-width: 160px; max-width: none; }
+  </style>
 </head>
 <body>
   <header class="top">
@@ -23,29 +72,213 @@
   </header>
   <main>
     <section class="hero">
-      <div class="tag">SLAM SESSION</div>
-      <h1>建图任务</h1>
-      <p class="muted">Supervisor mode=1 · 真正 SLAM 将在 Phase2 接入</p>
+      <div class="tag">HAND-PUSH SLAM</div>
+      <h1>手推建图</h1>
+      <p class="muted">
+        Supervisor <code>mode=1</code> 启停 SLAM · Foxglove 画布叠
+        <code>/map</code> + <code>/scan</code> · 随时保存写入
+        <code>{name}_pointList/charger</code>
+      </p>
     </section>
-    <section class="panel">
-      <h2>会话控制</h2>
-      <div class="btn-row">
-        <button id="start">开始建图</button>
-        <button class="secondary" id="stop">结束</button>
-        <button class="secondary" id="save">保存占位图</button>
+
+    <div class="section-title">Live map</div>
+    <div class="map-layout">
+      <section class="panel" style="padding:0.85rem">
+        <div id="map-container">
+          <canvas id="map-canvas"></canvas>
+          <canvas id="overlay-canvas"></canvas>
+        </div>
+        <p class="map-meta" id="mapStatus">画布未启动</p>
+      </section>
+
+      <div class="side-stack">
+        <section class="panel">
+          <h2>会话控制</h2>
+          <p class="muted" id="modeHint" style="margin:0 0 0.6rem;font-size:0.82rem">模式：—</p>
+          <div class="btn-row">
+            <button type="button" id="start">开始建图</button>
+            <button type="button" class="secondary" id="stop">结束</button>
+          </div>
+          <label for="mapName">地图名</label>
+          <div class="map-name-row">
+            <input id="mapName" type="text" autocomplete="off" spellcheck="false" />
+            <button type="button" id="save">保存地图</button>
+          </div>
+          <p class="muted" style="margin:0.55rem 0 0;font-size:0.78rem">
+            默认 <code>YYYYMMDD_HHMMSS</code> · 同名将覆盖
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>手推遥控</h2>
+          <div class="joystick-wrap" id="stick"><div class="knob" id="knob"></div></div>
+          <p class="muted" id="vel" style="font-family:var(--font-mono);text-align:center;margin:0">
+            vx=0.00 wz=0.00
+          </p>
+          <div class="btn-row" style="justify-content:center">
+            <button type="button" class="secondary" id="teleopStop">急停归零</button>
+          </div>
+        </section>
       </div>
+    </div>
+
+    <div class="section-title">Log</div>
+    <section class="panel">
       <pre id="log" class="log"></pre>
     </section>
   </main>
+
+  <script src="/js/vendor/foxglove_bundle.js"></script>
+  <script src="/js/vendor/roslib_foxglove.js"></script>
+  <script src="/js/vendor/ros_ws_helper.js"></script>
+  <script src="/js/map_canvas.js"></script>
   <script type="module">
-    import { connect, setMode, mapManage, onTask } from '/js/api.js';
+    import {
+      connect,
+      setMode,
+      mapManage,
+      publishTeleop,
+      onTask,
+      onState,
+    } from '/js/api.js';
     import '/js/app.js';
+
     connect();
-    const log = document.getElementById('log');
-    onTask((l) => { log.textContent = l + '\n' + log.textContent; });
-    document.getElementById('start').onclick = () => setMode(1, {});
-    document.getElementById('stop').onclick = () => setMode(0, {});
-    document.getElementById('save').onclick = () => mapManage(1, 'map_' + Date.now());
+
+    const logEl = document.getElementById('log');
+    const mapNameEl = document.getElementById('mapName');
+    const mapStatus = document.getElementById('mapStatus');
+    const modeHint = document.getElementById('modeHint');
+    let mappingActive = false;
+    let savedOnce = false;
+
+    function pad2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function defaultMapName() {
+      const d = new Date();
+      return (
+        d.getFullYear() +
+        pad2(d.getMonth() + 1) +
+        pad2(d.getDate()) +
+        '_' +
+        pad2(d.getHours()) +
+        pad2(d.getMinutes()) +
+        pad2(d.getSeconds())
+      );
+    }
+
+    function pushLog(line) {
+      logEl.textContent = line + '\n' + logEl.textContent;
+    }
+
+    mapNameEl.value = defaultMapName();
+
+    onTask((l) => pushLog(l));
+    onState((s) => {
+      const name = s.mode_name || String(s.mode);
+      modeHint.textContent = `模式：${name} (${s.mode}) · ${s.detail || ''}`;
+      mappingActive = Number(s.mode) === 1;
+    });
+
+    if (window.XwMapCanvas) {
+      window.XwMapCanvas.start({
+        onStatus: (msg) => {
+          mapStatus.textContent = msg;
+        },
+      });
+    } else {
+      mapStatus.textContent = 'map_canvas.js 未加载';
+    }
+
+    document.getElementById('start').onclick = async () => {
+      savedOnce = false;
+      if (!mapNameEl.value.trim()) mapNameEl.value = defaultMapName();
+      pushLog('>> 开始建图 setMode(1)');
+      await setMode(1, {});
+    };
+
+    document.getElementById('stop').onclick = async () => {
+      if (mappingActive && !savedOnce) {
+        const ok = confirm(
+          '当前建图会话尚未手动保存。\n结束将交由后端 autosave（若已有栅格）。\n是否结束？'
+        );
+        if (!ok) return;
+      }
+      pushLog('>> 结束建图 setMode(0)');
+      await setMode(0, {});
+    };
+
+    document.getElementById('save').onclick = async () => {
+      let name = mapNameEl.value.trim();
+      if (!name) {
+        name = defaultMapName();
+        mapNameEl.value = name;
+      }
+      const list = await mapManage(2);
+      const maps = list.map_list || [];
+      if (maps.indexOf(name) !== -1) {
+        if (!confirm(`地图「${name}」已存在，继续保存将覆盖。是否继续？`)) return;
+      }
+      pushLog(`>> 保存地图 ${name}`);
+      const j = await mapManage(1, name);
+      if (j && j.ok) {
+        savedOnce = true;
+        pushLog(`<< 保存成功 ${j.message || ''}`);
+      } else {
+        pushLog(`!! 保存失败 ${j && j.message ? j.message : ''}`);
+      }
+    };
+
+    mapNameEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('save').click();
+    });
+
+    // Teleop pad
+    const stick = document.getElementById('stick');
+    const knob = document.getElementById('knob');
+    const vel = document.getElementById('vel');
+    let active = false;
+
+    function setKnob(nx, ny) {
+      const r = 72;
+      knob.style.transform = `translate(calc(-50% + ${nx * r}px), calc(-50% + ${ny * r}px))`;
+      const vx = -ny * 0.35;
+      const wz = -nx * 0.8;
+      vel.textContent = `vx=${vx.toFixed(2)} wz=${wz.toFixed(2)}`;
+      publishTeleop(vx, wz);
+    }
+
+    function fromEvent(e) {
+      const rect = stick.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      let dx = (t.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+      let dy = (t.clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+      const mag = Math.hypot(dx, dy) || 1;
+      if (mag > 1) {
+        dx /= mag;
+        dy /= mag;
+      }
+      setKnob(dx, dy);
+    }
+
+    stick.addEventListener('pointerdown', (e) => {
+      active = true;
+      stick.setPointerCapture(e.pointerId);
+      fromEvent(e);
+    });
+    stick.addEventListener('pointermove', (e) => {
+      if (active) fromEvent(e);
+    });
+    const end = () => {
+      active = false;
+      setKnob(0, 0);
+      publishTeleop(0, 0);
+    };
+    stick.addEventListener('pointerup', end);
+    stick.addEventListener('pointercancel', end);
+    document.getElementById('teleopStop').onclick = end;
   </script>
 </body>
 </html>

@@ -26,8 +26,9 @@
       <div class="tag">FOXGLOVE · RViz-CLASS</div>
       <h1>三维可视化</h1>
       <p class="muted">
-        <b>Foxglove Studio</b> 是机器人可视化工具，能力接近 RViz2：3D、激光、TF、图像、Plot 等。
-        本机跑 <code>foxglove_bridge</code>（端口 8765）把 ROS 话题桥到 WebSocket；浏览器/桌面端连上即可看图。
+        机器人上的 <code>foxglove_bridge</code>（8765）只负责桥数据。
+        <b>Studio 界面是 Foxglove 云端产品</b>，官方禁止被其它网站 iframe 嵌套（因此会出现「已拒绝连接」）。
+        正确用法：本页生成一键链接 → <b>新标签打开</b>，或用桌面端连 WS。
       </p>
     </section>
 
@@ -41,37 +42,56 @@
         </div>
         <div class="btn-row" style="margin:0">
           <button type="button" id="btnRefresh">刷新状态</button>
-          <button type="button" class="secondary" id="btnCopy">复制 WS 地址</button>
+          <button type="button" class="secondary" id="btnCopyWs">复制 WS</button>
         </div>
       </div>
-      <label>WebSocket 地址（本机桥）</label>
+      <label>WebSocket（本机器人）</label>
       <input id="wsUrl" type="text" readonly />
+    </section>
+
+    <div class="section-title">How to open</div>
+    <section class="panel">
+      <h2>一键打开（推荐）</h2>
+      <p class="muted" style="margin-top:0;font-size:0.82rem">
+        用你已登录的组织路径 + 布局。电脑与机器人需在同一局域网。
+      </p>
+      <label>组织路径（浏览器地址栏里 app.foxglove.dev 后第一段）</label>
+      <input id="orgPath" type="text" placeholder="例如 5144c9b7" />
+      <label>布局 ID（layoutId= 后面那串，可留空）</label>
+      <input id="layoutId" type="text" placeholder="例如 lay_0eXiBaencBo8VMDx" />
+      <label>生成的 Studio 链接</label>
+      <input id="studioUrl" type="text" readonly />
       <div class="btn-row">
-        <button type="button" id="btnOpenWeb">在新标签打开 Foxglove</button>
-        <button type="button" class="secondary" id="btnLoadEmbed">页内嵌入 / 重载</button>
-        <a class="btn secondary" id="linkDesktop" href="https://foxglove.dev/download" target="_blank" rel="noopener">下载桌面端</a>
+        <button type="button" id="btnOpen">新标签打开 Studio</button>
+        <button type="button" class="secondary" id="btnCopyLink">复制链接</button>
+        <button type="button" class="secondary" id="btnSave">保存设置</button>
+        <a class="btn secondary" href="https://foxglove.dev/download" target="_blank" rel="noopener">下载桌面端</a>
       </div>
-      <p class="muted" style="font-size:0.78rem;margin:0">
-        推荐：同一局域网用 <b>桌面端</b> 连接上面 WS（最稳，等同常用 RViz2 体验）。
-        浏览器版若无法连上本机 <code>ws://</code>，多为 HTTPS 页面禁止混合内容，请用桌面端或新标签在连好后操作。
+      <div class="viz-steps">
+        <div class="viz-step"><b>1</b> 确认上方 Bridge 为「在线」</div>
+        <div class="viz-step"><b>2</b> 点「新标签打开 Studio」（会带上本机 <code>ws://IP:8765</code>）</div>
+        <div class="viz-step"><b>3</b> 若已登录，会直接进你的布局；未登录则先登录一次</div>
+        <div class="viz-step"><b>4</b> 在 3D 面板加 LaserScan → 话题 <code>/scan</code>，并打开 TF</div>
+      </div>
+      <p class="muted" style="font-size:0.78rem;margin:0.75rem 0 0">
+        你之前能用的链接格式即：
+        <code>https://app.foxglove.dev/&lt;组织&gt;/view?ds=foxglove-websocket&amp;ds.url=ws://板子:8765&amp;layoutId=...</code>
+        官方文档见
+        <a href="https://docs.foxglove.dev/docs/getting-started/frameworks/ros2" target="_blank" rel="noopener">ROS 2 连接说明</a>。
       </p>
     </section>
 
-    <div class="section-title">Studio</div>
-    <section class="viz-frame-wrap panel">
-      <div class="viz-frame-bar">
-        <span id="embedLabel">Foxglove 嵌入视图</span>
-        <span class="pill warn" id="embedPill">未加载</span>
-      </div>
-      <iframe
-        id="foxFrame"
-        class="viz-frame"
-        title="Foxglove Studio"
-        allow="clipboard-read; clipboard-write; fullscreen"
-        referrerpolicy="no-referrer-when-downgrade"
-      ></iframe>
-      <p class="muted" style="font-size:0.75rem;margin:0.55rem 0 0">
-        首次使用可能需登录 Foxglove 账号（个人免费）。布局建议：3D + LaserScan(<code>/scan</code>) + TF + Raw Messages。
+    <div class="section-title">Desktop</div>
+    <section class="panel">
+      <h2>桌面端（更稳）</h2>
+      <ol class="viz-ol">
+        <li>安装 Foxglove Desktop</li>
+        <li>Open connection → <b>Foxglove WebSocket</b></li>
+        <li>填入上面的 WS 地址（如 <code id="wsHint">ws://192.168.x.x:8765</code>）</li>
+        <li>Open → 添加 3D / LaserScan / TF 面板</li>
+      </ol>
+      <p class="muted" style="font-size:0.78rem;margin:0">
+        桌面端无 iframe 限制，也更少碰到 HTTPS 页面连 <code>ws://</code> 的混合内容问题。
       </p>
     </section>
   </main>
@@ -81,74 +101,101 @@
 
     connect();
 
+    const LS_ORG = 'xw_foxglove_org';
+    const LS_LAYOUT = 'xw_foxglove_layout';
+    // Defaults from your working deep-link
+    const DEFAULT_ORG = '5144c9b7';
+    const DEFAULT_LAYOUT = 'lay_0eXiBaencBo8VMDx';
+
     const foxMeta = document.getElementById('foxMeta');
     const foxDetail = document.getElementById('foxDetail');
     const wsUrl = document.getElementById('wsUrl');
-    const foxFrame = document.getElementById('foxFrame');
-    const embedPill = document.getElementById('embedPill');
+    const orgPath = document.getElementById('orgPath');
+    const layoutId = document.getElementById('layoutId');
+    const studioUrlEl = document.getElementById('studioUrl');
+    const wsHint = document.getElementById('wsHint');
+
+    orgPath.value = localStorage.getItem(LS_ORG) || DEFAULT_ORG;
+    layoutId.value = localStorage.getItem(LS_LAYOUT) || DEFAULT_LAYOUT;
 
     function boardHost() {
       return location.hostname || '127.0.0.1';
     }
 
-    function wsFromStatus(j) {
-      const port = j.port || 8765;
-      return `ws://${boardHost()}:${port}`;
-    }
-
-    function studioUrl(ws) {
-      // Official deep-link: open Foxglove WebSocket data source
-      const u = new URL('https://app.foxglove.dev/');
+    function buildStudioUrl(ws) {
+      const org = (orgPath.value || '').trim().replace(/^\/+|\/+$/g, '');
+      const lay = (layoutId.value || '').trim();
+      let base;
+      if (org) {
+        base = `https://app.foxglove.dev/${org}/view`;
+      } else {
+        base = 'https://app.foxglove.dev/';
+      }
+      const u = new URL(base);
       u.searchParams.set('ds', 'foxglove-websocket');
       u.searchParams.set('ds.url', ws);
+      if (lay) u.searchParams.set('layoutId', lay);
       return u.toString();
+    }
+
+    function syncLink() {
+      const ws = wsUrl.value || `ws://${boardHost()}:8765`;
+      studioUrlEl.value = buildStudioUrl(ws);
+      wsHint.textContent = ws;
     }
 
     async function refresh() {
       const j = await fetchFoxgloveStatus();
-      const ws = wsFromStatus(j);
+      const port = j.port || 8765;
+      const ws = `ws://${boardHost()}:${port}`;
       wsUrl.value = ws;
+      syncLink();
       if (j.up) {
-        foxMeta.textContent = `在线 · 端口 ${j.port}`;
+        foxMeta.textContent = `在线 · 端口 ${port}`;
         foxMeta.style.color = 'var(--ok)';
-        foxDetail.textContent = 'foxglove_bridge 已监听，可打开 Studio 订阅 /scan · /odom · /tf · /xw/* 等（白名单内）。';
+        foxDetail.textContent = '桥已就绪。请点「新标签打开 Studio」，不要期待页内 iframe。';
       } else {
-        foxMeta.textContent = `离线 · 端口 ${j.port || 8765}`;
+        foxMeta.textContent = `离线 · 端口 ${port}`;
         foxMeta.style.color = 'var(--bad)';
-        foxDetail.textContent =
-          j.error
-            ? `探测失败: ${j.error}。请确认已安装 ros-humble-foxglove-bridge，且 launch 使用 use_foxglove:=true。`
-            : 'Bridge 未就绪。';
+        foxDetail.textContent = j.error
+          ? `探测失败: ${j.error}`
+          : 'Bridge 未就绪。需安装 foxglove_bridge 并 use_foxglove:=true。';
       }
       return j;
     }
 
-    function loadEmbed() {
-      const ws = wsUrl.value || `ws://${boardHost()}:8765`;
-      foxFrame.src = studioUrl(ws);
-      embedPill.textContent = '已加载';
-      embedPill.className = 'pill on';
-    }
-
     document.getElementById('btnRefresh').onclick = () => refresh();
-    document.getElementById('btnCopy').onclick = async () => {
+    document.getElementById('btnCopyWs').onclick = async () => {
       try {
         await navigator.clipboard.writeText(wsUrl.value);
         foxDetail.textContent = '已复制 WS 地址';
       } catch (_) {
         wsUrl.select();
-        foxDetail.textContent = '请手动复制输入框中的地址';
       }
     };
-    document.getElementById('btnOpenWeb').onclick = () => {
-      window.open(studioUrl(wsUrl.value), '_blank', 'noopener');
+    document.getElementById('btnOpen').onclick = () => {
+      syncLink();
+      window.open(studioUrlEl.value, '_blank', 'noopener');
     };
-    document.getElementById('btnLoadEmbed').onclick = loadEmbed;
+    document.getElementById('btnCopyLink').onclick = async () => {
+      syncLink();
+      try {
+        await navigator.clipboard.writeText(studioUrlEl.value);
+        foxDetail.textContent = '已复制 Studio 链接';
+      } catch (_) {
+        studioUrlEl.select();
+      }
+    };
+    document.getElementById('btnSave').onclick = () => {
+      localStorage.setItem(LS_ORG, orgPath.value.trim());
+      localStorage.setItem(LS_LAYOUT, layoutId.value.trim());
+      syncLink();
+      foxDetail.textContent = '组织路径 / 布局已保存在本浏览器';
+    };
+    orgPath.addEventListener('input', syncLink);
+    layoutId.addEventListener('input', syncLink);
 
-    refresh().then((j) => {
-      // Auto-embed only when bridge is up (still may require Foxglove login).
-      if (j.up) loadEmbed();
-    });
+    refresh();
     setInterval(refresh, 5000);
   </script>
 </body>
