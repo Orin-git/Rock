@@ -44,6 +44,9 @@ class NavSessionNode(Node):
         if not self._active:
             self.get_logger().warn('goal ignored (nav inactive)')
             return
+        x = float(msg.pose.position.x)
+        y = float(msg.pose.position.y)
+        self.get_logger().info(f'goal accepted x={x:.3f} y={y:.3f} (Nav2 TBD)')
         p = TaskProgress()
         p.stamp = self.get_clock().now().to_msg()
         p.command_id = self._command_id
@@ -55,8 +58,8 @@ class NavSessionNode(Node):
         r.command_id = self._command_id
         r.capability = 'nav'
         r.code = 3
-        r.message = 'stub accepted goal (no Nav2 yet)'
-        r.data_json = f'{{"x": {msg.pose.position.x}, "y": {msg.pose.position.y}}}'
+        r.message = 'goal received (Nav2 not wired yet)'
+        r.data_json = f'{{"x": {x}, "y": {y}, "frame_id": "{msg.header.frame_id}"}}'
         self._result_pub.publish(r)
 
 

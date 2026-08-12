@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="top">
-    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
       <a href="/">总览</a>
       <a class="active" href="/pages/topics.html">话题</a>
@@ -17,18 +17,21 @@
       <a href="/pages/mapping.html">建图</a>
       <a href="/pages/navigation.html">导航</a>
       <a href="/pages/maps.html">地图</a>
+      <a href="/pages/map_beautify.html">美化</a>
       <a href="/pages/settings.html">设置</a>
     </nav>
-    <div id="conn" class="pill off">链路…</div>
+    <div class="top-status">
+      <div id="conn" class="pill off">链路…</div>
+    </div>
   </header>
   <main>
-    <section class="hero">
-      <div class="tag">ROS GRAPH · ON DEMAND</div>
+    <section class="page-head">
+      <div class="tag">ROS Graph</div>
       <h1>话题与节点</h1>
       <p class="muted">点击话题后按 <code>ros2 topic echo</code> 方式显示该话题消息内容；离开或停止监听后自动断开。</p>
     </section>
 
-    <div class="section-title">Echo</div>
+    <div class="section-title">监听</div>
     <section class="panel probe-panel">
       <div class="probe-head">
         <div>
@@ -43,7 +46,7 @@
       <pre class="log probe-log" id="probeData">点击下方话题开始 echo…</pre>
     </section>
 
-    <div class="section-title">Topics <span class="section-count" id="topicCount">0</span></div>
+    <div class="section-title">话题 <span class="section-count" id="topicCount">0</span></div>
     <div class="tool-bar">
       <input id="topicFilter" type="search" placeholder="过滤话题名 / 说明…" />
       <label class="check-inline"><input type="checkbox" id="xwOnly" checked /> 优先 /xw</label>
@@ -52,7 +55,7 @@
       <p class="muted pad">加载图…</p>
     </section>
 
-    <div class="section-title">Nodes <span class="section-count" id="nodeCount">0</span></div>
+    <div class="section-title">节点 <span class="section-count" id="nodeCount">0</span></div>
     <section class="list-panel" id="nodeList">
       <p class="muted pad">加载节点…</p>
     </section>

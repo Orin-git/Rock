@@ -1,0 +1,39 @@
+# Gen2 front depth camera (Angstrong HP60C / ASJ ZNX_NVT, USB 3482:6723)
+#
+# Vendor node publishes under /ascamera_hp60c/camera_publisher/...
+# xw_depth_topic_bridge relays to stable /camera/front/... contracts.
+
+usb_bus_no: -1
+usb_path: "null"
+color_pcl: false
+pub_tfTree: true
+
+# Lower than vendor default to reduce Rock 5T load
+depth_width: 640
+depth_height: 480
+rgb_width: 640
+rgb_height: 480
+fps: 10
+
+# Bridge
+preview_fps: 5.0
+# Raw RGB is heavy; algorithms can enable later. Preview uses MJPEG/compressed.
+relay_raw_rgb: false
+# PointCloud2 relay — default OFF (nav uses /scan + depth image; PC is debug-only).
+# Flip via launch: enable_pointcloud:=true  (or USE_POINTCLOUD=true in start_robot_host).
+enable_pointcloud: false
+points_fps: 3.0
+
+rgb_image_in: /ascamera_hp60c/camera_publisher/rgb0/image
+rgb_info_in: /ascamera_hp60c/camera_publisher/rgb0/camera_info
+depth_image_in: /ascamera_hp60c/camera_publisher/depth0/image_raw
+depth_info_in: /ascamera_hp60c/camera_publisher/depth0/camera_info
+mjpeg_in: /ascamera_hp60c/camera_publisher/mjpeg0/compressed
+points_in: /ascamera_hp60c/camera_publisher/depth0/points
+
+rgb_image_out: /camera/front/color/image_raw
+rgb_info_out: /camera/front/color/camera_info
+depth_image_out: /camera/front/depth/image_raw
+depth_info_out: /camera/front/depth/camera_info
+compressed_out: /camera/front/color/image_raw/compressed
+points_out: /camera/front/depth/points

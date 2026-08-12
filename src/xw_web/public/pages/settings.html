@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="top">
-    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
       <a href="/">总览</a>
       <a href="/pages/topics.html">话题</a>
@@ -17,13 +17,16 @@
       <a href="/pages/mapping.html">建图</a>
       <a href="/pages/navigation.html">导航</a>
       <a href="/pages/maps.html">地图</a>
+      <a href="/pages/map_beautify.html">美化</a>
       <a class="active" href="/pages/settings.html">设置</a>
     </nav>
-    <div id="conn" class="pill off">链路…</div>
+    <div class="top-status">
+      <div id="conn" class="pill off">链路…</div>
+    </div>
   </header>
   <main>
-    <section class="hero">
-      <div class="tag">SYSTEM</div>
+    <section class="page-head">
+      <div class="tag">System</div>
       <h1>运行与能力</h1>
       <p class="muted">工作区 /ros2_ws · Web :9000 · ROS_DOMAIN_ID=99（默认）</p>
     </section>
@@ -36,6 +39,20 @@
       </div>
       <pre id="log" class="log"></pre>
     </section>
+
+    <section class="panel" style="margin-top:1rem">
+      <h2>深度点云（调试）</h2>
+      <p class="muted" style="margin-top:0">
+        默认关闭。导航用激光，不必常开。打开后可在 Foxglove Desktop 的
+        <b>3D → Point Cloud</b> 看 <code>/camera/front/depth/points</code>（约 3 FPS，较耗 CPU）。
+      </p>
+      <div class="btn-row" style="align-items:center;gap:0.75rem">
+        <button id="pcToggle" type="button">点云：…</button>
+        <span class="pill off" id="pcPill">状态…</span>
+      </div>
+      <p class="muted" style="font-size:0.8rem;margin:0.6rem 0 0" id="pcHint">—</p>
+    </section>
+
     <section class="panel" style="margin-top:1rem">
       <h2>Docker 命令提示</h2>
       <pre class="log">source /ros2_ws/scripts/ros_env.sh
@@ -45,7 +62,7 @@ htop   # 容器内 apt install -y htop</pre>
     </section>
   </main>
   <script type="module">
-    import { connect, setMode, onTask } from '/js/api.js';
+    import { connect, setMode, onTask, fetchPointcloudStatus, setPointcloudEnabled } from '/js/api.js';
     import '/js/app.js';
     connect();
     const log = document.getElementById('log');
@@ -53,6 +70,51 @@ htop   # 容器内 apt install -y htop</pre>
     document.getElementById('follow').onclick = () => setMode(3, {});
     document.getElementById('fall').onclick = () => setMode(4, {});
     document.getElementById('idle').onclick = () => setMode(0, {});
+
+    const btn = document.getElementById('pcToggle');
+    const pill = document.getElementById('pcPill');
+    const hint = document.getElementById('pcHint');
+    let enabled = false;
+    let busy = false;
+
+    function render() {
+      btn.textContent = enabled ? '点云：开 → 点此关闭' : '点云：关 → 点此打开';
+      btn.className = enabled ? '' : 'secondary';
+      pill.textContent = enabled ? 'ON' : 'OFF';
+      pill.className = enabled ? 'pill on' : 'pill off';
+    }
+
+    async function refreshPc() {
+      try {
+        const s = await fetchPointcloudStatus();
+        enabled = !!s.enabled;
+        hint.textContent = s.service_ready
+          ? `${s.hint || ''} · ${s.topic || ''}`
+          : '深度桥服务未就绪（确认 use_depth_cam 已开）';
+        render();
+      } catch (e) {
+        hint.textContent = String(e.message || e);
+      }
+    }
+
+    btn.onclick = async () => {
+      if (busy) return;
+      busy = true;
+      btn.disabled = true;
+      try {
+        const j = await setPointcloudEnabled(!enabled);
+        if (j.ok) enabled = !!j.enabled;
+        else hint.textContent = j.message || '切换失败';
+        render();
+        await refreshPc();
+      } finally {
+        busy = false;
+        btn.disabled = false;
+      }
+    };
+
+    refreshPc();
+    setInterval(refreshPc, 4000);
   </script>
 </body>
 </html>

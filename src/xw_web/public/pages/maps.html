@@ -5,76 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>地图 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
-  <style>
-    .map-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.7rem 0.9rem;
-      box-shadow: var(--shadow);
-    }
-    .map-item-main {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      min-width: 0;
-      flex: 1;
-    }
-    .map-item-main input[type="checkbox"] {
-      width: auto;
-      max-width: none;
-      accent-color: var(--accent);
-    }
-    .map-item-name {
-      font-family: var(--font-mono);
-      font-size: 0.9rem;
-      color: var(--accent);
-      word-break: break-all;
-      font-weight: 500;
-    }
-    .map-item-meta {
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-top: 0.2rem;
-    }
-    .map-item-meta.has-wp { color: var(--ok); }
-    .map-item-meta.no-wp { color: var(--amber); }
-    .map-item-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
-    .batch-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.55rem;
-      align-items: center;
-      margin-bottom: 0.75rem;
-    }
-    .batch-bar .muted { margin: 0; font-size: 0.82rem; }
-    .index-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 1.5rem;
-      height: 1.5rem;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      font-weight: 600;
-    }
-  </style>
 </head>
 <body>
   <header class="top">
-    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
       <a href="/">总览</a>
       <a href="/pages/topics.html">话题</a>
@@ -83,22 +17,25 @@
       <a href="/pages/mapping.html">建图</a>
       <a href="/pages/navigation.html">导航</a>
       <a class="active" href="/pages/maps.html">地图</a>
+      <a href="/pages/map_beautify.html">美化</a>
       <a href="/pages/settings.html">设置</a>
     </nav>
-    <div id="conn" class="pill off">链路…</div>
+    <div class="top-status">
+      <div id="conn" class="pill off">链路…</div>
+    </div>
   </header>
   <main>
-    <section class="hero">
-      <div class="tag">MAP STORE</div>
+    <section class="page-head">
+      <div class="tag">Map Store</div>
       <h1>地图管理</h1>
       <p class="muted">
-        列表 / 重命名 / 删除 / 批量删除 / 批量保留 · 经
+        列表 / 重命名 / 美化 / 删除 / 批量删除 / 批量保留 · 经
         <code>/api/map</code> · 关联航点
         <code>{name}_pointList</code>
       </p>
     </section>
 
-    <div class="section-title">Maps <span class="section-count" id="mapCount">0</span></div>
+    <div class="section-title">地图列表 <span class="section-count" id="mapCount">0</span></div>
     <section class="panel">
       <div class="batch-bar">
         <label class="check-inline">
@@ -114,7 +51,7 @@
       </div>
     </section>
 
-    <div class="section-title">Log</div>
+    <div class="section-title">日志</div>
     <section class="panel">
       <pre id="log" class="log"></pre>
     </section>
@@ -221,6 +158,14 @@
         renameBtn.textContent = '重命名';
         renameBtn.onclick = () => renameMap(name);
 
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'secondary';
+        editBtn.textContent = '美化';
+        editBtn.onclick = () => {
+          location.href = `/pages/map_beautify.html?map=${encodeURIComponent(name)}`;
+        };
+
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
         delBtn.className = 'secondary';
@@ -228,6 +173,7 @@
         delBtn.onclick = () => deleteOne(name);
 
         actions.appendChild(renameBtn);
+        actions.appendChild(editBtn);
         actions.appendChild(delBtn);
         row.appendChild(main);
         row.appendChild(actions);

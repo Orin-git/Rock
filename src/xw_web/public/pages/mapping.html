@@ -5,59 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>建图 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
-  <style>
-    .map-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-      gap: 1rem;
-      align-items: start;
-    }
-    @media (max-width: 900px) {
-      .map-layout { grid-template-columns: 1fr; }
-    }
-    #map-container {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      max-height: min(72vh, 720px);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      background: #1e2230;
-      box-shadow: var(--shadow);
-    }
-    #map-canvas, #overlay-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    #overlay-canvas { pointer-events: none; }
-    .map-meta {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin: 0.55rem 0 0;
-    }
-    .side-stack { display: flex; flex-direction: column; gap: 0.9rem; }
-    .side-stack .joystick-wrap {
-      width: min(220px, 100%);
-      height: min(220px, 70vw);
-      margin: 0.6rem auto;
-    }
-    .map-name-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.55rem;
-      align-items: center;
-    }
-    .map-name-row input { flex: 1; min-width: 160px; max-width: none; }
-  </style>
 </head>
 <body>
   <header class="top">
-    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
       <a href="/">总览</a>
       <a href="/pages/topics.html">话题</a>
@@ -66,14 +17,17 @@
       <a class="active" href="/pages/mapping.html">建图</a>
       <a href="/pages/navigation.html">导航</a>
       <a href="/pages/maps.html">地图</a>
+      <a href="/pages/map_beautify.html">美化</a>
       <a href="/pages/settings.html">设置</a>
     </nav>
-    <div id="conn" class="pill off">链路…</div>
+    <div class="top-status">
+      <div id="conn" class="pill off">链路…</div>
+    </div>
   </header>
   <main>
-    <section class="hero">
-      <div class="tag">HAND-PUSH SLAM</div>
-      <h1>手推建图</h1>
+    <section class="page-head">
+      <div class="tag">SLAM</div>
+      <h1>建图</h1>
       <p class="muted">
         Supervisor <code>mode=1</code> 启停 SLAM · Foxglove 画布叠
         <code>/map</code> + <code>/scan</code> · 随时保存写入
@@ -81,48 +35,69 @@
       </p>
     </section>
 
-    <div class="section-title">Live map</div>
-    <div class="map-layout">
-      <section class="panel" style="padding:0.85rem">
-        <div id="map-container">
-          <canvas id="map-canvas"></canvas>
-          <canvas id="overlay-canvas"></canvas>
-        </div>
+    <div class="section-title">实时地图</div>
+    <section class="panel map-stage">
+      <div id="map-container">
+        <canvas id="map-canvas"></canvas>
+        <canvas id="overlay-canvas"></canvas>
+      </div>
+      <div class="map-stage-foot">
         <p class="map-meta" id="mapStatus">画布未启动</p>
+        <p class="map-meta" id="modeHint">模式：—</p>
+      </div>
+    </section>
+
+    <section class="panel map-save-bar">
+      <div class="map-save-fields">
+        <label for="mapName">地图名</label>
+        <div class="map-name-row">
+          <input id="mapName" type="text" autocomplete="off" spellcheck="false" />
+          <button type="button" id="save">保存地图</button>
+        </div>
+      </div>
+      <p class="muted hint-sm map-save-hint">
+        默认 <code>YYYYMMDD_HHMMSS</code> · 同名将覆盖
+      </p>
+    </section>
+
+    <div class="section-title">建图方式</div>
+    <div class="map-actions">
+      <section class="panel map-action-card">
+        <h2>手推建图</h2>
+        <p class="muted hint-sm map-action-desc">遥控推动机器人扫描环境</p>
+        <div class="map-action-body">
+          <div class="btn-stack">
+            <button type="button" id="startManual">开始手推建图</button>
+            <button type="button" class="secondary" id="stop">结束建图</button>
+          </div>
+        </div>
       </section>
 
-      <div class="side-stack">
-        <section class="panel">
-          <h2>会话控制</h2>
-          <p class="muted" id="modeHint" style="margin:0 0 0.6rem;font-size:0.82rem">模式：—</p>
-          <div class="btn-row">
-            <button type="button" id="start">开始建图</button>
-            <button type="button" class="secondary" id="stop">结束</button>
+      <section class="panel map-action-card">
+        <h2>自主建图</h2>
+        <p class="muted hint-sm map-action-desc">机器人自主规划路径建图</p>
+        <div class="map-action-body">
+          <div class="btn-stack">
+            <button type="button" id="startAuto">开始自主建图</button>
+            <p class="muted hint-sm text-center mt-0" id="autoHint">功能开发中，敬请期待</p>
           </div>
-          <label for="mapName">地图名</label>
-          <div class="map-name-row">
-            <input id="mapName" type="text" autocomplete="off" spellcheck="false" />
-            <button type="button" id="save">保存地图</button>
-          </div>
-          <p class="muted" style="margin:0.55rem 0 0;font-size:0.78rem">
-            默认 <code>YYYYMMDD_HHMMSS</code> · 同名将覆盖
-          </p>
-        </section>
+        </div>
+      </section>
 
-        <section class="panel">
-          <h2>手推遥控</h2>
+      <section class="panel map-action-card">
+        <h2>手推遥控</h2>
+        <p class="muted hint-sm map-action-desc">建图过程中手动驱动</p>
+        <div class="map-action-body map-action-teleop">
           <div class="joystick-wrap" id="stick"><div class="knob" id="knob"></div></div>
-          <p class="muted" id="vel" style="font-family:var(--font-mono);text-align:center;margin:0">
-            vx=0.00 wz=0.00
-          </p>
-          <div class="btn-row" style="justify-content:center">
+          <p class="muted mono text-center mt-0" id="vel">vx=0.00 wz=0.00</p>
+          <div class="btn-stack">
             <button type="button" class="secondary" id="teleopStop">急停归零</button>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
     </div>
 
-    <div class="section-title">Log</div>
+    <div class="section-title">日志</div>
     <section class="panel">
       <pre id="log" class="log"></pre>
     </section>
@@ -192,11 +167,16 @@
       mapStatus.textContent = 'map_canvas.js 未加载';
     }
 
-    document.getElementById('start').onclick = async () => {
+    document.getElementById('startManual').onclick = async () => {
       savedOnce = false;
       if (!mapNameEl.value.trim()) mapNameEl.value = defaultMapName();
-      pushLog('>> 开始建图 setMode(1)');
+      pushLog('>> 手推建图 setMode(1)');
       await setMode(1, {});
+    };
+
+    document.getElementById('startAuto').onclick = () => {
+      pushLog('!! 自主建图尚未开放');
+      alert('自主建图功能开发中，敬请期待。');
     };
 
     document.getElementById('stop').onclick = async () => {
@@ -242,7 +222,7 @@
     let active = false;
 
     function setKnob(nx, ny) {
-      const r = 72;
+      const r = 56;
       knob.style.transform = `translate(calc(-50% + ${nx * r}px), calc(-50% + ${ny * r}px))`;
       const vx = -ny * 0.35;
       const wz = -nx * 0.8;

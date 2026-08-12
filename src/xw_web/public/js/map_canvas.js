@@ -1,7 +1,8 @@
 /**
- * Gen2 mapping canvas — Foxglove WS draw /map + /scan + robot pose.
+ * Gen2 map canvas — Foxglove WS draw /map + /scan + robot pose.
+ * Also used by navigation: click-to-goal, waypoints, static PGM preview.
  * Depends on vendor: foxglove_bundle.js, roslib_foxglove.js, ros_ws_helper.js
- * Export: window.XwMapCanvas = { start, redraw, resizeCanvases }
+ * Export: window.XwMapCanvas
  */
 (function (global) {
   'use strict';
@@ -14,6 +15,14 @@
     blurPx: 0.8,
     alpha: 0.35,
   };
+
+  /** Default sensor frames relative to base_link (from xw_gen2.urdf). */
+  const DEFAULT_SENSOR_FRAMES = [
+    { id: 'lidar', frame: 'lidar_link', label: 'LiDAR', color: '#c23048' },
+    { id: 'camera_front', frame: 'camera_front_link', label: '深度前视', color: '#22c55e' },
+    { id: 'camera_rear', frame: 'camera_rear_link', label: '后视占位', color: '#94a3b8' },
+    { id: 'ultrasonic', frame: 'ultrasonic_front_link', label: '超声占位', color: '#f59e0b' },
+  ];
 
   let mapCanvas = null;
   let overlayCanvas = null;
@@ -45,6 +54,15 @@
   let tfCleanTimer = null;
   let resizeObserver = null;
   let statusCb = null;
+  let clickCb = null;
+  let interactive = false;
+  let preferLiveMap = true;
+  let showSensorFrames = false;
+  let goalPose = null; // { x, y, yaw }
+  let waypoints = []; // [{ name, x, y, yaw? }]
+  let scanAgeMs = 0;
+  let lastScanTs = 0;
+  let clickBound = false;
 
   function setStatus(msg) {
     if (typeof statusCb === 'function') statusCb(msg);
@@ -337,37 +355,77 @@
     mapCtx.restore();
   }
 
-  function drawOverlay() {
-    if (!latestMap || !overlayCtx) return;
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+  function getViewTransform() {
+    if (!latestMap || !overlayCanvas) return null;
     const scaleX = overlayCanvas.width / latestMap.info.width;
     const scaleY = overlayCanvas.height / latestMap.info.height;
     const scale = Math.min(scaleX, scaleY);
-    const offsetX = (overlayCanvas.width - latestMap.info.width * scale) / 2;
-    const offsetY = (overlayCanvas.height - latestMap.info.height * scale) / 2;
+    return {
+      scale: scale,
+      offsetX: (overlayCanvas.width - latestMap.info.width * scale) / 2,
+      offsetY: (overlayCanvas.height - latestMap.info.height * scale) / 2,
+      origin: latestMap.info.origin,
+      mapRes: latestMap.info.resolution,
+      height: latestMap.info.height,
+      width: latestMap.info.width,
+    };
+  }
 
-    const robotTf = getRobotTf();
-    if (robotTf) {
-      const origin = latestMap.info.origin;
-      const mapRes = latestMap.info.resolution;
-      const mx = (robotTf.x - origin.position.x) / mapRes;
-      const my = (robotTf.y - origin.position.y) / mapRes;
-      const px = offsetX + mx * scale;
-      const py = offsetY + (latestMap.info.height - my) * scale;
-      overlayCtx.beginPath();
-      overlayCtx.arc(px, py, Math.max(8, scale * 2), 0, 2 * Math.PI);
-      overlayCtx.fillStyle = 'rgba(0, 150, 255, 0.8)';
-      overlayCtx.fill();
-      const arrowLen = Math.max(16, scale * 4);
-      const arrowX = px + arrowLen * Math.cos(robotTf.yaw);
-      const arrowY = py - arrowLen * Math.sin(robotTf.yaw);
-      overlayCtx.beginPath();
-      overlayCtx.moveTo(px, py);
-      overlayCtx.lineTo(arrowX, arrowY);
-      overlayCtx.strokeStyle = '#0b6e99';
-      overlayCtx.lineWidth = 3;
+  function worldToPixel(wx, wy, view) {
+    const mx = (wx - view.origin.position.x) / view.mapRes;
+    const my = (wy - view.origin.position.y) / view.mapRes;
+    return {
+      px: view.offsetX + mx * view.scale,
+      py: view.offsetY + (view.height - my) * view.scale,
+    };
+  }
+
+  function canvasToWorld(clientX, clientY) {
+    if (!latestMap || !overlayCanvas) return null;
+    const rect = overlayCanvas.getBoundingClientRect();
+    const cx = ((clientX - rect.left) / rect.width) * overlayCanvas.width;
+    const cy = ((clientY - rect.top) / rect.height) * overlayCanvas.height;
+    const view = getViewTransform();
+    if (!view || !view.scale) return null;
+    const mx = (cx - view.offsetX) / view.scale;
+    const my = view.height - (cy - view.offsetY) / view.scale;
+    return {
+      x: view.origin.position.x + mx * view.mapRes,
+      y: view.origin.position.y + my * view.mapRes,
+    };
+  }
+
+  function drawPoseMarker(view, x, y, yaw, fill, stroke, radius) {
+    const p = worldToPixel(x, y, view);
+    const r = radius || Math.max(7, view.scale * 1.8);
+    overlayCtx.beginPath();
+    overlayCtx.arc(p.px, p.py, r, 0, 2 * Math.PI);
+    overlayCtx.fillStyle = fill;
+    overlayCtx.fill();
+    if (stroke) {
+      overlayCtx.strokeStyle = stroke;
+      overlayCtx.lineWidth = 2;
       overlayCtx.stroke();
     }
+    if (typeof yaw === 'number' && !Number.isNaN(yaw)) {
+      const arrowLen = Math.max(14, view.scale * 3.5);
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(p.px, p.py);
+      overlayCtx.lineTo(p.px + arrowLen * Math.cos(yaw), p.py - arrowLen * Math.sin(yaw));
+      overlayCtx.strokeStyle = stroke || fill;
+      overlayCtx.lineWidth = 2.5;
+      overlayCtx.stroke();
+    }
+    return p;
+  }
+
+  function drawOverlay() {
+    if (!latestMap || !overlayCtx) return;
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    const view = getViewTransform();
+    if (!view) return;
+
+    const robotTf = getRobotTf();
 
     if (latestScan) {
       let tf = null;
@@ -376,30 +434,95 @@
         tf = getTransform('map', fid);
       }
       if (!tf) tf = robotTf;
-      if (!tf) return;
-      const origin = latestMap.info.origin;
-      const mapRes = latestMap.info.resolution;
-      const robotX = tf.x;
-      const robotY = tf.y;
-      const scanYaw = tf.yaw + LASER_DISPLAY_YAW_OFFSET;
-      overlayCtx.fillStyle = '#c23048';
-      const ranges = latestScan.ranges || [];
-      for (let i = 0; i < ranges.length; i++) {
-        const range = ranges[i];
-        if (range < latestScan.range_min || range > latestScan.range_max) continue;
-        const angle = latestScan.angle_min + i * latestScan.angle_increment;
-        const lx = range * Math.cos(angle);
-        const ly = range * Math.sin(angle);
-        const wx = robotX + Math.cos(scanYaw) * lx - Math.sin(scanYaw) * ly;
-        const wy = robotY + Math.sin(scanYaw) * lx + Math.cos(scanYaw) * ly;
-        const mx = (wx - origin.position.x) / mapRes;
-        const my = (wy - origin.position.y) / mapRes;
-        const px = offsetX + mx * scale;
-        const py = offsetY + (latestMap.info.height - my) * scale;
-        overlayCtx.beginPath();
-        overlayCtx.arc(px, py, Math.max(2.5, scale * 0.9), 0, 2 * Math.PI);
-        overlayCtx.fill();
+      if (tf) {
+        const robotX = tf.x;
+        const robotY = tf.y;
+        const scanYaw = tf.yaw + LASER_DISPLAY_YAW_OFFSET;
+        overlayCtx.fillStyle = '#c23048';
+        const ranges = latestScan.ranges || [];
+        for (let i = 0; i < ranges.length; i++) {
+          const range = ranges[i];
+          if (range < latestScan.range_min || range > latestScan.range_max) continue;
+          const angle = latestScan.angle_min + i * latestScan.angle_increment;
+          const lx = range * Math.cos(angle);
+          const ly = range * Math.sin(angle);
+          const wx = robotX + Math.cos(scanYaw) * lx - Math.sin(scanYaw) * ly;
+          const wy = robotY + Math.sin(scanYaw) * lx + Math.cos(scanYaw) * ly;
+          const p = worldToPixel(wx, wy, view);
+          overlayCtx.beginPath();
+          overlayCtx.arc(p.px, p.py, Math.max(2.5, view.scale * 0.9), 0, 2 * Math.PI);
+          overlayCtx.fill();
+        }
       }
+    }
+
+    if (Array.isArray(waypoints)) {
+      waypoints.forEach((wp, idx) => {
+        if (!wp || typeof wp.x !== 'number') return;
+        const p = drawPoseMarker(
+          view,
+          wp.x,
+          wp.y,
+          typeof wp.yaw === 'number' ? wp.yaw : undefined,
+          'rgba(124, 58, 237, 0.85)',
+          '#5b21b6',
+          Math.max(6, view.scale * 1.5)
+        );
+        overlayCtx.fillStyle = '#fff';
+        overlayCtx.font = 'bold 11px sans-serif';
+        overlayCtx.textAlign = 'center';
+        overlayCtx.textBaseline = 'middle';
+        overlayCtx.fillText(String(idx + 1), p.px, p.py);
+      });
+    }
+
+    if (goalPose && typeof goalPose.x === 'number') {
+      drawPoseMarker(
+        view,
+        goalPose.x,
+        goalPose.y,
+        typeof goalPose.yaw === 'number' ? goalPose.yaw : 0,
+        'rgba(34, 197, 94, 0.9)',
+        '#15803d',
+        Math.max(8, view.scale * 2)
+      );
+    }
+
+    if (robotTf) {
+      drawPoseMarker(
+        view,
+        robotTf.x,
+        robotTf.y,
+        robotTf.yaw,
+        'rgba(0, 150, 255, 0.85)',
+        '#0b6e99',
+        Math.max(8, view.scale * 2)
+      );
+    }
+
+    if (showSensorFrames && robotTf) {
+      DEFAULT_SENSOR_FRAMES.forEach((sf) => {
+        let tf = getTransform('map', sf.frame);
+        if (!tf) {
+          // Fall back: base_link relative offsets from URDF if TF missing
+          const rel = getTransform('base_link', sf.frame);
+          if (rel && robotTf) {
+            const cos = Math.cos(robotTf.yaw);
+            const sin = Math.sin(robotTf.yaw);
+            tf = {
+              x: robotTf.x + cos * rel.x - sin * rel.y,
+              y: robotTf.y + sin * rel.x + cos * rel.y,
+              yaw: robotTf.yaw + rel.yaw,
+            };
+          }
+        }
+        if (!tf) return;
+        const p = worldToPixel(tf.x, tf.y, view);
+        overlayCtx.beginPath();
+        overlayCtx.arc(p.px, p.py, Math.max(3, view.scale * 0.8), 0, 2 * Math.PI);
+        overlayCtx.fillStyle = sf.color;
+        overlayCtx.fill();
+      });
     }
   }
 
@@ -409,20 +532,153 @@
     drawOverlay();
   }
 
+  function applyMapMessage(message, statusText) {
+    const normalized = normalizeOccupancyGridMessage(message);
+    if (!normalized || !normalized.info || !normalized.info.width || !normalized.info.height) {
+      return false;
+    }
+    latestMap = normalized;
+    mapBitmapKey = null;
+    buildMapBitmap(normalized);
+    redraw();
+    if (statusText) setStatus(statusText);
+    return true;
+  }
+
   function onMapMessage(message) {
+    if (!preferLiveMap) return;
     try {
-      const normalized = normalizeOccupancyGridMessage(message);
-      if (!normalized || !normalized.info || !normalized.info.width || !normalized.info.height) {
-        return;
-      }
-      latestMap = normalized;
-      buildMapBitmap(normalized);
-      redraw();
-      setStatus('地图已更新');
+      if (!applyMapMessage(message, '地图已更新（/map）')) return;
     } catch (err) {
       console.error('[XwMapCanvas] /map handler error', err);
       setStatus('地图解析失败');
     }
+  }
+
+  function pgmByteToOccupancy(v) {
+    if (v >= 250) return 0;
+    if (v <= 50) return 100;
+    if (Math.abs(v - 205) <= 25) return -1;
+    return Math.max(0, Math.min(100, Math.round(((255 - v) * 100) / 255)));
+  }
+
+  function b64ToBytes(b64) {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  /** Load saved map from /api/map op=5 payload (pgm_b64). */
+  function loadStaticMap(payload) {
+    if (!payload || !payload.pgm_b64 || !payload.width || !payload.height) {
+      setStatus('静态地图数据无效');
+      return false;
+    }
+    const width = Number(payload.width) | 0;
+    const height = Number(payload.height) | 0;
+    const bytes = b64ToBytes(payload.pgm_b64);
+    if (bytes.length !== width * height) {
+      setStatus(`静态地图像素不匹配 ${bytes.length}≠${width * height}`);
+      return false;
+    }
+    const data = new Int8Array(width * height);
+    for (let i = 0; i < bytes.length; i++) {
+      data[i] = pgmByteToOccupancy(bytes[i]);
+    }
+    preferLiveMap = false;
+    const msg = {
+      header: { stamp: { sec: 0, nanosec: 0 }, frame_id: 'map' },
+      info: {
+        resolution: Number(payload.resolution) || 0.05,
+        width: width,
+        height: height,
+        origin: {
+          position: {
+            x: Number(payload.origin_x) || 0,
+            y: Number(payload.origin_y) || 0,
+            z: 0,
+          },
+          orientation: { x: 0, y: 0, z: 0, w: 1 },
+        },
+      },
+      data: data,
+    };
+    return applyMapMessage(msg, `静态地图已加载 · ${width}×${height}`);
+  }
+
+  function enableLiveMap() {
+    preferLiveMap = true;
+    setStatus('等待 /map 实时话题…');
+  }
+
+  function onOverlayClick(ev) {
+    if (!interactive || typeof clickCb !== 'function') return;
+    const world = canvasToWorld(ev.clientX, ev.clientY);
+    if (!world) return;
+    clickCb(world, ev);
+  }
+
+  function setInteractive(on, onClick) {
+    interactive = !!on;
+    clickCb = typeof onClick === 'function' ? onClick : clickCb;
+    if (overlayCanvas) {
+      overlayCanvas.style.pointerEvents = interactive ? 'auto' : 'none';
+      overlayCanvas.style.cursor = interactive ? 'crosshair' : '';
+      if (interactive && !clickBound) {
+        overlayCanvas.addEventListener('click', onOverlayClick);
+        clickBound = true;
+      }
+    }
+    if (containerEl) {
+      containerEl.classList.toggle('nav-interactive', interactive);
+    }
+  }
+
+  function setGoal(pose) {
+    if (!pose || typeof pose.x !== 'number') {
+      goalPose = null;
+    } else {
+      goalPose = {
+        x: Number(pose.x),
+        y: Number(pose.y),
+        yaw: typeof pose.yaw === 'number' ? pose.yaw : 0,
+      };
+    }
+    drawOverlay();
+  }
+
+  function clearGoal() {
+    goalPose = null;
+    drawOverlay();
+  }
+
+  function setWaypoints(list) {
+    waypoints = Array.isArray(list) ? list : [];
+    drawOverlay();
+  }
+
+  function setShowSensorFrames(on) {
+    showSensorFrames = !!on;
+    drawOverlay();
+  }
+
+  function getScanStatus() {
+    const age = lastScanTs ? Date.now() - lastScanTs : null;
+    return {
+      hasScan: !!latestScan,
+      ageMs: age,
+      live: age != null && age < 2000,
+      ranges: latestScan && latestScan.ranges ? latestScan.ranges.length : 0,
+    };
+  }
+
+  function getRobotPose() {
+    return getRobotTf();
+  }
+
+  function hasMap() {
+    return !!latestMap;
   }
 
   function subscribeAll() {
@@ -443,6 +699,7 @@
     scanTopic.subscribe((msg) => {
       if (!msg || !msg.header) return;
       latestScan = msg;
+      lastScanTs = Date.now();
     });
 
     tfTopic = new ROSLIB.Topic({
@@ -466,6 +723,11 @@
     const overlayId = options.overlayCanvasId || 'overlay-canvas';
     const containerId = options.containerId || 'map-container';
     statusCb = options.onStatus || null;
+    preferLiveMap = options.preferLiveMap !== false;
+    showSensorFrames = !!options.showSensorFrames;
+    if (typeof options.onMapClick === 'function') {
+      clickCb = options.onMapClick;
+    }
 
     mapCanvas = document.getElementById(mapId);
     overlayCanvas = document.getElementById(overlayId);
@@ -477,6 +739,10 @@
     mapCtx = mapCanvas.getContext('2d');
     overlayCtx = overlayCanvas.getContext('2d');
     resizeCanvases();
+
+    if (options.interactive) {
+      setInteractive(true, clickCb);
+    }
 
     if (typeof ResizeObserver !== 'undefined') {
       if (resizeObserver) resizeObserver.disconnect();
@@ -501,9 +767,10 @@
         ? getFoxgloveWsUrl()
         : `ws://${location.hostname || '127.0.0.1'}:8765`;
 
+    const connName = options.connectionName || 'xw-map-canvas';
     ros = createManagedRosConnection({
       url: url,
-      name: 'xw-map-canvas',
+      name: connName,
       onConnection: () => {
         setStatus('Foxglove 已连接 · 订阅 /map /scan /tf');
         subscribeAll();
@@ -515,6 +782,7 @@
     if (!overlayTimer) {
       overlayTimer = setInterval(() => {
         if (latestMap) drawOverlay();
+        scanAgeMs = lastScanTs ? Date.now() - lastScanTs : 0;
       }, 200);
     }
 
@@ -536,6 +804,18 @@
     start: start,
     redraw: redraw,
     resizeCanvases: resizeCanvases,
+    loadStaticMap: loadStaticMap,
+    enableLiveMap: enableLiveMap,
+    setInteractive: setInteractive,
+    setGoal: setGoal,
+    clearGoal: clearGoal,
+    setWaypoints: setWaypoints,
+    setShowSensorFrames: setShowSensorFrames,
+    getScanStatus: getScanStatus,
+    getRobotPose: getRobotPose,
+    hasMap: hasMap,
+    canvasToWorld: canvasToWorld,
+    DEFAULT_SENSOR_FRAMES: DEFAULT_SENSOR_FRAMES,
     LASER_DISPLAY_YAW_OFFSET: LASER_DISPLAY_YAW_OFFSET,
   };
 })(window);

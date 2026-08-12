@@ -8,7 +8,7 @@
 | 层 | 包 | 职责 |
 |----|-----|------|
 | 契约 | `xw_interfaces` | msg/srv 唯一源 |
-| 驱动 | `xw_chassis`, `xw_sensors`, `xw_description` | 底盘 / 传感器 / TF |
+| 驱动 | `xw_chassis`, `xw_sensors`, `xw_description`, `third_party/ascamera` | 底盘 / 传感器 / TF / 深度相机 |
 | 安全运动 | `xw_cmd_arbiter`, `xw_safety_gate`, `xw_motion` | 仲裁 → 安全门 → 点动 |
 | 应用 | `xw_supervisor` + `*_session` + `xw_map_manager` | 模式机与会话 |
 | 感知 | `xw_perception` | 人体轨迹 / 跌倒（stub→算法） |
@@ -33,12 +33,14 @@
 ```
 /xw/cmd/teleop | motion | nav | follow | recharge
         → xw_cmd_arbiter
-        → xw_safety_gate   (/scan + ultrasonic [+ depth later])
+        → xw_safety_gate   (/scan + ultrasonic + depth ROI)
         → /cmd_vel
         → xw_chassis
 ```
 
 优先级：`estop > teleop > motion > nav > follow > recharge`
+
+深度相机（前视 HP60C）：驱动随 `robot.launch.py` **常开**；Web 彩色预览仅在打开 `/pages/camera.html` 时订 compressed 推流。
 
 ## 4. 模式 FSM（supervisor）
 
@@ -93,11 +95,30 @@ ros2 launch xw_bringup robot.launch.py
 
 ## 7. Phase 路线
 
-- **P0（当前）**：mock 栈 + FSM + Web SPA  
+- **P0**：mock 栈 + FSM + Web SPA  
 - **P1**：真底盘 / 雷达 / 超声  
-- **P2**：手推建图已落地（`slam_toolbox` + `/map` 画布 + `{map}_pointList/charger`）；Nav2 仍待接入  
-- **P3**：双深度相机 + 跟随/跌倒算法  
+- **P2**：手推建图已落地；**导航 Web 壳 + `/xw/goal_pose` 链路已通**，Nav2/AMCL 仍待接入  
+- **P3（部分）**：前视深度驱动 + `/camera/front/...` + 安全门深度 ROI；跟随/跌倒算法仍 stub  
 - **P4**：回充 / 压测 / 可选 Gateway  
+
+### 深度相机要点
+
+- 包：`third_party/ascamera` + `xw_sensors/launch/depth_camera.launch.py`  
+- `use_depth_cam:=true` 常开驱动；无相机用 `false`  
+- 预览：Foxglove Desktop Image 面板订 `/camera/front/color/image_raw/compressed`（网页相机预览已关闭）  
+- 深度：`/camera/front/depth/image_raw`（安全门 ROI）；**点云默认关**  
+- 点云调试：设置页开关，或 `enable_pointcloud:=true` / `USE_POINTCLOUD=true` → `/camera/front/depth/points`（约 3 FPS，有订阅才转发；偏好写入 `config/enable_pointcloud`）  
+- 服务：`/xw/camera/set_pointcloud`（SetBool）；状态：`/xw/camera/pointcloud_enabled`  
+- 导航当前用 `/scan`，不会自动开点云  
+
+### 导航 Web 要点（壳 + 链路）
+
+- 页：`/pages/navigation.html`（对照一代控制台布局）  
+- 画布：复用 `map_canvas.js` → Foxglove `/map` + `/scan` + TF；可 `mapManage(5)` 静态预览  
+- 会话：`set_mode(2, {map_name})` → `/xw/nav/enable`；结束 `set_mode(0)`  
+- 目标：`POST /api/goal` → 发布 `/xw/goal_pose` → `xw_nav_session`（现 stub 回 TaskProgress/Result）  
+- 传感器面板：`GET /api/sensors`（激光/深度在线探测；超声/IMU/底盘/架位为 URDF 占位，后续只填契约）  
+- **未做**：真实 Nav2、AMCL 初始位姿、多点巡航执行、自动回充  
 
 ### 手推建图要点
 
@@ -105,7 +126,8 @@ ros2 launch xw_bringup robot.launch.py
 - 保存：`/xw/map/manage` op=1 → `map_saver_cli` → upsert `waypoints/{name}_pointList.yaml` 的 `charger`（yaw = tf_yaw+π）  
 - 未保存停止 → `autosave_YYYYMMDD_HHMMSS`  
 - Web：`/pages/mapping.html`（Foxglove `/map`+`/scan`），`/pages/maps.html`（批量 CRUD，级联 pointList）  
-- HTTP：`POST /api/map`、`POST /api/waypoint`  
+- 导航 Web：`/pages/navigation.html` · `POST /api/goal` · `GET /api/sensors`  
+- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`GET /api/sensors`  
 
 ## 8. 验收（容器内）
 

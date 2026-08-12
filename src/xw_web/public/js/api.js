@@ -245,3 +245,53 @@ export async function fetchFoxgloveStatus() {
     return { ok: false, up: false, port: 8765, error: 'bridge offline' };
   }
 }
+
+/** Depth pointcloud debug switch (default off). */
+export async function fetchPointcloudStatus() {
+  const r = await fetch(`${apiBase()}/api/pointcloud`, { cache: 'no-store' });
+  if (!r.ok) throw new Error(String(r.status));
+  return await r.json();
+}
+
+export async function setPointcloudEnabled(enabled) {
+  const r = await fetch(`${apiBase()}/api/pointcloud`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !!enabled }),
+  });
+  const j = await r.json();
+  emitTask(j.message || `pointcloud ${enabled ? 'on' : 'off'}`);
+  return j;
+}
+
+/** Publish nav goal → /api/goal → /xw/goal_pose */
+export async function publishGoal(x, y, yaw = 0, frame_id = 'map') {
+  try {
+    const r = await fetch(`${apiBase()}/api/goal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x, y, yaw, frame_id }),
+    });
+    const j = await r.json();
+    if (j.ok) {
+      emitTask(`goal → (${Number(x).toFixed(2)}, ${Number(y).toFixed(2)}) yaw=${Number(yaw).toFixed(2)}`);
+    } else {
+      emitTask(`!! goal failed: ${j.message || ''}`);
+    }
+    return j;
+  } catch (_) {
+    emitTask('!! goal request failed');
+    return { ok: false };
+  }
+}
+
+/** Sensor hub presence (lidar / depth / placeholders). */
+export async function fetchSensorHub() {
+  try {
+    const r = await fetch(`${apiBase()}/api/sensors`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    return await r.json();
+  } catch (_) {
+    return { ok: false, sensors: {}, layout: [] };
+  }
+}

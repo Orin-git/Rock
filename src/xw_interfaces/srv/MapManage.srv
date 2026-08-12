@@ -1,4 +1,6 @@
-# 1 save 2 list 3 rename 4 delete 5 get 6 update 7 get_keepout 8 update_keepout
+# 1 save 2 list 3 rename 4 delete
+# 5 get_map (PGM+meta JSON in data_json)  6 update_map (pgm_b64 JSON; new_name=另存为)
+# 7 get_keepout 8 update_keepout
 uint8 operation
 string map_name
 string new_name

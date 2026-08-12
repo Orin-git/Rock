@@ -8,7 +8,7 @@
 </head>
 <body class="viz-body">
   <header class="top">
-    <div class="brand">XIAOWEI<span>GEN-2 / ROCK 5T</span></div>
+    <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
       <a href="/">总览</a>
       <a href="/pages/topics.html">话题</a>
@@ -17,13 +17,16 @@
       <a href="/pages/mapping.html">建图</a>
       <a href="/pages/navigation.html">导航</a>
       <a href="/pages/maps.html">地图</a>
+      <a href="/pages/map_beautify.html">美化</a>
       <a href="/pages/settings.html">设置</a>
     </nav>
-    <div id="conn" class="pill off">链路…</div>
+    <div class="top-status">
+      <div id="conn" class="pill off">链路…</div>
+    </div>
   </header>
   <main class="viz-main">
-    <section class="hero">
-      <div class="tag">FOXGLOVE · RViz-CLASS</div>
+    <section class="page-head">
+      <div class="tag">Foxglove</div>
       <h1>三维可视化</h1>
       <p class="muted">
         机器人上的 <code>foxglove_bridge</code>（8765）只负责桥数据。
@@ -32,7 +35,7 @@
       </p>
     </section>
 
-    <div class="section-title">Bridge</div>
+    <div class="section-title">数据桥</div>
     <section class="panel">
       <div class="viz-status-row">
         <div>
@@ -49,7 +52,7 @@
       <input id="wsUrl" type="text" readonly />
     </section>
 
-    <div class="section-title">How to open</div>
+    <div class="section-title">打开方式</div>
     <section class="panel">
       <h2>一键打开（推荐）</h2>
       <p class="muted" style="margin-top:0;font-size:0.82rem">
@@ -72,6 +75,7 @@
         <div class="viz-step"><b>2</b> 点「新标签打开 Studio」（会带上本机 <code>ws://IP:8765</code>）</div>
         <div class="viz-step"><b>3</b> 若已登录，会直接进你的布局；未登录则先登录一次</div>
         <div class="viz-step"><b>4</b> 在 3D 面板加 LaserScan → 话题 <code>/scan</code>，并打开 TF</div>
+        <div class="viz-step"><b>5</b> 前视相机：加 <b>Image</b> 面板 → <code>/camera/front/color/image_raw/compressed</code></div>
       </div>
       <p class="muted" style="font-size:0.78rem;margin:0.75rem 0 0">
         你之前能用的链接格式即：
@@ -81,7 +85,7 @@
       </p>
     </section>
 
-    <div class="section-title">Desktop</div>
+    <div class="section-title">桌面端</div>
     <section class="panel">
       <h2>桌面端（更稳）</h2>
       <ol class="viz-ol">
@@ -89,6 +93,8 @@
         <li>Open connection → <b>Foxglove WebSocket</b></li>
         <li>填入上面的 WS 地址（如 <code id="wsHint">ws://192.168.x.x:8765</code>）</li>
         <li>Open → 添加 3D / LaserScan / TF 面板</li>
+        <li>看相机：添加 <b>Image</b> → 话题 <code>/camera/front/color/image_raw/compressed</code></li>
+        <li>看点云：先在 <a href="/pages/settings.html">设置</a> 打开点云开关，再加 <b>3D</b> → Point Cloud → <code>/camera/front/depth/points</code></li>
       </ol>
       <p class="muted" style="font-size:0.78rem;margin:0">
         桌面端无 iframe 限制，也更少碰到 HTTPS 页面连 <code>ws://</code> 的混合内容问题。

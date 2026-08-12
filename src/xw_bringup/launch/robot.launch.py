@@ -9,8 +9,15 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    LogInfo,
+    TimerAction,
+)
 from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -21,6 +28,8 @@ def generate_launch_description() -> LaunchDescription:
     use_sim_lidar = LaunchConfiguration('use_sim_lidar')
     use_web = LaunchConfiguration('use_web')
     use_foxglove = LaunchConfiguration('use_foxglove')
+    use_depth_cam = LaunchConfiguration('use_depth_cam')
+    enable_pointcloud = LaunchConfiguration('enable_pointcloud')
     profile = LaunchConfiguration('profile')
     lidar_port = LaunchConfiguration('lidar_port')
     lidar_baudrate = LaunchConfiguration('lidar_baudrate')
@@ -36,11 +45,17 @@ def generate_launch_description() -> LaunchDescription:
     web_public = os.path.join(web_share, 'public')
     maps_dir = os.environ.get('XW_MAPS', '/ros2_ws/maps')
 
+    safety_yaml = os.path.join(
+        get_package_share_directory('xw_safety_gate'), 'config', 'safety_gate.yaml'
+    )
+
     nodes = [
         LogInfo(msg=[
             '[xw_bringup] profile=', profile,
             ' use_sim_hw=', use_sim,
             ' use_sim_lidar=', use_sim_lidar,
+            ' use_depth_cam=', use_depth_cam,
+            ' enable_pointcloud=', enable_pointcloud,
             f' lidar_delay={lidar_delay}s',
         ]),
         Node(
@@ -65,7 +80,16 @@ def generate_launch_description() -> LaunchDescription:
             output='screen',
         ),
         Node(package='xw_cmd_arbiter', executable='cmd_arbiter_node', name='xw_cmd_arbiter', output='screen'),
-        Node(package='xw_safety_gate', executable='safety_gate_node', name='xw_safety_gate', output='screen'),
+        Node(
+            package='xw_safety_gate',
+            executable='safety_gate_node',
+            name='xw_safety_gate',
+            parameters=[
+                safety_yaml,
+                {'use_depth': ParameterValue(use_depth_cam, value_type=bool)},
+            ],
+            output='screen',
+        ),
         Node(package='xw_motion', executable='motion_node', name='xw_motion', output='screen'),
         Node(
             package='xw_map_manager',
@@ -109,6 +133,20 @@ def generate_launch_description() -> LaunchDescription:
         ),
     ]
 
+    depth_cam = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('xw_sensors'),
+                'launch',
+                'depth_camera.launch.py',
+            )
+        ),
+        launch_arguments={
+            'enable_pointcloud': enable_pointcloud,
+        }.items(),
+        condition=IfCondition(use_depth_cam),
+    )
+
     foxglove = ExecuteProcess(
         cmd=[
             'bash', '-lc',
@@ -117,7 +155,9 @@ def generate_launch_description() -> LaunchDescription:
             '-p port:=8765 '
             '-p address:=0.0.0.0 '
             '-p topic_whitelist:=["^/tf$","^/tf_static$","^/scan$","^/odom$","^/cmd_vel$",'
-            '"^/map$","^/xw/.*","^/safety_status$","^/emergency_stop$"] '
+            '"^/map$","^/xw/.*","^/safety_status$","^/emergency_stop$",'
+            '"^/camera/front/color/image_raw/compressed$","^/camera/front/.*/camera_info$",'
+            '"^/camera/front/depth/points$"] '
             '-p service_whitelist:=["^/xw/.*"] '
             '-p client_topic_whitelist:=["^/xw/cmd/teleop$","^/xw/goal_pose$","^/initialpose$"] '
             '-p num_threads:=2; '
@@ -159,12 +199,17 @@ def generate_launch_description() -> LaunchDescription:
                               description='Simulate chassis odometry (independent of lidar)'),
         DeclareLaunchArgument('use_sim_lidar', default_value='false',
                               description='If true, stub /scan; if false, delayed rplidar_ros'),
+        DeclareLaunchArgument('use_depth_cam', default_value='true',
+                              description='Start Angstrong HP60C depth camera + /camera/front bridge'),
+        DeclareLaunchArgument('enable_pointcloud', default_value='false',
+                              description='Relay /camera/front/depth/points for Foxglove debug (CPU heavy)'),
         DeclareLaunchArgument('lidar_port', default_value='/dev/radar'),
         DeclareLaunchArgument('lidar_baudrate', default_value='1000000'),
         DeclareLaunchArgument('use_web', default_value='true'),
         DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('profile', default_value='normal'),
         *nodes,
+        depth_cam,
         foxglove,
         delayed_lidar,
     ])

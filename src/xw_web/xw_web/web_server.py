@@ -14,8 +14,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
+import math
+
 import rclpy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped, Twist
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import (
@@ -24,10 +26,59 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
+from std_msgs.msg import Bool
+from std_srvs.srv import SetBool
 from rosidl_runtime_py.utilities import get_message
 
 from xw_interfaces.msg import RobotState, TaskProgress, TaskResult
 from xw_interfaces.srv import MapManage, SetMode, WaypointManage
+
+# URDF xw_gen2.urdf — relative to base_link (fill sensors later without UI rewrite)
+_SENSOR_LAYOUT = [
+    {'id': 'lidar', 'frame': 'lidar_link', 'xyz': [0.0, 0.0, 0.22], 'status': 'live', 'label': '激光雷达'},
+    {
+        'id': 'camera_front',
+        'frame': 'camera_front_link',
+        'xyz': [0.18, 0.0, 0.25],
+        'status': 'live',
+        'label': '前视深度相机',
+    },
+    {
+        'id': 'camera_rear',
+        'frame': 'camera_rear_link',
+        'xyz': [-0.18, 0.0, 0.25],
+        'status': 'placeholder',
+        'label': '后视相机（占位）',
+    },
+    {
+        'id': 'ultrasonic',
+        'frame': 'ultrasonic_front_link',
+        'xyz': [0.22, 0.0, 0.08],
+        'status': 'placeholder',
+        'label': '超声波（占位）',
+    },
+    {
+        'id': 'imu',
+        'frame': 'imu_link',
+        'xyz': [0.0, 0.0, 0.12],
+        'status': 'placeholder',
+        'label': 'IMU（占位）',
+    },
+    {
+        'id': 'chassis',
+        'frame': 'base_link',
+        'xyz': [0.0, 0.0, 0.0],
+        'status': 'partial',
+        'label': '底盘 / odom',
+    },
+]
+
+_LATCHED_BOOL_QOS = QoSProfile(
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+    reliability=ReliabilityPolicy.RELIABLE,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+)
 
 # Heavy / binary message types: only expose metadata to avoid CPU spikes.
 _HEAVY_TYPES = frozenset(
@@ -75,6 +126,12 @@ _TOPIC_HINTS: Dict[str, str] = {
     '/xw/perception/fall': '跌倒感知状态',
     '/xw/fall/status': '跌倒会话状态',
     '/xw/motion/status': '点动执行状态',
+    '/camera/front/color/image_raw': '前视彩色图（raw，算法用，不进 Foxglove）',
+    '/camera/front/color/image_raw/compressed': '前视彩色预览（JPEG，Foxglove Desktop 看）',
+    '/camera/front/color/camera_info': '前视彩色内参',
+    '/camera/front/depth/image_raw': '前视深度图（本机算法/安全门）',
+    '/camera/front/depth/camera_info': '前视深度内参',
+    '/camera/front/depth/points': '前视点云（调试开关 enable_pointcloud，默认关）',
     '/map': '占用栅格地图',
     '/tf': '动态坐标变换',
     '/tf_static': '静态坐标变换',
@@ -98,6 +155,8 @@ _NODE_HINTS: Dict[str, str] = {
     'xw_fall_session': '跌倒巡视会话',
     'xw_perception': '感知（人体/跌倒）',
     'xw_sensors': '传感器桩/桥接',
+    'xw_depth_topic_bridge': '深度相机话题适配（/camera/front）',
+    'camera_publisher': 'Angstrong 深度相机驱动',
     'xw_health': '话题健康监测',
     'robot_state_publisher': '根据 URDF 发布 TF',
 }
@@ -248,13 +307,60 @@ class BridgeNode(Node):
         self.create_subscription(TaskProgress, '/xw/task/progress', self._on_progress, 10)
         self.create_subscription(TaskResult, '/xw/task/result', self._on_result, 10)
         self._teleop_pub = self.create_publisher(Twist, '/xw/cmd/teleop', 10)
+        self._goal_pub = self.create_publisher(PoseStamped, '/xw/goal_pose', 10)
         self._set_mode = self.create_client(SetMode, '/xw/supervisor/set_mode')
         self._map_mgr = self.create_client(MapManage, '/xw/map/manage')
         self._wp_mgr = self.create_client(WaypointManage, '/xw/map/waypoint')
-        # Reclaim idle watchers without a UI peek.
+        self._set_pointcloud = self.create_client(SetBool, '/xw/camera/set_pointcloud')
+        self._pointcloud_enabled = False
+        self.create_subscription(
+            Bool,
+            '/xw/camera/pointcloud_enabled',
+            self._on_pointcloud_enabled,
+            _LATCHED_BOOL_QOS,
+        )
         self.create_timer(5.0, self._watch_housekeep)
         domain = os.environ.get('ROS_DOMAIN_ID', '?')
         self.get_logger().info(f'web ROS bridge ready (DOMAIN={domain})')
+
+    def _on_pointcloud_enabled(self, msg: Bool) -> None:
+        with self._lock:
+            self._pointcloud_enabled = bool(msg.data)
+
+    def pointcloud_status(self) -> Dict[str, Any]:
+        with self._lock:
+            enabled = bool(self._pointcloud_enabled)
+        ready = self._set_pointcloud.service_is_ready()
+        return {
+            'ok': True,
+            'enabled': enabled,
+            'service_ready': ready,
+            'topic': '/camera/front/depth/points',
+            'hint': 'Foxglove 3D → Point Cloud；默认关，仅调试打开',
+        }
+
+    def set_pointcloud(self, enabled: bool) -> Dict[str, Any]:
+        if not self._set_pointcloud.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'set_pointcloud service unavailable (depth bridge down?)'}
+        req = SetBool.Request()
+        req.data = bool(enabled)
+        fut = self._set_pointcloud.call_async(req)
+        for _ in range(60):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'set_pointcloud timeout'}
+        res = fut.result()
+        with self._lock:
+            self._pointcloud_enabled = bool(enabled) if res.success else self._pointcloud_enabled
+        self._push_task(f'[pointcloud] {res.message}')
+        return {
+            'ok': bool(res.success),
+            'enabled': bool(enabled) if res.success else self._pointcloud_enabled,
+            'message': res.message,
+            'topic': '/camera/front/depth/points',
+        }
 
     def _push_task(self, line: str) -> None:
         with self._lock:
@@ -338,6 +444,112 @@ class BridgeNode(Node):
         self._teleop_pub.publish(t)
         return {'ok': True}
 
+    def publish_goal(
+        self,
+        x: float,
+        y: float,
+        yaw: float = 0.0,
+        frame_id: str = 'map',
+    ) -> Dict[str, Any]:
+        """Publish navigation goal → /xw/goal_pose (consumed by xw_nav_session)."""
+        msg = PoseStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = frame_id or 'map'
+        msg.pose.position.x = float(x)
+        msg.pose.position.y = float(y)
+        msg.pose.position.z = 0.0
+        half = float(yaw) * 0.5
+        msg.pose.orientation.z = math.sin(half)
+        msg.pose.orientation.w = math.cos(half)
+        self._goal_pub.publish(msg)
+        self._push_task(
+            f'[goal] frame={msg.header.frame_id} x={x:.3f} y={y:.3f} yaw={yaw:.3f}'
+        )
+        return {
+            'ok': True,
+            'topic': '/xw/goal_pose',
+            'x': float(x),
+            'y': float(y),
+            'yaw': float(yaw),
+            'frame_id': msg.header.frame_id,
+        }
+
+    def sensor_hub_status(self) -> Dict[str, Any]:
+        """Topic presence for nav sensor panel (live + placeholders)."""
+        try:
+            pairs = self.get_topic_names_and_types()
+        except Exception as exc:  # noqa: BLE001
+            return {'ok': False, 'message': str(exc), 'sensors': {}, 'layout': _SENSOR_LAYOUT}
+        names = {str(n) for n, _ in pairs}
+
+        def has(*topics: str) -> bool:
+            return any(t in names for t in topics)
+
+        sensors = {
+            'lidar': {
+                'id': 'lidar',
+                'label': '激光雷达',
+                'status': 'live' if has('/scan', 'scan') else 'missing',
+                'topics': ['/scan'],
+                'present': has('/scan', 'scan'),
+            },
+            'depth_camera': {
+                'id': 'depth_camera',
+                'label': '前视深度相机',
+                'status': 'live'
+                if has(
+                    '/camera/front/color/image_raw/compressed',
+                    '/camera/front/depth/image_raw',
+                )
+                else 'missing',
+                'topics': [
+                    '/camera/front/color/image_raw/compressed',
+                    '/camera/front/depth/image_raw',
+                ],
+                'present': has(
+                    '/camera/front/color/image_raw/compressed',
+                    '/camera/front/depth/image_raw',
+                ),
+                'pointcloud_enabled': bool(self._pointcloud_enabled),
+                'preview': '/camera/front/color/image_raw/compressed',
+            },
+            'ultrasonic': {
+                'id': 'ultrasonic',
+                'label': '超声波',
+                'status': 'placeholder',
+                'topics': ['/ultrasonic_array'],
+                'present': has('/ultrasonic_array'),
+                'hint': '后续接入测距阵列',
+            },
+            'imu': {
+                'id': 'imu',
+                'label': 'IMU',
+                'status': 'placeholder',
+                'topics': ['/imu/data', '/imu'],
+                'present': has('/imu/data', '/imu'),
+                'hint': '后续接入姿态融合',
+            },
+            'chassis': {
+                'id': 'chassis',
+                'label': '底盘',
+                'status': 'live' if has('/odom', 'odom', '/cmd_vel') else 'partial',
+                'topics': ['/odom', '/cmd_vel', '/xw/cmd/teleop'],
+                'present': has('/odom', 'odom') or has('/cmd_vel'),
+                'hint': '速度经仲裁 → 安全门 → /cmd_vel',
+            },
+        }
+        return {
+            'ok': True,
+            'sensors': sensors,
+            'layout': _SENSOR_LAYOUT,
+            'contracts': {
+                'goal': '/xw/goal_pose',
+                'nav_enable': '/xw/nav/enable',
+                'map': '/map',
+                'scan': '/scan',
+            },
+        }
+
     def set_mode(self, mode: int, payload: Optional[Dict[str, Any]], command_id: str) -> Dict[str, Any]:
         if not self._set_mode.wait_for_service(timeout_sec=2.0):
             return {'ok': False, 'message': 'set_mode service unavailable'}
@@ -371,8 +583,9 @@ class BridgeNode(Node):
         req.new_name = new_name
         req.data_json = data_json
         fut = self._map_mgr.call_async(req)
-        # SAVE runs map_saver_cli — allow up to ~25s
-        for _ in range(500):
+        # SAVE / GET_MAP / UPDATE_MAP may transfer large PGM payloads
+        wait_rounds = 800 if int(operation) in (1, 5, 6) else 500
+        for _ in range(wait_rounds):
             if fut.done():
                 break
             threading.Event().wait(0.05)
@@ -751,6 +964,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.peek_topic())
+        if path == '/api/pointcloud':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.pointcloud_status())
+        if path == '/api/sensors':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.sensor_hub_status())
         return super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
@@ -764,6 +985,26 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.bridge.publish_teleop(
                     float(data.get('linear_x', 0.0)),
                     float(data.get('angular_z', 0.0)),
+                ),
+            )
+        if path == '/api/goal':
+            try:
+                x = float(data.get('x'))
+                y = float(data.get('y'))
+            except (TypeError, ValueError):
+                return self._json(400, {'ok': False, 'message': 'x/y required'})
+            yaw = data.get('yaw', data.get('theta', 0.0))
+            try:
+                yaw_f = float(yaw if yaw is not None else 0.0)
+            except (TypeError, ValueError):
+                yaw_f = 0.0
+            return self._json(
+                200,
+                self.bridge.publish_goal(
+                    x,
+                    y,
+                    yaw_f,
+                    str(data.get('frame_id') or 'map'),
                 ),
             )
         if path == '/api/set_mode':
@@ -797,6 +1038,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     str(data.get('data_json') or ''),
                 ),
             )
+        if path == '/api/pointcloud':
+            enabled = data.get('enabled')
+            if enabled is None:
+                enabled = data.get('enable')
+            if enabled is None:
+                return self._json(400, {'ok': False, 'message': 'missing enabled'})
+            return self._json(200, self.bridge.set_pointcloud(bool(enabled)))
         if path == '/api/topic/watch':
             return self._json(
                 200,

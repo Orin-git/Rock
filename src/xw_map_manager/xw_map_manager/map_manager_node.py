@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import math
 import os
 import re
+import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -233,6 +236,169 @@ class MapManagerNode(Node):
     def _cascade_delete_waypoints(self, map_name: str) -> None:
         self._wp_path(point_list_name(map_name)).unlink(missing_ok=True)
 
+    def _read_pgm(self, path: Path) -> Tuple[int, int, bytes]:
+        raw = path.read_bytes()
+        if raw.startswith(b'P5'):
+            # Binary P5: ASCII header lines, then raw bytes
+            text_end = 0
+            header: List[str] = []
+            while text_end < len(raw) and len(header) < 3:
+                nl = raw.find(b'\n', text_end)
+                if nl < 0:
+                    raise ValueError('invalid PGM header')
+                line = raw[text_end:nl].decode('ascii', errors='replace').strip()
+                text_end = nl + 1
+                if not line or line.startswith('#'):
+                    continue
+                header.append(line)
+            if len(header) < 3 or header[0] != 'P5':
+                raise ValueError('unsupported PGM (need P5)')
+            wh = header[1].split()
+            if len(wh) < 2:
+                raise ValueError('invalid PGM size')
+            width, height = int(wh[0]), int(wh[1])
+            maxval = int(header[2].split()[0])
+            if maxval > 255:
+                raise ValueError('PGM maxval > 255 not supported')
+            expected = width * height
+            data = raw[text_end : text_end + expected]
+            if len(data) != expected:
+                raise ValueError(f'PGM data incomplete: want {expected} got {len(data)}')
+            return width, height, data
+
+        # ASCII P2 fallback
+        text = raw.decode('ascii', errors='replace')
+        tokens: List[str] = []
+        for line in text.splitlines():
+            s = line.strip()
+            if not s or s.startswith('#'):
+                continue
+            tokens.extend(s.split())
+        if len(tokens) < 4 or tokens[0] != 'P2':
+            raise ValueError('unsupported PGM format')
+        width, height = int(tokens[1]), int(tokens[2])
+        vals = [max(0, min(255, int(t))) for t in tokens[4 : 4 + width * height]]
+        if len(vals) != width * height:
+            raise ValueError('P2 PGM data incomplete')
+        return width, height, bytes(vals)
+
+    def _write_pgm(self, path: Path, width: int, height: int, data: bytes) -> None:
+        expected = width * height
+        if len(data) != expected:
+            raise ValueError(f'pixel size mismatch: want {expected} got {len(data)}')
+        header = f'P5\n{width} {height}\n255\n'.encode('ascii')
+        path.write_bytes(header + data)
+
+    def _load_map_yaml_meta(self, yaml_path: Path) -> Dict[str, Any]:
+        meta = yaml.safe_load(yaml_path.read_text(encoding='utf-8')) or {}
+        if not isinstance(meta, dict):
+            meta = {}
+        origin = meta.get('origin') or [0.0, 0.0, 0.0]
+        if not isinstance(origin, list) or len(origin) < 2:
+            origin = [0.0, 0.0, 0.0]
+        return {
+            'resolution': float(meta.get('resolution') or 0.05),
+            'origin_x': float(origin[0]),
+            'origin_y': float(origin[1]),
+            'origin_yaw': float(origin[2]) if len(origin) > 2 else 0.0,
+            'raw': meta,
+        }
+
+    def _get_map_payload(self, name: str) -> Tuple[bool, Dict[str, Any], str]:
+        yaml_path = self._root / f'{name}.yaml'
+        pgm_path = self._root / f'{name}.pgm'
+        if not yaml_path.is_file() or not pgm_path.is_file():
+            return False, {}, 'not found'
+        try:
+            meta = self._load_map_yaml_meta(yaml_path)
+            width, height, data = self._read_pgm(pgm_path)
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            return False, {}, str(exc)
+        payload = {
+            'map_name': name,
+            'width': width,
+            'height': height,
+            'resolution': meta['resolution'],
+            'origin_x': meta['origin_x'],
+            'origin_y': meta['origin_y'],
+            'origin_yaw': meta['origin_yaw'],
+            'pgm_b64': base64.b64encode(data).decode('ascii'),
+        }
+        return True, payload, f'ok {width}x{height}'
+
+    def _update_map_pixels(
+        self, src_name: str, dst_name: str, data_json: str
+    ) -> Tuple[bool, str]:
+        src_yaml = self._root / f'{src_name}.yaml'
+        src_pgm = self._root / f'{src_name}.pgm'
+        if not src_yaml.is_file() or not src_pgm.is_file():
+            return False, 'source map not found'
+
+        raw = (data_json or '').strip()
+        if not raw:
+            return False, 'empty data_json'
+
+        # Legacy: plain YAML text write (no PGM)
+        if not raw.startswith('{'):
+            if src_name != dst_name:
+                return False, 'yaml-only update cannot save-as'
+            src_yaml.write_text(data_json or '', encoding='utf-8')
+            return True, 'yaml updated'
+
+        try:
+            body = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            return False, f'invalid json: {exc}'
+        if not isinstance(body, dict):
+            return False, 'data_json must be object'
+        b64 = body.get('pgm_b64')
+        if not b64 or not isinstance(b64, str):
+            return False, 'missing pgm_b64'
+
+        try:
+            pixels = base64.b64decode(b64)
+            width, height, _existing = self._read_pgm(src_pgm)
+        except (ValueError, OSError) as exc:
+            return False, str(exc)
+
+        expected = width * height
+        if len(pixels) != expected:
+            return False, f'pixel size mismatch: want {expected} got {len(pixels)}'
+
+        save_as = src_name != dst_name
+        if save_as:
+            dst_yaml = self._root / f'{dst_name}.yaml'
+            dst_pgm = self._root / f'{dst_name}.pgm'
+            if dst_yaml.exists() or dst_pgm.exists():
+                return False, 'target exists'
+            try:
+                meta = yaml.safe_load(src_yaml.read_text(encoding='utf-8')) or {}
+                if not isinstance(meta, dict):
+                    meta = {}
+                meta['image'] = f'{dst_name}.pgm'
+                dst_yaml.write_text(
+                    yaml.safe_dump(meta, allow_unicode=True, sort_keys=False),
+                    encoding='utf-8',
+                )
+                self._write_pgm(dst_pgm, width, height, pixels)
+            except (OSError, ValueError, yaml.YAMLError) as exc:
+                dst_yaml.unlink(missing_ok=True)
+                dst_pgm.unlink(missing_ok=True)
+                return False, str(exc)
+            return True, f'saved as {dst_name}'
+
+        # Overwrite with backup
+        backup_dir = self._root / 'backups'
+        try:
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            stamp = time.strftime('%Y%m%d_%H%M%S')
+            backup_path = backup_dir / f'{src_name}_{stamp}.pgm'
+            shutil.copy2(src_pgm, backup_path)
+            self._write_pgm(src_pgm, width, height, pixels)
+        except (OSError, ValueError) as exc:
+            return False, str(exc)
+        return True, f'updated (backup {backup_path.name})'
+
     def _on_map(self, req: MapManage.Request, res: MapManage.Response):
         op = int(req.operation)
         try:
@@ -322,23 +488,30 @@ class MapManagerNode(Node):
                 res.message = 'deleted'
                 return res
 
-            if op in (5, 6, 7, 8):
+            if op == 5:
                 name = sanitize_map_name(req.map_name)
-                p = self._root / f'{name}.yaml'
-                if op == 5:
-                    if not p.exists():
-                        res.success = False
-                        res.message = 'not found'
-                        return res
-                    res.success = True
-                    res.message = 'ok'
-                    res.data_json = p.read_text(encoding='utf-8')
-                    return res
-                if op == 6:
-                    p.write_text(req.data_json or '', encoding='utf-8')
-                    res.success = True
-                    res.message = 'updated'
-                    return res
+                ok, payload, msg = self._get_map_payload(name)
+                res.success = ok
+                res.message = msg
+                if ok:
+                    res.data_json = json.dumps(payload, ensure_ascii=False)
+                    res.map_list = [name]
+                return res
+
+            if op == 6:
+                src_name = sanitize_map_name(req.map_name)
+                dst_raw = (req.new_name or '').strip()
+                dst_name = sanitize_map_name(dst_raw) if dst_raw else src_name
+                ok, msg = self._update_map_pixels(src_name, dst_name, req.data_json or '')
+                res.success = ok
+                res.message = msg
+                if ok:
+                    res.map_list = [dst_name]
+                    res.data_json = json.dumps({'map_name': dst_name})
+                return res
+
+            if op in (7, 8):
+                name = sanitize_map_name(req.map_name)
                 ko = self._root / f'{name}.keepout.json'
                 if op == 7:
                     res.success = True

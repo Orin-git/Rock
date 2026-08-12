@@ -15,6 +15,8 @@ if [[ "${XW_ALLOW_NO_FOXGLOVE:-}" != "1" ]]; then
   USE_FOXGLOVE=true
 fi
 PROFILE="${PROFILE:-normal}"
+# PointCloud2 debug relay (default off). Set USE_POINTCLOUD=true to enable for Foxglove.
+USE_POINTCLOUD="${USE_POINTCLOUD:-false}"
 # Delay real lidar motor start after Web is up (inrush can brown-out SBC / drop SSH)
 XW_LIDAR_START_DELAY="${XW_LIDAR_START_DELAY:-30}"
 
@@ -48,13 +50,36 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-# Stop any previous launch residual (best-effort; do not kill this script's shell)
-docker exec "$CONTAINER" bash -c \
-  'pkill -f "ros2 launch xw_bringup" 2>/dev/null || true;
-   pkill -f "robot.launch.py" 2>/dev/null || true' || true
+# Single-instance lock: avoid systemd restart racing a manual start
+LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp}/xw-robot.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  # Stale lock from dead PID?
+  old_pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+  if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+    echo "[start_robot_host] another instance running (pid=$old_pid), exit"
+    exit 0
+  fi
+  rm -rf "$LOCK_DIR"
+  mkdir "$LOCK_DIR"
+fi
+echo $$ >"$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR"' EXIT
+
+# Stop previous launch AND orphaned children (pkill launch alone leaves web on :9000)
+docker exec "$CONTAINER" bash -c '
+  set +e
+  pkill -9 -f "ros2 launch xw_bringup" 2>/dev/null
+  pkill -9 -f "robot.launch.py" 2>/dev/null
+  pkill -9 -f "/ros2_ws/install/" 2>/dev/null
+  pkill -9 -f "foxglove_bridge" 2>/dev/null
+  pkill -9 -f "robot_state_publisher" 2>/dev/null
+  pkill -9 -f "rplidar_node" 2>/dev/null
+  pkill -9 -f "async_slam_toolbox" 2>/dev/null
+  sleep 2
+' || true
 sleep 1
 
-echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB lidar_delay=${XW_LIDAR_START_DELAY}s)"
+echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s)"
 
 # Foreground so systemd tracks the process
 exec docker exec -i "$CONTAINER" bash -lc "
@@ -70,5 +95,6 @@ exec docker exec -i "$CONTAINER" bash -lc "
     lidar_baudrate:=${LIDAR_BAUDRATE} \
     use_web:=${USE_WEB} \
     use_foxglove:=${USE_FOXGLOVE} \
+    enable_pointcloud:=${USE_POINTCLOUD} \
     profile:=${PROFILE}
 "
