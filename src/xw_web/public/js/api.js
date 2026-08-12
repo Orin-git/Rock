@@ -3,6 +3,7 @@
 const stateListeners = [];
 const taskListeners = [];
 const metaListeners = [];
+const obstacleListeners = [];
 
 let connected = false;
 let pollTimer = null;
@@ -11,11 +12,26 @@ let lastTasks = new Set();
 let state = {
   mode: 0,
   mode_name: 'IDLE',
+  run_mode: 1, // Gen2 default: developer
   safety_ok: true,
   emergency_stop: false,
   power: { battery_percent: 0 },
   detail: '',
   profile: 'normal',
+};
+
+let obstacle = {
+  blocked: false,
+  any_sector_blocked: false,
+  safety_ok: true,
+  reason: 'waiting',
+  depth_m: null,
+  sectors: {
+    front: { blocked: false, range_m: null, source: null },
+    rear: { blocked: false, range_m: null, source: null },
+    left: { blocked: false, range_m: null, source: null },
+    right: { blocked: false, range_m: null, source: null },
+  },
 };
 
 let meta = {
@@ -65,9 +81,56 @@ function updateDomainUi() {
   metaListeners.forEach((fn) => fn(meta));
 }
 
+function notifyDesktopPetState(s) {
+  try {
+    const pet = window.__DesktopPet;
+    if (!pet) return;
+    if (typeof pet.setGen2Mode === 'function') {
+      pet.setGen2Mode(s.mode, s.mode_name);
+    } else if (typeof pet.setTaskMode === 'function') {
+      const m = Number(s.mode);
+      const mapped = m === 1 ? 2 : m === 2 ? 1 : m === 3 ? 3 : 0;
+      pet.setTaskMode(mapped);
+    }
+    /* Gen2 RobotState.run_mode: 0 production / 1 developer (default) */
+    const rm = s.run_mode == null ? 1 : Number(s.run_mode);
+    if (typeof pet.setGen2RunMode === 'function') {
+      pet.setGen2RunMode(rm);
+    } else if (typeof pet.setRunMode === 'function') {
+      pet.setRunMode(rm);
+    }
+  } catch (_) { /* noop */ }
+}
+
+function notifyDesktopPetTask(line) {
+  try {
+    const pet = window.__DesktopPet;
+    if (!pet || typeof pet.showBubble !== 'function') return;
+    const text = String(line || '');
+    let level = 'info';
+    if (/(fail|error|失败|错误|异常|超时|unavailable|拒绝|无法)/i.test(text)) level = 'error';
+    else if (/(ok|success|成功|完成|已启动|已停止|ready)/i.test(text)) level = 'success';
+    pet.showBubble(text, level);
+  } catch (_) { /* noop */ }
+}
+
 function emitState(s) {
   state = { ...state, ...s };
   stateListeners.forEach((fn) => fn(state));
+  notifyDesktopPetState(state);
+}
+
+function emitObstacle(o) {
+  if (!o || typeof o !== 'object') return;
+  obstacle = {
+    ...obstacle,
+    ...o,
+    sectors: {
+      ...obstacle.sectors,
+      ...(o.sectors || {}),
+    },
+  };
+  obstacleListeners.forEach((fn) => fn(obstacle));
 }
 
 function emitTask(line) {
@@ -77,6 +140,7 @@ function emitTask(line) {
     lastTasks = new Set([...lastTasks].slice(-50));
   }
   taskListeners.forEach((fn) => fn(line));
+  notifyDesktopPetTask(line);
 }
 
 async function fetchState() {
@@ -85,6 +149,7 @@ async function fetchState() {
     if (!r.ok) throw new Error(String(r.status));
     const j = await r.json();
     if (j.state) emitState(j.state);
+    if (j.obstacle) emitObstacle(j.obstacle);
     if (Array.isArray(j.tasks)) {
       j.tasks.slice().reverse().forEach((t) => emitTask(t));
     }
@@ -116,6 +181,11 @@ export function onState(fn) {
   fn(state);
 }
 
+export function onObstacle(fn) {
+  obstacleListeners.push(fn);
+  fn(obstacle);
+}
+
 export function onTask(fn) {
   taskListeners.push(fn);
 }
@@ -137,6 +207,28 @@ export function publishTeleop(linearX, angularZ) {
   }).catch(() => {});
 }
 
+/** Fixed-distance jog → /api/motion → /xw/motion/command */
+export async function callMotion(angleDeg, distanceM, commandId = '') {
+  emitTask(`>> motion ang=${angleDeg} dist=${distanceM}`);
+  try {
+    const r = await fetch(`${apiBase()}/api/motion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        angle_deg: Number(angleDeg),
+        distance_m: Number(distanceM),
+        command_id: commandId || `ui-${Date.now()}`,
+      }),
+    });
+    const j = await r.json();
+    emitTask(`<< motion ${j.ok ? 'ok' : 'fail'}: ${j.message || ''}`);
+    return j;
+  } catch (_) {
+    emitTask('!! motion failed');
+    return { ok: false, message: 'request failed' };
+  }
+}
+
 export async function setMode(mode, payload = {}) {
   emitTask(`>> set_mode ${mode}`);
   try {
@@ -152,6 +244,26 @@ export async function setMode(mode, payload = {}) {
   } catch (e) {
     emitTask(`!! set_mode failed`);
     return { ok: false };
+  }
+}
+
+/** Gen2 run_mode: 0 production / 1 developer (default) → /api/run_mode → /xw/supervisor/set_run_mode */
+export async function setRunMode(run_mode) {
+  const code = Number(run_mode);
+  emitTask(`>> set_run_mode ${code === 0 ? '量产' : '开发者'}`);
+  try {
+    const r = await fetch(`${apiBase()}/api/run_mode`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run_mode: code }),
+    });
+    const j = await r.json();
+    emitTask(`<< run_mode ${j.label || j.message || ''}`);
+    await fetchState();
+    return j;
+  } catch (_) {
+    emitTask('!! set_run_mode failed');
+    return { ok: false, run_mode: 1 };
   }
 }
 
@@ -246,7 +358,7 @@ export async function fetchFoxgloveStatus() {
   }
 }
 
-/** Depth pointcloud debug switch (default off). */
+/** Depth pointcloud debug switch (default off; nav also auto-enables). */
 export async function fetchPointcloudStatus() {
   const r = await fetch(`${apiBase()}/api/pointcloud`, { cache: 'no-store' });
   if (!r.ok) throw new Error(String(r.status));
@@ -261,6 +373,24 @@ export async function setPointcloudEnabled(enabled) {
   });
   const j = await r.json();
   emitTask(j.message || `pointcloud ${enabled ? 'on' : 'off'}`);
+  return j;
+}
+
+/** Fall detection orthogonal switch (can run with IDLE/nav). */
+export async function fetchFallStatus() {
+  const r = await fetch(`${apiBase()}/api/fall`, { cache: 'no-store' });
+  if (!r.ok) throw new Error(String(r.status));
+  return await r.json();
+}
+
+export async function setFallEnabled(enabled) {
+  const r = await fetch(`${apiBase()}/api/fall`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !!enabled }),
+  });
+  const j = await r.json();
+  emitTask(j.message || `fall ${enabled ? 'on' : 'off'}`);
   return j;
 }
 

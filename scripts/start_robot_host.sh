@@ -3,11 +3,21 @@
 set -eo pipefail
 
 CONTAINER="${XW_CONTAINER:-ros2_humble_dev}"
-USE_SIM_HW="${USE_SIM_HW:-true}"
+USE_SIM_HW="${USE_SIM_HW:-false}"
 USE_SIM_LIDAR="${USE_SIM_LIDAR:-false}"
 LIDAR_PORT="${LIDAR_PORT:-/dev/radar}"
 LIDAR_BAUDRATE="${LIDAR_BAUDRATE:-1000000}"
+CHASSIS_PORT="${CHASSIS_PORT:-/dev/chassis}"
+CHASSIS_BAUDRATE="${CHASSIS_BAUDRATE:-115200}"
+CHASSIS_FALLBACK="${CHASSIS_FALLBACK:-/dev/ttyACM0}"
 USE_WEB="${USE_WEB:-true}"
+# systemd may still export USE_SIM_HW=true; prefer real MCU when present
+# (set FORCE_SIM_HW=1 to keep mock despite /dev/chassis|/dev/ttyACM0).
+if [[ "${FORCE_SIM_HW:-0}" != "1" ]]; then
+  if [[ -e /dev/chassis || -e /dev/ttyACM0 ]]; then
+    USE_SIM_HW=false
+  fi
+fi
 # Mapping Live canvas needs Foxglove WS :8765. Old unit files may set false — override
 # unless XW_ALLOW_NO_FOXGLOVE=1.
 USE_FOXGLOVE="${USE_FOXGLOVE:-true}"
@@ -65,21 +75,46 @@ fi
 echo $$ >"$LOCK_DIR/pid"
 trap 'rm -rf "$LOCK_DIR"' EXIT
 
-# Stop previous launch AND orphaned children (pkill launch alone leaves web on :9000)
+# Ensure NPU runtime lib is present in the container (survives recreate if re-run)
+if [[ -e /usr/lib/librknnrt.so ]]; then
+  real="$(readlink -f /usr/lib/librknnrt.so)"
+  docker exec "$CONTAINER" mkdir -p /usr/lib /usr/lib/aarch64-linux-gnu 2>/dev/null || true
+  docker cp "$real" "$CONTAINER:/usr/lib/librknnrt.so" 2>/dev/null || true
+  docker cp "$real" "$CONTAINER:/usr/lib/aarch64-linux-gnu/$(basename "$real")" 2>/dev/null || true
+fi
+
+# Stop previous launch AND orphaned children (pkill launch alone leaves web on :9000).
+# Avoid `pkill -f /ros2_ws/install/` — that pattern matches THIS kill script and self-terminates.
 docker exec "$CONTAINER" bash -c '
   set +e
-  pkill -9 -f "ros2 launch xw_bringup" 2>/dev/null
-  pkill -9 -f "robot.launch.py" 2>/dev/null
-  pkill -9 -f "/ros2_ws/install/" 2>/dev/null
-  pkill -9 -f "foxglove_bridge" 2>/dev/null
-  pkill -9 -f "robot_state_publisher" 2>/dev/null
-  pkill -9 -f "rplidar_node" 2>/dev/null
-  pkill -9 -f "async_slam_toolbox" 2>/dev/null
+  kill_pat() {
+    # $1 = extended regex matched against /proc/PID/cmdline
+    local re="$1"
+    local pid cmd
+    for pid in /proc/[0-9]*; do
+      pid=${pid#/proc/}
+      [[ "$pid" =~ ^[0-9]+$ ]] || continue
+      [[ "$pid" -eq "$$" ]] && continue
+      cmd=$(tr "\0" " " <"/proc/$pid/cmdline" 2>/dev/null) || continue
+      [[ "$cmd" =~ $re ]] || continue
+      kill -9 "$pid" 2>/dev/null
+    done
+  }
+  kill_pat "ros2[[:space:]]+launch[[:space:]]+xw_bringup"
+  kill_pat "robot\\.launch\\.py"
+  kill_pat "/ros2_ws/install/.+/lib/.+"
+  kill_pat "person_perception_node"
+  kill_pat "perception_stub_node"
+  kill_pat "foxglove_bridge"
+  kill_pat "robot_state_publisher"
+  kill_pat "rplidar_node"
+  kill_pat "async_slam_toolbox"
+  kill_pat "ascamera"
   sleep 2
 ' || true
 sleep 1
 
-echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s)"
+echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT)"
 
 # Foreground so systemd tracks the process
 exec docker exec -i "$CONTAINER" bash -lc "
@@ -93,6 +128,9 @@ exec docker exec -i "$CONTAINER" bash -lc "
     use_sim_lidar:=${USE_SIM_LIDAR} \
     lidar_port:=${LIDAR_PORT} \
     lidar_baudrate:=${LIDAR_BAUDRATE} \
+    chassis_port:=${CHASSIS_PORT} \
+    chassis_baudrate:=${CHASSIS_BAUDRATE} \
+    chassis_fallback:=${CHASSIS_FALLBACK} \
     use_web:=${USE_WEB} \
     use_foxglove:=${USE_FOXGLOVE} \
     enable_pointcloud:=${USE_POINTCLOUD} \

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch Angstrong HP60C driver + Gen2 topic bridge."""
+"""Launch Angstrong HP60C driver + Gen2 topic bridge (front or front_2)."""
 
 import os
 
@@ -12,10 +12,11 @@ from launch_ros.actions import Node
 
 
 def _launch_setup(context, *args, **kwargs):
+    config_name = LaunchConfiguration('config').perform(context) or 'depth_camera.yaml'
     cfg_path = os.path.join(
         get_package_share_directory('xw_sensors'),
         'config',
-        'depth_camera.yaml',
+        config_name,
     )
 
     as_share = get_package_share_directory('ascamera')
@@ -31,19 +32,26 @@ def _launch_setup(context, *args, **kwargs):
         LaunchConfiguration('preview_fps').perform(context) or cfg.get('preview_fps', 5.0)
     )
     points_fps = float(
-        LaunchConfiguration('points_fps').perform(context) or cfg.get('points_fps', 3.0)
+        LaunchConfiguration('points_fps').perform(context) or cfg.get('points_fps', 10.0)
     )
     enable_pc = LaunchConfiguration('enable_pointcloud').perform(context).lower() in (
         '1', 'true', 'yes', 'on',
     )
 
+    vendor_ns = str(cfg.get('vendor_namespace', 'ascamera_hp60c'))
+    bridge_name = str(cfg.get('bridge_node_name', 'xw_depth_topic_bridge'))
+    static_name = str(cfg.get('static_tf_node_name', 'camera_front_optical_static'))
+    robot_frame = str(cfg.get('robot_frame', 'camera_front_link'))
+    vendor_frame = str(cfg.get('vendor_frame', f'{vendor_ns}_camera_link_0'))
+    camera_id = str(cfg.get('camera_id', 'front'))
+
     ascamera = Node(
         package='ascamera',
         executable='ascamera_node',
         name='camera_publisher',
-        namespace='ascamera_hp60c',
+        namespace=vendor_ns,
         output='screen',
-        respawn=False,
+        respawn=True,
         parameters=[{
             'usb_bus_no': int(cfg.get('usb_bus_no', -1)),
             'usb_path': str(cfg.get('usb_path', 'null')),
@@ -61,7 +69,7 @@ def _launch_setup(context, *args, **kwargs):
     bridge = Node(
         package='xw_sensors',
         executable='depth_topic_bridge',
-        name='xw_depth_topic_bridge',
+        name=bridge_name,
         output='screen',
         respawn=True,
         respawn_delay=2.0,
@@ -82,26 +90,30 @@ def _launch_setup(context, *args, **kwargs):
             'points_fps': points_fps,
             'relay_raw_rgb': bool(cfg.get('relay_raw_rgb', False)),
             'enable_pointcloud': enable_pc,
+            'manage_pointcloud_control': bool(cfg.get('manage_pointcloud_control', True)),
+            'gate_rgb_on_sessions': bool(cfg.get('gate_rgb_on_sessions', True)),
         }],
     )
 
     static_tf = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='camera_front_optical_static',
+        name=static_name,
         arguments=[
             '--x', '0', '--y', '0', '--z', '0',
             '--qx', '0', '--qy', '0', '--qz', '0', '--qw', '1',
-            '--frame-id', 'camera_front_link',
-            '--child-frame-id', 'ascamera_hp60c_camera_link_0',
+            '--frame-id', robot_frame,
+            '--child-frame-id', vendor_frame,
         ],
         condition=IfCondition(LaunchConfiguration('publish_static_tf')),
     )
 
     return [
         LogInfo(msg=(
-            f'[xw_sensors] depth cam confiPath={confi_path} fps={fps} '
-            f'preview_fps={preview_fps} enable_pointcloud={enable_pc} points_fps={points_fps}'
+            f'[xw_sensors] depth cam id={camera_id} '
+            f'usb={cfg.get("usb_bus_no")}/{cfg.get("usb_path")} '
+            f'ns={vendor_ns} → {cfg.get("depth_image_out")} '
+            f'fps={fps} preview_fps={preview_fps} enable_pointcloud={enable_pc}'
         )),
         ascamera,
         bridge,
@@ -111,13 +123,18 @@ def _launch_setup(context, *args, **kwargs):
 
 def generate_launch_description() -> LaunchDescription:
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'config',
+            default_value='depth_camera.yaml',
+            description='YAML under xw_sensors/config (depth_camera.yaml | depth_camera_front_2.yaml)',
+        ),
         DeclareLaunchArgument('fps', default_value='10'),
         DeclareLaunchArgument('preview_fps', default_value='5.0'),
-        DeclareLaunchArgument('points_fps', default_value='3.0'),
+        DeclareLaunchArgument('points_fps', default_value='10.0'),
         DeclareLaunchArgument(
             'enable_pointcloud',
             default_value='false',
-            description='Relay /camera/front/depth/points (CPU heavy; debug only)',
+            description='Relay depth/points (CPU heavy; front cam only via set_pointcloud)',
         ),
         DeclareLaunchArgument('publish_static_tf', default_value='true'),
         OpaqueFunction(function=_launch_setup),

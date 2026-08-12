@@ -11,7 +11,7 @@
 | 驱动 | `xw_chassis`, `xw_sensors`, `xw_description`, `third_party/ascamera` | 底盘 / 传感器 / TF / 深度相机 |
 | 安全运动 | `xw_cmd_arbiter`, `xw_safety_gate`, `xw_motion` | 仲裁 → 安全门 → 点动 |
 | 应用 | `xw_supervisor` + `*_session` + `xw_map_manager` | 模式机与会话 |
-| 感知 | `xw_perception` | 人体轨迹 / 跌倒（stub→算法） |
+| 感知 | `xw_perception` | 人体轨迹 / 跌倒（YOLOv8n-pose RKNN） |
 | 对外 | `xw_web`, `foxglove_bridge` | SPA + WS |
 | 入口 | `xw_bringup`, `xw_health` | launch / 健康 |
 
@@ -38,7 +38,7 @@
         → xw_chassis
 ```
 
-优先级：`estop > teleop > motion > nav > follow > recharge`
+优先级：`teleop > motion > nav > follow > recharge`（MCU 失能见 `/xw/chassis/motor_disabled`，不进速度仲裁）
 
 深度相机（前视 HP60C）：驱动随 `robot.launch.py` **常开**；Web 彩色预览仅在打开 `/pages/camera.html` 时订 compressed 推流。
 
@@ -96,20 +96,44 @@ ros2 launch xw_bringup robot.launch.py
 ## 7. Phase 路线
 
 - **P0**：mock 栈 + FSM + Web SPA  
-- **P1**：真底盘 / 雷达 / 超声  
+- **P1**：真底盘（`xw_chassis` 串口 `/dev/chassis` 或回退 `/dev/ttyACM0` @115200，一代 0x7B 协议；udev：`scripts/install_chassis_udev.sh`）/ 雷达 / 超声（超声仍待）  
 - **P2**：手推建图已落地；**导航 Web 壳 + `/xw/goal_pose` 链路已通**，Nav2/AMCL 仍待接入  
-- **P3（部分）**：前视深度驱动 + `/camera/front/...` + 安全门深度 ROI；跟随/跌倒算法仍 stub  
+- **P3（部分）**：前视深度驱动 + `/camera/front/...` + 安全门深度 ROI；**感知已换真节点**（YOLOv8n-pose RKNN → tracks/fall）  
 - **P4**：回充 / 压测 / 可选 Gateway  
+
+### 传感器命名契约（Gen2）
+
+| 设备 | 节点 | Frame | 公共话题 |
+|------|------|-------|----------|
+| 激光雷达 | `rplidar_node` | `lidar_link` | `/scan` |
+| 前视深度 #1 | `ascamera_hp60c/camera_publisher` + `xw_depth_topic_bridge` | `camera_front_link` | `/camera/front/{color,depth}/...` |
+| 前视深度 #2 | `ascamera_hp60c_2/camera_publisher` + `xw_depth_topic_bridge_front_2` | `camera_front_2_link` | `/camera/front_2/{color,depth}/...` |
+| 底盘 | `xw_chassis` | `base_link`（odom→base） | `/odom` `/cmd_vel` `/xw/power` |
+
+厂商私有话题 `/ascamera_hp60c{,_2}/...` 仅 bridge 订阅，业务节点只用 `/camera/...`。
 
 ### 深度相机要点
 
-- 包：`third_party/ascamera` + `xw_sensors/launch/depth_camera.launch.py`  
-- `use_depth_cam:=true` 常开驱动；无相机用 `false`  
-- 预览：Foxglove Desktop Image 面板订 `/camera/front/color/image_raw/compressed`（网页相机预览已关闭）  
-- 深度：`/camera/front/depth/image_raw`（安全门 ROI）；**点云默认关**  
-- 点云调试：设置页开关，或 `enable_pointcloud:=true` / `USE_POINTCLOUD=true` → `/camera/front/depth/points`（约 3 FPS，有订阅才转发；偏好写入 `config/enable_pointcloud`）  
-- 服务：`/xw/camera/set_pointcloud`（SetBool）；状态：`/xw/camera/pointcloud_enabled`  
-- 导航当前用 `/scan`，不会自动开点云  
+- 包：`third_party/ascamera` + `xw_sensors/launch/depth_camera.launch.py`（`config:=depth_camera.yaml` / `depth_camera_front_2.yaml`）  
+- `use_depth_cam:=true` / `use_depth_cam_2:=true`；USB 用 `usb_bus_no` + `usb_path` 钉死（换口需改 yaml）  
+- 预览：Foxglove Image 订 `/camera/front/.../compressed` 或 `/camera/front_2/.../compressed`  
+- 深度 #1：`/camera/front/depth/image_raw`（安全门 ROI + 感知）；**点云默认关**  
+- 深度 #2：bring-up 完成；感知/安全门仍用 #1（导航避障 / 人脸后续）  
+- 点云（仅 #1）：进导航自动开（`/xw/camera/set_pointcloud_nav`）；设置页手动 persist  
+- 服务：`/xw/camera/set_pointcloud`；`/xw/camera/set_pointcloud_nav`；状态：`/xw/camera/pointcloud_enabled`  
+- **建图不参与深度**：slam_toolbox 仍只用 `/scan`  
+- raw RGB（#1）：仅在 `fall_en || follow_en` 时由 bridge 转发  
+
+### 感知 / 跌倒 / 跟随
+
+- 节点：`xw_perception` → `person_perception_node`（替换 stub）  
+- 模型：`xw_perception/models/yolov8n-pose.rknn`（见 `models/README.md` / `convert_rknn.sh`）  
+- 容器依赖：`scripts/install_perception_deps.sh`（rknnlite cp310 + librknnrt + opencv）  
+- 推理：约 **5–6 FPS**；跌倒几何去抖约 **9 帧（≤2s）**  
+- 输出契约不变：`/xw/perception/tracks`、`/xw/perception/fall`  
+- **跌倒为正交开关**：`POST /api/fall` → `/xw/supervisor/set_fall` → `/xw/fall/enable`（可与 IDLE/导航并存；`set_mode(4)` 仍兼容）  
+- **跟随**：`set_mode(3)` → `/xw/follow/enable`（与建图/导航互斥）；距离用深度中位数  
+- 订阅：`/camera/front/{color,depth}/image_raw`（frame `camera_front_link`）  
 
 ### 导航 Web 要点（壳 + 链路）
 
@@ -135,9 +159,12 @@ ros2 launch xw_bringup robot.launch.py
 2. `robot.launch.py` mock 可起  
 3. teleop → `/cmd_vel` → mock odom  
 4. 浏览器连 9000/8765，`set_mode` 互斥可见  
+5. 设置页：跌倒开关 → `/xw/fall/enable`；跟随 `set_mode(3)`；导航进/出点云自动开/关  
+6. 有 `yolov8n-pose.rknn` 时：开启跌倒后 `ros2 topic echo /xw/perception/fall` 可见几何去抖结果  
 
 ## 9. Supervisor 与 Session 协作
 
-- `SetMode` 只改模式并在 `/xw/slam|nav|follow|fall/enable`（latched Bool）上发命令。
+- `SetMode` 改运动模式并在 `/xw/slam|nav|follow/enable` 上发命令；**跌倒**走独立 `/xw/supervisor/set_fall` / `/xw/fall/enable`（模式切换不清除）。
 - Session 既可订阅 enable，也可暴露 `/xw/session/*/control` 供调试直连。
 - **禁止** Supervisor 在 service 回调里 `spin_until_future_complete` 再调 session service（会死锁）。
+- 进/出 NAVIGATING 时 supervisor 异步调 `/xw/camera/set_pointcloud_nav`（不写 persist）。

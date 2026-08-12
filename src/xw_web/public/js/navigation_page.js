@@ -237,7 +237,7 @@ function statusLabel(st) {
 async function refreshSensors() {
   const j = await fetchSensorHub();
   const sensors = j.sensors || {};
-  const order = ['lidar', 'depth_camera', 'ultrasonic', 'imu', 'chassis'];
+  const order = ['lidar', 'depth_camera', 'depth_camera_2', 'ultrasonic', 'imu', 'chassis'];
   sensorCards.innerHTML = '';
   order.forEach((key) => {
     const s = sensors[key];
@@ -273,6 +273,29 @@ async function refreshSensors() {
   renderLayout(j.layout || []);
 }
 
+function layoutStatusColor(status) {
+  if (status === 'live') return '#22c55e';
+  if (status === 'partial') return '#f59e0b';
+  return '#94a3b8';
+}
+
+function shortSensorLabel(s) {
+  const id = String(s.id || '');
+  if (id === 'lidar') return '激光';
+  if (id === 'camera_front') return '前视';
+  if (id === 'camera_front_2') return '前视2';
+  if (id === 'camera_rear') return '后视';
+  if (id === 'ultrasonic') return '超声';
+  if (id === 'imu') return 'IMU';
+  if (id === 'chassis') return '底盘';
+  const full = String(s.label || id);
+  return full.length > 4 ? full.slice(0, 4) : full;
+}
+
+/**
+ * Isometric transparent chassis + sensor markers (URDF relative to base_link).
+ * ROS: +X forward, +Y left, +Z up.
+ */
 function renderLayout(layout) {
   if (!layout.length && window.XwMapCanvas) {
     layout = (window.XwMapCanvas.DEFAULT_SENSOR_FRAMES || []).map((f) => ({
@@ -283,31 +306,183 @@ function renderLayout(layout) {
       status: 'placeholder',
     }));
   }
-  // Top-down schematic: x forward (up on SVG), y left
-  const W = 220;
-  const H = 200;
-  const cx = W / 2;
-  const cy = H / 2 + 10;
-  const scale = 180; // px per meter
-  let dots = '';
-  layout.forEach((s) => {
+
+  const W = 380;
+  const H = 300;
+  const ox = W * 0.48;
+  const oy = H * 0.62;
+  const scale = 210; // px / m
+
+  // Isometric: screen from front-right-above
+  const cos30 = Math.cos(Math.PI / 6);
+  const sin30 = Math.sin(Math.PI / 6);
+  function project(x, y, z) {
+    return {
+      sx: ox + (x - y) * cos30 * scale,
+      sy: oy - z * scale - (x + y) * sin30 * scale,
+    };
+  }
+  function poly(pts) {
+    return pts.map((p) => `${p.sx.toFixed(1)},${p.sy.toFixed(1)}`).join(' ');
+  }
+
+  // URDF chassis box 0.45 × 0.35 × 0.18 centered on base_link
+  const hx = 0.225;
+  const hy = 0.175;
+  const hz = 0.09;
+  const c = {
+    // bottom
+    b000: project(-hx, -hy, -hz),
+    b100: project(hx, -hy, -hz),
+    b110: project(hx, hy, -hz),
+    b010: project(-hx, hy, -hz),
+    // top
+    t000: project(-hx, -hy, hz),
+    t100: project(hx, -hy, hz),
+    t110: project(hx, hy, hz),
+    t010: project(-hx, hy, hz),
+  };
+
+  // Faces back-to-front for transparency
+  const faces = [
+    { pts: [c.b010, c.b110, c.t110, c.t010], fill: 'rgba(56,189,248,0.06)', stroke: '#475569' }, // +Y left
+    { pts: [c.b000, c.b010, c.t010, c.t000], fill: 'rgba(148,163,184,0.08)', stroke: '#475569' }, // -X rear
+    { pts: [c.b000, c.b100, c.b110, c.b010], fill: 'rgba(15,23,42,0.35)', stroke: '#64748b' }, // bottom
+    { pts: [c.b100, c.b110, c.t110, c.t100], fill: 'rgba(56,189,248,0.12)', stroke: '#38bdf8' }, // +X front
+    { pts: [c.b000, c.b100, c.t100, c.t000], fill: 'rgba(148,163,184,0.10)', stroke: '#64748b' }, // -Y right
+    { pts: [c.t000, c.t100, c.t110, c.t010], fill: 'rgba(148,163,184,0.14)', stroke: '#94a3b8' }, // top
+  ];
+
+  let body = faces
+    .map(
+      (f) =>
+        `<polygon points="${poly(f.pts)}" fill="${f.fill}" stroke="${f.stroke}" stroke-width="1.2" />`
+    )
+    .join('');
+
+  // Vertical edge emphasis (wireframe feel)
+  const edges = [
+    [c.b000, c.t000],
+    [c.b100, c.t100],
+    [c.b110, c.t110],
+    [c.b010, c.t010],
+  ];
+  body += edges
+    .map(
+      ([a, b]) =>
+        `<line x1="${a.sx}" y1="${a.sy}" x2="${b.sx}" y2="${b.sy}" stroke="#64748b" stroke-width="1" stroke-opacity="0.7" />`
+    )
+    .join('');
+
+  // Axis triad at base_link origin
+  const o = project(0, 0, 0);
+  const ax = project(0.16, 0, 0);
+  const ay = project(0, 0.14, 0);
+  const az = project(0, 0, 0.16);
+  const axes = `
+    <line x1="${o.sx}" y1="${o.sy}" x2="${ax.sx}" y2="${ax.sy}" stroke="#38bdf8" stroke-width="2" />
+    <line x1="${o.sx}" y1="${o.sy}" x2="${ay.sx}" y2="${ay.sy}" stroke="#4ade80" stroke-width="2" />
+    <line x1="${o.sx}" y1="${o.sy}" x2="${az.sx}" y2="${az.sy}" stroke="#c084fc" stroke-width="2" />
+    <text x="${ax.sx + 4}" y="${ax.sy + 3}" class="layout-axis" fill="#38bdf8">X前</text>
+    <text x="${ay.sx - 2}" y="${ay.sy - 4}" class="layout-axis" fill="#4ade80">Y左</text>
+    <text x="${az.sx + 4}" y="${az.sy}" class="layout-axis" fill="#c084fc">Z上</text>
+    <circle cx="${o.sx}" cy="${o.sy}" r="2.5" fill="#e2e8f0" />`;
+
+  // Front direction chevron on top face
+  const nose = project(hx + 0.04, 0, hz);
+  const noseL = project(hx - 0.02, 0.04, hz);
+  const noseR = project(hx - 0.02, -0.04, hz);
+  const noseMark = `<polygon points="${poly([nose, noseL, noseR])}" fill="#38bdf8" opacity="0.9" />`;
+
+  const items = layout.map((s) => {
     const xyz = s.xyz || [0, 0, 0];
-    const px = cx - xyz[1] * scale;
-    const py = cy - xyz[0] * scale;
-    const color =
-      s.status === 'live' ? '#22c55e' : s.status === 'partial' ? '#f59e0b' : '#94a3b8';
-    dots += `<circle cx="${px}" cy="${py}" r="6" fill="${color}" />
-      <text x="${px}" y="${py - 10}" text-anchor="middle" class="layout-label">${escapeHtml(
-      s.label || s.id
+    const x = Number(xyz[0]) || 0;
+    const y = Number(xyz[1]) || 0;
+    const z = Number(xyz[2]) || 0;
+    const p = project(x, y, z);
+    return {
+      ...s,
+      x,
+      y,
+      z,
+      px: p.sx,
+      py: p.sy,
+      color: layoutStatusColor(s.status),
+      short: shortSensorLabel(s),
+    };
+  });
+
+  // Depth sort: draw farther first (higher screen-y is nearer in our iso)
+  const sorted = [...items].sort((a, b) => a.py - b.py);
+
+  // Callouts: aft / left-of-screen → left; forward / right → right; centerline split by z
+  const left = [];
+  const right = [];
+  const mid = [];
+  items.forEach((it) => {
+    if (it.x < -0.05 || (Math.abs(it.x) <= 0.05 && it.y > 0.02)) left.push(it);
+    else if (it.x > 0.05 || (Math.abs(it.x) <= 0.05 && it.y < -0.02)) right.push(it);
+    else mid.push(it);
+  });
+  mid.sort((a, b) => b.z - a.z);
+  mid.forEach((it, i) => (i % 2 === 0 ? left : right).push(it));
+  left.sort((a, b) => a.py - b.py);
+  right.sort((a, b) => a.py - b.py);
+
+  const labelTop = 36;
+  const labelBot = H - 36;
+  function placeSide(sideItems, side) {
+    const n = Math.max(sideItems.length, 1);
+    const span = labelBot - labelTop;
+    return sideItems.map((it, i) => {
+      const ly = n === 1 ? (labelTop + labelBot) / 2 : labelTop + (span * i) / (n - 1);
+      return {
+        ...it,
+        side,
+        lx: side === 'left' ? 10 : W - 10,
+        ly,
+        elbowX: side === 'left' ? 92 : W - 92,
+      };
+    });
+  }
+  const callouts = [...placeSide(left, 'left'), ...placeSide(right, 'right')];
+
+  let leaders = '';
+  callouts.forEach((it) => {
+    const name = escapeHtml(it.label || it.id);
+    const xyzTxt = `(${it.x.toFixed(2)}, ${it.y.toFixed(2)}, ${it.z.toFixed(2)})`;
+    const axText = it.side === 'left' ? it.lx : it.lx;
+    const anchor = it.side === 'left' ? 'start' : 'end';
+    leaders += `
+      <path d="M ${it.px} ${it.py} L ${it.elbowX} ${it.ly} L ${axText} ${it.ly}"
+        fill="none" stroke="${it.color}" stroke-width="1.15" stroke-opacity="0.75" />
+      <text x="${axText}" y="${it.ly - 3}" text-anchor="${anchor}" class="layout-label">${name}</text>
+      <text x="${axText}" y="${it.ly + 10}" text-anchor="${anchor}" class="layout-xyz">${xyzTxt}</text>`;
+  });
+
+  let marks = '';
+  sorted.forEach((it) => {
+    // Drop line to chassis top for height cue
+    const foot = project(it.x, it.y, Math.min(it.z, hz));
+    if (it.z > hz + 0.01) {
+      marks += `<line x1="${foot.sx}" y1="${foot.sy}" x2="${it.px}" y2="${it.py}"
+        stroke="${it.color}" stroke-width="1" stroke-dasharray="3 2" opacity="0.55" />`;
+    }
+    marks += `
+      <circle cx="${it.px}" cy="${it.py}" r="6" fill="${it.color}" stroke="#0f172a" stroke-width="1.6" />
+      <text x="${it.px}" y="${it.py - 10}" text-anchor="middle" class="layout-dot-label">${escapeHtml(
+      it.short
     )}</text>`;
   });
+
   sensorLayout.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="180" role="img">
-      <rect x="70" y="70" width="80" height="60" rx="8" fill="#1e293b" stroke="#64748b" />
-      <text x="${cx}" y="105" text-anchor="middle" fill="#e2e8f0" font-size="11">base_link</text>
-      <polygon points="${cx},55 ${cx - 8},68 ${cx + 8},68" fill="#38bdf8" />
-      <text x="${cx}" y="48" text-anchor="middle" fill="#64748b" font-size="10">+X</text>
-      ${dots}
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="280" role="img" aria-label="三维透明机身与传感器位姿">
+      <text x="${W / 2}" y="18" text-anchor="middle" class="layout-caption">透明机身 · URDF 相对 base_link</text>
+      ${body}
+      ${noseMark}
+      ${axes}
+      ${leaders}
+      ${marks}
     </svg>`;
 }
 

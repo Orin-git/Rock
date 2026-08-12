@@ -2,7 +2,7 @@
 """Angle + distance jog via /xw/cmd/motion."""
 
 import math
-from typing import Optional
+import time
 
 import rclpy
 from geometry_msgs.msg import Twist
@@ -23,6 +23,8 @@ class MotionNode(Node):
         self.declare_parameter('angular_speed', 0.5)
         self.declare_parameter('angle_tol_deg', 3.0)
         self.declare_parameter('dist_tol_m', 0.03)
+        self.declare_parameter('timeout_margin_sec', 5.0)
+        self.declare_parameter('preempt', True)
 
         self._cb = ReentrantCallbackGroup()
         self._state = self.IDLE
@@ -35,6 +37,8 @@ class MotionNode(Node):
         self._odom_x = 0.0
         self._odom_y = 0.0
         self._have_odom = False
+        self._deadline = 0.0
+        self._drive_sign = 1.0  # +1 forward, -1 backward
 
         self.create_subscription(Odometry, 'odom', self._on_odom, 10)
         self._cmd_pub = self.create_publisher(Twist, '/xw/cmd/motion', 10)
@@ -62,17 +66,31 @@ class MotionNode(Node):
             res.success = False
             res.message = 'no odom yet'
             return res
+
+        preempt = bool(self.get_parameter('preempt').value)
         if self._state not in (self.IDLE, self.DONE):
-            res.success = False
-            res.message = 'busy'
-            return res
+            if not preempt:
+                res.success = False
+                res.message = 'busy'
+                return res
+            self._cmd_pub.publish(Twist())
+            self._finish(1, 'preempted')
 
         self._cmd_id = req.command_id or f'motion-{self.get_clock().now().nanoseconds}'
         self._start_x = self._odom_x
         self._start_y = self._odom_y
         angle = math.radians(float(req.angle_deg))
         self._target_yaw = self._odom_yaw + angle
-        self._target_dist = abs(float(req.distance_m))
+        dist_signed = float(req.distance_m)
+        self._drive_sign = 1.0 if dist_signed >= 0.0 else -1.0
+        self._target_dist = abs(dist_signed)
+        lin = max(0.05, float(self.get_parameter('linear_speed').value))
+        ang = max(0.05, float(self.get_parameter('angular_speed').value))
+        margin = float(self.get_parameter('timeout_margin_sec').value)
+        turn_t = abs(angle) / ang if abs(req.angle_deg) > 0.1 else 0.0
+        drive_t = self._target_dist / lin if self._target_dist > 1e-3 else 0.0
+        self._deadline = time.monotonic() + turn_t + drive_t + margin
+
         self._state = self.TURN if abs(req.angle_deg) > 0.1 else self.DRIVE
         if abs(req.angle_deg) <= 0.1 and self._target_dist < 1e-3:
             self._finish(0, 'noop')
@@ -80,18 +98,28 @@ class MotionNode(Node):
             res.message = 'noop'
             return res
         res.success = True
-        res.message = f'accepted {self._cmd_id}'
-        self._publish_status(self.TURN if self._state == self.TURN else self.DRIVE, 'started')
+        direction = 'fwd' if self._drive_sign > 0 else 'back'
+        res.message = f'accepted {self._cmd_id} ({direction} {self._target_dist:.2f}m)'
+        self._publish_status(
+            self.TURN if self._state == self.TURN else self.DRIVE, 'started'
+        )
         return res
 
     def _ang_diff(self, a: float, b: float) -> float:
-        d = (a - b + math.pi) % (2 * math.pi) - math.pi
-        return d
+        return (a - b + math.pi) % (2 * math.pi) - math.pi
+
+    def _traveled(self) -> float:
+        return math.hypot(self._odom_x - self._start_x, self._odom_y - self._start_y)
 
     def _tick(self) -> None:
         if self._state in (self.IDLE, self.DONE) or not self._have_odom:
             if self._state == self.IDLE:
                 self._cmd_pub.publish(Twist())
+            return
+
+        if self._deadline > 0.0 and time.monotonic() > self._deadline:
+            self._cmd_pub.publish(Twist())
+            self._finish(2, f'timeout traveled={self._traveled():.2f}m')
             return
 
         out = Twist()
@@ -104,6 +132,8 @@ class MotionNode(Node):
             err = self._ang_diff(self._target_yaw, self._odom_yaw)
             if abs(err) < ang_tol:
                 if self._target_dist > dist_tol:
+                    self._start_x = self._odom_x
+                    self._start_y = self._odom_y
                     self._state = self.DRIVE
                     self._publish_status(self.DRIVE, 'driving')
                 else:
@@ -112,20 +142,35 @@ class MotionNode(Node):
                 return
             out.angular.z = ang_sp if err > 0 else -ang_sp
             self._cmd_pub.publish(out)
+            self._publish_progress(f'turn err_deg={math.degrees(err):.1f}')
             return
 
         if self._state == self.DRIVE:
-            dx = self._odom_x - self._start_x
-            dy = self._odom_y - self._start_y
-            traveled = math.hypot(dx, dy)
+            traveled = self._traveled()
             if traveled >= self._target_dist - dist_tol:
                 self._finish(0, 'done')
                 self._cmd_pub.publish(Twist())
                 return
-            out.linear.x = lin_sp if self._target_dist >= 0 else -lin_sp
-            # distance_m is forward magnitude; always drive forward for scaffold
-            out.linear.x = lin_sp
+            out.linear.x = lin_sp * self._drive_sign
             self._cmd_pub.publish(out)
+            pct = (
+                100.0 * min(1.0, traveled / self._target_dist)
+                if self._target_dist > 1e-6
+                else 100.0
+            )
+            tag = 'fwd' if self._drive_sign > 0 else 'back'
+            self._publish_progress(
+                f'{tag} {traveled:.2f}/{self._target_dist:.2f}m', percent=pct
+            )
+
+    def _publish_progress(self, phase: str, percent: float = 0.0) -> None:
+        p = TaskProgress()
+        p.stamp = self.get_clock().now().to_msg()
+        p.command_id = self._cmd_id
+        p.capability = 'motion'
+        p.phase = phase
+        p.percent = float(percent)
+        self._progress_pub.publish(p)
 
     def _publish_status(self, status: int, message: str) -> None:
         m = MotionStatus()
@@ -134,17 +179,10 @@ class MotionNode(Node):
         m.status = status
         m.message = message
         self._status_pub.publish(m)
-
-        p = TaskProgress()
-        p.stamp = m.stamp
-        p.command_id = self._cmd_id
-        p.capability = 'motion'
-        p.phase = message
-        p.percent = 0.0
-        self._progress_pub.publish(p)
+        self._publish_progress(message)
 
     def _finish(self, code: int, message: str) -> None:
-        self._state = self.DONE
+        self._cmd_pub.publish(Twist())
         self._publish_status(self.DONE if code == 0 else 5, message)
         r = TaskResult()
         r.stamp = self.get_clock().now().to_msg()
@@ -154,6 +192,7 @@ class MotionNode(Node):
         r.message = message
         self._result_pub.publish(r)
         self._state = self.IDLE
+        self._deadline = 0.0
 
 
 def main(args=None) -> None:

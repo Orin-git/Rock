@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Relay Angstrong vendor topics onto Gen2 /camera/front/... contracts.
+"""Relay Angstrong vendor topics onto Gen2 /camera/front[_2]/... contracts.
 
-PointCloud is runtime-toggleable (default off) via:
-  /xw/camera/set_pointcloud  (std_srvs/SetBool)
-  /xw/camera/pointcloud_enabled  (latched Bool)
-Preference persisted under XW_WS/config/enable_pointcloud.
+PointCloud (front cam only when manage_pointcloud_control:=true):
+  /xw/camera/set_pointcloud      — manual (persists preference)
+  /xw/camera/set_pointcloud_nav  — nav auto (no persist; OR with manual)
+  /xw/camera/pointcloud_enabled  — latched effective state
+
+Raw RGB relay is gated by /xw/fall/enable OR /xw/follow/enable when
+gate_rgb_on_sessions:=true (front). Depth image always relays.
 """
 
 from __future__ import annotations
@@ -28,7 +31,6 @@ _SENSOR_QOS = QoSProfile(
     depth=1,
 )
 
-# ascamera PointCloud2 publishers are RELIABLE; must match or no data / no stream enable.
 _POINTS_QOS = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     history=HistoryPolicy.KEEP_LAST,
@@ -89,9 +91,13 @@ class DepthTopicBridge(Node):
         self.declare_parameter('points_out', '/camera/front/depth/points')
         self.declare_parameter('preview_fps', 5.0)
         self.declare_parameter('points_fps', 3.0)
-        self.declare_parameter('relay_raw_rgb', False)
+        self.declare_parameter('relay_raw_rgb', False)  # force always-on if true
         self.declare_parameter('enable_pointcloud', False)
         self.declare_parameter('persist_path', _default_persist_path())
+        # Only one bridge should own global /xw/camera/set_pointcloud* (front cam).
+        self.declare_parameter('manage_pointcloud_control', True)
+        # When false, never subscribe fall/follow for raw RGB (front_2).
+        self.declare_parameter('gate_rgb_on_sessions', True)
 
         self._preview_period = 1.0 / max(0.5, float(self.get_parameter('preview_fps').value))
         self._points_period = 1.0 / max(0.5, float(self.get_parameter('points_fps').value))
@@ -100,18 +106,27 @@ class DepthTopicBridge(Node):
         self._have_depth = False
         self._have_preview = False
         self._have_points = False
+        self._have_rgb = False
         self._preview_frames = 0
         self._points_frames = 0
+        self._rgb_frames = 0
         self._last_status = 0.0
 
-        self._points_pub = None
         self._points_sub = None
+        self._rgb_sub = None
         self._persist_path = str(self.get_parameter('persist_path').value)
+        self._manage_pc = bool(self.get_parameter('manage_pointcloud_control').value)
+        self._gate_rgb = bool(self.get_parameter('gate_rgb_on_sessions').value)
 
-        # Persist file wins over launch default when present (web toggle survives restart).
+        # Manual preference (persisted) OR nav auto → effective pointcloud.
         launch_default = bool(self.get_parameter('enable_pointcloud').value)
-        persisted = _read_persist(self._persist_path)
-        self._enable_pc = launch_default if persisted is None else persisted
+        persisted = _read_persist(self._persist_path) if self._manage_pc else None
+        self._manual_pc = launch_default if persisted is None else persisted
+        self._nav_auto_pc = False
+
+        self._fall_en = False
+        self._follow_en = False
+        self._force_rgb = bool(self.get_parameter('relay_raw_rgb').value)
 
         self._rgb_pub = self.create_publisher(Image, str(self.get_parameter('rgb_image_out').value), _SENSOR_QOS)
         self._rgb_info_pub = self.create_publisher(
@@ -126,7 +141,9 @@ class DepthTopicBridge(Node):
         self._comp_pub = self.create_publisher(
             CompressedImage, str(self.get_parameter('compressed_out').value), _SENSOR_QOS
         )
-        self._enabled_pub = self.create_publisher(Bool, '/xw/camera/pointcloud_enabled', _LATCHED_QOS)
+        self._enabled_pub = None
+        if self._manage_pc:
+            self._enabled_pub = self.create_publisher(Bool, '/xw/camera/pointcloud_enabled', _LATCHED_QOS)
 
         self.create_subscription(
             Image, str(self.get_parameter('depth_image_in').value), self._on_depth, _SENSOR_QOS
@@ -140,33 +157,45 @@ class DepthTopicBridge(Node):
         self.create_subscription(
             CompressedImage, str(self.get_parameter('mjpeg_in').value), self._on_mjpeg, _SENSOR_QOS
         )
-        if bool(self.get_parameter('relay_raw_rgb').value):
-            self.create_subscription(
-                Image, str(self.get_parameter('rgb_image_in').value), self._on_rgb, _SENSOR_QOS
-            )
+        if self._gate_rgb:
+            self.create_subscription(Bool, '/xw/fall/enable', self._on_fall_en, _LATCHED_QOS)
+            self.create_subscription(Bool, '/xw/follow/enable', self._on_follow_en, _LATCHED_QOS)
 
-        # Always advertise so Foxglove can list the topic; data only when enabled + subscribed.
         self._points_pub = self.create_publisher(
             PointCloud2, str(self.get_parameter('points_out').value), _POINTS_QOS
         )
 
-        self.create_service(SetBool, '/xw/camera/set_pointcloud', self._on_set_pointcloud)
+        if self._manage_pc:
+            self.create_service(SetBool, '/xw/camera/set_pointcloud', self._on_set_pointcloud)
+            self.create_service(SetBool, '/xw/camera/set_pointcloud_nav', self._on_set_pointcloud_nav)
         self.create_timer(2.0, self._status)
 
-        if self._enable_pc:
-            self._start_pointcloud()
+        self._sync_pointcloud()
+        self._sync_rgb_relay()
         self._publish_enabled()
 
         self.get_logger().info(
-            f'depth bridge ready preview_fps={self.get_parameter("preview_fps").value} '
-            f'enable_pointcloud={self._enable_pc} '
+            f'depth bridge ready out={self.get_parameter("depth_image_out").value} '
+            f'preview_fps={self.get_parameter("preview_fps").value} '
+            f'manual_pc={self._manual_pc} manage_pc={self._manage_pc} '
+            f'gate_rgb={self._gate_rgb} '
             f'points_fps={self.get_parameter("points_fps").value} '
             f'persist={self._persist_path}'
         )
 
+    @property
+    def _pc_wanted(self) -> bool:
+        return bool(self._manual_pc or self._nav_auto_pc)
+
+    @property
+    def _rgb_wanted(self) -> bool:
+        return bool(self._force_rgb or self._fall_en or self._follow_en)
+
     def _publish_enabled(self) -> None:
+        if self._enabled_pub is None:
+            return
         msg = Bool()
-        msg.data = bool(self._enable_pc)
+        msg.data = bool(self._pc_wanted and self._points_sub is not None)
         self._enabled_pub.publish(msg)
 
     def _start_pointcloud(self) -> None:
@@ -177,8 +206,8 @@ class DepthTopicBridge(Node):
                 self._on_points,
                 _POINTS_QOS,
             )
-        self._enable_pc = True
-        self.get_logger().info('pointcloud relay ON → /camera/front/depth/points')
+            out = str(self.get_parameter('points_out').value)
+            self.get_logger().info(f'pointcloud relay ON → {out}')
 
     def _stop_pointcloud(self) -> None:
         if self._points_sub is not None:
@@ -187,28 +216,79 @@ class DepthTopicBridge(Node):
             except Exception:  # noqa: BLE001
                 pass
             self._points_sub = None
-        # Keep publisher advertised for Foxglove topic list.
-        self._enable_pc = False
-        self._have_points = False
-        self.get_logger().info('pointcloud relay OFF')
+            self._have_points = False
+            self.get_logger().info('pointcloud relay OFF')
+
+    def _sync_pointcloud(self) -> None:
+        if self._pc_wanted:
+            self._start_pointcloud()
+        else:
+            self._stop_pointcloud()
+        self._publish_enabled()
+
+    def _start_rgb(self) -> None:
+        if self._rgb_sub is None:
+            self._rgb_sub = self.create_subscription(
+                Image, str(self.get_parameter('rgb_image_in').value), self._on_rgb, _SENSOR_QOS
+            )
+            out = str(self.get_parameter('rgb_image_out').value)
+            self.get_logger().info(f'raw RGB relay ON → {out}')
+
+    def _stop_rgb(self) -> None:
+        if self._rgb_sub is not None:
+            try:
+                self.destroy_subscription(self._rgb_sub)
+            except Exception:  # noqa: BLE001
+                pass
+            self._rgb_sub = None
+            self._have_rgb = False
+            self.get_logger().info('raw RGB relay OFF')
+
+    def _sync_rgb_relay(self) -> None:
+        if self._rgb_wanted:
+            self._start_rgb()
+        else:
+            self._stop_rgb()
+
+    def _on_fall_en(self, msg: Bool) -> None:
+        self._fall_en = bool(msg.data)
+        self._sync_rgb_relay()
+
+    def _on_follow_en(self, msg: Bool) -> None:
+        self._follow_en = bool(msg.data)
+        self._sync_rgb_relay()
 
     def _on_set_pointcloud(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
-        want = bool(req.data)
-        if want and not self._enable_pc:
-            self._start_pointcloud()
-        elif (not want) and self._enable_pc:
-            self._stop_pointcloud()
-        _write_persist(self._persist_path, self._enable_pc)
-        self._publish_enabled()
+        """Manual toggle — persists preference."""
+        self._manual_pc = bool(req.data)
+        _write_persist(self._persist_path, self._manual_pc)
+        self._sync_pointcloud()
         res.success = True
-        res.message = f'pointcloud={"on" if self._enable_pc else "off"}'
+        res.message = (
+            f'pointcloud={"on" if self._pc_wanted else "off"} '
+            f'(manual={self._manual_pc}, nav_auto={self._nav_auto_pc})'
+        )
+        return res
+
+    def _on_set_pointcloud_nav(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
+        """Nav auto toggle — does NOT write persist."""
+        self._nav_auto_pc = bool(req.data)
+        self._sync_pointcloud()
+        res.success = True
+        res.message = (
+            f'pointcloud={"on" if self._pc_wanted else "off"} '
+            f'(manual={self._manual_pc}, nav_auto={self._nav_auto_pc})'
+        )
         return res
 
     def _on_rgb(self, msg: Image) -> None:
+        self._have_rgb = True
+        self._rgb_frames += 1
         self._rgb_pub.publish(msg)
 
     def _on_rgb_info(self, msg: CameraInfo) -> None:
-        self._rgb_info_pub.publish(msg)
+        if self._rgb_wanted:
+            self._rgb_info_pub.publish(msg)
 
     def _on_depth(self, msg: Image) -> None:
         self._have_depth = True
@@ -229,7 +309,7 @@ class DepthTopicBridge(Node):
         self._comp_pub.publish(msg)
 
     def _on_points(self, msg: PointCloud2) -> None:
-        if not self._enable_pc or self._points_pub is None:
+        if not self._pc_wanted or self._points_pub is None:
             return
         now = time.monotonic()
         if now - self._last_points < self._points_period:
@@ -246,20 +326,21 @@ class DepthTopicBridge(Node):
         if now - self._last_status < 10.0:
             return
         self._last_status = now
-        # Re-latch enabled state for late subscribers
         self._publish_enabled()
         pc = 'off'
-        if self._enable_pc and self._points_pub is not None:
+        if self._pc_wanted and self._points_pub is not None:
             pc = (
                 f'{"ok" if self._have_points else "wait"} '
                 f'frames={self._points_frames} '
-                f'subs={self._points_pub.get_subscription_count()}'
+                f'subs={self._points_pub.get_subscription_count()} '
+                f'manual={self._manual_pc} nav={self._nav_auto_pc}'
             )
         self.get_logger().info(
             f'bridge depth={"ok" if self._have_depth else "wait"} '
+            f'rgb={"ok" if self._have_rgb else ("gated" if not self._rgb_wanted else "wait")} '
+            f'rgb_frames={self._rgb_frames} '
             f'preview={"ok" if self._have_preview else "idle"} '
             f'preview_frames={self._preview_frames} '
-            f'preview_subs={self._comp_pub.get_subscription_count()} '
             f'pointcloud={pc}'
         )
 

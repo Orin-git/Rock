@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Safety gate: gated cmd + scan/ultrasonic/depth -> /cmd_vel."""
+"""Safety gate: gated cmd + scan/ultrasonic/depth -> /cmd_vel.
+
+Publishes:
+  safety_status (Bool) — overall gate pass
+  obstacle_status (String JSON) — overall + front/rear/left/right sectors
+"""
 
 from __future__ import annotations
 
+import json
 import math
 import struct
-from typing import Optional
+from typing import Any, Dict, Optional, Tuple
 
 import rclpy
 from geometry_msgs.msg import Twist
@@ -24,11 +30,18 @@ _DEPTH_QOS = QoSProfile(
 )
 
 
+def _ang_diff(a: float, b: float) -> float:
+    """Smallest signed difference a-b in (-pi, pi]."""
+    return (a - b + math.pi) % (2.0 * math.pi) - math.pi
+
+
 class SafetyGateNode(Node):
     def __init__(self) -> None:
         super().__init__('xw_safety_gate')
         self.declare_parameter('safety_distance', 0.35)
         self.declare_parameter('front_angle_deg', 40.0)
+        self.declare_parameter('sector_angle_deg', 40.0)
+        self.declare_parameter('lidar_ignore_below_m', 0.20)
         self.declare_parameter('ultrasonic_stop_m', 0.25)
         self.declare_parameter('use_lidar', True)
         self.declare_parameter('use_ultrasonic', True)
@@ -59,7 +72,7 @@ class SafetyGateNode(Node):
         self._safe_pub = self.create_publisher(Bool, 'safety_status', 10)
         self._obs_pub = self.create_publisher(String, 'obstacle_status', 10)
         self.create_timer(0.05, self._tick)
-        self.get_logger().info('safety gate ready')
+        self.get_logger().info('safety gate ready (4-sector obstacle_status)')
 
     def _on_cmd(self, msg: Twist) -> None:
         self._last_cmd = msg
@@ -127,52 +140,124 @@ class SafetyGateNode(Node):
             return None
         return min(vals)
 
-    def _front_min_lidar(self) -> Optional[float]:
+    def _sector_min_lidar(self, center_rad: float, half_rad: float) -> Optional[float]:
         if not self.get_parameter('use_lidar').value or self._scan is None:
             return None
         scan = self._scan
-        half = math.radians(float(self.get_parameter('front_angle_deg').value))
+        ignore_below = float(self.get_parameter('lidar_ignore_below_m').value)
         mins = []
         angle = scan.angle_min
         for r in scan.ranges:
-            if -half <= angle <= half:
-                if scan.range_min < r < scan.range_max and math.isfinite(r):
+            if abs(_ang_diff(angle, center_rad)) <= half_rad:
+                lo = max(float(scan.range_min), ignore_below)
+                if lo < r < scan.range_max and math.isfinite(r):
                     mins.append(r)
             angle += scan.angle_increment
         return min(mins) if mins else None
 
-    def _front_min_ultra(self) -> Optional[float]:
+    def _ultra_min_for(self, keys: Tuple[str, ...]) -> Optional[float]:
         if not self.get_parameter('use_ultrasonic').value or self._ultra is None:
             return None
         if not self._ultra.ranges:
             return None
         vals = []
-        for r, label in zip(self._ultra.ranges, self._ultra.labels or []):
-            if 'front' in label.lower() or 'f' == label.lower():
-                vals.append(r)
-        if not vals:
-            vals = list(self._ultra.ranges)
+        labels = list(self._ultra.labels or [])
+        for i, r in enumerate(self._ultra.ranges):
+            label = (labels[i] if i < len(labels) else '').lower()
+            if any(k in label for k in keys):
+                if math.isfinite(r) and r > 0.0:
+                    vals.append(float(r))
         return min(vals) if vals else None
+
+    def _pick_range(
+        self, *candidates: Tuple[Optional[float], str]
+    ) -> Tuple[Optional[float], str]:
+        best: Optional[float] = None
+        src = ''
+        for dist, name in candidates:
+            if dist is None:
+                continue
+            if best is None or dist < best:
+                best = dist
+                src = name
+        return best, src
+
+    def _sector_info(
+        self,
+        name: str,
+        stop_m: float,
+        lidar_m: Optional[float],
+        ultra_m: Optional[float],
+        depth_m: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        dist, src = self._pick_range(
+            (lidar_m, 'lidar'),
+            (ultra_m, 'ultra'),
+            (depth_m, 'depth'),
+        )
+        blocked = dist is not None and dist < stop_m
+        return {
+            'name': name,
+            'blocked': blocked,
+            'range_m': None if dist is None else round(float(dist), 3),
+            'source': src or None,
+            'stop_m': round(float(stop_m), 3),
+        }
 
     def _tick(self) -> None:
         stop_lidar = float(self.get_parameter('safety_distance').value)
         stop_ultra = float(self.get_parameter('ultrasonic_stop_m').value)
         stop_depth = float(self.get_parameter('depth_stop_m').value)
-        d_lidar = self._front_min_lidar()
-        d_ultra = self._front_min_ultra()
+
+        half = math.radians(float(self.get_parameter('sector_angle_deg').value))
+        front_half = math.radians(float(self.get_parameter('front_angle_deg').value))
+
+        # ROS: +X forward, +Y left
+        lidar_front = self._sector_min_lidar(0.0, front_half)
+        lidar_left = self._sector_min_lidar(math.pi / 2.0, half)
+        lidar_right = self._sector_min_lidar(-math.pi / 2.0, half)
+        lidar_rear = self._sector_min_lidar(math.pi, half)
+
+        ultra_front = self._ultra_min_for(('front', 'f', '前'))
+        ultra_rear = self._ultra_min_for(('rear', 'back', 'aft', '后'))
+        ultra_left = self._ultra_min_for(('left', 'l', '左'))
+        ultra_right = self._ultra_min_for(('right', 'r', '右'))
+
         d_depth = self._depth_min if bool(self.get_parameter('use_depth').value) else None
 
-        blocked = False
+        # Per-sector stop: if winning source is ultra use ultra stop, else lidar/depth stop
+        def sector(name: str, lidar_m, ultra_m, depth_m=None) -> Dict[str, Any]:
+            dist, src = self._pick_range((lidar_m, 'lidar'), (ultra_m, 'ultra'), (depth_m, 'depth'))
+            if src == 'ultra':
+                stop = stop_ultra
+            elif src == 'depth':
+                stop = stop_depth
+            else:
+                stop = stop_lidar
+            blocked = dist is not None and dist < stop
+            return {
+                'name': name,
+                'blocked': blocked,
+                'range_m': None if dist is None else round(float(dist), 3),
+                'source': src or None,
+                'stop_m': round(float(stop), 3),
+            }
+
+        sectors = {
+            'front': sector('front', lidar_front, ultra_front, d_depth),
+            'rear': sector('rear', lidar_rear, ultra_rear),
+            'left': sector('left', lidar_left, ultra_left),
+            'right': sector('right', lidar_right, ultra_right),
+        }
+
+        # Gate behavior remains forward-biased (same as before): block forward motion on front obstacle
+        front = sectors['front']
+        blocked = bool(front['blocked'])
         reason = 'clear'
-        if d_lidar is not None and d_lidar < stop_lidar:
-            blocked = True
-            reason = f'lidar:{d_lidar:.2f}'
-        if d_ultra is not None and d_ultra < stop_ultra:
-            blocked = True
-            reason = f'ultra:{d_ultra:.2f}'
-        if d_depth is not None and d_depth < stop_depth:
-            blocked = True
-            reason = f'depth:{d_depth:.2f}'
+        if blocked:
+            rm = front.get('range_m')
+            src = front.get('source') or 'front'
+            reason = f'{src}:{rm:.2f}' if isinstance(rm, (int, float)) else src
 
         out = Twist()
         out.linear.x = self._last_cmd.linear.x
@@ -188,11 +273,18 @@ class SafetyGateNode(Node):
         st = Bool()
         st.data = self._safety_ok
         self._safe_pub.publish(st)
+
+        any_sector = any(s['blocked'] for s in sectors.values())
+        payload = {
+            'blocked': blocked,
+            'any_sector_blocked': any_sector,
+            'safety_ok': bool(self._safety_ok),
+            'reason': reason,
+            'depth_m': None if d_depth is None else round(float(d_depth), 3),
+            'sectors': sectors,
+        }
         obs = String()
-        obs.data = (
-            f'{{"blocked": {str(blocked).lower()}, "reason": "{reason}", '
-            f'"depth_m": {("null" if d_depth is None else f"{d_depth:.3f}")}}}'
-        )
+        obs.data = json.dumps(payload, ensure_ascii=False)
         self._obs_pub.publish(obs)
 
 

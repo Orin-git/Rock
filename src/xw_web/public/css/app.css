@@ -380,6 +380,86 @@ a.pill.lan-url:hover {
   margin: 0.85rem 0;
   align-items: center;
 }
+
+.run-mode-panel .run-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.safety-panel .safety-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.safety-compass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0 0.2rem;
+}
+
+.safety-mid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.safety-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 5.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.safety-dir {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.safety-range {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.safety-hub {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  border: 1px dashed var(--line);
+  background: var(--surface);
+}
+
+.safety-front, .safety-rear {
+  min-width: 7rem;
+}
+
 button, .btn {
   font-family: var(--font-body);
   letter-spacing: 0.01em;
@@ -1095,10 +1175,37 @@ code {
   border-radius: var(--radius-sm);
   padding: 0.35rem;
   margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+.sensor-layout svg {
+  display: block;
+}
+.sensor-layout .layout-caption {
+  fill: #64748b;
+  font-size: 10px;
 }
 .sensor-layout .layout-label {
-  fill: #cbd5e1;
+  fill: #e2e8f0;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.sensor-layout .layout-xyz {
+  fill: #94a3b8;
+  font-size: 8.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.sensor-layout .layout-dot-label {
+  fill: #f8fafc;
   font-size: 9px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: #0f172a;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.sensor-layout .layout-axis {
+  font-size: 9px;
+  font-weight: 600;
 }
 .nav-pipe-list {
   margin: 0;

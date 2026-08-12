@@ -1,7 +1,7 @@
 string command_id
-# yaw degrees (positive = left/CCW)
+# yaw degrees: +left/CCW, -right/CW
 float32 angle_deg
-# forward distance meters
+# signed drive meters: +forward, -backward (turn completes first if angle!=0)
 float32 distance_m
 ---
 bool success

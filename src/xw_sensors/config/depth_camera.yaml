@@ -1,28 +1,36 @@
-# Gen2 front depth camera (Angstrong HP60C / ASJ ZNX_NVT, USB 3482:6723)
+# Gen2 front depth camera #1 (Angstrong HP60C / ASJ ZNX_NVT, USB 3482:6723)
 #
-# Vendor node publishes under /ascamera_hp60c/camera_publisher/...
-# xw_depth_topic_bridge relays to stable /camera/front/... contracts.
+# Public contract: /camera/front/{color,depth}/...
+# Vendor private:  /ascamera_hp60c/camera_publisher/...
+# Robot frame:     camera_front_link
+#
+# USB pin (Rock 5T): bus 5 path 1.2  →  KERNEL 5-1.2
+# If cams swap after replug, re-check: udevadm info -a -n ... ATTR{busnum}/ATTR{devpath}
 
-usb_bus_no: -1
-usb_path: "null"
+camera_id: front
+vendor_namespace: ascamera_hp60c
+bridge_node_name: xw_depth_topic_bridge
+static_tf_node_name: camera_front_optical_static
+robot_frame: camera_front_link
+vendor_frame: ascamera_hp60c_camera_link_0
+
+usb_bus_no: 5
+usb_path: "1.2"
 color_pcl: false
 pub_tfTree: true
 
-# Lower than vendor default to reduce Rock 5T load
 depth_width: 640
 depth_height: 480
 rgb_width: 640
 rgb_height: 480
 fps: 10
 
-# Bridge
 preview_fps: 5.0
-# Raw RGB is heavy; algorithms can enable later. Preview uses MJPEG/compressed.
 relay_raw_rgb: false
-# PointCloud2 relay — default OFF (nav uses /scan + depth image; PC is debug-only).
-# Flip via launch: enable_pointcloud:=true  (or USE_POINTCLOUD=true in start_robot_host).
 enable_pointcloud: false
-points_fps: 3.0
+points_fps: 10.0
+manage_pointcloud_control: true
+gate_rgb_on_sessions: true
 
 rgb_image_in: /ascamera_hp60c/camera_publisher/rgb0/image
 rgb_info_in: /ascamera_hp60c/camera_publisher/rgb0/camera_info

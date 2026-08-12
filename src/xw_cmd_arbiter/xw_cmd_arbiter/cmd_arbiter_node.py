@@ -6,7 +6,6 @@ from typing import Dict, Optional, Tuple
 import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
-from std_msgs.msg import Bool
 
 
 # Higher number = higher priority
@@ -26,7 +25,6 @@ class CmdArbiterNode(Node):
         self.declare_parameter('publish_rate_hz', 20.0)
 
         self._sources: Dict[str, Tuple[Twist, float]] = {}
-        self._estop = False
 
         for name in SOURCE_PRIORITY:
             self.create_subscription(
@@ -36,24 +34,17 @@ class CmdArbiterNode(Node):
                 10,
             )
 
-        self.create_subscription(Bool, 'emergency_stop', self._on_estop, 10)
         self._pub = self.create_publisher(Twist, '/xw/cmd/gated', 10)
         rate = float(self.get_parameter('publish_rate_hz').value)
         self.create_timer(1.0 / max(rate, 1.0), self._tick)
         self.get_logger().info('cmd arbiter ready')
 
-    def _on_estop(self, msg: Bool) -> None:
-        self._estop = bool(msg.data)
-
     def _on_cmd(self, name: str, msg: Twist) -> None:
         self._sources[name] = (msg, self.get_clock().now().nanoseconds * 1e-9)
 
     def _select(self) -> Optional[Twist]:
-        if self._estop:
-            return Twist()
         timeout = float(self.get_parameter('stale_timeout_sec').value)
         now = self.get_clock().now().nanoseconds * 1e-9
-        best_name = None
         best_pri = -1
         best_twist = None
         for name, (twist, t) in list(self._sources.items()):
@@ -62,15 +53,12 @@ class CmdArbiterNode(Node):
             pri = SOURCE_PRIORITY.get(name, 0)
             if pri > best_pri:
                 best_pri = pri
-                best_name = name
                 best_twist = twist
         return best_twist
 
     def _tick(self) -> None:
         selected = self._select()
         out = selected if selected is not None else Twist()
-        if self._estop:
-            out = Twist()
         self._pub.publish(out)
 
 

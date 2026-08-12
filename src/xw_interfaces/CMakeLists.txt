@@ -23,6 +23,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MotionStatus.msg"
   "msg/UltrasonicArray.msg"
   "srv/SetMode.srv"
+  "srv/SetRunMode.srv"
   "srv/GetState.srv"
   "srv/MapManage.srv"
   "srv/WaypointManage.srv"

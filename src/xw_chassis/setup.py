@@ -23,11 +23,11 @@ setup(
     version='0.1.0',
     packages=find_packages(exclude=['test']),
     data_files=data_files,
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'pyserial'],
     zip_safe=True,
     maintainer='xiaowei',
     maintainer_email='dev@xiaowei.local',
-    description='Chassis driver (mock + future serial)',
+    description='Chassis driver (mock + STM32 serial)',
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={

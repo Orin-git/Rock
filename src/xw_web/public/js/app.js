@@ -1,5 +1,24 @@
 // Ensure header status chips + active nav on every page
 
+function bootDesktopPet() {
+  if (document.getElementById('desktop-pet') || document.getElementById('desktop-pet-script')) {
+    return;
+  }
+  if (!document.querySelector('link[href*="desktop_pet.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/css/desktop_pet.css?v=20260812-pet9';
+    document.head.appendChild(link);
+  }
+  const script = document.createElement('script');
+  script.id = 'desktop-pet-script';
+  script.src = '/js/desktop_pet.js?v=20260812-pet9';
+  script.async = true;
+  document.head.appendChild(script);
+}
+
+bootDesktopPet();
+
 function ensureStatusChips() {
   const top = document.querySelector('header.top');
   if (!top) return;

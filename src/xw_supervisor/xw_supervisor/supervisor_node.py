@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """Mode FSM: sole business gate for Gen2 sessions.
 
+Motion modes (mapping/nav/follow) are mutually exclusive.
+Fall detection is an orthogonal feature latch (/xw/fall/enable) that survives
+mode switches (except estop → idle still keeps fall unless cleared elsewhere).
+
 Session lifecycle is commanded via topics (no nested service calls)
 to avoid client/server deadlocks inside the same executor.
 """
+
+from __future__ import annotations
+
+from typing import Optional
 
 import rclpy
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Bool
+from std_srvs.srv import SetBool
 
 from xw_interfaces.msg import PowerState, RobotEvent, RobotState, TaskProgress
-from xw_interfaces.srv import GetState, SetMode
+from xw_interfaces.srv import GetState, SetMode, SetRunMode
 
 MODE_NAMES = {
     0: 'IDLE',
@@ -22,12 +31,11 @@ MODE_NAMES = {
     4: 'FALL_DETECT',
 }
 
-# mode -> session enable topic
-SESSION_ENABLE = {
+# Motion sessions only — fall is orthogonal and not listed here.
+MOTION_SESSION = {
     1: '/xw/slam/enable',
     2: '/xw/nav/enable',
     3: '/xw/follow/enable',
-    4: '/xw/fall/enable',
 }
 
 
@@ -44,13 +52,13 @@ class SupervisorNode(Node):
         self._power = PowerState()
         self._active_map = ''
         self._detail = 'boot'
+        self._fall_en = False
 
         # Keep robot_state VOLATILE (high rate) so CLI/Foxglove default QoS always sees updates.
         self._state_pub = self.create_publisher(RobotState, '/xw/robot_state', 10)
         self._event_pub = self.create_publisher(RobotEvent, '/xw/event', 10)
         self._progress_pub = self.create_publisher(TaskProgress, '/xw/task/progress', 10)
 
-        # Session enables: transient local so late-joining sessions get last command
         latch = QoSProfile(
             depth=1,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -58,29 +66,35 @@ class SupervisorNode(Node):
         )
         self._session_pubs = {
             mode: self.create_publisher(Bool, topic, latch)
-            for mode, topic in SESSION_ENABLE.items()
+            for mode, topic in MOTION_SESSION.items()
         }
+        self._fall_pub = self.create_publisher(Bool, '/xw/fall/enable', latch)
 
-        self.create_subscription(Bool, 'emergency_stop', self._on_estop, 10)
+        self._set_pc_nav = self.create_client(SetBool, '/xw/camera/set_pointcloud_nav')
+
+        self.create_subscription(Bool, '/xw/chassis/motor_disabled', self._on_motor_disabled, 10)
         self.create_subscription(Bool, 'safety_status', self._on_safety, 10)
         self.create_subscription(PowerState, '/xw/power', self._on_power, 10)
 
         self.create_service(SetMode, '/xw/supervisor/set_mode', self._on_set_mode, callback_group=self._cb)
+        self.create_service(SetRunMode, '/xw/supervisor/set_run_mode', self._on_set_run_mode, callback_group=self._cb)
         self.create_service(GetState, '/xw/supervisor/get_state', self._on_get_state, callback_group=self._cb)
+        self.create_service(SetBool, '/xw/supervisor/set_fall', self._on_set_fall, callback_group=self._cb)
 
         self.create_timer(0.5, self._publish_state)
-        # latched disables
-        for mode in SESSION_ENABLE:
+        for mode in MOTION_SESSION:
             self._session_pubs[mode].publish(Bool(data=False))
-        self.get_logger().info('supervisor ready')
+        self._publish_fall()
+        self.get_logger().info('supervisor ready (fall orthogonal, nav auto pointcloud)')
 
-    def _on_estop(self, msg: Bool) -> None:
+    def _on_motor_disabled(self, msg: Bool) -> None:
+        """MCU Flag_Stop → RobotState.emergency_stop (UI); cancel motion mode if engaged."""
         was = self._estop
         self._estop = bool(msg.data)
         if self._estop and not was:
-            self._emit_event(2, 'emergency_stop', 'pressed')
+            self._emit_event(2, 'motor_disabled', 'mcu_flag_stop')
             if self._mode != 0:
-                self._apply_mode(0, 'estop')
+                self._apply_mode(0, 'motor_disabled')
 
     def _on_safety(self, msg: Bool) -> None:
         self._safety_ok = bool(msg.data)
@@ -100,7 +114,9 @@ class SupervisorNode(Node):
         s.active_map = self._active_map
         s.profile = str(self.get_parameter('profile').value)
         s.power = self._power
-        s.detail = self._detail
+        fall_tag = 'fall=on' if self._fall_en else 'fall=off'
+        base = self._detail or ''
+        s.detail = f'{base} | {fall_tag}' if base else fall_tag
         return s
 
     def _publish_state(self) -> None:
@@ -117,15 +133,72 @@ class SupervisorNode(Node):
         if pub is not None:
             pub.publish(Bool(data=active))
 
-    def _disable_all_sessions(self) -> None:
-        for mode in SESSION_ENABLE:
+    def _disable_motion_sessions(self) -> None:
+        for mode in MOTION_SESSION:
             self._set_session(mode, False)
 
+    def _publish_fall(self) -> None:
+        self._fall_pub.publish(Bool(data=bool(self._fall_en)))
+
+    def _set_fall(self, active: bool) -> None:
+        self._fall_en = bool(active)
+        self._publish_fall()
+
+    def _on_set_fall(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
+        self._set_fall(bool(req.data))
+        if self._mode == 4 and not self._fall_en:
+            self._mode = 0
+            self._detail = 'fall disabled → idle'
+        elif self._fall_en and self._mode == 0:
+            # Stay IDLE but reflect fall in detail; mode 4 only via set_mode(4).
+            self._detail = 'fall enabled (background)'
+        res.success = True
+        res.message = f'fall={"on" if self._fall_en else "off"}'
+        self._publish_state()
+        return res
+
+    def _set_pointcloud_nav(self, enabled: bool) -> None:
+        """Fire-and-forget nav auto pointcloud (no persist)."""
+        if not self._set_pc_nav.service_is_ready():
+            self.get_logger().warn('set_pointcloud_nav not ready (depth bridge?)')
+            return
+
+        req = SetBool.Request()
+        req.data = bool(enabled)
+
+        def _done(fut) -> None:
+            try:
+                r = fut.result()
+                self.get_logger().info(
+                    f'pointcloud_nav → {enabled}: {getattr(r, "message", r)}'
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warn(f'pointcloud_nav call failed: {exc}')
+
+        fut = self._set_pc_nav.call_async(req)
+        fut.add_done_callback(_done)
+
     def _apply_mode(self, target: int, reason: str) -> None:
-        self._disable_all_sessions()
-        self._mode = target
-        if target in SESSION_ENABLE:
+        prev = self._mode
+
+        if prev == 2 and target != 2:
+            self._set_pointcloud_nav(False)
+        if target == 2 and prev != 2:
+            self._set_pointcloud_nav(True)
+
+        self._disable_motion_sessions()
+
+        if target == 4:
+            self._mode = 4
+            self._set_fall(True)
+        elif target in MOTION_SESSION:
+            self._mode = target
             self._set_session(target, True)
+            # Keep fall_en as-is (orthogonal).
+        else:
+            self._mode = 0
+            # Keep fall_en as-is.
+
         self._detail = reason
         self._publish_state()
 
@@ -138,16 +211,25 @@ class SupervisorNode(Node):
             return res
         if self._estop and target != 0:
             res.success = False
-            res.message = 'emergency stop active'
+            res.message = 'motor disabled (MCU Flag_Stop)'
             res.active_mode = self._mode
             return res
 
         production = int(self.get_parameter('run_mode').value) == 0
         if production and self._mode != 0 and target != 0 and target != self._mode:
-            res.success = False
-            res.message = f'busy in {MODE_NAMES[self._mode]} (production)'
-            res.active_mode = self._mode
-            return res
+            # set_mode(4) while in a motion mode → only latch fall, keep motion.
+            if target == 4 and self._mode in MOTION_SESSION:
+                self._set_fall(True)
+                res.success = True
+                res.message = 'fall on (kept motion mode)'
+                res.active_mode = self._mode
+                self._publish_state()
+                return res
+            if self._mode in MOTION_SESSION and target in MOTION_SESSION:
+                res.success = False
+                res.message = f'busy in {MODE_NAMES[self._mode]} (production)'
+                res.active_mode = self._mode
+                return res
 
         reason = f'entered {MODE_NAMES[target]}' if target else 'idle'
         cid = req.command_id or f'mode-{target}'
@@ -168,6 +250,27 @@ class SupervisorNode(Node):
         self._progress_pub.publish(p)
         return res
 
+    def _on_set_run_mode(self, req: SetRunMode.Request, res: SetRunMode.Response):
+        """0 production / 1 developer (Gen2 default is developer)."""
+        target = int(req.run_mode)
+        if target not in (0, 1):
+            res.success = False
+            res.message = f'invalid run_mode {target} (use 0 production / 1 developer)'
+            res.run_mode = int(self.get_parameter('run_mode').value)
+            return res
+        self.set_parameters([
+            rclpy.Parameter('run_mode', rclpy.Parameter.Type.INTEGER, target),
+        ])
+        label = '量产' if target == 0 else '开发者'
+        self._detail = f'run_mode={label}'
+        self._emit_event(1, 'run_mode', label)
+        self._publish_state()
+        res.success = True
+        res.message = label
+        res.run_mode = target
+        self.get_logger().info(f'run_mode -> {target} ({label})')
+        return res
+
     def _emit_event(self, severity: int, etype: str, body: str) -> None:
         e = RobotEvent()
         e.stamp = self.get_clock().now().to_msg()
@@ -178,7 +281,7 @@ class SupervisorNode(Node):
         self._event_pub.publish(e)
 
 
-def main(args=None) -> None:
+def main(args: Optional[list] = None) -> None:
     rclpy.init(args=args)
     node = SupervisorNode()
     try:

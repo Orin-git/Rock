@@ -31,20 +31,47 @@
       <p class="muted">工作区 /ros2_ws · Web :9000 · ROS_DOMAIN_ID=99（默认）</p>
     </section>
     <section class="panel">
+      <h2>运行形态（开发者 / 量产）</h2>
+      <p class="muted" style="margin-top:0">
+        对应 <code>/xw/robot_state.run_mode</code>：
+        <b>1 开发者（默认）</b>可随时切能力；
+        <b>0 量产</b>禁止在运动模式间直接互切（与一代逻辑一致，二代自有服务
+        <code>/xw/supervisor/set_run_mode</code>）。
+      </p>
+      <div class="btn-row" style="align-items:center;gap:0.75rem">
+        <button id="runDev" type="button">开发者</button>
+        <button id="runProd" class="secondary" type="button">量产</button>
+        <span class="pill off" id="runPill">形态…</span>
+      </div>
+      <p class="muted" style="font-size:0.8rem;margin:0.6rem 0 0" id="runHint">默认开发者</p>
+    </section>
+
+    <section class="panel" style="margin-top:1rem">
       <h2>模式快捷</h2>
       <div class="btn-row">
         <button id="follow">人体跟随</button>
-        <button id="fall">跌倒检测</button>
         <button class="secondary" id="idle">回 IDLE</button>
       </div>
       <pre id="log" class="log"></pre>
     </section>
 
     <section class="panel" style="margin-top:1rem">
-      <h2>深度点云（调试）</h2>
+      <h2>跌倒检测</h2>
       <p class="muted" style="margin-top:0">
-        默认关闭。导航用激光，不必常开。打开后可在 Foxglove Desktop 的
-        <b>3D → Point Cloud</b> 看 <code>/camera/front/depth/points</code>（约 3 FPS，较耗 CPU）。
+        独立开关，可与 IDLE / 导航同时开启。前视 RGB 按需转发；约 5–6 FPS NPU 推理，≤2s 稳定确认。
+      </p>
+      <div class="btn-row" style="align-items:center;gap:0.75rem">
+        <button id="fallToggle" type="button">跌倒：…</button>
+        <span class="pill off" id="fallPill">状态…</span>
+      </div>
+      <p class="muted" style="font-size:0.8rem;margin:0.6rem 0 0" id="fallHint">—</p>
+    </section>
+
+    <section class="panel" style="margin-top:1rem">
+      <h2>深度点云</h2>
+      <p class="muted" style="margin-top:0">
+        进导航自动开、退出自动关（不写持久化）。手动开关会写入偏好。
+        Foxglove Desktop：<b>3D → Point Cloud</b> → <code>/camera/front/depth/points</code>（约 3 FPS）。
       </p>
       <div class="btn-row" style="align-items:center;gap:0.75rem">
         <button id="pcToggle" type="button">点云：…</button>
@@ -62,59 +89,96 @@ htop   # 容器内 apt install -y htop</pre>
     </section>
   </main>
   <script type="module">
-    import { connect, setMode, onTask, fetchPointcloudStatus, setPointcloudEnabled } from '/js/api.js';
+    import {
+      connect, setMode, setRunMode, onTask, onState,
+      fetchPointcloudStatus, setPointcloudEnabled,
+      fetchFallStatus, setFallEnabled,
+    } from '/js/api.js';
     import '/js/app.js';
     connect();
     const log = document.getElementById('log');
     onTask((l) => { log.textContent = l + '\n' + log.textContent; });
     document.getElementById('follow').onclick = () => setMode(3, {});
-    document.getElementById('fall').onclick = () => setMode(4, {});
     document.getElementById('idle').onclick = () => setMode(0, {});
 
-    const btn = document.getElementById('pcToggle');
-    const pill = document.getElementById('pcPill');
-    const hint = document.getElementById('pcHint');
-    let enabled = false;
-    let busy = false;
+    const runPill = document.getElementById('runPill');
+    const runHint = document.getElementById('runHint');
+    const runDev = document.getElementById('runDev');
+    const runProd = document.getElementById('runProd');
+    function renderRunMode(rm) {
+      const code = rm == null ? 1 : Number(rm);
+      const isDev = code !== 0;
+      runPill.textContent = isDev ? '开发者' : '量产';
+      runPill.className = isDev ? 'pill on' : 'pill warn';
+      runDev.className = isDev ? '' : 'secondary';
+      runProd.className = isDev ? 'secondary' : '';
+      runHint.textContent = isDev
+        ? '开发者模式：可随时切换建图/导航/跟随'
+        : '量产模式：运动能力互斥，不可直接互切';
+    }
+    onState((s) => renderRunMode(s.run_mode));
+    runDev.onclick = () => setRunMode(1);
+    runProd.onclick = () => setRunMode(0);
 
-    function render() {
-      btn.textContent = enabled ? '点云：开 → 点此关闭' : '点云：关 → 点此打开';
-      btn.className = enabled ? '' : 'secondary';
-      pill.textContent = enabled ? 'ON' : 'OFF';
-      pill.className = enabled ? 'pill on' : 'pill off';
+    function wireToggle({ btn, pill, hint, fetchStatus, setEnabled }) {
+      let enabled = false;
+      let busy = false;
+      function render() {
+        btn.textContent = enabled ? `${btn.dataset.label}：开 → 点此关闭` : `${btn.dataset.label}：关 → 点此打开`;
+        btn.className = enabled ? '' : 'secondary';
+        pill.textContent = enabled ? 'ON' : 'OFF';
+        pill.className = enabled ? 'pill on' : 'pill off';
+      }
+      async function refresh() {
+        try {
+          const s = await fetchStatus();
+          enabled = !!s.enabled;
+          hint.textContent = s.service_ready
+            ? `${s.hint || ''} · ${s.topic || ''}`
+            : (s.message || '服务未就绪');
+          render();
+        } catch (e) {
+          hint.textContent = String(e.message || e);
+        }
+      }
+      btn.onclick = async () => {
+        if (busy) return;
+        busy = true;
+        btn.disabled = true;
+        try {
+          const j = await setEnabled(!enabled);
+          if (j.ok) enabled = !!j.enabled;
+          else hint.textContent = j.message || '切换失败';
+          render();
+          await refresh();
+        } finally {
+          busy = false;
+          btn.disabled = false;
+        }
+      };
+      refresh();
+      setInterval(refresh, 4000);
     }
 
-    async function refreshPc() {
-      try {
-        const s = await fetchPointcloudStatus();
-        enabled = !!s.enabled;
-        hint.textContent = s.service_ready
-          ? `${s.hint || ''} · ${s.topic || ''}`
-          : '深度桥服务未就绪（确认 use_depth_cam 已开）';
-        render();
-      } catch (e) {
-        hint.textContent = String(e.message || e);
-      }
-    }
+    const fallBtn = document.getElementById('fallToggle');
+    fallBtn.dataset.label = '跌倒';
+    wireToggle({
+      btn: fallBtn,
+      pill: document.getElementById('fallPill'),
+      hint: document.getElementById('fallHint'),
+      fetchStatus: fetchFallStatus,
+      setEnabled: setFallEnabled,
+    });
 
-    btn.onclick = async () => {
-      if (busy) return;
-      busy = true;
-      btn.disabled = true;
-      try {
-        const j = await setPointcloudEnabled(!enabled);
-        if (j.ok) enabled = !!j.enabled;
-        else hint.textContent = j.message || '切换失败';
-        render();
-        await refreshPc();
-      } finally {
-        busy = false;
-        btn.disabled = false;
-      }
-    };
-
-    refreshPc();
-    setInterval(refreshPc, 4000);
+    const pcBtn = document.getElementById('pcToggle');
+    pcBtn.dataset.label = '点云';
+    wireToggle({
+      btn: pcBtn,
+      pill: document.getElementById('pcPill'),
+      hint: document.getElementById('pcHint'),
+      fetchStatus: fetchPointcloudStatus,
+      setEnabled: setPointcloudEnabled,
+    });
   </script>
 </body>
 </html>

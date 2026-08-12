@@ -1,0 +1,7 @@
+# Gen2 run mode (same idea as Gen1, own interface)
+# 0 = production (量产)  1 = developer (开发者，默认)
+uint8 run_mode
+---
+bool success
+string message
+uint8 run_mode

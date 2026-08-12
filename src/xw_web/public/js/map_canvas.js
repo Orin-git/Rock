@@ -20,7 +20,7 @@
   const DEFAULT_SENSOR_FRAMES = [
     { id: 'lidar', frame: 'lidar_link', label: 'LiDAR', color: '#c23048' },
     { id: 'camera_front', frame: 'camera_front_link', label: '深度前视', color: '#22c55e' },
-    { id: 'camera_rear', frame: 'camera_rear_link', label: '后视占位', color: '#94a3b8' },
+    { id: 'camera_front_2', frame: 'camera_front_2_link', label: '深度前视二号', color: '#16a34a' },
     { id: 'ultrasonic', frame: 'ultrasonic_front_link', label: '超声占位', color: '#f59e0b' },
   ];
 

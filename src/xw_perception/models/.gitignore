@@ -1,0 +1,4 @@
+*.onnx
+check*.onnx
+!README.md
+yolov8n-detect.rknn

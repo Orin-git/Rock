@@ -5,7 +5,7 @@ uint8 mode
 string mode_name
 # run_mode: 0 production 1 developer
 uint8 run_mode
-bool emergency_stop
+bool emergency_stop  # latched from /xw/chassis/motor_disabled (MCU Flag_Stop)
 bool safety_ok
 bool localization_ok
 string active_map

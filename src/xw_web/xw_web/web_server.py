@@ -26,12 +26,12 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from std_srvs.srv import SetBool
 from rosidl_runtime_py.utilities import get_message
 
 from xw_interfaces.msg import RobotState, TaskProgress, TaskResult
-from xw_interfaces.srv import MapManage, SetMode, WaypointManage
+from xw_interfaces.srv import MapManage, MotionCommand, SetMode, SetRunMode, WaypointManage
 
 # URDF xw_gen2.urdf — relative to base_link (fill sensors later without UI rewrite)
 _SENSOR_LAYOUT = [
@@ -44,11 +44,11 @@ _SENSOR_LAYOUT = [
         'label': '前视深度相机',
     },
     {
-        'id': 'camera_rear',
-        'frame': 'camera_rear_link',
-        'xyz': [-0.18, 0.0, 0.25],
-        'status': 'placeholder',
-        'label': '后视相机（占位）',
+        'id': 'camera_front_2',
+        'frame': 'camera_front_2_link',
+        'xyz': [0.18, 0.05, 0.25],
+        'status': 'live',
+        'label': '前视深度相机二号',
     },
     {
         'id': 'ultrasonic',
@@ -96,7 +96,10 @@ _HEAVY_TYPES = frozenset(
 )
 
 _TOPIC_HINTS: Dict[str, str] = {
-    '/xw/robot_state': '机器人总状态：模式、急停、安全闸、定位、电池摘要',
+    '/xw/robot_state': '机器人总状态：模式、run_mode、急停、安全闸、定位、电池摘要',
+    '/xw/supervisor/set_mode': '切换工作模式 IDLE/建图/导航/跟随/跌倒',
+    '/xw/supervisor/set_run_mode': '切换运行形态：0量产 / 1开发者（默认开发者）',
+    '/xw/supervisor/get_state': '查询 Supervisor 当前状态',
     '/xw/power': '电源状态：电量、电压、充电/回充对接',
     '/xw/event': '系统事件流（Supervisor 广播）',
     '/xw/task/progress': '任务进度：能力会话当前阶段',
@@ -110,8 +113,7 @@ _TOPIC_HINTS: Dict[str, str] = {
     'scan': '激光雷达扫描（原始）',
     '/odom': '里程计位姿与速度',
     'odom': '里程计位姿与速度',
-    '/emergency_stop': '急停布尔量',
-    'emergency_stop': '急停布尔量',
+    '/xw/chassis/motor_disabled': '底盘失能：true=不可控，false=使能可遥控',
     '/safety_status': '安全闸通过状态',
     'safety_status': '安全闸通过状态',
     '/obstacle_status': '障碍描述文本',
@@ -153,7 +155,8 @@ _NODE_HINTS: Dict[str, str] = {
     'xw_nav_session': '导航会话',
     'xw_follow_session': '跟随会话',
     'xw_fall_session': '跌倒巡视会话',
-    'xw_perception': '感知（人体/跌倒）',
+    'xw_perception_stub': '感知（人体/跌倒 stub）',
+    'xw_perception': '感知（YOLOv8-pose RKNN → tracks/fall）',
     'xw_sensors': '传感器桩/桥接',
     'xw_depth_topic_bridge': '深度相机话题适配（/camera/front）',
     'camera_publisher': 'Angstrong 深度相机驱动',
@@ -287,6 +290,19 @@ class BridgeNode(Node):
             },
         }
         self._tasks: List[str] = []
+        self._obstacle: Dict[str, Any] = {
+            'blocked': False,
+            'any_sector_blocked': False,
+            'safety_ok': True,
+            'reason': 'waiting',
+            'depth_m': None,
+            'sectors': {
+                'front': {'blocked': False, 'range_m': None, 'source': None},
+                'rear': {'blocked': False, 'range_m': None, 'source': None},
+                'left': {'blocked': False, 'range_m': None, 'source': None},
+                'right': {'blocked': False, 'range_m': None, 'source': None},
+            },
+        }
 
         # On-demand single-topic probe (only one active subscription at a time).
         self._watch_topic: Optional[str] = None
@@ -306,17 +322,28 @@ class BridgeNode(Node):
         self.create_subscription(RobotState, '/xw/robot_state', self._on_state, 10)
         self.create_subscription(TaskProgress, '/xw/task/progress', self._on_progress, 10)
         self.create_subscription(TaskResult, '/xw/task/result', self._on_result, 10)
+        self.create_subscription(String, 'obstacle_status', self._on_obstacle, 10)
         self._teleop_pub = self.create_publisher(Twist, '/xw/cmd/teleop', 10)
         self._goal_pub = self.create_publisher(PoseStamped, '/xw/goal_pose', 10)
         self._set_mode = self.create_client(SetMode, '/xw/supervisor/set_mode')
+        self._set_run_mode = self.create_client(SetRunMode, '/xw/supervisor/set_run_mode')
         self._map_mgr = self.create_client(MapManage, '/xw/map/manage')
         self._wp_mgr = self.create_client(WaypointManage, '/xw/map/waypoint')
         self._set_pointcloud = self.create_client(SetBool, '/xw/camera/set_pointcloud')
+        self._set_fall = self.create_client(SetBool, '/xw/supervisor/set_fall')
+        self._motion_cli = self.create_client(MotionCommand, '/xw/motion/command')
         self._pointcloud_enabled = False
+        self._fall_enabled = False
         self.create_subscription(
             Bool,
             '/xw/camera/pointcloud_enabled',
             self._on_pointcloud_enabled,
+            _LATCHED_BOOL_QOS,
+        )
+        self.create_subscription(
+            Bool,
+            '/xw/fall/enable',
+            self._on_fall_enabled,
             _LATCHED_BOOL_QOS,
         )
         self.create_timer(5.0, self._watch_housekeep)
@@ -327,6 +354,10 @@ class BridgeNode(Node):
         with self._lock:
             self._pointcloud_enabled = bool(msg.data)
 
+    def _on_fall_enabled(self, msg: Bool) -> None:
+        with self._lock:
+            self._fall_enabled = bool(msg.data)
+
     def pointcloud_status(self) -> Dict[str, Any]:
         with self._lock:
             enabled = bool(self._pointcloud_enabled)
@@ -336,7 +367,7 @@ class BridgeNode(Node):
             'enabled': enabled,
             'service_ready': ready,
             'topic': '/camera/front/depth/points',
-            'hint': 'Foxglove 3D → Point Cloud；默认关，仅调试打开',
+            'hint': '导航自动开；手动开关会持久化。Foxglove 3D → Point Cloud',
         }
 
     def set_pointcloud(self, enabled: bool) -> Dict[str, Any]:
@@ -362,6 +393,41 @@ class BridgeNode(Node):
             'topic': '/camera/front/depth/points',
         }
 
+    def fall_status(self) -> Dict[str, Any]:
+        with self._lock:
+            enabled = bool(self._fall_enabled)
+        ready = self._set_fall.service_is_ready()
+        return {
+            'ok': True,
+            'enabled': enabled,
+            'service_ready': ready,
+            'topic': '/xw/fall/enable',
+            'hint': '正交开关：可与 IDLE/导航同时开；跟随复用同一感知管线',
+        }
+
+    def set_fall(self, enabled: bool) -> Dict[str, Any]:
+        if not self._set_fall.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'set_fall service unavailable (supervisor down?)'}
+        req = SetBool.Request()
+        req.data = bool(enabled)
+        fut = self._set_fall.call_async(req)
+        for _ in range(60):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'set_fall timeout'}
+        res = fut.result()
+        with self._lock:
+            self._fall_enabled = bool(enabled) if res.success else self._fall_enabled
+        self._push_task(f'[fall] {res.message}')
+        return {
+            'ok': bool(res.success),
+            'enabled': bool(enabled) if res.success else self._fall_enabled,
+            'message': res.message,
+            'topic': '/xw/fall/enable',
+        }
+
     def _push_task(self, line: str) -> None:
         with self._lock:
             self._tasks.insert(0, line)
@@ -370,6 +436,40 @@ class BridgeNode(Node):
     def _on_state(self, msg: RobotState) -> None:
         with self._lock:
             self._state = _state_to_dict(msg)
+
+    def _on_obstacle(self, msg: String) -> None:
+        raw = (msg.data or '').strip()
+        if not raw:
+            return
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = {'reason': raw, 'blocked': 'block' in raw.lower()}
+        if not isinstance(parsed, dict):
+            return
+        sectors_in = parsed.get('sectors') if isinstance(parsed.get('sectors'), dict) else {}
+        def _sec(key: str) -> Dict[str, Any]:
+            s = sectors_in.get(key) if isinstance(sectors_in.get(key), dict) else {}
+            return {
+                'blocked': bool(s.get('blocked', False)),
+                'range_m': s.get('range_m'),
+                'source': s.get('source'),
+                'stop_m': s.get('stop_m'),
+            }
+        with self._lock:
+            self._obstacle = {
+                'blocked': bool(parsed.get('blocked', False)),
+                'any_sector_blocked': bool(parsed.get('any_sector_blocked', parsed.get('blocked', False))),
+                'safety_ok': bool(parsed.get('safety_ok', not parsed.get('blocked', False))),
+                'reason': str(parsed.get('reason') or ''),
+                'depth_m': parsed.get('depth_m'),
+                'sectors': {
+                    'front': _sec('front'),
+                    'rear': _sec('rear'),
+                    'left': _sec('left'),
+                    'right': _sec('right'),
+                },
+            }
 
     def _on_progress(self, msg: TaskProgress) -> None:
         self._push_task(f'[progress] {msg.capability} {msg.phase}')
@@ -429,6 +529,7 @@ class BridgeNode(Node):
             return {
                 'ok': True,
                 'state': dict(self._state),
+                'obstacle': dict(self._obstacle),
                 'tasks': list(self._tasks[:40]),
                 'ros_domain_id': os.environ.get('ROS_DOMAIN_ID', ''),
                 'robot_id': os.environ.get('ROBOT_ID', ''),
@@ -443,6 +544,37 @@ class BridgeNode(Node):
         t.angular.z = float(angular_z)
         self._teleop_pub.publish(t)
         return {'ok': True}
+
+    def call_motion(
+        self,
+        angle_deg: float,
+        distance_m: float,
+        command_id: str = '',
+    ) -> Dict[str, Any]:
+        if not self._motion_cli.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'motion service unavailable (xw_motion down?)'}
+        req = MotionCommand.Request()
+        req.angle_deg = float(angle_deg)
+        req.distance_m = float(distance_m)
+        req.command_id = command_id or f'ui-{int(time.time() * 1000)}'
+        fut = self._motion_cli.call_async(req)
+        for _ in range(80):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'motion command timeout'}
+        res = fut.result()
+        self._push_task(
+            f'[motion] id={req.command_id} ang={angle_deg} dist={distance_m} → {res.message}'
+        )
+        return {
+            'ok': bool(res.success),
+            'message': res.message,
+            'command_id': req.command_id,
+            'angle_deg': float(angle_deg),
+            'distance_m': float(distance_m),
+        }
 
     def publish_goal(
         self,
@@ -513,6 +645,25 @@ class BridgeNode(Node):
                 'pointcloud_enabled': bool(self._pointcloud_enabled),
                 'preview': '/camera/front/color/image_raw/compressed',
             },
+            'depth_camera_2': {
+                'id': 'depth_camera_2',
+                'label': '前视深度相机二号',
+                'status': 'live'
+                if has(
+                    '/camera/front_2/color/image_raw/compressed',
+                    '/camera/front_2/depth/image_raw',
+                )
+                else 'missing',
+                'topics': [
+                    '/camera/front_2/color/image_raw/compressed',
+                    '/camera/front_2/depth/image_raw',
+                ],
+                'present': has(
+                    '/camera/front_2/color/image_raw/compressed',
+                    '/camera/front_2/depth/image_raw',
+                ),
+                'preview': '/camera/front_2/color/image_raw/compressed',
+            },
             'ultrasonic': {
                 'id': 'ultrasonic',
                 'label': '超声波',
@@ -570,6 +721,29 @@ class BridgeNode(Node):
             'ok': bool(res.success),
             'message': res.message,
             'active_mode': int(res.active_mode),
+        }
+
+    def set_run_mode(self, run_mode: int) -> Dict[str, Any]:
+        """0 production / 1 developer — Gen2 default is developer."""
+        if not self._set_run_mode.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'set_run_mode service unavailable', 'run_mode': 1}
+        req = SetRunMode.Request()
+        req.run_mode = int(run_mode)
+        fut = self._set_run_mode.call_async(req)
+        for _ in range(60):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'set_run_mode timeout', 'run_mode': 1}
+        res = fut.result()
+        label = '量产' if int(res.run_mode) == 0 else '开发者'
+        self._push_task(f'[run_mode] {label} ({res.message})')
+        return {
+            'ok': bool(res.success),
+            'message': res.message,
+            'run_mode': int(res.run_mode),
+            'label': label,
         }
 
     def map_manage(
@@ -968,6 +1142,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.pointcloud_status())
+        if path == '/api/fall':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.fall_status())
         if path == '/api/sensors':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
@@ -985,6 +1163,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.bridge.publish_teleop(
                     float(data.get('linear_x', 0.0)),
                     float(data.get('angular_z', 0.0)),
+                ),
+            )
+        if path == '/api/motion':
+            try:
+                angle = float(data.get('angle_deg', data.get('angle', 0.0)))
+                dist = float(data.get('distance_m', data.get('distance', 0.0)))
+            except (TypeError, ValueError):
+                return self._json(400, {'ok': False, 'message': 'angle_deg/distance_m required'})
+            return self._json(
+                200,
+                self.bridge.call_motion(
+                    angle,
+                    dist,
+                    str(data.get('command_id') or ''),
                 ),
             )
         if path == '/api/goal':
@@ -1017,6 +1209,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     str(data.get('command_id') or ''),
                 ),
             )
+        if path == '/api/run_mode':
+            return self._json(
+                200,
+                self.bridge.set_run_mode(int(data.get('run_mode', 1))),
+            )
         if path == '/api/map':
             return self._json(
                 200,
@@ -1045,6 +1242,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if enabled is None:
                 return self._json(400, {'ok': False, 'message': 'missing enabled'})
             return self._json(200, self.bridge.set_pointcloud(bool(enabled)))
+        if path == '/api/fall':
+            enabled = data.get('enabled')
+            if enabled is None:
+                enabled = data.get('enable')
+            if enabled is None:
+                return self._json(400, {'ok': False, 'message': 'missing enabled'})
+            return self._json(200, self.bridge.set_fall(bool(enabled)))
         if path == '/api/topic/watch':
             return self._json(
                 200,
