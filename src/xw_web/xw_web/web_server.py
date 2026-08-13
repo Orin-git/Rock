@@ -47,8 +47,8 @@ _SENSOR_LAYOUT = [
         'id': 'camera_front_down',
         'frame': 'camera_front_down_link',
         'xyz': [0.18, 0.0, 0.28],
-        'status': 'live',
-        'label': '前下深度相机',
+        'status': 'partial',
+        'label': '前下深度（需分 USB 总线）',
     },
     {
         'id': 'ultrasonic',
@@ -61,14 +61,14 @@ _SENSOR_LAYOUT = [
         'id': 'imu',
         'frame': 'imu_link',
         'xyz': [0.0, 0.0, 0.10],
-        'status': 'placeholder',
-        'label': '独立 IMU（占位）',
+        'status': 'live',
+        'label': '独立 IMU（WT901C485）',
     },
     {
         'id': 'chassis',
         'frame': 'base_link',
         'xyz': [0.0, 0.0, 0.0],
-        'status': 'partial',
+        'status': 'live',
         'label': '底盘 / odom',
     },
 ]
@@ -733,6 +733,7 @@ class BridgeNode(Node):
                     '/camera/front_down/depth/image_raw',
                 ),
                 'preview': '/camera/front_down/color/image_raw/compressed',
+                'hint': '默认关；USB3(speed=5000)后 USE_DEPTH_CAM_2=true',
             },
             'ultrasonic': {
                 'id': 'ultrasonic',
@@ -746,10 +747,10 @@ class BridgeNode(Node):
             'imu': {
                 'id': 'imu',
                 'label': 'IMU',
-                'status': 'placeholder',
-                'topics': ['/imu/data', '/imu'],
-                'present': False,
-                'hint': '未装配，占位',
+                'status': 'live' if has('/imu/data', 'imu/data') else 'missing',
+                'topics': ['/imu/data'],
+                'present': has('/imu/data', 'imu/data'),
+                'hint': 'WT901C485 Modbus → /dev/imu → /imu/data',
             },
             'chassis': {
                 'id': 'chassis',

@@ -10,6 +10,12 @@ LIDAR_BAUDRATE="${LIDAR_BAUDRATE:-1000000}"
 CHASSIS_PORT="${CHASSIS_PORT:-/dev/chassis}"
 CHASSIS_BAUDRATE="${CHASSIS_BAUDRATE:-115200}"
 CHASSIS_FALLBACK="${CHASSIS_FALLBACK:-/dev/ttyACM0}"
+USE_IMU="${USE_IMU:-true}"
+IMU_PORT="${IMU_PORT:-/dev/imu}"
+IMU_BAUDRATE="${IMU_BAUDRATE:-9600}"
+# Enable cam2 only after cams sit on different USB host controllers (see ARCHITECTURE).
+USE_DEPTH_CAM="${USE_DEPTH_CAM:-true}"
+USE_DEPTH_CAM_2="${USE_DEPTH_CAM_2:-false}"
 USE_WEB="${USE_WEB:-true}"
 # systemd may still export USE_SIM_HW=true; prefer real MCU when present
 # (set FORCE_SIM_HW=1 to keep mock despite /dev/chassis|/dev/ttyACM0).
@@ -110,11 +116,12 @@ docker exec "$CONTAINER" bash -c '
   kill_pat "rplidar_node"
   kill_pat "async_slam_toolbox"
   kill_pat "ascamera"
+  kill_pat "wt901_imu_node"
   sleep 2
 ' || true
 sleep 1
 
-echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT)"
+echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT imu=$IMU_PORT depth=$USE_DEPTH_CAM depth2=$USE_DEPTH_CAM_2)"
 
 # Foreground so systemd tracks the process
 exec docker exec -i "$CONTAINER" bash -lc "
@@ -131,6 +138,11 @@ exec docker exec -i "$CONTAINER" bash -lc "
     chassis_port:=${CHASSIS_PORT} \
     chassis_baudrate:=${CHASSIS_BAUDRATE} \
     chassis_fallback:=${CHASSIS_FALLBACK} \
+    use_imu:=${USE_IMU} \
+    imu_port:=${IMU_PORT} \
+    imu_baudrate:=${IMU_BAUDRATE} \
+    use_depth_cam:=${USE_DEPTH_CAM} \
+    use_depth_cam_2:=${USE_DEPTH_CAM_2} \
     use_web:=${USE_WEB} \
     use_foxglove:=${USE_FOXGLOVE} \
     enable_pointcloud:=${USE_POINTCLOUD} \

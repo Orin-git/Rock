@@ -1,0 +1,6 @@
+# Angstrong HP60C (3482:6723): SDK uses libusb/usbfs; kernel uvcvideo causes
+# GET_INFO -71 / disconnect storms. Unbind UVC interfaces after bind.
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="3482", ATTR{idProduct}=="6723", RUN+="/bin/sh -c 'sleep 0.2; for i in 0 1; do echo $kernel:$i > /sys/bus/usb/drivers/uvcvideo/unbind 2>/dev/null || true; done'"
+
+# Reduce LPM flakiness on these cams (also set via usbcore.quirks if desired)
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="3482", ATTR{idProduct}=="6723", ATTR{power/control}="on", ATTR{power/autosuspend}="-1"

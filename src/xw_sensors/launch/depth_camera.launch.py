@@ -27,13 +27,13 @@ def _launch_setup(context, *args, **kwargs):
     with open(cfg_path, 'r', encoding='utf-8') as f:
         cfg = yaml.safe_load(f) or {}
 
-    fps = int(LaunchConfiguration('fps').perform(context) or cfg.get('fps', 10))
-    preview_fps = float(
-        LaunchConfiguration('preview_fps').perform(context) or cfg.get('preview_fps', 5.0)
-    )
-    points_fps = float(
-        LaunchConfiguration('points_fps').perform(context) or cfg.get('points_fps', 10.0)
-    )
+    fps_arg = (LaunchConfiguration('fps').perform(context) or '').strip()
+    preview_arg = (LaunchConfiguration('preview_fps').perform(context) or '').strip()
+    points_arg = (LaunchConfiguration('points_fps').perform(context) or '').strip()
+    # Empty launch args → use YAML (so config fps/preview_fps take effect).
+    fps = int(fps_arg) if fps_arg else int(cfg.get('fps', 5))
+    preview_fps = float(preview_arg) if preview_arg else float(cfg.get('preview_fps', 3.0))
+    points_fps = float(points_arg) if points_arg else float(cfg.get('points_fps', 10.0))
     enable_pc = LaunchConfiguration('enable_pointcloud').perform(context).lower() in (
         '1', 'true', 'yes', 'on',
     )
@@ -131,9 +131,10 @@ def generate_launch_description() -> LaunchDescription:
             default_value='depth_camera.yaml',
             description='YAML under xw_sensors/config (depth_camera.yaml | depth_camera_front_down.yaml)',
         ),
-        DeclareLaunchArgument('fps', default_value='10'),
-        DeclareLaunchArgument('preview_fps', default_value='5.0'),
-        DeclareLaunchArgument('points_fps', default_value='10.0'),
+        # Empty → use values from YAML (do not hardcode 10 here or YAML fps is ignored).
+        DeclareLaunchArgument('fps', default_value=''),
+        DeclareLaunchArgument('preview_fps', default_value=''),
+        DeclareLaunchArgument('points_fps', default_value=''),
         DeclareLaunchArgument(
             'enable_pointcloud',
             default_value='false',

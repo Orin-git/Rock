@@ -27,6 +27,7 @@ setup(
         'console_scripts': [
             'sensors_stub_node = xw_sensors.sensors_stub_node:main',
             'depth_topic_bridge = xw_sensors.depth_topic_bridge:main',
+            'wt901_imu_node = xw_sensors.wt901_imu_node:main',
         ],
     },
 )

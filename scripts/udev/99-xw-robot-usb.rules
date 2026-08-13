@@ -1,0 +1,11 @@
+# Xiaowei Gen2 USB serial bindings (Rock 5T)
+# Layout: USB3×2 → depth cams; USB2 → lidar; USB2 → hub(chassis+IMU)
+
+# Chassis MCU: QinHeng CDC ACM 1a86:55d4 → /dev/chassis
+KERNEL=="ttyACM*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", MODE:="0666", GROUP:="dialout", SYMLINK+="chassis"
+
+# WT901C485 IMU via CH340 1a86:7523 (same hub as chassis) → /dev/imu
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0666", GROUP:="dialout", SYMLINK+="imu"
+
+# Slamtec RPLidar CP210x 10c4:ea60 → /dev/radar
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", MODE:="0666", GROUP:="dialout", SYMLINK+="radar"

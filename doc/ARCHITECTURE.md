@@ -100,10 +100,33 @@ ros2 launch xw_bringup robot.launch.py
 ## 7. Phase 路线
 
 - **P0**：mock 栈 + FSM + Web SPA  
-- **P1**：真底盘（`xw_chassis` 串口 `/dev/chassis` 或回退 `/dev/ttyACM0` @115200，一代 0x7B 协议；udev：`scripts/install_chassis_udev.sh`）/ 雷达 / 超声（超声仍待）  
+- **P1**：真底盘（`xw_chassis` 串口 `/dev/chassis` 或回退 `/dev/ttyACM0` @115200，一代 0x7B 协议；udev：`scripts/install_robot_udev.sh`）/ 雷达 / 超声（超声仍待）  
 - **P2**：手推建图已落地；**Nav2/AMCL 已接入**（`xw_nav_session`）；单点/多点/初位姿 Web API 已通  
 - **P3（部分）**：双前视深度 + 安全门深度 ROI；导航 local costmap 融合激光+双深度点云；**感知真节点**（YOLOv8n-pose RKNN）  
-- **P4**：独立 IMU + EKF 真融合、回充 / 压测 / 可选 Gateway；相机/IMU 精标定  
+- **P4（部分）**：**WT901C485 独立 IMU 已接入**（`/imu/data`）；EKF 真融合默认关（`use_ekf:=true` 启用）；回充 / 压测 / 精标定仍待  
+
+### USB 接口分配（Rock 5T）— HP60C 为 USB2.0 设备
+
+Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常）。  
+两个蓝色口在 USB2 层共用 **同一条 VIA HS 总线（Bus1，480Mbps）**；两台深度相机都插蓝口会挤爆总线 → 掉线/libusb 崩溃。
+
+**推荐接线（双相机同时开的关键：相机分属不同 USB 主机控制器）：**
+
+| 板载口 | 设备 | 为何 |
+|--------|------|------|
+| 蓝色 USB3 A | 深度相机 front_up | 走 xhci 的 USB2 伴生（Bus1） |
+| 蓝色 USB3 B | 拓展坞 → 底盘+IMU | 串口流量极小，可与 cam1 共享 Bus1 |
+| 黑色 USB2 A | 深度相机 front_down | **独占**另一路 EHCI（Bus3 或 Bus5） |
+| 黑色 USB2 B | 激光雷达 | **独占**供电/电流 |
+
+插完后执行 `lsusb -t`：两台 `3482:6723` 必须出现在**不同 Bus**（例如一台 Bus1、一台 Bus5），再开双相机。
+
+```bash
+# 确认分总线后打开第二路
+USE_DEPTH_CAM_2=true sudo systemctl restart xw-robot
+```
+
+注意：HP60C SDK **不支持 fps=5**；深度用 **10**。已加 udev 解绑 `uvcvideo`，避免与 ascamera 抢接口。
 
 ### 传感器命名契约（Gen2）
 
@@ -112,7 +135,7 @@ ros2 launch xw_bringup robot.launch.py
 | 激光雷达 | `rplidar_node` | `lidar_link` | `/scan`（建图/AMCL/避障） |
 | 前上深度 | `ascamera_hp60c/...` + bridge | `camera_front_up_link` | `/camera/front_up/{color,depth,...}` |
 | 前下深度 | `ascamera_hp60c_2/...` + bridge | `camera_front_down_link` | `/camera/front_down/...` |
-| 独立 IMU（明日） | 驱动 TBD | `imu_link` | `/imu/data` |
+| 独立 IMU（WT901C485） | `xw_wt901_imu` | `imu_link` | `/imu/data`（Modbus RTU @9600，slave `0x50`） |
 | 底盘轮式里程计 | `xw_chassis` | `base_link` | 默认 `/odom`；EKF 时 `/odom/wheel` |
 | EKF 融合（可选） | `ekf_filter_node` | `odom→base_link` | `/odom` |
 

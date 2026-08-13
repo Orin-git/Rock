@@ -32,9 +32,12 @@ def generate_launch_description() -> LaunchDescription:
     use_depth_cam_2 = LaunchConfiguration('use_depth_cam_2')
     enable_pointcloud = LaunchConfiguration('enable_pointcloud')
     use_ekf = LaunchConfiguration('use_ekf')
+    use_imu = LaunchConfiguration('use_imu')
     profile = LaunchConfiguration('profile')
     lidar_port = LaunchConfiguration('lidar_port')
     lidar_baudrate = LaunchConfiguration('lidar_baudrate')
+    imu_port = LaunchConfiguration('imu_port')
+    imu_baudrate = LaunchConfiguration('imu_baudrate')
 
     lidar_delay = float(os.environ.get('XW_LIDAR_START_DELAY', '25'))
 
@@ -72,6 +75,7 @@ def generate_launch_description() -> LaunchDescription:
             ' use_depth_cam_2=', use_depth_cam_2,
             ' enable_pointcloud=', enable_pointcloud,
             ' use_ekf=', use_ekf,
+            ' use_imu=', use_imu,
             f' lidar_delay={lidar_delay}s',
         ]),
         Node(
@@ -87,6 +91,23 @@ def generate_launch_description() -> LaunchDescription:
             name='xw_chassis',
             parameters=[chassis_params],
             output='screen',
+        ),
+        Node(
+            package='xw_sensors',
+            executable='wt901_imu_node',
+            name='xw_wt901_imu',
+            condition=IfCondition(use_imu),
+            parameters=[{
+                'port': imu_port,
+                'port_fallback': '/dev/ttyUSB0',
+                'baud': ParameterValue(imu_baudrate, value_type=int),
+                'slave_id': 0x50,
+                'frame_id': 'imu_link',
+                'rate': 15.0,
+            }],
+            output='screen',
+            respawn=True,
+            respawn_delay=2.0,
         ),
         Node(
             package='xw_sensors',
@@ -176,13 +197,23 @@ def generate_launch_description() -> LaunchDescription:
         }.items(),
         condition=IfCondition(use_depth_cam),
     )
-    depth_cam_2 = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(depth_launch),
-        launch_arguments={
-            'config': 'depth_camera_front_down.yaml',
-            'enable_pointcloud': 'false',
-        }.items(),
-        condition=IfCondition(use_depth_cam_2),
+    # Stagger cam2 so dual HP60C USB init does not race / brown-out the bus.
+    depth_cam_2 = TimerAction(
+        period=8.0,
+        actions=[
+            LogInfo(
+                msg='[xw_bringup] starting depth camera #2 (front_down) after 8s',
+                condition=IfCondition(use_depth_cam_2),
+            ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(depth_launch),
+                launch_arguments={
+                    'config': 'depth_camera_front_down.yaml',
+                    'enable_pointcloud': 'false',
+                }.items(),
+                condition=IfCondition(use_depth_cam_2),
+            ),
+        ],
     )
 
     foxglove = ExecuteProcess(
@@ -193,7 +224,7 @@ def generate_launch_description() -> LaunchDescription:
             '-p port:=8765 '
             '-p address:=0.0.0.0 '
             '-p topic_whitelist:=["^/tf$","^/tf_static$","^/scan$","^/odom$","^/cmd_vel$",'
-            '"^/map$","^/xw/.*","^/safety_status$",'
+            '"^/imu/data$","^/map$","^/xw/.*","^/safety_status$",'
             '"^/camera/front_up/color/image_raw/compressed$","^/camera/front_up/.*/camera_info$",'
             '"^/camera/front_up/depth/points$",'
             '"^/camera/front_down/color/image_raw/compressed$","^/camera/front_down/.*/camera_info$",'
@@ -256,6 +287,11 @@ def generate_launch_description() -> LaunchDescription:
             description='Fuse /odom/wheel + /imu/data via robot_localization (needs independent IMU)',
         ),
         DeclareLaunchArgument(
+            'use_imu',
+            default_value='true',
+            description='Start WT901C485 Modbus driver → /imu/data (frame imu_link)',
+        ),
+        DeclareLaunchArgument(
             'chassis_odom_topic',
             default_value='odom',
             description='When use_ekf:=true set to odom/wheel',
@@ -267,6 +303,8 @@ def generate_launch_description() -> LaunchDescription:
         ),
         DeclareLaunchArgument('lidar_port', default_value='/dev/radar'),
         DeclareLaunchArgument('lidar_baudrate', default_value='1000000'),
+        DeclareLaunchArgument('imu_port', default_value='/dev/imu'),
+        DeclareLaunchArgument('imu_baudrate', default_value='9600'),
         DeclareLaunchArgument('use_web', default_value='true'),
         DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('profile', default_value='normal'),

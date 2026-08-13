@@ -11,6 +11,11 @@ source "${ROOT}/scripts/ros_env.sh"
 : "${CHASSIS_PORT:=/dev/chassis}"
 : "${CHASSIS_BAUDRATE:=115200}"
 : "${CHASSIS_FALLBACK:=/dev/ttyACM0}"
+: "${USE_IMU:=true}"
+: "${IMU_PORT:=/dev/imu}"
+: "${IMU_BAUDRATE:=9600}"
+: "${USE_DEPTH_CAM:=true}"
+: "${USE_DEPTH_CAM_2:=false}"
 : "${USE_WEB:=true}"
 : "${USE_FOXGLOVE:=true}"
 : "${PROFILE:=normal}"
@@ -26,6 +31,11 @@ exec ros2 launch xw_bringup robot.launch.py \
   chassis_port:="${CHASSIS_PORT}" \
   chassis_baudrate:="${CHASSIS_BAUDRATE}" \
   chassis_fallback:="${CHASSIS_FALLBACK}" \
+  use_imu:="${USE_IMU}" \
+  imu_port:="${IMU_PORT}" \
+  imu_baudrate:="${IMU_BAUDRATE}" \
+  use_depth_cam:="${USE_DEPTH_CAM}" \
+  use_depth_cam_2:="${USE_DEPTH_CAM_2}" \
   use_web:="${USE_WEB}" \
   use_foxglove:="${USE_FOXGLOVE}" \
   profile:="${PROFILE}"
