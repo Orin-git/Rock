@@ -16,28 +16,28 @@
     </collision>
   </link>
 
-  <!-- LiDAR: yaw=0 assumes driver angle 0 == robot +X. Verify: obstacle ahead → short range near scan angle 0.
-       If 180° flipped, change ONLY this joint yaw to π (do not also set driver inverted). -->
+  <!-- LiDAR: yaw=π — physical RPLidar angle-0 faced robot rear (front/rear & left/right swapped on UI).
+       Do NOT also set rplidar inverted:=true (would double-flip). Verify: obstacle ahead → short range near scan angle π in lidar_link / front after offset. -->
   <link name="lidar_link"/>
   <joint name="lidar_joint" type="fixed">
     <parent link="base_link"/>
     <child link="lidar_link"/>
-    <origin xyz="0 0 0.22" rpy="0 0 0"/>
+    <origin xyz="0 0 0.22" rpy="0 0 3.141592653589793"/>
   </joint>
 
-  <!-- Cam1 (down-tilt) → /camera/front/... ; follow + near obstacles. Optical-ish RPY (Z forward). -->
-  <link name="camera_front_link"/>
-  <joint name="camera_front_joint" type="fixed">
+  <!-- front_up → /camera/front_up/... ; follow + safety depth. Optical-ish RPY (Z forward). -->
+  <link name="camera_front_up_link"/>
+  <joint name="camera_front_up_joint" type="fixed">
     <parent link="base_link"/>
-    <child link="camera_front_link"/>
+    <child link="camera_front_up_link"/>
     <origin xyz="0.18 0 0.25" rpy="-1.3955 0 -1.5708"/>
   </joint>
 
-  <!-- Cam2 (up-tilt) → /camera/front_2/... ; high / hanging obstacles. -->
-  <link name="camera_front_2_link"/>
-  <joint name="camera_front_2_joint" type="fixed">
+  <!-- front_down → /camera/front_down/... ; second depth for nav / near ground. -->
+  <link name="camera_front_down_link"/>
+  <joint name="camera_front_down_joint" type="fixed">
     <parent link="base_link"/>
-    <child link="camera_front_2_link"/>
+    <child link="camera_front_down_link"/>
     <origin xyz="0.18 0 0.28" rpy="-1.1 0 -1.5708"/>
   </joint>
 
@@ -49,7 +49,7 @@
     <origin xyz="0 0 0.10" rpy="0 0 0"/>
   </joint>
 
-  <!-- Legacy rear placeholder (unused); prefer camera_front_2_link. -->
+  <!-- Legacy rear placeholder (unused); prefer camera_front_down_link. -->
   <link name="camera_rear_link"/>
   <joint name="camera_rear_joint" type="fixed">
     <parent link="base_link"/>

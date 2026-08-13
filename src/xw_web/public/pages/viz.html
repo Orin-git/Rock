@@ -75,7 +75,7 @@
         <div class="viz-step"><b>2</b> 点「新标签打开 Studio」（会带上本机 <code>ws://IP:8765</code>）</div>
         <div class="viz-step"><b>3</b> 若已登录，会直接进你的布局；未登录则先登录一次</div>
         <div class="viz-step"><b>4</b> 在 3D 面板加 LaserScan → 话题 <code>/scan</code>，并打开 TF</div>
-        <div class="viz-step"><b>5</b> 前视相机：加 <b>Image</b> 面板 → <code>/camera/front/color/image_raw/compressed</code></div>
+        <div class="viz-step"><b>5</b> 前上相机：加 <b>Image</b> 面板 → <code>/camera/front_up/color/image_raw/compressed</code></div>
       </div>
       <p class="muted" style="font-size:0.78rem;margin:0.75rem 0 0">
         你之前能用的链接格式即：
@@ -93,8 +93,8 @@
         <li>Open connection → <b>Foxglove WebSocket</b></li>
         <li>填入上面的 WS 地址（如 <code id="wsHint">ws://192.168.x.x:8765</code>）</li>
         <li>Open → 添加 3D / LaserScan / TF 面板</li>
-        <li>看相机：添加 <b>Image</b> → 话题 <code>/camera/front/color/image_raw/compressed</code></li>
-        <li>看点云：先在 <a href="/pages/settings.html">设置</a> 打开点云开关，再加 <b>3D</b> → Point Cloud → <code>/camera/front/depth/points</code></li>
+        <li>看相机：添加 <b>Image</b> → 话题 <code>/camera/front_up/color/image_raw/compressed</code></li>
+        <li>看点云：先在 <a href="/pages/settings.html">设置</a> 打开点云开关，再加 <b>3D</b> → Point Cloud → <code>/camera/front_up/depth/points</code></li>
       </ol>
       <p class="muted" style="font-size:0.78rem;margin:0">
         桌面端无 iframe 限制，也更少碰到 HTTPS 页面连 <code>ws://</code> 的混合内容问题。

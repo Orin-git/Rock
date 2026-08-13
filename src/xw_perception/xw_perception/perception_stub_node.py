@@ -32,7 +32,7 @@ class PerceptionStubNode(Node):
         if self._follow_en:
             t = PersonTracks()
             t.stamp = self.get_clock().now().to_msg()
-            t.frame_id = 'camera_front_link'
+            t.frame_id = 'camera_front_up_link'
             if self.get_parameter('simulate_person').value:
                 p = PersonTrack()
                 p.track_id = 1

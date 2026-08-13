@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, urlparse
 import math
 
 import rclpy
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import (
@@ -37,18 +37,18 @@ from xw_interfaces.srv import MapManage, MotionCommand, SetMode, SetRunMode, Way
 _SENSOR_LAYOUT = [
     {'id': 'lidar', 'frame': 'lidar_link', 'xyz': [0.0, 0.0, 0.22], 'status': 'live', 'label': '激光雷达'},
     {
-        'id': 'camera_front',
-        'frame': 'camera_front_link',
+        'id': 'camera_front_up',
+        'frame': 'camera_front_up_link',
         'xyz': [0.18, 0.0, 0.25],
         'status': 'live',
-        'label': '前视深度相机',
+        'label': '前上深度相机',
     },
     {
-        'id': 'camera_front_2',
-        'frame': 'camera_front_2_link',
-        'xyz': [0.18, 0.05, 0.25],
+        'id': 'camera_front_down',
+        'frame': 'camera_front_down_link',
+        'xyz': [0.18, 0.0, 0.28],
         'status': 'live',
-        'label': '前视深度相机二号',
+        'label': '前下深度相机',
     },
     {
         'id': 'ultrasonic',
@@ -60,9 +60,9 @@ _SENSOR_LAYOUT = [
     {
         'id': 'imu',
         'frame': 'imu_link',
-        'xyz': [0.0, 0.0, 0.12],
+        'xyz': [0.0, 0.0, 0.10],
         'status': 'placeholder',
-        'label': 'IMU（占位）',
+        'label': '独立 IMU（占位）',
     },
     {
         'id': 'chassis',
@@ -128,12 +128,18 @@ _TOPIC_HINTS: Dict[str, str] = {
     '/xw/perception/fall': '跌倒感知状态',
     '/xw/fall/status': '跌倒会话状态',
     '/xw/motion/status': '点动执行状态',
-    '/camera/front/color/image_raw': '前视彩色图（raw，算法用，不进 Foxglove）',
-    '/camera/front/color/image_raw/compressed': '前视彩色预览（JPEG，Foxglove Desktop 看）',
-    '/camera/front/color/camera_info': '前视彩色内参',
-    '/camera/front/depth/image_raw': '前视深度图（本机算法/安全门）',
-    '/camera/front/depth/camera_info': '前视深度内参',
-    '/camera/front/depth/points': '前视点云（调试开关 enable_pointcloud，默认关）',
+    '/camera/front_up/color/image_raw': '前上彩色图（raw，算法用，不进 Foxglove）',
+    '/camera/front_up/color/image_raw/compressed': '前上彩色预览（JPEG，Foxglove Desktop 看）',
+    '/camera/front_up/color/camera_info': '前上彩色内参',
+    '/camera/front_up/depth/image_raw': '前上深度图（本机算法/安全门）',
+    '/camera/front_up/depth/camera_info': '前上深度内参',
+    '/camera/front_up/depth/points': '前上点云（调试开关 enable_pointcloud，默认关）',
+    '/camera/front_down/color/image_raw': '前下彩色图（raw）',
+    '/camera/front_down/color/image_raw/compressed': '前下彩色预览（JPEG）',
+    '/camera/front_down/color/camera_info': '前下彩色内参',
+    '/camera/front_down/depth/image_raw': '前下深度图',
+    '/camera/front_down/depth/camera_info': '前下深度内参',
+    '/camera/front_down/depth/points': '前下点云（随点云开关）',
     '/map': '占用栅格地图',
     '/tf': '动态坐标变换',
     '/tf_static': '静态坐标变换',
@@ -158,7 +164,7 @@ _NODE_HINTS: Dict[str, str] = {
     'xw_perception_stub': '感知（人体/跌倒 stub）',
     'xw_perception': '感知（YOLOv8-pose RKNN → tracks/fall）',
     'xw_sensors': '传感器桩/桥接',
-    'xw_depth_topic_bridge': '深度相机话题适配（/camera/front）',
+    'xw_depth_topic_bridge': '深度相机话题适配（/camera/front_up）',
     'camera_publisher': 'Angstrong 深度相机驱动',
     'xw_health': '话题健康监测',
     'robot_state_publisher': '根据 URDF 发布 TF',
@@ -325,6 +331,11 @@ class BridgeNode(Node):
         self.create_subscription(String, 'obstacle_status', self._on_obstacle, 10)
         self._teleop_pub = self.create_publisher(Twist, '/xw/cmd/teleop', 10)
         self._goal_pub = self.create_publisher(PoseStamped, '/xw/goal_pose', 10)
+        self._initialpose_pub = self.create_publisher(
+            PoseWithCovarianceStamped, '/initialpose', 10
+        )
+        self._patrol_pub = self.create_publisher(String, '/xw/nav/patrol_cmd', 10)
+        self._nav_cancel_pub = self.create_publisher(Bool, '/xw/nav/cancel', 10)
         self._set_mode = self.create_client(SetMode, '/xw/supervisor/set_mode')
         self._set_run_mode = self.create_client(SetRunMode, '/xw/supervisor/set_run_mode')
         self._map_mgr = self.create_client(MapManage, '/xw/map/manage')
@@ -366,7 +377,7 @@ class BridgeNode(Node):
             'ok': True,
             'enabled': enabled,
             'service_ready': ready,
-            'topic': '/camera/front/depth/points',
+            'topic': '/camera/front_up/depth/points',
             'hint': '导航自动开；手动开关会持久化。Foxglove 3D → Point Cloud',
         }
 
@@ -390,7 +401,7 @@ class BridgeNode(Node):
             'ok': bool(res.success),
             'enabled': bool(enabled) if res.success else self._pointcloud_enabled,
             'message': res.message,
-            'topic': '/camera/front/depth/points',
+            'topic': '/camera/front_up/depth/points',
         }
 
     def fall_status(self) -> Dict[str, Any]:
@@ -606,6 +617,65 @@ class BridgeNode(Node):
             'frame_id': msg.header.frame_id,
         }
 
+    def publish_initial_pose(
+        self,
+        x: float,
+        y: float,
+        yaw: float = 0.0,
+        frame_id: str = 'map',
+    ) -> Dict[str, Any]:
+        msg = PoseWithCovarianceStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = frame_id or 'map'
+        msg.pose.pose.position.x = float(x)
+        msg.pose.pose.position.y = float(y)
+        half = float(yaw) * 0.5
+        msg.pose.pose.orientation.z = math.sin(half)
+        msg.pose.pose.orientation.w = math.cos(half)
+        # Modest covariance for AMCL particle cloud
+        msg.pose.covariance[0] = 0.25
+        msg.pose.covariance[7] = 0.25
+        msg.pose.covariance[35] = 0.068
+        self._initialpose_pub.publish(msg)
+        self._push_task(
+            f'[initialpose] x={x:.3f} y={y:.3f} yaw={yaw:.3f}'
+        )
+        return {
+            'ok': True,
+            'topic': '/initialpose',
+            'x': float(x),
+            'y': float(y),
+            'yaw': float(yaw),
+            'frame_id': msg.header.frame_id,
+        }
+
+    def publish_patrol(
+        self,
+        map_name: str = '',
+        loop: bool = False,
+        waypoints: Optional[List[str]] = None,
+        action: str = 'start',
+        command_id: str = '',
+    ) -> Dict[str, Any]:
+        payload = {
+            'action': action or 'start',
+            'map_name': map_name or '',
+            'loop': bool(loop),
+            'command_id': command_id or f'patrol-{int(time.time() * 1000)}',
+        }
+        if waypoints:
+            payload['waypoints'] = list(waypoints)
+        msg = String()
+        msg.data = json.dumps(payload, ensure_ascii=False)
+        self._patrol_pub.publish(msg)
+        self._push_task(f'[patrol] {msg.data}')
+        return {'ok': True, 'topic': '/xw/nav/patrol_cmd', **payload}
+
+    def cancel_nav(self) -> Dict[str, Any]:
+        self._nav_cancel_pub.publish(Bool(data=True))
+        self._push_task('[nav] cancel')
+        return {'ok': True, 'topic': '/xw/nav/cancel'}
+
     def sensor_hub_status(self) -> Dict[str, Any]:
         """Topic presence for nav sensor panel (live + placeholders)."""
         try:
@@ -627,58 +697,59 @@ class BridgeNode(Node):
             },
             'depth_camera': {
                 'id': 'depth_camera',
-                'label': '前视深度相机',
+                'label': '前上深度',
                 'status': 'live'
                 if has(
-                    '/camera/front/color/image_raw/compressed',
-                    '/camera/front/depth/image_raw',
+                    '/camera/front_up/color/image_raw/compressed',
+                    '/camera/front_up/depth/image_raw',
                 )
                 else 'missing',
                 'topics': [
-                    '/camera/front/color/image_raw/compressed',
-                    '/camera/front/depth/image_raw',
+                    '/camera/front_up/color/image_raw/compressed',
+                    '/camera/front_up/depth/image_raw',
                 ],
                 'present': has(
-                    '/camera/front/color/image_raw/compressed',
-                    '/camera/front/depth/image_raw',
+                    '/camera/front_up/color/image_raw/compressed',
+                    '/camera/front_up/depth/image_raw',
                 ),
                 'pointcloud_enabled': bool(self._pointcloud_enabled),
-                'preview': '/camera/front/color/image_raw/compressed',
+                'preview': '/camera/front_up/color/image_raw/compressed',
             },
             'depth_camera_2': {
                 'id': 'depth_camera_2',
-                'label': '前视深度相机二号',
+                'label': '前下深度',
                 'status': 'live'
                 if has(
-                    '/camera/front_2/color/image_raw/compressed',
-                    '/camera/front_2/depth/image_raw',
+                    '/camera/front_down/color/image_raw/compressed',
+                    '/camera/front_down/depth/image_raw',
                 )
                 else 'missing',
                 'topics': [
-                    '/camera/front_2/color/image_raw/compressed',
-                    '/camera/front_2/depth/image_raw',
+                    '/camera/front_down/color/image_raw/compressed',
+                    '/camera/front_down/depth/image_raw',
                 ],
                 'present': has(
-                    '/camera/front_2/color/image_raw/compressed',
-                    '/camera/front_2/depth/image_raw',
+                    '/camera/front_down/color/image_raw/compressed',
+                    '/camera/front_down/depth/image_raw',
                 ),
-                'preview': '/camera/front_2/color/image_raw/compressed',
+                'preview': '/camera/front_down/color/image_raw/compressed',
             },
             'ultrasonic': {
                 'id': 'ultrasonic',
                 'label': '超声波',
                 'status': 'placeholder',
                 'topics': ['/ultrasonic_array'],
-                'present': has('/ultrasonic_array'),
-                'hint': '后续接入测距阵列',
+                # Not fitted: never treat stub/graph presence as online
+                'present': False,
+                'hint': '未装配，占位',
             },
             'imu': {
                 'id': 'imu',
                 'label': 'IMU',
                 'status': 'placeholder',
                 'topics': ['/imu/data', '/imu'],
-                'present': has('/imu/data', '/imu'),
-                'hint': '后续接入姿态融合',
+                'present': False,
+                'hint': '未装配，占位',
             },
             'chassis': {
                 'id': 'chassis',
@@ -1199,6 +1270,42 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     str(data.get('frame_id') or 'map'),
                 ),
             )
+        if path == '/api/initialpose':
+            try:
+                x = float(data.get('x'))
+                y = float(data.get('y'))
+            except (TypeError, ValueError):
+                return self._json(400, {'ok': False, 'message': 'x/y required'})
+            yaw = data.get('yaw', data.get('theta', 0.0))
+            try:
+                yaw_f = float(yaw if yaw is not None else 0.0)
+            except (TypeError, ValueError):
+                yaw_f = 0.0
+            return self._json(
+                200,
+                self.bridge.publish_initial_pose(
+                    x,
+                    y,
+                    yaw_f,
+                    str(data.get('frame_id') or 'map'),
+                ),
+            )
+        if path == '/api/nav/patrol':
+            wps = data.get('waypoints')
+            if wps is not None and not isinstance(wps, list):
+                return self._json(400, {'ok': False, 'message': 'waypoints must be list'})
+            return self._json(
+                200,
+                self.bridge.publish_patrol(
+                    str(data.get('map_name') or ''),
+                    bool(data.get('loop', False)),
+                    wps,
+                    str(data.get('action') or 'start'),
+                    str(data.get('command_id') or ''),
+                ),
+            )
+        if path == '/api/nav/cancel':
+            return self._json(200, self.bridge.cancel_nav())
         if path == '/api/set_mode':
             payload = data.get('payload') if isinstance(data.get('payload'), dict) else {}
             return self._json(

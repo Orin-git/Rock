@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch Angstrong HP60C driver + Gen2 topic bridge (front or front_2)."""
+"""Launch Angstrong HP60C driver + Gen2 topic bridge (front_up or front_down)."""
 
 import os
 
@@ -40,8 +40,8 @@ def _launch_setup(context, *args, **kwargs):
 
     vendor_ns = str(cfg.get('vendor_namespace', 'ascamera_hp60c'))
     bridge_name = str(cfg.get('bridge_node_name', 'xw_depth_topic_bridge'))
-    static_name = str(cfg.get('static_tf_node_name', 'camera_front_optical_static'))
-    robot_frame = str(cfg.get('robot_frame', 'camera_front_link'))
+    static_name = str(cfg.get('static_tf_node_name', 'camera_front_up_optical_static'))
+    robot_frame = str(cfg.get('robot_frame', 'camera_front_up_link'))
     vendor_frame = str(cfg.get('vendor_frame', f'{vendor_ns}_camera_link_0'))
     camera_id = str(cfg.get('camera_id', 'front'))
 
@@ -91,6 +91,9 @@ def _launch_setup(context, *args, **kwargs):
             'relay_raw_rgb': bool(cfg.get('relay_raw_rgb', False)),
             'enable_pointcloud': enable_pc,
             'manage_pointcloud_control': bool(cfg.get('manage_pointcloud_control', True)),
+            'follow_pointcloud_enabled_topic': bool(
+                cfg.get('follow_pointcloud_enabled_topic', False)
+            ),
             'gate_rgb_on_sessions': bool(cfg.get('gate_rgb_on_sessions', True)),
         }],
     )
@@ -126,7 +129,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             'config',
             default_value='depth_camera.yaml',
-            description='YAML under xw_sensors/config (depth_camera.yaml | depth_camera_front_2.yaml)',
+            description='YAML under xw_sensors/config (depth_camera.yaml | depth_camera_front_down.yaml)',
         ),
         DeclareLaunchArgument('fps', default_value='10'),
         DeclareLaunchArgument('preview_fps', default_value='5.0'),

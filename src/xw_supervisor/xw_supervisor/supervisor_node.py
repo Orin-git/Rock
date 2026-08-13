@@ -11,13 +11,14 @@ to avoid client/server deadlocks inside the same executor.
 
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 import rclpy
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from std_srvs.srv import SetBool
 
 from xw_interfaces.msg import PowerState, RobotEvent, RobotState, TaskProgress
@@ -69,6 +70,7 @@ class SupervisorNode(Node):
             for mode, topic in MOTION_SESSION.items()
         }
         self._fall_pub = self.create_publisher(Bool, '/xw/fall/enable', latch)
+        self._nav_map_pub = self.create_publisher(String, '/xw/nav/map_name', latch)
 
         self._set_pc_nav = self.create_client(SetBool, '/xw/camera/set_pointcloud_nav')
 
@@ -178,8 +180,26 @@ class SupervisorNode(Node):
         fut = self._set_pc_nav.call_async(req)
         fut.add_done_callback(_done)
 
-    def _apply_mode(self, target: int, reason: str) -> None:
+    def _apply_mode(self, target: int, reason: str, payload_json: str = '') -> None:
         prev = self._mode
+
+        map_name = ''
+        if payload_json:
+            try:
+                payload = json.loads(payload_json)
+                if isinstance(payload, dict):
+                    map_name = str(payload.get('map_name') or '').strip()
+            except json.JSONDecodeError:
+                map_name = ''
+
+        if target == 2 and map_name:
+            self._active_map = map_name
+            msg = String()
+            msg.data = map_name
+            self._nav_map_pub.publish(msg)
+        elif target != 2:
+            # Clear latched map name when leaving nav
+            self._nav_map_pub.publish(String(data=''))
 
         if prev == 2 and target != 2:
             self._set_pointcloud_nav(False)
@@ -233,10 +253,7 @@ class SupervisorNode(Node):
 
         reason = f'entered {MODE_NAMES[target]}' if target else 'idle'
         cid = req.command_id or f'mode-{target}'
-        self._apply_mode(target, reason)
-
-        if target != 0 and '"map_name"' in (req.payload_json or ''):
-            self._active_map = req.payload_json
+        self._apply_mode(target, reason, req.payload_json or '')
 
         res.success = True
         res.message = MODE_NAMES[target]

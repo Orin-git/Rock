@@ -43,7 +43,7 @@ class TopicHealthNode(Node):
         if bool(self.get_parameter('watch_depth').value):
             self.create_subscription(
                 Image,
-                '/camera/front/depth/image_raw',
+                '/camera/front_up/depth/image_raw',
                 lambda m: self._touch('camera_depth'),
                 _CAM_QOS,
             )

@@ -69,7 +69,11 @@
 | Srv | `/xw/map/waypoint` | 航点 |
 | Srv | `/xw/motion/command` | 定距点动 |
 | In | `/xw/cmd/teleop` | 遥控白名单入口 |
-| In | `/xw/goal_pose` | 导航目标（预留） |
+| In | `/xw/goal_pose` | 单点导航目标 |
+| In | `/xw/nav/patrol_cmd` | 多点巡航 JSON |
+| In | `/xw/nav/cancel` | 取消当前导航 |
+| In | `/xw/nav/map_name` | 导航地图名（latched） |
+| In | `/initialpose` | AMCL 初始位姿 |
 
 ## 6. Docker 日常
 
@@ -97,61 +101,70 @@ ros2 launch xw_bringup robot.launch.py
 
 - **P0**：mock 栈 + FSM + Web SPA  
 - **P1**：真底盘（`xw_chassis` 串口 `/dev/chassis` 或回退 `/dev/ttyACM0` @115200，一代 0x7B 协议；udev：`scripts/install_chassis_udev.sh`）/ 雷达 / 超声（超声仍待）  
-- **P2**：手推建图已落地；**导航 Web 壳 + `/xw/goal_pose` 链路已通**，Nav2/AMCL 仍待接入  
-- **P3（部分）**：前视深度驱动 + `/camera/front/...` + 安全门深度 ROI；**感知已换真节点**（YOLOv8n-pose RKNN → tracks/fall）  
-- **P4**：回充 / 压测 / 可选 Gateway  
+- **P2**：手推建图已落地；**Nav2/AMCL 已接入**（`xw_nav_session`）；单点/多点/初位姿 Web API 已通  
+- **P3（部分）**：双前视深度 + 安全门深度 ROI；导航 local costmap 融合激光+双深度点云；**感知真节点**（YOLOv8n-pose RKNN）  
+- **P4**：独立 IMU + EKF 真融合、回充 / 压测 / 可选 Gateway；相机/IMU 精标定  
 
 ### 传感器命名契约（Gen2）
 
 | 设备 | 节点 | Frame | 公共话题 |
 |------|------|-------|----------|
-| 激光雷达 | `rplidar_node` | `lidar_link` | `/scan` |
-| 前视深度 #1 | `ascamera_hp60c/camera_publisher` + `xw_depth_topic_bridge` | `camera_front_link` | `/camera/front/{color,depth}/...` |
-| 前视深度 #2 | `ascamera_hp60c_2/camera_publisher` + `xw_depth_topic_bridge_front_2` | `camera_front_2_link` | `/camera/front_2/{color,depth}/...` |
-| 底盘 | `xw_chassis` | `base_link`（odom→base） | `/odom` `/cmd_vel` `/xw/power` |
+| 激光雷达 | `rplidar_node` | `lidar_link` | `/scan`（建图/AMCL/避障） |
+| 前上深度 | `ascamera_hp60c/...` + bridge | `camera_front_up_link` | `/camera/front_up/{color,depth,...}` |
+| 前下深度 | `ascamera_hp60c_2/...` + bridge | `camera_front_down_link` | `/camera/front_down/...` |
+| 独立 IMU（明日） | 驱动 TBD | `imu_link` | `/imu/data` |
+| 底盘轮式里程计 | `xw_chassis` | `base_link` | 默认 `/odom`；EKF 时 `/odom/wheel` |
+| EKF 融合（可选） | `ekf_filter_node` | `odom→base_link` | `/odom` |
 
 厂商私有话题 `/ascamera_hp60c{,_2}/...` 仅 bridge 订阅，业务节点只用 `/camera/...`。
 
+**激光前向验收**：正前方挡板 → `/scan` 在 angle≈0 距离变短；否则只改 URDF `lidar_joint` yaw=`π` **或** 驱动 `inverted`（二选一）。
+
+### 传感器职责
+
+| 能力 | 激光 | 深度1 | 深度2 | IMU |
+|------|------|-------|-------|-----|
+| 建图 SLAM | 是 | 否 | 否 | 间接（稳 odom） |
+| AMCL | 是 | 否 | 否 | 间接 |
+| Local 避障 | 是 | 点云 | 点云 | 否 |
+| 安全门 | 是 | ROI | 后续 | 否 |
+| 人体跟随 | 否 | **是** | 否 | 否 |
+
 ### 深度相机要点
 
-- 包：`third_party/ascamera` + `xw_sensors/launch/depth_camera.launch.py`（`config:=depth_camera.yaml` / `depth_camera_front_2.yaml`）  
-- `use_depth_cam:=true` / `use_depth_cam_2:=true`；USB 用 `usb_bus_no` + `usb_path` 钉死（换口需改 yaml）  
-- 预览：Foxglove Image 订 `/camera/front/.../compressed` 或 `/camera/front_2/.../compressed`  
-- 深度 #1：`/camera/front/depth/image_raw`（安全门 ROI + 感知）；**点云默认关**  
-- 深度 #2：bring-up 完成；感知/安全门仍用 #1（导航避障 / 人脸后续）  
-- 点云（仅 #1）：进导航自动开（`/xw/camera/set_pointcloud_nav`）；设置页手动 persist  
-- 服务：`/xw/camera/set_pointcloud`；`/xw/camera/set_pointcloud_nav`；状态：`/xw/camera/pointcloud_enabled`  
-- **建图不参与深度**：slam_toolbox 仍只用 `/scan`  
-- raw RGB（#1）：仅在 `fall_en || follow_en` 时由 bridge 转发  
+- 包：`third_party/ascamera` + `xw_sensors/launch/depth_camera.launch.py`  
+- 进导航：`/xw/camera/set_pointcloud_nav` 开 #1；#2 镜像 `/xw/camera/pointcloud_enabled`  
+- **建图不参与深度**：slam_toolbox 只用 `/scan`  
+- raw RGB（#1）：仅在 `fall_en || follow_en` 时转发  
+
+### EKF 空槽（打滑友好）
+
+- 默认 `use_ekf:=false`：底盘直接发 `/odom` + TF  
+- `use_ekf:=true` 时：`chassis_odom_topic:=odom/wheel`、`chassis_publish_odom_tf:=false`，加载 `xw_sensors/config/ekf.yaml`  
+- 融合：`odom0` 只融 **vx**；`imu0` 只融 **vyaw**（绝对 yaw / aX 待标定后再开）  
+- **不用**底盘 MCU IMU 字节；只用中置 `imu_link` → `/imu/data`  
+- 标定参考：[imu_utils](https://github.com/gaowenliang/imu_utils)、[Nav2 camera calibration](https://docs.nav2.org/tutorials/docs/camera_calibration.html)  
 
 ### 感知 / 跌倒 / 跟随
 
-- 节点：`xw_perception` → `person_perception_node`（替换 stub）  
-- 模型：`xw_perception/models/yolov8n-pose.rknn`（见 `models/README.md` / `convert_rknn.sh`）  
-- 容器依赖：`scripts/install_perception_deps.sh`（rknnlite cp310 + librknnrt + opencv）  
-- 推理：约 **5–6 FPS**；跌倒几何去抖约 **9 帧（≤2s）**  
-- 输出契约不变：`/xw/perception/tracks`、`/xw/perception/fall`  
-- **跌倒为正交开关**：`POST /api/fall` → `/xw/supervisor/set_fall` → `/xw/fall/enable`（可与 IDLE/导航并存；`set_mode(4)` 仍兼容）  
-- **跟随**：`set_mode(3)` → `/xw/follow/enable`（与建图/导航互斥）；距离用深度中位数  
-- 订阅：`/camera/front/{color,depth}/image_raw`（frame `camera_front_link`）  
+- 跟随仍用相机1：`/camera/front_up/{color,depth}` → `/xw/cmd/follow`  
+- 跌倒正交开关与输出契约不变（`/xw/perception/tracks`、`/xw/perception/fall`）  
 
-### 导航 Web 要点（壳 + 链路）
+### 导航要点
 
-- 页：`/pages/navigation.html`（对照一代控制台布局）  
-- 画布：复用 `map_canvas.js` → Foxglove `/map` + `/scan` + TF；可 `mapManage(5)` 静态预览  
-- 会话：`set_mode(2, {map_name})` → `/xw/nav/enable`；结束 `set_mode(0)`  
-- 目标：`POST /api/goal` → 发布 `/xw/goal_pose` → `xw_nav_session`（现 stub 回 TaskProgress/Result）  
-- 传感器面板：`GET /api/sensors`（激光/深度在线探测；超声/IMU/底盘/架位为 URDF 占位，后续只填契约）  
-- **未做**：真实 Nav2、AMCL 初始位姿、多点巡航执行、自动回充  
+- 参数：`xw_nav_session/config/nav2_params.yaml`（一代 MPPI 移植，`base_link`，`robot_radius: 0.23`）  
+- Launch：`xw_nav_session/launch/nav2.launch.py`（localization + navigation；`cmd_vel`→`/xw/cmd/nav`）  
+- 会话：`set_mode(2,{map_name})` → `/xw/nav/map_name` + `/xw/nav/enable` → 起 Nav2  
+- 单点：`POST /api/goal` → `/xw/goal_pose` → `NavigateToPose`  
+- 多点：`POST /api/nav/patrol` → `/xw/nav/patrol_cmd`（读 `*_pointList.yaml`）  
+- 初位姿：`POST /api/initialpose` → `/initialpose`  
+- 取消：`POST /api/nav/cancel` → `/xw/nav/cancel`  
+- Local costmap：`/scan` + `/camera/front_up/depth/points` + `/camera/front_down/depth/points`  
 
 ### 手推建图要点
 
-- `set_mode(1)` → `xw_slam_session` 自管启停 `async_slam_toolbox_node`，抓取 `map→base_link` 起点  
-- 保存：`/xw/map/manage` op=1 → `map_saver_cli` → upsert `waypoints/{name}_pointList.yaml` 的 `charger`（yaw = tf_yaw+π）  
-- 未保存停止 → `autosave_YYYYMMDD_HHMMSS`  
-- Web：`/pages/mapping.html`（Foxglove `/map`+`/scan`），`/pages/maps.html`（批量 CRUD，级联 pointList）  
-- 导航 Web：`/pages/navigation.html` · `POST /api/goal` · `GET /api/sensors`  
-- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`GET /api/sensors`  
+- `set_mode(1)` → slam_toolbox；保存仍写 charger 到 pointList  
+- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`POST /api/initialpose`、`POST /api/nav/patrol`、`GET /api/sensors`  
 
 ## 8. 验收（容器内）
 
@@ -159,8 +172,9 @@ ros2 launch xw_bringup robot.launch.py
 2. `robot.launch.py` mock 可起  
 3. teleop → `/cmd_vel` → mock odom  
 4. 浏览器连 9000/8765，`set_mode` 互斥可见  
-5. 设置页：跌倒开关 → `/xw/fall/enable`；跟随 `set_mode(3)`；导航进/出点云自动开/关  
-6. 有 `yolov8n-pose.rknn` 时：开启跌倒后 `ros2 topic echo /xw/perception/fall` 可见几何去抖结果  
+5. 选地图进入导航 → Nav2 起；`/api/initialpose` + `/api/goal` 有 TaskProgress/Result  
+6. 设置页：跌倒开关；跟随；导航进/出双相机点云自动开/关  
+7. 有 `yolov8n-pose.rknn` 时：跌倒可见 `/xw/perception/fall`  
 
 ## 9. Supervisor 与 Session 协作
 

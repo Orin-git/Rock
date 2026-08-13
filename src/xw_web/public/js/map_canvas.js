@@ -9,6 +9,9 @@
 
   // Web-only: rotate laser overlay on map canvas (does not affect /scan or SLAM).
   const LASER_DISPLAY_YAW_OFFSET = Math.PI;
+  /** Waypoint / pose must stay this far from occupied cells (meters). */
+  const OBSTACLE_CLEARANCE_M = 0.3;
+  const OCCUPIED_THRESH = 50;
 
   const GLOW_CONFIG = {
     dilateRadius: 1,
@@ -19,8 +22,8 @@
   /** Default sensor frames relative to base_link (from xw_gen2.urdf). */
   const DEFAULT_SENSOR_FRAMES = [
     { id: 'lidar', frame: 'lidar_link', label: 'LiDAR', color: '#c23048' },
-    { id: 'camera_front', frame: 'camera_front_link', label: '深度前视', color: '#22c55e' },
-    { id: 'camera_front_2', frame: 'camera_front_2_link', label: '深度前视二号', color: '#16a34a' },
+    { id: 'camera_front_up', frame: 'camera_front_up_link', label: '前上深度', color: '#22c55e' },
+    { id: 'camera_front_down', frame: 'camera_front_down_link', label: '前下深度', color: '#16a34a' },
     { id: 'ultrasonic', frame: 'ultrasonic_front_link', label: '超声占位', color: '#f59e0b' },
   ];
 
@@ -55,14 +58,23 @@
   let resizeObserver = null;
   let statusCb = null;
   let clickCb = null;
+  let modeChangeCb = null;
   let interactive = false;
   let preferLiveMap = true;
   let showSensorFrames = false;
   let goalPose = null; // { x, y, yaw }
-  let waypoints = []; // [{ name, x, y, yaw? }]
+  let waypoints = []; // [{ name, x, y, yaw?, bad? }]
   let scanAgeMs = 0;
   let lastScanTs = 0;
-  let clickBound = false;
+  let pointerBound = false;
+
+  /** 'view' | 'initial_pose' | 'edit_wp' | 'goal'(legacy) */
+  let interactMode = 'view';
+  let waypointClickCb = null;
+  let initialPose = null; // { x, y, yaw }
+  let selectedWpIdx = null;
+  let dragState = null; // { type: 'pose'|'wp', idx?, ox, oy }
+  let yawChangeCb = null;
 
   function setStatus(msg) {
     if (typeof statusCb === 'function') statusCb(msg);
@@ -395,6 +407,61 @@
     };
   }
 
+  function worldToMapCell(wx, wy) {
+    if (!latestMap || !latestMap.info) return null;
+    const info = latestMap.info;
+    const mx = Math.floor((wx - info.origin.position.x) / info.resolution);
+    const my = Math.floor((wy - info.origin.position.y) / info.resolution);
+    if (mx < 0 || my < 0 || mx >= info.width || my >= info.height) return null;
+    return { mx: mx, my: my, width: info.width, height: info.height, res: info.resolution };
+  }
+
+  function cellOccupied(mx, my) {
+    if (!latestMap) return true;
+    const idx = my * latestMap.info.width + mx;
+    const v = readOccupancyCell(latestMap.data, idx);
+    return v >= OCCUPIED_THRESH;
+  }
+
+  /** True if point is at least clearanceM from any occupied cell. */
+  function isClearanceOk(wx, wy, clearanceM) {
+    const clr = typeof clearanceM === 'number' ? clearanceM : OBSTACLE_CLEARANCE_M;
+    const cell = worldToMapCell(wx, wy);
+    if (!cell) return false;
+    if (cellOccupied(cell.mx, cell.my)) return false;
+    const r = Math.max(1, Math.ceil(clr / cell.res));
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const dist = Math.sqrt(dx * dx + dy * dy) * cell.res;
+        if (dist > clr + 1e-6) continue;
+        const nx = cell.mx + dx;
+        const ny = cell.my + dy;
+        if (nx < 0 || ny < 0 || nx >= cell.width || ny >= cell.height) continue;
+        if (cellOccupied(nx, ny)) return false;
+      }
+    }
+    return true;
+  }
+
+  function annotateWaypointBadness(list) {
+    return (list || []).map((wp) => {
+      if (!wp || typeof wp.x !== 'number') return wp;
+      const ok = isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M);
+      return Object.assign({}, wp, { bad: !ok });
+    });
+  }
+
+  function pixelDist(clientX, clientY, wx, wy, view) {
+    const rect = overlayCanvas.getBoundingClientRect();
+    const cx = ((clientX - rect.left) / rect.width) * overlayCanvas.width;
+    const cy = ((clientY - rect.top) / rect.height) * overlayCanvas.height;
+    const p = worldToPixel(wx, wy, view);
+    const dx = cx - p.px;
+    const dy = cy - p.py;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
   function drawPoseMarker(view, x, y, yaw, fill, stroke, radius) {
     const p = worldToPixel(x, y, view);
     const r = radius || Math.max(7, view.scale * 1.8);
@@ -426,6 +493,12 @@
     if (!view) return;
 
     const robotTf = getRobotTf();
+    const displayRobot =
+      interactMode === 'initial_pose' && initialPose
+        ? initialPose
+        : initialPose && !robotTf
+          ? initialPose
+          : robotTf;
 
     if (latestScan) {
       let tf = null;
@@ -433,11 +506,11 @@
         const fid = String(latestScan.header.frame_id).replace(/^\//, '');
         tf = getTransform('map', fid);
       }
-      if (!tf) tf = robotTf;
+      if (!tf) tf = robotTf || (initialPose ? initialPose : null);
       if (tf) {
         const robotX = tf.x;
         const robotY = tf.y;
-        const scanYaw = tf.yaw + LASER_DISPLAY_YAW_OFFSET;
+        const scanYaw = (typeof tf.yaw === 'number' ? tf.yaw : 0) + LASER_DISPLAY_YAW_OFFSET;
         overlayCtx.fillStyle = '#c23048';
         const ranges = latestScan.ranges || [];
         for (let i = 0; i < ranges.length; i++) {
@@ -459,20 +532,34 @@
     if (Array.isArray(waypoints)) {
       waypoints.forEach((wp, idx) => {
         if (!wp || typeof wp.x !== 'number') return;
+        const bad = !!wp.bad || !isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M);
+        wp.bad = bad;
+        const selected = interactMode === 'edit_wp' && selectedWpIdx === idx;
+        const fill = bad
+          ? 'rgba(220, 38, 38, 0.9)'
+          : selected
+            ? 'rgba(234, 179, 8, 0.95)'
+            : 'rgba(124, 58, 237, 0.85)';
+        const stroke = bad ? '#7f1d1d' : selected ? '#a16207' : '#5b21b6';
         const p = drawPoseMarker(
           view,
           wp.x,
           wp.y,
           typeof wp.yaw === 'number' ? wp.yaw : undefined,
-          'rgba(124, 58, 237, 0.85)',
-          '#5b21b6',
+          fill,
+          stroke,
           Math.max(6, view.scale * 1.5)
         );
         overlayCtx.fillStyle = '#fff';
         overlayCtx.font = 'bold 11px sans-serif';
         overlayCtx.textAlign = 'center';
         overlayCtx.textBaseline = 'middle';
-        overlayCtx.fillText(String(idx + 1), p.px, p.py);
+        overlayCtx.fillText(bad ? '!' : String(idx + 1), p.px, p.py);
+        if (bad) {
+          overlayCtx.fillStyle = 'rgba(220,38,38,0.95)';
+          overlayCtx.font = '10px sans-serif';
+          overlayCtx.fillText('坏点', p.px, p.py - Math.max(12, view.scale * 2.2));
+        }
       });
     }
 
@@ -488,23 +575,30 @@
       );
     }
 
-    if (robotTf) {
+    if (displayRobot) {
+      const isPreview = !robotTf || (interactMode === 'initial_pose' && initialPose);
       drawPoseMarker(
         view,
-        robotTf.x,
-        robotTf.y,
-        robotTf.yaw,
-        'rgba(0, 150, 255, 0.85)',
-        '#0b6e99',
-        Math.max(8, view.scale * 2)
+        displayRobot.x,
+        displayRobot.y,
+        typeof displayRobot.yaw === 'number' ? displayRobot.yaw : 0,
+        isPreview ? 'rgba(14, 165, 233, 0.9)' : 'rgba(0, 150, 255, 0.85)',
+        isPreview ? '#0369a1' : '#0b6e99',
+        Math.max(9, view.scale * 2.2)
       );
+      if (isPreview) {
+        const p = worldToPixel(displayRobot.x, displayRobot.y, view);
+        overlayCtx.fillStyle = '#0ea5e9';
+        overlayCtx.font = '11px sans-serif';
+        overlayCtx.textAlign = 'center';
+        overlayCtx.fillText('初位姿', p.px, p.py + Math.max(16, view.scale * 3));
+      }
     }
 
     if (showSensorFrames && robotTf) {
       DEFAULT_SENSOR_FRAMES.forEach((sf) => {
         let tf = getTransform('map', sf.frame);
         if (!tf) {
-          // Fall back: base_link relative offsets from URDF if TF missing
           const rel = getTransform('base_link', sf.frame);
           if (rel && robotTf) {
             const cos = Math.cos(robotTf.yaw);
@@ -543,16 +637,6 @@
     redraw();
     if (statusText) setStatus(statusText);
     return true;
-  }
-
-  function onMapMessage(message) {
-    if (!preferLiveMap) return;
-    try {
-      if (!applyMapMessage(message, '地图已更新（/map）')) return;
-    } catch (err) {
-      console.error('[XwMapCanvas] /map handler error', err);
-      setStatus('地图解析失败');
-    }
   }
 
   function pgmByteToOccupancy(v) {
@@ -609,14 +693,210 @@
 
   function enableLiveMap() {
     preferLiveMap = true;
-    setStatus('等待 /map 实时话题…');
+    setStatus('等待 /map 实时话题…（已保留静态底图直至收到）');
   }
 
-  function onOverlayClick(ev) {
-    if (!interactive || typeof clickCb !== 'function') return;
+  /** Keep showing static until first live /map; then switch. */
+  function onMapMessage(message) {
+    if (!preferLiveMap) return;
+    try {
+      if (!applyMapMessage(message, '地图已更新（/map 实时）')) return;
+    } catch (err) {
+      console.error('[XwMapCanvas] /map handler error', err);
+      setStatus('地图解析失败');
+    }
+  }
+
+  function notifyMode() {
+    if (typeof modeChangeCb === 'function') {
+      try {
+        modeChangeCb(interactMode, {
+          initialPose: initialPose,
+          selectedWpIdx: selectedWpIdx,
+          waypoints: waypoints,
+        });
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  function notifyYaw() {
+    if (typeof yawChangeCb === 'function') {
+      try {
+        yawChangeCb(getActiveYaw());
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  function getActiveYaw() {
+    if (interactMode === 'initial_pose' && initialPose) return initialPose.yaw || 0;
+    if (interactMode === 'edit_wp' && selectedWpIdx != null && waypoints[selectedWpIdx]) {
+      return Number(waypoints[selectedWpIdx].yaw) || 0;
+    }
+    if (goalPose) return Number(goalPose.yaw) || 0;
+    return 0;
+  }
+
+  function setActiveYaw(yawRad) {
+    const y = Number(yawRad) || 0;
+    if (interactMode === 'initial_pose') {
+      if (!initialPose) return;
+      initialPose.yaw = y;
+    } else if (interactMode === 'edit_wp' && selectedWpIdx != null && waypoints[selectedWpIdx]) {
+      waypoints[selectedWpIdx].yaw = y;
+    } else if (goalPose) {
+      goalPose.yaw = y;
+    }
+    drawOverlay();
+    notifyYaw();
+  }
+
+  function setInteractMode(mode) {
+    const next = mode || 'view';
+    interactMode = next;
+    dragState = null;
+    if (next === 'initial_pose') {
+      if (!initialPose) {
+        const seed = getRobotTf() || goalPose || mapCenterWorld();
+        initialPose = {
+          x: seed ? Number(seed.x) : 0,
+          y: seed ? Number(seed.y) : 0,
+          yaw: seed && typeof seed.yaw === 'number' ? seed.yaw : 0,
+        };
+      }
+    }
+    if (next !== 'edit_wp') selectedWpIdx = null;
+    if (overlayCanvas) {
+      overlayCanvas.style.cursor =
+        next === 'edit_wp' || next === 'initial_pose'
+          ? 'grab'
+          : interactive
+            ? 'default'
+            : '';
+    }
+    drawOverlay();
+    notifyMode();
+    notifyYaw();
+  }
+
+  function mapCenterWorld() {
+    if (!latestMap || !latestMap.info) return null;
+    const info = latestMap.info;
+    return {
+      x: info.origin.position.x + (info.width * info.resolution) / 2,
+      y: info.origin.position.y + (info.height * info.resolution) / 2,
+      yaw: 0,
+    };
+  }
+
+  function findWaypointHit(clientX, clientY, view) {
+    const hitR = Math.max(14, view.scale * 3);
+    for (let i = waypoints.length - 1; i >= 0; i--) {
+      const wp = waypoints[i];
+      if (!wp) continue;
+      if (pixelDist(clientX, clientY, wp.x, wp.y, view) <= hitR) return i;
+    }
+    return null;
+  }
+
+  function onPointerDown(ev) {
+    if (!interactive || !latestMap) return;
+    const view = getViewTransform();
+    if (!view) return;
     const world = canvasToWorld(ev.clientX, ev.clientY);
     if (!world) return;
-    clickCb(world, ev);
+
+    if (interactMode === 'initial_pose') {
+      ev.preventDefault();
+      if (initialPose && pixelDist(ev.clientX, ev.clientY, initialPose.x, initialPose.y, view) <= 18) {
+        dragState = { type: 'pose' };
+      } else {
+        initialPose = { x: world.x, y: world.y, yaw: initialPose ? initialPose.yaw : 0 };
+        dragState = { type: 'pose' };
+        notifyYaw();
+      }
+      drawOverlay();
+      notifyMode();
+      return;
+    }
+
+    if (interactMode === 'edit_wp') {
+      ev.preventDefault();
+      const hit = findWaypointHit(ev.clientX, ev.clientY, view);
+      if (hit != null) {
+        selectedWpIdx = hit;
+        dragState = { type: 'wp', idx: hit };
+        notifyMode();
+        notifyYaw();
+        drawOverlay();
+        return;
+      }
+      // add new waypoint
+      if (!isClearanceOk(world.x, world.y, OBSTACLE_CLEARANCE_M)) {
+        setStatus('坏点：距障碍物不足 0.3m，不能打点');
+        return;
+      }
+      const wp = {
+        name: `wp_${waypoints.length + 1}`,
+        x: world.x,
+        y: world.y,
+        yaw: Math.PI / 2,
+        bad: false,
+      };
+      waypoints.push(wp);
+      selectedWpIdx = waypoints.length - 1;
+      dragState = { type: 'wp', idx: selectedWpIdx };
+      setStatus(`已添加航点 ${wp.name}`);
+      notifyMode();
+      notifyYaw();
+      drawOverlay();
+      return;
+    }
+
+    // view / goal: click existing waypoint to navigate; empty click only in goal mode
+    if (interactMode === 'view' || interactMode === 'goal') {
+      const hit = findWaypointHit(ev.clientX, ev.clientY, view);
+      if (hit != null) {
+        selectedWpIdx = hit;
+        notifyMode();
+        drawOverlay();
+        if (typeof waypointClickCb === 'function') {
+          waypointClickCb(waypoints[hit], hit, ev);
+        }
+        return;
+      }
+      if (interactMode === 'goal' && typeof clickCb === 'function') {
+        clickCb(world, ev);
+      }
+    }
+  }
+
+  function onPointerMove(ev) {
+    if (!dragState || !latestMap) return;
+    const world = canvasToWorld(ev.clientX, ev.clientY);
+    if (!world) return;
+    if (dragState.type === 'pose' && initialPose) {
+      initialPose.x = world.x;
+      initialPose.y = world.y;
+      drawOverlay();
+    } else if (dragState.type === 'wp' && dragState.idx != null && waypoints[dragState.idx]) {
+      const wp = waypoints[dragState.idx];
+      wp.x = world.x;
+      wp.y = world.y;
+      wp.bad = !isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M);
+      drawOverlay();
+    }
+  }
+
+  function onPointerUp(ev) {
+    if (!dragState) return;
+    if (dragState.type === 'wp' && dragState.idx != null && waypoints[dragState.idx]) {
+      const wp = waypoints[dragState.idx];
+      wp.bad = !isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M);
+      if (wp.bad) setStatus(`航点 ${wp.name || dragState.idx + 1} 为坏点（<0.3m 障碍）`);
+      notifyMode();
+    }
+    if (dragState.type === 'pose') notifyMode();
+    dragState = null;
   }
 
   function setInteractive(on, onClick) {
@@ -625,9 +905,11 @@
     if (overlayCanvas) {
       overlayCanvas.style.pointerEvents = interactive ? 'auto' : 'none';
       overlayCanvas.style.cursor = interactive ? 'crosshair' : '';
-      if (interactive && !clickBound) {
-        overlayCanvas.addEventListener('click', onOverlayClick);
-        clickBound = true;
+      if (interactive && !pointerBound) {
+        overlayCanvas.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        pointerBound = true;
       }
     }
     if (containerEl) {
@@ -654,8 +936,57 @@
   }
 
   function setWaypoints(list) {
-    waypoints = Array.isArray(list) ? list : [];
+    waypoints = annotateWaypointBadness(Array.isArray(list) ? list : []);
     drawOverlay();
+  }
+
+  function getWaypoints() {
+    return annotateWaypointBadness(waypoints);
+  }
+
+  function getInitialPose() {
+    return initialPose ? Object.assign({}, initialPose) : null;
+  }
+
+  function setInitialPose(pose) {
+    if (!pose || typeof pose.x !== 'number') {
+      initialPose = null;
+    } else {
+      initialPose = {
+        x: Number(pose.x),
+        y: Number(pose.y),
+        yaw: typeof pose.yaw === 'number' ? pose.yaw : 0,
+      };
+    }
+    drawOverlay();
+    notifyMode();
+    notifyYaw();
+  }
+
+  function clearInitialPose() {
+    initialPose = null;
+    drawOverlay();
+  }
+
+  function getSelectedWaypointIndex() {
+    return selectedWpIdx;
+  }
+
+  function setSelectedWaypointIndex(idx) {
+    selectedWpIdx = idx == null ? null : Number(idx);
+    drawOverlay();
+    notifyMode();
+    notifyYaw();
+  }
+
+  function deleteSelectedWaypoint() {
+    if (selectedWpIdx == null || !waypoints[selectedWpIdx]) return false;
+    waypoints.splice(selectedWpIdx, 1);
+    selectedWpIdx = null;
+    waypoints = annotateWaypointBadness(waypoints);
+    drawOverlay();
+    notifyMode();
+    return true;
   }
 
   function setShowSensorFrames(on) {
@@ -674,11 +1005,15 @@
   }
 
   function getRobotPose() {
-    return getRobotTf();
+    return getRobotTf() || (initialPose ? Object.assign({}, initialPose) : null);
   }
 
   function hasMap() {
     return !!latestMap;
+  }
+
+  function getObstacleClearanceM() {
+    return OBSTACLE_CLEARANCE_M;
   }
 
   function subscribeAll() {
@@ -723,10 +1058,15 @@
     const overlayId = options.overlayCanvasId || 'overlay-canvas';
     const containerId = options.containerId || 'map-container';
     statusCb = options.onStatus || null;
+    modeChangeCb = typeof options.onModeChange === 'function' ? options.onModeChange : null;
+    yawChangeCb = typeof options.onYawChange === 'function' ? options.onYawChange : null;
     preferLiveMap = options.preferLiveMap !== false;
     showSensorFrames = !!options.showSensorFrames;
     if (typeof options.onMapClick === 'function') {
       clickCb = options.onMapClick;
+    }
+    if (typeof options.onWaypointClick === 'function') {
+      waypointClickCb = options.onWaypointClick;
     }
 
     mapCanvas = document.getElementById(mapId);
@@ -807,9 +1147,24 @@
     loadStaticMap: loadStaticMap,
     enableLiveMap: enableLiveMap,
     setInteractive: setInteractive,
+    setInteractMode: setInteractMode,
+    getInteractMode: function () {
+      return interactMode;
+    },
     setGoal: setGoal,
     clearGoal: clearGoal,
     setWaypoints: setWaypoints,
+    getWaypoints: getWaypoints,
+    setInitialPose: setInitialPose,
+    getInitialPose: getInitialPose,
+    clearInitialPose: clearInitialPose,
+    getSelectedWaypointIndex: getSelectedWaypointIndex,
+    setSelectedWaypointIndex: setSelectedWaypointIndex,
+    deleteSelectedWaypoint: deleteSelectedWaypoint,
+    setActiveYaw: setActiveYaw,
+    getActiveYaw: getActiveYaw,
+    isClearanceOk: isClearanceOk,
+    getObstacleClearanceM: getObstacleClearanceM,
     setShowSensorFrames: setShowSensorFrames,
     getScanStatus: getScanStatus,
     getRobotPose: getRobotPose,
@@ -817,5 +1172,6 @@
     canvasToWorld: canvasToWorld,
     DEFAULT_SENSOR_FRAMES: DEFAULT_SENSOR_FRAMES,
     LASER_DISPLAY_YAW_OFFSET: LASER_DISPLAY_YAW_OFFSET,
+    OBSTACLE_CLEARANCE_M: OBSTACLE_CLEARANCE_M,
   };
 })(window);

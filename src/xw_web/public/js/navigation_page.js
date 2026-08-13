@@ -1,6 +1,5 @@
 /**
- * Gen2 navigation page — shell + lidar/depth pipeline wiring.
- * Nav2 planning still stub; goals already reach xw_nav_session.
+ * Gen2 navigation page — map + lidar, initial pose drag, yaw dial, waypoint edit.
  */
 import {
   connect,
@@ -8,8 +7,10 @@ import {
   mapManage,
   waypointManage,
   publishGoal,
+  publishInitialPose,
+  startPatrol,
+  cancelNav,
   publishTeleop,
-  fetchSensorHub,
   onTask,
   onState,
 } from '/js/api.js';
@@ -19,45 +20,214 @@ connect();
 
 const $ = (id) => document.getElementById(id);
 
-const logEl = $('log');
 const mapSelect = $('mapSelect');
 const mapStatus = $('mapStatus');
 const modeHint = $('modeHint');
 const poseHint = $('poseHint');
+const toolHint = $('toolHint');
 const sessionHint = $('sessionHint');
-const goalHint = $('goalHint');
+const wpHint = $('wpHint');
 const wpList = $('wpList');
 const wpCount = $('wpCount');
-const sensorCards = $('sensorCards');
-const sensorLayout = $('sensorLayout');
-const gx = $('gx');
-const gy = $('gy');
-const gyaw = $('gyaw');
+const navFlash = $('navFlash');
+const applyBtn = $('applyInitialPose');
+const patrolLoop = $('patrolLoop');
 
 let navActive = false;
 let waypoints = [];
 let selectedWp = null;
+let selectedWpIdx = null;
 let poseTimer = null;
+let orientationControls = null;
+let flashTimer = null;
 
-function pushLog(line) {
-  logEl.textContent = line + '\n' + logEl.textContent;
+const ORIENTATION_ROTATE_SPEED = Math.PI / 2;
+
+function flash(msg, kind = 'info', ms = 5000) {
+  if (!navFlash) return;
+  navFlash.hidden = false;
+  navFlash.className = `nav-flash is-${kind}`;
+  navFlash.textContent = msg;
+  if (flashTimer) clearTimeout(flashTimer);
+  if (ms > 0) {
+    flashTimer = setTimeout(() => {
+      navFlash.hidden = true;
+    }, ms);
+  }
 }
 
-onTask((l) => pushLog(l));
+function pushLog(line) {
+  const text = String(line || '').trim();
+  if (!text) return;
+  if (text.startsWith('!!') || /失败|failed|拒绝/.test(text)) {
+    flash(text.replace(/^!!\s*/, ''), 'err');
+  } else if (text.startsWith('<<') || text.includes('已保存') || text.includes('已删除')) {
+    flash(text.replace(/^<<\s*/, ''), 'ok');
+  } else if (text.startsWith('>>')) {
+    flash(text.replace(/^>>\s*/, ''), 'info', 4500);
+  } else {
+    flash(text, 'info', 3500);
+  }
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function radToDeg(rad) {
+  let d = ((Number(rad) || 0) * 180) / Math.PI;
+  d = ((d % 360) + 360) % 360;
+  return d;
+}
+
+function degToRad(deg) {
+  return ((Number(deg) || 0) * Math.PI) / 180;
+}
+
+/** Gen1-style orientation slider + hold rotate (for initial pose / waypoint). */
+class OrientationControls {
+  constructor(container, opts) {
+    opts = opts || {};
+    this._getYaw = opts.getYaw || (() => 0);
+    this._setYaw = opts.setYaw || (() => {});
+    this._onChange = opts.onChange || null;
+    this._rotFrame = null;
+    this._rotDirection = 0;
+    this._onGlobalPointerUp = this._stopRotate.bind(this);
+
+    this._root = document.createElement('div');
+    this._root.className = 'orientation-controls';
+    this._root.innerHTML =
+      '<div class="orientation-controls-header">' +
+      '  <span class="orientation-controls-title">朝向控制</span>' +
+      '  <span class="orientation-controls-value">0°</span>' +
+      '</div>' +
+      '<div class="orientation-slider-wrap">' +
+      '  <input type="range" class="orientation-slider" min="0" max="360" step="0.5" value="0">' +
+      '</div>' +
+      '<div class="orientation-btn-row">' +
+      '  <button type="button" class="orientation-rotate-btn orientation-rotate-ccw">' +
+      '    <span>↺ 逆时针</span></button>' +
+      '  <button type="button" class="orientation-rotate-btn orientation-rotate-cw">' +
+      '    <span>↻ 顺时针</span></button>' +
+      '</div>';
+    container.appendChild(this._root);
+
+    this._valueEl = this._root.querySelector('.orientation-controls-value');
+    this._slider = this._root.querySelector('.orientation-slider');
+    this._btnCcw = this._root.querySelector('.orientation-rotate-ccw');
+    this._btnCw = this._root.querySelector('.orientation-rotate-cw');
+    this._bindEvents();
+    this.syncFromYaw();
+  }
+
+  syncFromYaw() {
+    if (!this._slider || !this._valueEl) return;
+    const deg = radToDeg(this._getYaw());
+    this._slider.value = deg.toFixed(1);
+    this._valueEl.textContent = Math.round(deg) + '°';
+  }
+
+  _applyYaw(yawRad) {
+    this._setYaw(yawRad);
+    this.syncFromYaw();
+    if (this._onChange) {
+      try {
+        this._onChange(yawRad);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }
+
+  _bindEvents() {
+    const self = this;
+    this._slider.addEventListener('input', () => {
+      const deg = parseFloat(self._slider.value);
+      if (!Number.isNaN(deg)) self._applyYaw(degToRad(deg));
+    });
+    const bindRotate = (btn, direction) => {
+      const start = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        self._startRotate(direction, btn);
+      };
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('touchstart', start, { passive: false });
+    };
+    bindRotate(this._btnCcw, 1);
+    bindRotate(this._btnCw, -1);
+  }
+
+  _startRotate(direction, activeBtn) {
+    this._stopRotate();
+    this._rotDirection = direction;
+    if (activeBtn) activeBtn.classList.add('active');
+    document.addEventListener('mouseup', this._onGlobalPointerUp);
+    document.addEventListener('touchend', this._onGlobalPointerUp);
+    let lastTime = performance.now();
+    const tick = (now) => {
+      if (!this._rotDirection) return;
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      this._applyYaw(this._getYaw() + this._rotDirection * ORIENTATION_ROTATE_SPEED * dt);
+      this._rotFrame = requestAnimationFrame(tick);
+    };
+    this._rotFrame = requestAnimationFrame(tick);
+  }
+
+  _stopRotate() {
+    this._rotDirection = 0;
+    if (this._rotFrame) {
+      cancelAnimationFrame(this._rotFrame);
+      this._rotFrame = null;
+    }
+    if (this._btnCcw) this._btnCcw.classList.remove('active');
+    if (this._btnCw) this._btnCw.classList.remove('active');
+    document.removeEventListener('mouseup', this._onGlobalPointerUp);
+    document.removeEventListener('touchend', this._onGlobalPointerUp);
+  }
+
+  setVisible(on) {
+    const panel = $('orientation-controls-panel');
+    if (panel) panel.style.display = on ? 'block' : 'none';
+  }
+}
+
+onTask((l) => {
+  /* keep quiet on page; important actions use flash() */
+  void l;
+});
 onState((s) => {
   const name = s.mode_name || String(s.mode);
   modeHint.textContent = `模式：${name} (${s.mode}) · ${s.detail || ''}`;
   navActive = Number(s.mode) === 2;
   sessionHint.textContent = navActive
-    ? '导航会话中 · 可发送 /xw/goal_pose（Nav2 接入前为 stub 回执）'
-    : '会话未启动 · 先选地图并「进入导航」';
-  goalHint.textContent = navActive
-    ? '点击地图或填写坐标后发送'
-    : '需先进入导航会话后再发送目标';
+    ? '导航中 · 拖设初位姿后点「确认初位姿」'
+    : '选地图 → 进入导航 → 拖设初位姿并确认';
 });
 
 function currentMapName() {
   return (mapSelect.value || '').trim();
+}
+
+function syncToolButtons(mode) {
+  document.querySelectorAll('.tool-btn').forEach((b) => b.classList.remove('active-tool'));
+  const id = mode === 'initial_pose' ? 'toolInitialPose' : mode === 'edit_wp' ? 'toolEditWp' : null;
+  if (id) {
+    const el = $(id);
+    if (el) el.classList.add('active-tool');
+  }
+  const labels = {
+    view: '浏览（点列表/地图航点可前往）',
+    initial_pose: '拖设初位姿',
+    edit_wp: '编辑航点',
+  };
+  toolHint.textContent = `工具：${labels[mode] || mode}`;
+  if (orientationControls) {
+    orientationControls.setVisible(mode === 'initial_pose' || mode === 'edit_wp');
+    orientationControls.syncFromYaw();
+  }
 }
 
 async function refreshMaps() {
@@ -86,32 +256,36 @@ async function loadMapPreview() {
   const name = currentMapName();
   if (!name) {
     pushLog('!! 请先选择地图');
-    return;
+    return false;
   }
-  pushLog(`>> 加载静态地图预览 ${name}`);
+  pushLog(`>> 加载地图 ${name}`);
   const j = await mapManage(5, name);
   if (!j.ok) {
     pushLog(`!! ${j.message || '加载失败'}`);
-    return;
+    return false;
   }
   let payload;
   try {
     payload = typeof j.data_json === 'string' ? JSON.parse(j.data_json || '{}') : j.data_json;
   } catch (_) {
     pushLog('!! 地图 JSON 无效');
-    return;
+    return false;
   }
   if (window.XwMapCanvas && window.XwMapCanvas.loadStaticMap(payload)) {
-    pushLog(`<< 预览就绪 ${name}`);
+    pushLog(`<< 地图就绪 ${name}`);
     await loadWaypoints();
+    return true;
   }
+  return false;
 }
 
 async function loadWaypoints() {
   const name = currentMapName();
   waypoints = [];
   selectedWp = null;
+  selectedWpIdx = null;
   $('gotoSelectedWp').disabled = true;
+  $('deleteWp').disabled = true;
   if (!name) {
     wpList.innerHTML = '<p class="muted pad">未选择地图</p>';
     wpCount.textContent = '0';
@@ -126,58 +300,49 @@ async function loadWaypoints() {
     data = {};
   }
   const list = Array.isArray(data.waypoints) ? data.waypoints : [];
-  // charger may sit at top-level
-  if (data.charger && typeof data.charger === 'object') {
-    list.unshift({
-      name: 'charger',
-      x: Number(data.charger.x),
-      y: Number(data.charger.y),
-      yaw: Number(data.charger.yaw || data.charger.theta || 0),
-      _kind: 'charger',
-    });
-  }
   waypoints = list
     .map((w, i) => ({
       name: w.name || w.id || `wp_${i + 1}`,
       x: Number(w.x),
       y: Number(w.y),
       yaw: Number(w.yaw != null ? w.yaw : w.theta != null ? w.theta : 0),
-      _kind: w._kind || 'waypoint',
+      _kind: String(w.name || '').toLowerCase() === 'charger' ? 'charger' : 'waypoint',
     }))
     .filter((w) => Number.isFinite(w.x) && Number.isFinite(w.y));
 
+  if (window.XwMapCanvas) {
+    window.XwMapCanvas.setWaypoints(waypoints);
+    waypoints = window.XwMapCanvas.getWaypoints();
+  }
   wpCount.textContent = String(waypoints.length);
-  if (window.XwMapCanvas) window.XwMapCanvas.setWaypoints(waypoints);
   renderWpList();
 }
 
 function renderWpList() {
   wpList.innerHTML = '';
   if (!waypoints.length) {
-    wpList.innerHTML = '<p class="muted pad">无航点（建图保存时会写入 charger）</p>';
+    wpList.innerHTML = '<p class="muted pad">无航点 · 点「编辑航点」后在地图空白处点击打点</p>';
     return;
   }
   waypoints.forEach((wp, idx) => {
     const row = document.createElement('div');
-    row.className = 'map-item nav-wp-item' + (selectedWp === wp.name ? ' selected' : '');
+    const bad = !!wp.bad;
+    const selected = selectedWpIdx === idx || selectedWp === wp.name;
+    row.className =
+      'map-item nav-wp-item' + (selected ? ' selected' : '') + (bad ? ' wp-bad' : '');
     row.innerHTML = `
       <div class="map-item-main">
-        <span class="index-badge">${idx + 1}</span>
+        <span class="index-badge">${bad ? '!' : idx + 1}</span>
         <div>
-          <div class="map-item-name">${escapeHtml(wp.name)}${wp._kind === 'charger' ? ' · 充电桩' : ''}</div>
+          <div class="map-item-name">${escapeHtml(wp.name)}${
+            wp._kind === 'charger' ? ' · 充电桩' : ''
+          }${bad ? ' · <span class="bad-tag">坏点</span>' : ''}</div>
           <div class="map-item-meta mono">x=${wp.x.toFixed(2)} y=${wp.y.toFixed(2)} yaw=${wp.yaw.toFixed(2)}</div>
         </div>
       </div>`;
     row.onclick = () => {
-      selectedWp = wp.name;
-      gx.value = String(wp.x);
-      gy.value = String(wp.y);
-      gyaw.value = String(wp.yaw);
-      if (window.XwMapCanvas) {
-        window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
-      }
-      $('gotoSelectedWp').disabled = false;
-      renderWpList();
+      selectWaypoint(idx, false);
+      if (navActive && !bad) goToWaypoint(idx);
     };
     wpList.appendChild(row);
   });
@@ -191,309 +356,69 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
-function syncGoalInputsFromClick(world) {
-  gx.value = world.x.toFixed(3);
-  gy.value = world.y.toFixed(3);
+function selectWaypoint(idx, fromMap) {
+  if (idx == null || !waypoints[idx]) return;
+  const wp = waypoints[idx];
+  selectedWpIdx = idx;
+  selectedWp = wp.name;
+  $('gotoSelectedWp').disabled = !!wp.bad;
+  $('deleteWp').disabled = false;
   if (window.XwMapCanvas) {
-    window.XwMapCanvas.setGoal({
-      x: world.x,
-      y: world.y,
-      yaw: Number(gyaw.value) || 0,
-    });
+    window.XwMapCanvas.setSelectedWaypointIndex(idx);
+    if (!fromMap) window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
   }
+  if (orientationControls) orientationControls.syncFromYaw();
+  renderWpList();
 }
 
-async function sendGoalNow() {
-  const x = Number(gx.value);
-  const y = Number(gy.value);
-  const yaw = Number(gyaw.value) || 0;
-  if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    pushLog('!! 坐标无效');
+async function goToWaypoint(idx) {
+  const wp = waypoints[idx != null ? idx : selectedWpIdx];
+  if (!wp) {
+    flash('请先选中航点', 'err');
+    return;
+  }
+  if (wp.bad) {
+    flash('坏点不可前往（距障碍 <0.3m）', 'err');
     return;
   }
   if (!navActive) {
-    pushLog('!! 尚未进入导航模式（mode≠2），目标可能被 session 忽略');
+    flash('尚未进入导航，请先「进入导航」并确认初位姿', 'err');
+    return;
   }
-  if (window.XwMapCanvas) window.XwMapCanvas.setGoal({ x, y, yaw });
-  const j = await publishGoal(x, y, yaw, 'map');
-  pushLog(j.ok ? `<< goal published` : `!! ${j.message || 'goal failed'}`);
-}
-
-function statusClass(st) {
-  if (st === 'live') return 'on';
-  if (st === 'partial') return 'warn';
-  if (st === 'placeholder') return 'off';
-  return 'off';
-}
-
-function statusLabel(st) {
-  if (st === 'live') return '在线';
-  if (st === 'partial') return '部分';
-  if (st === 'placeholder') return '占位';
-  if (st === 'missing') return '未检出';
-  return st || '—';
-}
-
-async function refreshSensors() {
-  const j = await fetchSensorHub();
-  const sensors = j.sensors || {};
-  const order = ['lidar', 'depth_camera', 'depth_camera_2', 'ultrasonic', 'imu', 'chassis'];
-  sensorCards.innerHTML = '';
-  order.forEach((key) => {
-    const s = sensors[key];
-    if (!s) return;
-    const card = document.createElement('div');
-    card.className = 'sensor-card';
-    const topics = (s.topics || []).map((t) => `<code>${escapeHtml(t)}</code>`).join(' ');
-    card.innerHTML = `
-      <div class="sensor-card-head">
-        <strong>${escapeHtml(s.label || key)}</strong>
-        <span class="pill ${statusClass(s.status)}">${statusLabel(s.status)}</span>
-      </div>
-      <div class="sensor-card-body muted">${topics || '—'}</div>
-      ${s.hint ? `<div class="sensor-card-hint">${escapeHtml(s.hint)}</div>` : ''}
-    `;
-    sensorCards.appendChild(card);
-  });
-
-  // Live scan badge from canvas
-  if (window.XwMapCanvas) {
-    const scan = window.XwMapCanvas.getScanStatus();
-    const lidarCard = sensorCards.querySelector('.sensor-card');
-    if (lidarCard && scan.hasScan) {
-      const extra = document.createElement('div');
-      extra.className = 'sensor-card-hint';
-      extra.textContent = scan.live
-        ? `画布激光活跃 · ${scan.ranges} beams · ${scan.ageMs}ms`
-        : `画布有扫描缓存 · 年龄 ${scan.ageMs}ms`;
-      lidarCard.appendChild(extra);
-    }
-  }
-
-  renderLayout(j.layout || []);
-}
-
-function layoutStatusColor(status) {
-  if (status === 'live') return '#22c55e';
-  if (status === 'partial') return '#f59e0b';
-  return '#94a3b8';
-}
-
-function shortSensorLabel(s) {
-  const id = String(s.id || '');
-  if (id === 'lidar') return '激光';
-  if (id === 'camera_front') return '前视';
-  if (id === 'camera_front_2') return '前视2';
-  if (id === 'camera_rear') return '后视';
-  if (id === 'ultrasonic') return '超声';
-  if (id === 'imu') return 'IMU';
-  if (id === 'chassis') return '底盘';
-  const full = String(s.label || id);
-  return full.length > 4 ? full.slice(0, 4) : full;
-}
-
-/**
- * Isometric transparent chassis + sensor markers (URDF relative to base_link).
- * ROS: +X forward, +Y left, +Z up.
- */
-function renderLayout(layout) {
-  if (!layout.length && window.XwMapCanvas) {
-    layout = (window.XwMapCanvas.DEFAULT_SENSOR_FRAMES || []).map((f) => ({
-      id: f.id,
-      frame: f.frame,
-      label: f.label,
-      xyz: [0, 0, 0],
-      status: 'placeholder',
-    }));
-  }
-
-  const W = 380;
-  const H = 300;
-  const ox = W * 0.48;
-  const oy = H * 0.62;
-  const scale = 210; // px / m
-
-  // Isometric: screen from front-right-above
-  const cos30 = Math.cos(Math.PI / 6);
-  const sin30 = Math.sin(Math.PI / 6);
-  function project(x, y, z) {
-    return {
-      sx: ox + (x - y) * cos30 * scale,
-      sy: oy - z * scale - (x + y) * sin30 * scale,
-    };
-  }
-  function poly(pts) {
-    return pts.map((p) => `${p.sx.toFixed(1)},${p.sy.toFixed(1)}`).join(' ');
-  }
-
-  // URDF chassis box 0.45 × 0.35 × 0.18 centered on base_link
-  const hx = 0.225;
-  const hy = 0.175;
-  const hz = 0.09;
-  const c = {
-    // bottom
-    b000: project(-hx, -hy, -hz),
-    b100: project(hx, -hy, -hz),
-    b110: project(hx, hy, -hz),
-    b010: project(-hx, hy, -hz),
-    // top
-    t000: project(-hx, -hy, hz),
-    t100: project(hx, -hy, hz),
-    t110: project(hx, hy, hz),
-    t010: project(-hx, hy, hz),
-  };
-
-  // Faces back-to-front for transparency
-  const faces = [
-    { pts: [c.b010, c.b110, c.t110, c.t010], fill: 'rgba(56,189,248,0.06)', stroke: '#475569' }, // +Y left
-    { pts: [c.b000, c.b010, c.t010, c.t000], fill: 'rgba(148,163,184,0.08)', stroke: '#475569' }, // -X rear
-    { pts: [c.b000, c.b100, c.b110, c.b010], fill: 'rgba(15,23,42,0.35)', stroke: '#64748b' }, // bottom
-    { pts: [c.b100, c.b110, c.t110, c.t100], fill: 'rgba(56,189,248,0.12)', stroke: '#38bdf8' }, // +X front
-    { pts: [c.b000, c.b100, c.t100, c.t000], fill: 'rgba(148,163,184,0.10)', stroke: '#64748b' }, // -Y right
-    { pts: [c.t000, c.t100, c.t110, c.t010], fill: 'rgba(148,163,184,0.14)', stroke: '#94a3b8' }, // top
-  ];
-
-  let body = faces
-    .map(
-      (f) =>
-        `<polygon points="${poly(f.pts)}" fill="${f.fill}" stroke="${f.stroke}" stroke-width="1.2" />`
-    )
-    .join('');
-
-  // Vertical edge emphasis (wireframe feel)
-  const edges = [
-    [c.b000, c.t000],
-    [c.b100, c.t100],
-    [c.b110, c.t110],
-    [c.b010, c.t010],
-  ];
-  body += edges
-    .map(
-      ([a, b]) =>
-        `<line x1="${a.sx}" y1="${a.sy}" x2="${b.sx}" y2="${b.sy}" stroke="#64748b" stroke-width="1" stroke-opacity="0.7" />`
-    )
-    .join('');
-
-  // Axis triad at base_link origin
-  const o = project(0, 0, 0);
-  const ax = project(0.16, 0, 0);
-  const ay = project(0, 0.14, 0);
-  const az = project(0, 0, 0.16);
-  const axes = `
-    <line x1="${o.sx}" y1="${o.sy}" x2="${ax.sx}" y2="${ax.sy}" stroke="#38bdf8" stroke-width="2" />
-    <line x1="${o.sx}" y1="${o.sy}" x2="${ay.sx}" y2="${ay.sy}" stroke="#4ade80" stroke-width="2" />
-    <line x1="${o.sx}" y1="${o.sy}" x2="${az.sx}" y2="${az.sy}" stroke="#c084fc" stroke-width="2" />
-    <text x="${ax.sx + 4}" y="${ax.sy + 3}" class="layout-axis" fill="#38bdf8">X前</text>
-    <text x="${ay.sx - 2}" y="${ay.sy - 4}" class="layout-axis" fill="#4ade80">Y左</text>
-    <text x="${az.sx + 4}" y="${az.sy}" class="layout-axis" fill="#c084fc">Z上</text>
-    <circle cx="${o.sx}" cy="${o.sy}" r="2.5" fill="#e2e8f0" />`;
-
-  // Front direction chevron on top face
-  const nose = project(hx + 0.04, 0, hz);
-  const noseL = project(hx - 0.02, 0.04, hz);
-  const noseR = project(hx - 0.02, -0.04, hz);
-  const noseMark = `<polygon points="${poly([nose, noseL, noseR])}" fill="#38bdf8" opacity="0.9" />`;
-
-  const items = layout.map((s) => {
-    const xyz = s.xyz || [0, 0, 0];
-    const x = Number(xyz[0]) || 0;
-    const y = Number(xyz[1]) || 0;
-    const z = Number(xyz[2]) || 0;
-    const p = project(x, y, z);
-    return {
-      ...s,
-      x,
-      y,
-      z,
-      px: p.sx,
-      py: p.sy,
-      color: layoutStatusColor(s.status),
-      short: shortSensorLabel(s),
-    };
-  });
-
-  // Depth sort: draw farther first (higher screen-y is nearer in our iso)
-  const sorted = [...items].sort((a, b) => a.py - b.py);
-
-  // Callouts: aft / left-of-screen → left; forward / right → right; centerline split by z
-  const left = [];
-  const right = [];
-  const mid = [];
-  items.forEach((it) => {
-    if (it.x < -0.05 || (Math.abs(it.x) <= 0.05 && it.y > 0.02)) left.push(it);
-    else if (it.x > 0.05 || (Math.abs(it.x) <= 0.05 && it.y < -0.02)) right.push(it);
-    else mid.push(it);
-  });
-  mid.sort((a, b) => b.z - a.z);
-  mid.forEach((it, i) => (i % 2 === 0 ? left : right).push(it));
-  left.sort((a, b) => a.py - b.py);
-  right.sort((a, b) => a.py - b.py);
-
-  const labelTop = 36;
-  const labelBot = H - 36;
-  function placeSide(sideItems, side) {
-    const n = Math.max(sideItems.length, 1);
-    const span = labelBot - labelTop;
-    return sideItems.map((it, i) => {
-      const ly = n === 1 ? (labelTop + labelBot) / 2 : labelTop + (span * i) / (n - 1);
-      return {
-        ...it,
-        side,
-        lx: side === 'left' ? 10 : W - 10,
-        ly,
-        elbowX: side === 'left' ? 92 : W - 92,
-      };
-    });
-  }
-  const callouts = [...placeSide(left, 'left'), ...placeSide(right, 'right')];
-
-  let leaders = '';
-  callouts.forEach((it) => {
-    const name = escapeHtml(it.label || it.id);
-    const xyzTxt = `(${it.x.toFixed(2)}, ${it.y.toFixed(2)}, ${it.z.toFixed(2)})`;
-    const axText = it.side === 'left' ? it.lx : it.lx;
-    const anchor = it.side === 'left' ? 'start' : 'end';
-    leaders += `
-      <path d="M ${it.px} ${it.py} L ${it.elbowX} ${it.ly} L ${axText} ${it.ly}"
-        fill="none" stroke="${it.color}" stroke-width="1.15" stroke-opacity="0.75" />
-      <text x="${axText}" y="${it.ly - 3}" text-anchor="${anchor}" class="layout-label">${name}</text>
-      <text x="${axText}" y="${it.ly + 10}" text-anchor="${anchor}" class="layout-xyz">${xyzTxt}</text>`;
-  });
-
-  let marks = '';
-  sorted.forEach((it) => {
-    // Drop line to chassis top for height cue
-    const foot = project(it.x, it.y, Math.min(it.z, hz));
-    if (it.z > hz + 0.01) {
-      marks += `<line x1="${foot.sx}" y1="${foot.sy}" x2="${it.px}" y2="${it.py}"
-        stroke="${it.color}" stroke-width="1" stroke-dasharray="3 2" opacity="0.55" />`;
-    }
-    marks += `
-      <circle cx="${it.px}" cy="${it.py}" r="6" fill="${it.color}" stroke="#0f172a" stroke-width="1.6" />
-      <text x="${it.px}" y="${it.py - 10}" text-anchor="middle" class="layout-dot-label">${escapeHtml(
-      it.short
-    )}</text>`;
-  });
-
-  sensorLayout.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="280" role="img" aria-label="三维透明机身与传感器位姿">
-      <text x="${W / 2}" y="18" text-anchor="middle" class="layout-caption">透明机身 · URDF 相对 base_link</text>
-      ${body}
-      ${noseMark}
-      ${axes}
-      ${leaders}
-      ${marks}
-    </svg>`;
+  if (window.XwMapCanvas) window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
+  const j = await publishGoal(wp.x, wp.y, wp.yaw || 0, 'map');
+  flash(
+    j.ok
+      ? `已前往 ${wp.name}（${wp.x.toFixed(2)}, ${wp.y.toFixed(2)}）`
+      : `前往失败：${j.message || ''}`,
+    j.ok ? 'ok' : 'err',
+  );
 }
 
 function tickPose() {
   if (!window.XwMapCanvas) return;
   const p = window.XwMapCanvas.getRobotPose();
   if (!p) {
-    poseHint.textContent = '位姿：等待 TF map→base_link';
+    poseHint.textContent = '位姿：等待 map→base（请先拖设初位姿）';
     return;
   }
   poseHint.textContent = `位姿：x=${p.x.toFixed(2)} y=${p.y.toFixed(2)} yaw=${p.yaw.toFixed(2)}`;
+}
+
+function syncInputsFromCanvasMode(_mode, state) {
+  if (!state) return;
+  if (Array.isArray(state.waypoints)) {
+    waypoints = state.waypoints;
+    wpCount.textContent = String(waypoints.length);
+    if (state.selectedWpIdx != null && waypoints[state.selectedWpIdx]) {
+      selectedWpIdx = state.selectedWpIdx;
+      selectedWp = waypoints[state.selectedWpIdx].name;
+      $('deleteWp').disabled = false;
+      $('gotoSelectedWp').disabled = !!waypoints[state.selectedWpIdx].bad;
+    }
+    renderWpList();
+  }
+  if (orientationControls) orientationControls.syncFromYaw();
 }
 
 // ——— wire UI ———
@@ -508,42 +433,178 @@ $('startNav').onclick = async () => {
     alert('请先选择地图');
     return;
   }
+  // Load static map FIRST so the canvas isn't blank while Nav2 starts.
+  const ok = await loadMapPreview();
+  if (!ok) {
+    pushLog('!! 地图加载失败，仍尝试进入导航');
+  }
   pushLog(`>> 进入导航 setMode(2) map=${name}`);
   await setMode(2, { map_name: name });
-  // Prefer live /map when Nav2 map_server is up; keep static preview if not.
-  if (window.XwMapCanvas) window.XwMapCanvas.enableLiveMap();
+  if (window.XwMapCanvas) {
+    window.XwMapCanvas.enableLiveMap();
+    window.XwMapCanvas.setInteractMode('initial_pose');
+    syncToolButtons('initial_pose');
+  }
   await loadWaypoints();
 };
 
 $('stopNav').onclick = async () => {
   pushLog('>> 结束导航 setMode(0)');
+  await cancelNav();
   await setMode(0, {});
+  if (window.XwMapCanvas) {
+    window.XwMapCanvas.setInteractMode('view');
+    window.XwMapCanvas.clearInitialPose();
+    window.XwMapCanvas.clearGoal();
+    syncToolButtons('view');
+  }
 };
 
 $('estop').onclick = () => {
   publishTeleop(0, 0);
-  pushLog('>> 急停：teleop 归零');
+  cancelNav();
+  pushLog('>> 急停：teleop 归零 + cancel');
 };
 
-$('sendGoal').onclick = () => sendGoalNow();
-$('clearGoal').onclick = () => {
-  if (window.XwMapCanvas) window.XwMapCanvas.clearGoal();
-};
-$('gotoSelectedWp').onclick = () => sendGoalNow();
-$('refreshSensors').onclick = () => refreshSensors();
+function toggleTool(mode) {
+  if (!window.XwMapCanvas) return;
+  const cur = window.XwMapCanvas.getInteractMode();
+  const next = cur === mode ? 'view' : mode;
+  window.XwMapCanvas.setInteractMode(next);
+  syncToolButtons(next);
+  if (next === 'initial_pose') {
+    pushLog('>> 拖设初位姿：拖动蓝点，右上角调朝向，再点「确认初位姿」');
+  } else if (next === 'edit_wp') {
+    pushLog('>> 编辑航点：空白处点击打点，拖动移动；改完请点「保存航点」');
+  }
+}
 
-$('clickGoal').onchange = (ev) => {
-  if (window.XwMapCanvas) {
-    window.XwMapCanvas.setInteractive(!!ev.target.checked);
+$('toolInitialPose').onclick = () => toggleTool('initial_pose');
+$('toolEditWp').onclick = () => toggleTool('edit_wp');
+
+$('applyInitialPose').onclick = async () => {
+  if (!window.XwMapCanvas) {
+    flash('画布未就绪', 'err');
+    return;
+  }
+  if (window.XwMapCanvas.getInteractMode() !== 'initial_pose') {
+    window.XwMapCanvas.setInteractMode('initial_pose');
+    syncToolButtons('initial_pose');
+  }
+  const pose = window.XwMapCanvas.getInitialPose();
+  if (!pose) {
+    flash('请先在地图上拖设初位姿（点「拖设初位姿」后拖动蓝点）', 'err', 7000);
+    return;
+  }
+  if (!navActive) {
+    flash('尚未进入导航模式：请先点「进入导航」，再确认初位姿', 'err', 7000);
+    return;
+  }
+
+  applyBtn.disabled = true;
+  applyBtn.textContent = '发送中…';
+  flash(
+    `正在发布初位姿 x=${pose.x.toFixed(2)} y=${pose.y.toFixed(2)} yaw=${pose.yaw.toFixed(2)} …`,
+    'info',
+    0,
+  );
+
+  let last = { ok: false };
+  try {
+    for (let i = 0; i < 3; i++) {
+      last = await publishInitialPose(pose.x, pose.y, pose.yaw, 'map');
+      if (!last.ok) break;
+      await sleep(120);
+    }
+  } finally {
+    applyBtn.disabled = false;
+    applyBtn.textContent = '确认初位姿';
+  }
+
+  if (last && last.ok) {
+    flash(
+      `初位姿已发送成功（x=${pose.x.toFixed(2)}, y=${pose.y.toFixed(2)}, yaw=${pose.yaw.toFixed(2)}）。请看地图上机器人是否跳到该位置。`,
+      'ok',
+      9000,
+    );
+    if (poseHint) poseHint.textContent = '初位姿已发 · 等待 AMCL 收敛';
+    if (sessionHint) sessionHint.textContent = '初位姿已确认 · 可点航点前往或巡航';
+    window.XwMapCanvas.setInteractMode('view');
+    syncToolButtons('view');
+  } else {
+    flash(`初位姿发送失败：${(last && last.message) || '网络/桥接异常'}`, 'err', 8000);
   }
 };
-$('showFrames').onchange = (ev) => {
-  if (window.XwMapCanvas) {
-    window.XwMapCanvas.setShowSensorFrames(!!ev.target.checked);
+
+$('startPatrol').onclick = async () => {
+  const name = currentMapName();
+  if (!waypoints.length) {
+    flash('没有航点，请先编辑并保存航点', 'err');
+    return;
   }
+  const loop = !!(patrolLoop && patrolLoop.checked);
+  const j = await startPatrol({ map_name: name, loop });
+  pushLog(j.ok ? `<< 多点巡航已启动${loop ? '（循环）' : ''}` : `!! ${j.message || 'failed'}`);
+};
+
+$('cancelNav').onclick = async () => {
+  const j = await cancelNav();
+  pushLog(j.ok ? '<< 导航已取消' : `!! ${j.message || 'failed'}`);
+};
+
+$('gotoSelectedWp').onclick = () => goToWaypoint(selectedWpIdx);
+
+$('deleteWp').onclick = () => {
+  if (!window.XwMapCanvas) return;
+  if (window.XwMapCanvas.deleteSelectedWaypoint()) {
+    waypoints = window.XwMapCanvas.getWaypoints();
+    selectedWp = null;
+    selectedWpIdx = null;
+    $('deleteWp').disabled = true;
+    $('gotoSelectedWp').disabled = true;
+    wpCount.textContent = String(waypoints.length);
+    renderWpList();
+    pushLog('<< 已删除选中航点（未写入文件，请点「保存航点」）');
+  }
+};
+
+$('saveWp').onclick = async () => {
+  const name = currentMapName();
+  if (!name) {
+    flash('请先选择地图', 'err');
+    return;
+  }
+  if (!window.XwMapCanvas) return;
+  const list = window.XwMapCanvas.getWaypoints();
+  const bad = list.filter((w) => w.bad);
+  if (bad.length) {
+    flash(`存在 ${bad.length} 个坏点（<0.3m 障碍），请先挪开或删除再保存`, 'err', 7000);
+    return;
+  }
+  const payload = {
+    waypoints: list.map((w) => ({
+      name: w._kind === 'charger' ? 'charger' : w.name,
+      x: w.x,
+      y: w.y,
+      yaw: w.yaw || 0,
+    })),
+  };
+  const j = await waypointManage(1, name, { data_json: JSON.stringify(payload) });
+  pushLog(j.ok ? `<< 航点已保存到地图「${name}」` : `!! ${j.message || 'save failed'}`);
+  if (j.ok) await loadWaypoints();
 };
 
 if (window.XwMapCanvas) {
+  const panel = $('orientation-controls-panel');
+  orientationControls = new OrientationControls(panel, {
+    getYaw: () => window.XwMapCanvas.getActiveYaw(),
+    setYaw: (y) => {
+      window.XwMapCanvas.setActiveYaw(y);
+    },
+    onChange: () => {},
+  });
+  orientationControls.setVisible(false);
+
   window.XwMapCanvas.start({
     connectionName: 'xw-nav-canvas',
     preferLiveMap: true,
@@ -552,17 +613,24 @@ if (window.XwMapCanvas) {
     onStatus: (msg) => {
       mapStatus.textContent = msg;
     },
-    onMapClick: (world) => {
-      if (!$('clickGoal').checked) return;
-      syncGoalInputsFromClick(world);
-      pushLog(`地图点击 → (${world.x.toFixed(2)}, ${world.y.toFixed(2)})`);
+    onModeChange: (mode, state) => {
+      syncToolButtons(mode);
+      syncInputsFromCanvasMode(mode, state);
+    },
+    onYawChange: () => {
+      if (orientationControls) orientationControls.syncFromYaw();
+    },
+    onWaypointClick: (wp, idx) => {
+      selectWaypoint(idx, true);
+      if (window.XwMapCanvas.getInteractMode() === 'view') {
+        goToWaypoint(idx);
+      }
     },
   });
+  syncToolButtons('view');
 } else {
   mapStatus.textContent = 'map_canvas.js 未加载';
 }
 
 poseTimer = setInterval(tickPose, 500);
 refreshMaps();
-refreshSensors();
-setInterval(refreshSensors, 8000);

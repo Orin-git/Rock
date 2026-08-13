@@ -30,89 +30,139 @@
     <section class="page-head">
       <div class="tag">Ops Console</div>
       <h1>任务指挥中枢</h1>
-      <p class="muted">右上角 <b>DOMAIN</b> 与 <b>服务状态</b> 用于判断机器人是否已启动。Domain 正确且「服务已启动」= Supervisor / Map 已就绪。</p>
+      <p class="muted">Domain 正确且「服务已启动」表示 Supervisor / Map 已就绪。</p>
     </section>
 
     <div class="section-title">实时遥测</div>
-    <section class="grid">
-      <div class="stat"><h2>ROS Domain</h2><p id="domain">—</p><div class="sub" id="robotId">robot —</div></div>
-      <div class="stat"><h2>运行模式</h2><p id="mode">—</p><div class="sub" id="modeSub">waiting</div></div>
-      <div class="stat"><h2>电量</h2><p id="power">—</p><div class="meter"><i id="powerBar"></i></div></div>
-      <div class="stat"><h2>底盘失能</h2><p id="estop">—</p><div class="sub" id="profile">profile —</div></div>
-      <div class="stat"><h2>服务健康</h2><p id="stack">—</p><div class="sub" id="stackSub">supervisor / map</div></div>
+    <section class="grid overview-telemetry">
+      <div class="stat" id="cardDomain"><h2>ROS Domain</h2><p id="domain">—</p><div class="sub" id="robotId">robot —</div></div>
+      <div class="stat" id="cardMode"><h2>运行模式</h2><p id="mode">—</p><div class="sub" id="modeSub">waiting</div></div>
+      <div class="stat" id="cardPower"><h2>电量</h2><p id="power">—</p><div class="meter"><i id="powerBar"></i></div></div>
+      <div class="stat" id="cardEstop"><h2>底盘失能</h2><p id="estop">—</p><div class="sub" id="profile">profile —</div></div>
+      <div class="stat" id="cardStack"><h2>服务健康</h2><p id="stack">—</p><div class="sub" id="stackSub">supervisor / map</div></div>
     </section>
 
-    <div class="section-title">开发 / 量产</div>
-    <section class="panel run-mode-panel">
-      <div class="run-mode-row">
-        <div>
-          <h2 style="margin:0">运行形态</h2>
-          <p class="muted" style="margin:0.35rem 0 0">
-            <code>/xw/robot_state.run_mode</code> · 默认开发者 ·
-            量产禁止运动模式互切
-          </p>
+    <div class="section-title">传感器在线</div>
+    <section class="grid overview-sensors" id="sensorGrid">
+      <div class="stat is-neutral" data-sensor="lidar"><h2>激光雷达</h2><p>—</p><div class="sub">/scan</div></div>
+      <div class="stat is-neutral" data-sensor="depth_camera"><h2>前上深度</h2><p>—</p><div class="sub">front_up</div></div>
+      <div class="stat is-neutral" data-sensor="depth_camera_2"><h2>前下深度</h2><p>—</p><div class="sub">front_down</div></div>
+      <div class="stat is-neutral" data-sensor="chassis"><h2>底盘</h2><p>—</p><div class="sub">odom · cmd_vel</div></div>
+      <div class="stat is-neutral" data-sensor="ultrasonic"><h2>超声波</h2><p>—</p><div class="sub">占位</div></div>
+      <div class="stat is-neutral" data-sensor="imu"><h2>IMU</h2><p>—</p><div class="sub">占位</div></div>
+    </section>
+
+    <div class="section-title">运行与安全</div>
+    <section class="overview-split">
+      <div class="panel safety-panel">
+        <div class="safety-head">
+          <h2 style="margin:0">安全闸</h2>
+          <div class="safety-head-right">
+            <span class="muted" id="safetyReason" style="font-size:0.78rem">—</span>
+            <span class="pill off" id="safetyOverall">—</span>
+          </div>
         </div>
-        <div class="btn-row" style="margin:0">
-          <button id="runDev" type="button">开发者</button>
-          <button id="runProd" class="secondary" type="button">量产</button>
+        <div class="safety-cross" aria-label="四向障碍">
+          <div class="sx sx-front" id="cellFront">
+            <span class="sx-dir">前</span>
+            <span class="sx-state" id="obsFront">—</span>
+            <span class="sx-range" id="obsFrontRange">—</span>
+          </div>
+          <div class="sx sx-left" id="cellLeft">
+            <span class="sx-dir">左</span>
+            <span class="sx-state" id="obsLeft">—</span>
+            <span class="sx-range" id="obsLeftRange">—</span>
+          </div>
+          <div class="sx-hub" id="safetyHub">OK</div>
+          <div class="sx sx-right" id="cellRight">
+            <span class="sx-dir">右</span>
+            <span class="sx-state" id="obsRight">—</span>
+            <span class="sx-range" id="obsRightRange">—</span>
+          </div>
+          <div class="sx sx-rear" id="cellRear">
+            <span class="sx-dir">后</span>
+            <span class="sx-state" id="obsRear">—</span>
+            <span class="sx-range" id="obsRearRange">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel run-mode-panel">
+        <div class="run-mode-top">
+          <h2 style="margin:0">开发 / 量产</h2>
           <span class="pill off" id="runPill">…</span>
         </div>
-      </div>
-    </section>
-
-    <div class="section-title">安全闸 · 四向障碍</div>
-    <section class="panel safety-panel">
-      <div class="safety-head">
-        <div>
-          <h2 style="margin:0">总体</h2>
-          <p class="muted" style="margin:0.35rem 0 0" id="safetyReason">waiting</p>
-        </div>
-        <span class="pill off" id="safetyOverall">—</span>
-      </div>
-      <div class="safety-compass" aria-label="四向障碍">
-        <div class="safety-cell safety-front">
-          <span class="safety-dir">前</span>
-          <span class="pill off" id="obsFront">—</span>
-          <span class="safety-range" id="obsFrontRange">—</span>
-        </div>
-        <div class="safety-mid">
-          <div class="safety-cell">
-            <span class="safety-dir">左</span>
-            <span class="pill off" id="obsLeft">—</span>
-            <span class="safety-range" id="obsLeftRange">—</span>
-          </div>
-          <div class="safety-hub">BOT</div>
-          <div class="safety-cell">
-            <span class="safety-dir">右</span>
-            <span class="pill off" id="obsRight">—</span>
-            <span class="safety-range" id="obsRightRange">—</span>
-          </div>
-        </div>
-        <div class="safety-cell safety-rear">
-          <span class="safety-dir">后</span>
-          <span class="pill off" id="obsRear">—</span>
-          <span class="safety-range" id="obsRearRange">—</span>
+        <p class="run-mode-hint muted">默认开发者 · 量产禁止运动模式互切</p>
+        <div class="run-mode-stack">
+          <button id="runDev" type="button">开发者</button>
+          <button id="runProd" class="secondary" type="button">量产</button>
         </div>
       </div>
-      <p class="muted" style="margin:0.75rem 0 0;font-size:0.78rem">
-        数据来自 <code>obstacle_status</code>（激光扇区 + 超声标签 + 可选前视深度）。前向阻塞会刹住前进；四向状态独立显示。
-      </p>
-    </section>
-
-    <div class="section-title">任务事件</div>
-    <section class="panel">
-      <h2>Event stream</h2>
-      <pre id="tasklog" class="log">系统待机…</pre>
     </section>
   </main>
   <script type="module">
-    import { connect, onState, onObstacle, onTask, onMeta, setRunMode } from '/js/api.js';
+    import { connect, onState, onObstacle, onMeta, setRunMode, fetchSensorHub } from '/js/api.js';
     import '/js/app.js';
     connect();
 
     const runPill = document.getElementById('runPill');
     const runDev = document.getElementById('runDev');
     const runProd = document.getElementById('runProd');
+
+    function setTone(el, tone) {
+      if (!el) return;
+      el.classList.remove('is-ok', 'is-bad', 'is-warn', 'is-neutral');
+      el.classList.add(tone || 'is-neutral');
+    }
+
+    function sensorTone(status, present) {
+      if (status === 'live') return 'is-ok';
+      if (status === 'partial') return 'is-warn';
+      // placeholder = hardware not fitted; never show as online even if a stub topic exists
+      if (status === 'placeholder') return 'is-warn';
+      if (present) return 'is-ok';
+      return 'is-bad';
+    }
+
+    function sensorLabel(status, present) {
+      if (status === 'live') return '在线';
+      if (status === 'partial') return '部分';
+      if (status === 'placeholder') return '占位';
+      if (status === 'missing') return '离线';
+      if (present) return '在线';
+      return status || '—';
+    }
+
+    // Short sub-labels (avoid wrapping long topic paths)
+    const SENSOR_SUB = {
+      lidar: '/scan',
+      depth_camera: 'front_up',
+      depth_camera_2: 'front_down',
+      chassis: 'odom · cmd_vel',
+      ultrasonic: '占位',
+      imu: '占位',
+    };
+
+    async function refreshSensors() {
+      const j = await fetchSensorHub();
+      const sensors = j.sensors || {};
+      document.querySelectorAll('#sensorGrid [data-sensor]').forEach((card) => {
+        const key = card.getAttribute('data-sensor');
+        const s = sensors[key];
+        const p = card.querySelector('p');
+        const sub = card.querySelector('.sub');
+        if (!s) {
+          if (p) p.textContent = '未知';
+          setTone(card, 'is-warn');
+          return;
+        }
+        if (p) p.textContent = sensorLabel(s.status, s.present);
+        if (sub) {
+          sub.textContent = SENSOR_SUB[key] || s.hint || '—';
+        }
+        setTone(card, sensorTone(s.status, s.present));
+      });
+    }
 
     function renderRunMode(rm) {
       const code = rm == null ? 1 : Number(rm);
@@ -123,17 +173,26 @@
       runProd.className = isDev ? 'secondary' : '';
     }
 
-    function setSector(elPill, elRange, sec) {
+    function setSector(cell, elState, elRange, sec) {
       const s = sec || {};
       const blocked = !!s.blocked;
       const range = s.range_m;
-      elPill.textContent = blocked ? '有障' : (range == null ? '无数据' : '通畅');
-      elPill.className = blocked ? 'pill off' : (range == null ? 'pill warn' : 'pill on');
+      let tone = 'is-warn';
+      let label = '无数据';
+      if (blocked) {
+        tone = 'is-bad';
+        label = '有障';
+      } else if (range != null) {
+        tone = 'is-ok';
+        label = '通畅';
+      }
+      setTone(cell, tone);
+      elState.textContent = label;
       if (range == null) {
         elRange.textContent = '—';
       } else {
         const src = s.source ? ` · ${s.source}` : '';
-        elRange.textContent = `${Number(range).toFixed(2)} m${src}`;
+        elRange.textContent = `${Number(range).toFixed(2)}m${src}`;
       }
     }
 
@@ -145,42 +204,51 @@
       const sup = m.services?.supervisor_up ? 'sup:ok' : 'sup:--';
       const map = m.services?.map_manager_up ? 'map:ok' : 'map:--';
       document.getElementById('stackSub').textContent = `${sup} / ${map}`;
+      setTone(document.getElementById('cardDomain'), m.ros_domain_id ? 'is-ok' : 'is-warn');
+      setTone(document.getElementById('cardStack'), up ? 'is-ok' : 'is-bad');
     });
 
     onState((s) => {
       document.getElementById('mode').textContent = s.mode_name || s.mode;
       document.getElementById('modeSub').textContent = s.detail || '—';
       renderRunMode(s.run_mode);
-      document.getElementById('estop').textContent = s.emergency_stop ? 'DISABLED' : '使能';
-      const pct = s.power?.battery_percent ?? 0;
-      document.getElementById('power').textContent = `${Number(pct).toFixed(0)}%`;
+      const estop = !!s.emergency_stop;
+      document.getElementById('estop').textContent = estop ? 'DISABLED' : '使能';
+      setTone(document.getElementById('cardEstop'), estop ? 'is-bad' : 'is-ok');
+      setTone(document.getElementById('cardMode'), 'is-ok');
+
+      const pct = Number(s.power?.battery_percent ?? 0);
+      document.getElementById('power').textContent = `${pct.toFixed(0)}%`;
       document.getElementById('powerBar').style.width = `${Math.max(0, Math.min(100, pct))}%`;
       document.getElementById('profile').textContent = `profile ${s.profile || '—'}`;
+      setTone(
+        document.getElementById('cardPower'),
+        pct >= 40 ? 'is-ok' : pct >= 20 ? 'is-warn' : 'is-bad',
+      );
     });
 
     onObstacle((o) => {
       const overall = document.getElementById('safetyOverall');
+      const hub = document.getElementById('safetyHub');
       const ok = o.safety_ok !== false && !o.blocked;
       overall.textContent = ok ? 'CLEAR' : 'HOLD';
       overall.className = ok ? 'pill on' : 'pill off';
+      hub.textContent = ok ? 'OK' : 'HOLD';
+      setTone(hub, ok ? 'is-ok' : 'is-bad');
       const reason = o.reason || '—';
-      const any = o.any_sector_blocked ? ' · 有扇区告警' : '';
+      const any = o.any_sector_blocked ? ' · 扇区告警' : '';
       document.getElementById('safetyReason').textContent = `${reason}${any}`;
       const sec = o.sectors || {};
-      setSector(document.getElementById('obsFront'), document.getElementById('obsFrontRange'), sec.front);
-      setSector(document.getElementById('obsRear'), document.getElementById('obsRearRange'), sec.rear);
-      setSector(document.getElementById('obsLeft'), document.getElementById('obsLeftRange'), sec.left);
-      setSector(document.getElementById('obsRight'), document.getElementById('obsRightRange'), sec.right);
-    });
-
-    onTask((line) => {
-      const el = document.getElementById('tasklog');
-      if (el.textContent === '系统待机…') el.textContent = '';
-      el.textContent = line + '\n' + el.textContent;
+      setSector(document.getElementById('cellFront'), document.getElementById('obsFront'), document.getElementById('obsFrontRange'), sec.front);
+      setSector(document.getElementById('cellRear'), document.getElementById('obsRear'), document.getElementById('obsRearRange'), sec.rear);
+      setSector(document.getElementById('cellLeft'), document.getElementById('obsLeft'), document.getElementById('obsLeftRange'), sec.left);
+      setSector(document.getElementById('cellRight'), document.getElementById('obsRight'), document.getElementById('obsRightRange'), sec.right);
     });
 
     runDev.onclick = () => setRunMode(1);
     runProd.onclick = () => setRunMode(0);
+    refreshSensors();
+    setInterval(refreshSensors, 5000);
   </script>
 </body>
 </html>

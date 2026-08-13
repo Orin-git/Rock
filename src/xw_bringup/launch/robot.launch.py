@@ -31,6 +31,7 @@ def generate_launch_description() -> LaunchDescription:
     use_depth_cam = LaunchConfiguration('use_depth_cam')
     use_depth_cam_2 = LaunchConfiguration('use_depth_cam_2')
     enable_pointcloud = LaunchConfiguration('enable_pointcloud')
+    use_ekf = LaunchConfiguration('use_ekf')
     profile = LaunchConfiguration('profile')
     lidar_port = LaunchConfiguration('lidar_port')
     lidar_baudrate = LaunchConfiguration('lidar_baudrate')
@@ -50,6 +51,18 @@ def generate_launch_description() -> LaunchDescription:
         get_package_share_directory('xw_safety_gate'), 'config', 'safety_gate.yaml'
     )
 
+    # When EKF is on: chassis publishes /odom/wheel without TF; ekf publishes /odom + TF.
+    chassis_params = {
+        'use_sim_hw': ParameterValue(use_sim, value_type=bool),
+        'serial_port': LaunchConfiguration('chassis_port'),
+        'serial_baud_rate': ParameterValue(
+            LaunchConfiguration('chassis_baudrate'), value_type=int
+        ),
+        'serial_fallback': LaunchConfiguration('chassis_fallback'),
+        'publish_odom_tf': ParameterValue(LaunchConfiguration('chassis_publish_odom_tf'), value_type=bool),
+        'odom_topic': LaunchConfiguration('chassis_odom_topic'),
+    }
+
     nodes = [
         LogInfo(msg=[
             '[xw_bringup] profile=', profile,
@@ -58,6 +71,7 @@ def generate_launch_description() -> LaunchDescription:
             ' use_depth_cam=', use_depth_cam,
             ' use_depth_cam_2=', use_depth_cam_2,
             ' enable_pointcloud=', enable_pointcloud,
+            ' use_ekf=', use_ekf,
             f' lidar_delay={lidar_delay}s',
         ]),
         Node(
@@ -71,14 +85,7 @@ def generate_launch_description() -> LaunchDescription:
             package='xw_chassis',
             executable='chassis_node',
             name='xw_chassis',
-            parameters=[{
-                'use_sim_hw': ParameterValue(use_sim, value_type=bool),
-                'serial_port': LaunchConfiguration('chassis_port'),
-                'serial_baud_rate': ParameterValue(
-                    LaunchConfiguration('chassis_baudrate'), value_type=int
-                ),
-                'serial_fallback': LaunchConfiguration('chassis_fallback'),
-            }],
+            parameters=[chassis_params],
             output='screen',
         ),
         Node(
@@ -118,7 +125,13 @@ def generate_launch_description() -> LaunchDescription:
             }],
             output='screen',
         ),
-        Node(package='xw_nav_session', executable='nav_session_node', name='xw_nav_session', output='screen'),
+        Node(
+            package='xw_nav_session',
+            executable='nav_session_node',
+            name='xw_nav_session',
+            parameters=[{'maps_dir': maps_dir, 'use_nav2': True}],
+            output='screen',
+        ),
         Node(package='xw_follow_session', executable='follow_session_node', name='xw_follow_session', output='screen'),
         Node(package='xw_fall_session', executable='fall_session_node', name='xw_fall_session', output='screen'),
         Node(
@@ -149,6 +162,12 @@ def generate_launch_description() -> LaunchDescription:
 
     depth_share = get_package_share_directory('xw_sensors')
     depth_launch = os.path.join(depth_share, 'launch', 'depth_camera.launch.py')
+    ekf_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(depth_share, 'launch', 'ekf.launch.py')
+        ),
+        launch_arguments={'use_ekf': use_ekf}.items(),
+    )
     depth_cam = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(depth_launch),
         launch_arguments={
@@ -160,7 +179,7 @@ def generate_launch_description() -> LaunchDescription:
     depth_cam_2 = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(depth_launch),
         launch_arguments={
-            'config': 'depth_camera_front_2.yaml',
+            'config': 'depth_camera_front_down.yaml',
             'enable_pointcloud': 'false',
         }.items(),
         condition=IfCondition(use_depth_cam_2),
@@ -175,10 +194,10 @@ def generate_launch_description() -> LaunchDescription:
             '-p address:=0.0.0.0 '
             '-p topic_whitelist:=["^/tf$","^/tf_static$","^/scan$","^/odom$","^/cmd_vel$",'
             '"^/map$","^/xw/.*","^/safety_status$",'
-            '"^/camera/front/color/image_raw/compressed$","^/camera/front/.*/camera_info$",'
-            '"^/camera/front/depth/points$",'
-            '"^/camera/front_2/color/image_raw/compressed$","^/camera/front_2/.*/camera_info$",'
-            '"^/camera/front_2/depth/points$"] '
+            '"^/camera/front_up/color/image_raw/compressed$","^/camera/front_up/.*/camera_info$",'
+            '"^/camera/front_up/depth/points$",'
+            '"^/camera/front_down/color/image_raw/compressed$","^/camera/front_down/.*/camera_info$",'
+            '"^/camera/front_down/depth/points$"] '
             '-p service_whitelist:=["^/xw/.*"] '
             '-p client_topic_whitelist:=["^/xw/cmd/teleop$","^/xw/goal_pose$","^/initialpose$"] '
             '-p num_threads:=2; '
@@ -226,11 +245,26 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument('use_sim_lidar', default_value='false',
                               description='If true, stub /scan; if false, delayed rplidar_ros'),
         DeclareLaunchArgument('use_depth_cam', default_value='true',
-                              description='Start front HP60C #1 → /camera/front/...'),
+                              description='Start front HP60C #1 → /camera/front_up/...'),
         DeclareLaunchArgument('use_depth_cam_2', default_value='true',
-                              description='Start front HP60C #2 → /camera/front_2/...'),
+                              description='Start front HP60C #2 → /camera/front_down/...'),
         DeclareLaunchArgument('enable_pointcloud', default_value='false',
-                              description='Relay /camera/front/depth/points for Foxglove debug (CPU heavy)'),
+                              description='Relay /camera/front_up/depth/points for Foxglove debug (CPU heavy)'),
+        DeclareLaunchArgument(
+            'use_ekf',
+            default_value='false',
+            description='Fuse /odom/wheel + /imu/data via robot_localization (needs independent IMU)',
+        ),
+        DeclareLaunchArgument(
+            'chassis_odom_topic',
+            default_value='odom',
+            description='When use_ekf:=true set to odom/wheel',
+        ),
+        DeclareLaunchArgument(
+            'chassis_publish_odom_tf',
+            default_value='true',
+            description='When use_ekf:=true set to false (EKF owns odom→base_link)',
+        ),
         DeclareLaunchArgument('lidar_port', default_value='/dev/radar'),
         DeclareLaunchArgument('lidar_baudrate', default_value='1000000'),
         DeclareLaunchArgument('use_web', default_value='true'),
@@ -239,6 +273,7 @@ def generate_launch_description() -> LaunchDescription:
         *nodes,
         depth_cam,
         depth_cam_2,
+        ekf_launch,
         foxglove,
         delayed_lidar,
     ])

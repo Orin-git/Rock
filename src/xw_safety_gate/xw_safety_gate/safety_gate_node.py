@@ -41,12 +41,15 @@ class SafetyGateNode(Node):
         self.declare_parameter('safety_distance', 0.35)
         self.declare_parameter('front_angle_deg', 40.0)
         self.declare_parameter('sector_angle_deg', 40.0)
+        # Scan angles are in lidar_link. If lidar_joint yaw=π (180° mount), offset so
+        # sector "front" matches base_link +X. Keep in sync with xw_gen2.urdf lidar_joint.
+        self.declare_parameter('lidar_yaw_offset_rad', 3.141592653589793)
         self.declare_parameter('lidar_ignore_below_m', 0.20)
         self.declare_parameter('ultrasonic_stop_m', 0.25)
         self.declare_parameter('use_lidar', True)
         self.declare_parameter('use_ultrasonic', True)
         self.declare_parameter('use_depth', False)
-        self.declare_parameter('depth_topic', '/camera/front/depth/image_raw')
+        self.declare_parameter('depth_topic', '/camera/front_up/depth/image_raw')
         self.declare_parameter('depth_stop_m', 0.40)
         self.declare_parameter('depth_roi_frac', 0.35)
         self.declare_parameter('depth_min_valid_m', 0.05)
@@ -211,12 +214,13 @@ class SafetyGateNode(Node):
 
         half = math.radians(float(self.get_parameter('sector_angle_deg').value))
         front_half = math.radians(float(self.get_parameter('front_angle_deg').value))
+        yaw_off = float(self.get_parameter('lidar_yaw_offset_rad').value)
 
-        # ROS: +X forward, +Y left
-        lidar_front = self._sector_min_lidar(0.0, front_half)
-        lidar_left = self._sector_min_lidar(math.pi / 2.0, half)
-        lidar_right = self._sector_min_lidar(-math.pi / 2.0, half)
-        lidar_rear = self._sector_min_lidar(math.pi, half)
+        # Robot frame: +X forward, +Y left. Scan angles live in lidar_link; apply yaw_off.
+        lidar_front = self._sector_min_lidar(0.0 + yaw_off, front_half)
+        lidar_left = self._sector_min_lidar(math.pi / 2.0 + yaw_off, half)
+        lidar_right = self._sector_min_lidar(-math.pi / 2.0 + yaw_off, half)
+        lidar_rear = self._sector_min_lidar(math.pi + yaw_off, half)
 
         ultra_front = self._ultra_min_for(('front', 'f', '前'))
         ultra_rear = self._ultra_min_for(('rear', 'back', 'aft', '后'))

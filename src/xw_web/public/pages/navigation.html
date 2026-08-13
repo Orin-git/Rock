@@ -24,123 +24,79 @@
       <div id="conn" class="pill off">链路…</div>
     </div>
   </header>
-  <main>
-    <section class="page-head">
-      <div class="tag">Nav Session</div>
+  <main class="nav-page">
+    <section class="page-head nav-page-head">
       <h1>导航</h1>
-      <p class="muted">
-        mode=2 · 画布叠 <code>/map</code> + <code>/scan</code> · 目标经
-        <code>/api/goal</code> → <code>/xw/goal_pose</code>
-        · Nav2 规划后续接入；传感器位姿按 URDF 占位可填
-      </p>
+      <span class="tag">Nav Session</span>
+      <p class="muted nav-page-lead" id="sessionHint">选地图 → 进入导航 → 拖设初位姿并确认</p>
     </section>
 
-    <div class="nav-layout">
-      <div class="nav-main">
-        <div class="section-title">地图与激光</div>
-        <section class="panel map-stage nav-map-stage">
-          <div id="map-container" class="nav-interactive">
-            <canvas id="map-canvas"></canvas>
-            <canvas id="overlay-canvas"></canvas>
+    <section class="panel nav-console">
+      <div class="nav-console-cols">
+        <div class="nav-console-left">
+          <div class="nav-console-head">
+            <span class="nav-console-block-title">会话</span>
+            <span class="nav-console-head-sep">·</span>
+            <label class="nav-console-map-label" for="mapSelect">地图</label>
           </div>
-          <div class="map-stage-foot">
-            <p class="map-meta" id="mapStatus">画布未启动</p>
-            <p class="map-meta" id="modeHint">模式：—</p>
-            <p class="map-meta" id="poseHint">位姿：—</p>
-          </div>
-        </section>
-
-        <div class="section-title">目标与航点</div>
-        <section class="panel nav-goal-panel">
-          <div class="nav-goal-tools">
-            <label class="check-inline">
-              <input type="checkbox" id="clickGoal" checked /> 点击地图设目标
-            </label>
-            <label class="check-inline">
-              <input type="checkbox" id="showFrames" /> 显示传感器架位
-            </label>
-          </div>
-          <div class="nav-goal-row">
-            <div>
-              <label for="gx">x (m)</label>
-              <input id="gx" type="number" value="0" step="0.05" />
-            </div>
-            <div>
-              <label for="gy">y (m)</label>
-              <input id="gy" type="number" value="0" step="0.05" />
-            </div>
-            <div>
-              <label for="gyaw">yaw (rad)</label>
-              <input id="gyaw" type="number" value="0" step="0.1" />
-            </div>
-            <div class="nav-goal-actions">
-              <button type="button" id="sendGoal">发送目标</button>
-              <button type="button" class="secondary" id="clearGoal">清除标记</button>
-            </div>
-          </div>
-          <p class="muted hint-sm" id="goalHint">点击地图或填写坐标后发送 · 需先进入导航会话</p>
-        </section>
-
-        <div class="section-title">航点列表 <span class="section-count" id="wpCount">0</span></div>
-        <section class="panel">
-          <div class="btn-row nav-wp-bar">
-            <button type="button" class="secondary" id="reloadWp">刷新航点</button>
-            <button type="button" class="secondary" id="gotoSelectedWp" disabled>导航到选中</button>
-          </div>
-          <div class="list-panel nav-wp-list" id="wpList">
-            <p class="muted pad">选择地图后加载 pointList</p>
-          </div>
-        </section>
-      </div>
-
-      <aside class="nav-side">
-        <div class="section-title">导航控制台</div>
-        <section class="panel">
-          <label for="mapSelect">地图</label>
-          <select id="mapSelect"></select>
-          <div class="btn-row">
-            <button type="button" class="secondary" id="refreshMaps">刷新列表</button>
-            <button type="button" class="secondary" id="loadMapPreview">预览地图</button>
-          </div>
-          <div class="btn-stack mt-sm">
+          <select id="mapSelect" class="nav-console-select"></select>
+          <div class="nav-console-btn-row nav-console-btn-row-5">
+            <button type="button" class="secondary" id="refreshMaps">刷新</button>
+            <button type="button" class="secondary" id="loadMapPreview">预览</button>
             <button type="button" id="startNav">进入导航</button>
             <button type="button" class="secondary" id="stopNav">结束导航</button>
-            <button type="button" class="danger" id="estop">急停归零</button>
+            <button type="button" class="danger" id="estop">急停</button>
           </div>
-          <p class="muted hint-sm" id="sessionHint">会话未启动 · stub 会接 goal 并回 TaskResult</p>
-        </section>
-
-        <div class="section-title">传感器链路</div>
-        <section class="panel nav-sensor-panel">
-          <div class="sensor-cards" id="sensorCards">
-            <p class="muted">检测中…</p>
+        </div>
+        <div class="nav-console-right">
+          <div class="nav-console-head">
+            <span class="nav-console-block-title">位姿与航点</span>
           </div>
-          <button type="button" class="secondary full-w" id="refreshSensors">刷新传感器</button>
-        </section>
+          <div class="nav-console-btn-row nav-console-btn-row-3">
+            <button type="button" class="secondary tool-btn" id="toolInitialPose">拖设初位姿</button>
+            <button type="button" id="applyInitialPose">确认初位姿</button>
+            <button type="button" class="secondary tool-btn" id="toolEditWp">编辑航点</button>
+          </div>
+          <div class="nav-console-btn-row nav-console-btn-row-3">
+            <button type="button" class="secondary" id="startPatrol">多点巡航</button>
+            <label class="nav-loop-cell" for="patrolLoop">
+              <input type="checkbox" id="patrolLoop" />
+              <span>循环</span>
+            </label>
+            <button type="button" class="secondary" id="cancelNav">取消导航</button>
+          </div>
+        </div>
+      </div>
+      <div class="nav-flash" id="navFlash" hidden></div>
+    </section>
 
-        <div class="section-title">相对位姿（URDF）</div>
-        <section class="panel">
-          <div class="sensor-layout" id="sensorLayout" aria-label="传感器相对位置示意"></div>
-          <p class="muted hint-sm">
-            三维透明机身 · 点位来自 <code>xw_gen2.urdf</code>（相对 base_link）
-          </p>
-        </section>
+    <div class="section-title">地图与激光</div>
+    <section class="panel map-stage nav-map-stage">
+      <div id="map-container" class="nav-interactive">
+        <canvas id="map-canvas"></canvas>
+        <canvas id="overlay-canvas"></canvas>
+        <div id="orientation-controls-panel" class="orientation-controls-panel" style="display:none"></div>
+      </div>
+      <div class="map-stage-foot nav-map-foot">
+        <p class="map-meta" id="mapStatus">画布未启动</p>
+        <p class="map-meta" id="modeHint">模式：—</p>
+        <p class="map-meta" id="poseHint">位姿：—</p>
+        <p class="map-meta" id="toolHint">工具：浏览（点列表航点可前往）</p>
+      </div>
+    </section>
 
-        <div class="section-title">链路说明</div>
-        <section class="panel">
-          <ul class="nav-pipe-list">
-            <li><code>set_mode(2)</code> → <code>/xw/nav/enable</code></li>
-            <li><code>/api/goal</code> → <code>/xw/goal_pose</code> → nav_session</li>
-            <li>激光 <code>/scan</code> · 深度安全门 ROI</li>
-            <li>Foxglove 相机预览 · 设置页点云开关</li>
-          </ul>
-        </section>
-      </aside>
-    </div>
-
-    <div class="section-title">日志</div>
-    <section class="panel">
-      <pre id="log" class="log"></pre>
+    <div class="section-title">航点列表 <span class="section-count" id="wpCount">0</span></div>
+    <section class="panel nav-wp-panel">
+      <div class="btn-row nav-wp-bar">
+        <button type="button" class="secondary" id="reloadWp">刷新</button>
+        <button type="button" id="saveWp">保存航点</button>
+        <button type="button" class="secondary" id="deleteWp" disabled>删除选中</button>
+        <button type="button" class="secondary" id="gotoSelectedWp" disabled>前往选中</button>
+      </div>
+      <p class="muted hint-sm" id="wpHint">点「编辑航点」在地图打点/拖动，改完务必「保存航点」。导航中：点列表或地图上的航点即可前往。红点 = 距障碍 &lt;0.3m，不可保存/前往。</p>
+      <div class="list-panel nav-wp-list" id="wpList">
+        <p class="muted pad">选择地图后加载</p>
+      </div>
     </section>
   </main>
 

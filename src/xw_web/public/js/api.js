@@ -415,6 +415,63 @@ export async function publishGoal(x, y, yaw = 0, frame_id = 'map') {
   }
 }
 
+/** AMCL initial pose → /api/initialpose → /initialpose */
+export async function publishInitialPose(x, y, yaw = 0, frame_id = 'map') {
+  try {
+    const r = await fetch(`${apiBase()}/api/initialpose`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ x, y, yaw, frame_id }),
+    });
+    const j = await r.json();
+    emitTask(
+      j.ok
+        ? `initialpose → (${Number(x).toFixed(2)}, ${Number(y).toFixed(2)})`
+        : `!! initialpose failed: ${j.message || ''}`,
+    );
+    return j;
+  } catch (_) {
+    emitTask('!! initialpose request failed');
+    return { ok: false };
+  }
+}
+
+/** Multi-point patrol → /api/nav/patrol → /xw/nav/patrol_cmd */
+export async function startPatrol({ map_name = '', loop = false, waypoints = null, action = 'start' } = {}) {
+  try {
+    const body = { map_name, loop: !!loop, action };
+    if (Array.isArray(waypoints)) body.waypoints = waypoints;
+    const r = await fetch(`${apiBase()}/api/nav/patrol`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    emitTask(j.ok ? `patrol ${action}` : `!! patrol failed: ${j.message || ''}`);
+    return j;
+  } catch (_) {
+    emitTask('!! patrol request failed');
+    return { ok: false };
+  }
+}
+
+/** Cancel current NavigateToPose / patrol */
+export async function cancelNav() {
+  try {
+    const r = await fetch(`${apiBase()}/api/nav/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    const j = await r.json();
+    emitTask(j.ok ? 'nav cancel' : `!! cancel failed: ${j.message || ''}`);
+    return j;
+  } catch (_) {
+    emitTask('!! cancel request failed');
+    return { ok: false };
+  }
+}
+
 /** Sensor hub presence (lidar / depth / placeholders). */
 export async function fetchSensorHub() {
   try {

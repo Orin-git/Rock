@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Relay Angstrong vendor topics onto Gen2 /camera/front[_2]/... contracts.
+"""Relay Angstrong vendor topics onto Gen2 /camera/front_up|front_down/... contracts.
 
 PointCloud (front cam only when manage_pointcloud_control:=true):
   /xw/camera/set_pointcloud      — manual (persists preference)
@@ -83,12 +83,12 @@ class DepthTopicBridge(Node):
         self.declare_parameter('depth_info_in', '/ascamera_hp60c/camera_publisher/depth0/camera_info')
         self.declare_parameter('mjpeg_in', '/ascamera_hp60c/camera_publisher/mjpeg0/compressed')
         self.declare_parameter('points_in', '/ascamera_hp60c/camera_publisher/depth0/points')
-        self.declare_parameter('rgb_image_out', '/camera/front/color/image_raw')
-        self.declare_parameter('rgb_info_out', '/camera/front/color/camera_info')
-        self.declare_parameter('depth_image_out', '/camera/front/depth/image_raw')
-        self.declare_parameter('depth_info_out', '/camera/front/depth/camera_info')
-        self.declare_parameter('compressed_out', '/camera/front/color/image_raw/compressed')
-        self.declare_parameter('points_out', '/camera/front/depth/points')
+        self.declare_parameter('rgb_image_out', '/camera/front_up/color/image_raw')
+        self.declare_parameter('rgb_info_out', '/camera/front_up/color/camera_info')
+        self.declare_parameter('depth_image_out', '/camera/front_up/depth/image_raw')
+        self.declare_parameter('depth_info_out', '/camera/front_up/depth/camera_info')
+        self.declare_parameter('compressed_out', '/camera/front_up/color/image_raw/compressed')
+        self.declare_parameter('points_out', '/camera/front_up/depth/points')
         self.declare_parameter('preview_fps', 5.0)
         self.declare_parameter('points_fps', 3.0)
         self.declare_parameter('relay_raw_rgb', False)  # force always-on if true
@@ -96,7 +96,9 @@ class DepthTopicBridge(Node):
         self.declare_parameter('persist_path', _default_persist_path())
         # Only one bridge should own global /xw/camera/set_pointcloud* (front cam).
         self.declare_parameter('manage_pointcloud_control', True)
-        # When false, never subscribe fall/follow for raw RGB (front_2).
+        # When not managing, optionally mirror /xw/camera/pointcloud_enabled (dual-cam nav).
+        self.declare_parameter('follow_pointcloud_enabled_topic', False)
+        # When false, never subscribe fall/follow for raw RGB (front_down).
         self.declare_parameter('gate_rgb_on_sessions', True)
 
         self._preview_period = 1.0 / max(0.5, float(self.get_parameter('preview_fps').value))
@@ -116,6 +118,7 @@ class DepthTopicBridge(Node):
         self._rgb_sub = None
         self._persist_path = str(self.get_parameter('persist_path').value)
         self._manage_pc = bool(self.get_parameter('manage_pointcloud_control').value)
+        self._follow_pc_topic = bool(self.get_parameter('follow_pointcloud_enabled_topic').value)
         self._gate_rgb = bool(self.get_parameter('gate_rgb_on_sessions').value)
 
         # Manual preference (persisted) OR nav auto → effective pointcloud.
@@ -160,6 +163,10 @@ class DepthTopicBridge(Node):
         if self._gate_rgb:
             self.create_subscription(Bool, '/xw/fall/enable', self._on_fall_en, _LATCHED_QOS)
             self.create_subscription(Bool, '/xw/follow/enable', self._on_follow_en, _LATCHED_QOS)
+        if self._follow_pc_topic and not self._manage_pc:
+            self.create_subscription(
+                Bool, '/xw/camera/pointcloud_enabled', self._on_pc_enabled_mirror, _LATCHED_QOS
+            )
 
         self._points_pub = self.create_publisher(
             PointCloud2, str(self.get_parameter('points_out').value), _POINTS_QOS
@@ -178,6 +185,7 @@ class DepthTopicBridge(Node):
             f'depth bridge ready out={self.get_parameter("depth_image_out").value} '
             f'preview_fps={self.get_parameter("preview_fps").value} '
             f'manual_pc={self._manual_pc} manage_pc={self._manage_pc} '
+            f'follow_pc_topic={self._follow_pc_topic} '
             f'gate_rgb={self._gate_rgb} '
             f'points_fps={self.get_parameter("points_fps").value} '
             f'persist={self._persist_path}'
@@ -257,6 +265,15 @@ class DepthTopicBridge(Node):
     def _on_follow_en(self, msg: Bool) -> None:
         self._follow_en = bool(msg.data)
         self._sync_rgb_relay()
+
+    def _on_pc_enabled_mirror(self, msg: Bool) -> None:
+        """Front_2 mirrors primary bridge's effective pointcloud state (nav auto)."""
+        wanted = bool(msg.data)
+        if wanted == self._nav_auto_pc and wanted == self._pc_wanted:
+            return
+        self._nav_auto_pc = wanted
+        self._manual_pc = False
+        self._sync_pointcloud()
 
     def _on_set_pointcloud(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
         """Manual toggle — persists preference."""

@@ -1,17 +1,17 @@
 # Gen2 front depth camera #1 (Angstrong HP60C / ASJ ZNX_NVT, USB 3482:6723)
 #
-# Public contract: /camera/front/{color,depth}/...
+# Public contract: /camera/front_up/{color,depth}/...
 # Vendor private:  /ascamera_hp60c/camera_publisher/...
-# Robot frame:     camera_front_link
+# Robot frame:     camera_front_up_link
 #
 # USB pin (Rock 5T): bus 5 path 1.2  →  KERNEL 5-1.2
 # If cams swap after replug, re-check: udevadm info -a -n ... ATTR{busnum}/ATTR{devpath}
 
-camera_id: front
+camera_id: front_up
 vendor_namespace: ascamera_hp60c
 bridge_node_name: xw_depth_topic_bridge
-static_tf_node_name: camera_front_optical_static
-robot_frame: camera_front_link
+static_tf_node_name: camera_front_up_optical_static
+robot_frame: camera_front_up_link
 vendor_frame: ascamera_hp60c_camera_link_0
 
 usb_bus_no: 5
@@ -39,9 +39,9 @@ depth_info_in: /ascamera_hp60c/camera_publisher/depth0/camera_info
 mjpeg_in: /ascamera_hp60c/camera_publisher/mjpeg0/compressed
 points_in: /ascamera_hp60c/camera_publisher/depth0/points
 
-rgb_image_out: /camera/front/color/image_raw
-rgb_info_out: /camera/front/color/camera_info
-depth_image_out: /camera/front/depth/image_raw
-depth_info_out: /camera/front/depth/camera_info
-compressed_out: /camera/front/color/image_raw/compressed
-points_out: /camera/front/depth/points
+rgb_image_out: /camera/front_up/color/image_raw
+rgb_info_out: /camera/front_up/color/camera_info
+depth_image_out: /camera/front_up/depth/image_raw
+depth_info_out: /camera/front_up/depth/camera_info
+compressed_out: /camera/front_up/color/image_raw/compressed
+points_out: /camera/front_up/depth/points

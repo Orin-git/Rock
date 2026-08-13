@@ -2,12 +2,15 @@
   ros__parameters:
     safety_distance: 0.35
     front_angle_deg: 40.0
+    sector_angle_deg: 40.0
+    # Must match xw_gen2.urdf lidar_joint yaw (π) — physical lidar angle-0 faced rear
+    lidar_yaw_offset_rad: 3.141592653589793
     lidar_ignore_below_m: 0.20
     ultrasonic_stop_m: 0.25
     use_lidar: true
     use_ultrasonic: true
     use_depth: true
-    depth_topic: /camera/front/depth/image_raw
+    depth_topic: /camera/front_up/depth/image_raw
     depth_stop_m: 0.40
     depth_roi_frac: 0.35
     depth_min_valid_m: 0.05
