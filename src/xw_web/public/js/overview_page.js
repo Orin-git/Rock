@@ -390,10 +390,12 @@ function renderCharts() {
   if (radar) drawRadar(radar, lastObstacle?.sectors);
 
   const batt = lastPower.pct;
+  const locCode = Number(lastState?.localization_status ?? (lastState?.localization_ok ? 0 : 1));
+  const locPts = locCode === 0 ? 30 : locCode === 2 ? 15 : 5;
   const health =
     (lastState?.safety_ok !== false ? 35 : 0) +
     (!lastState?.emergency_stop ? 35 : 0) +
-    (lastState?.localization_ok ? 30 : 10);
+    locPts;
 
   const gBatt = document.getElementById('gaugeBatt');
   const gHealth = document.getElementById('gaugeHealth');
@@ -483,10 +485,12 @@ onState((s) => {
   document.getElementById('dProfile').textContent = `profile ${s.profile || '—'}`;
   tone(document.getElementById('kpiEstop'), estop ? 'is-bad' : 'is-ok');
 
-  const loc = !!s.localization_ok;
-  document.getElementById('dLoc').textContent = loc ? 'LOCKED' : 'SEARCH';
+  const locCode = Number(s.localization_status ?? (s.localization_ok ? 0 : 1));
+  const locLabels = { 0: '正常', 1: '未就绪', 2: '漂移自愈', 3: '需重定位' };
+  const locTones = { 0: 'is-ok', 1: 'is-warn', 2: 'is-warn', 3: 'is-bad' };
+  document.getElementById('dLoc').textContent = locLabels[locCode] ?? `LOC ${locCode}`;
   document.getElementById('dMap').textContent = s.active_map ? `map ${s.active_map}` : 'map —';
-  tone(document.getElementById('kpiLoc'), loc ? 'is-ok' : 'is-warn');
+  tone(document.getElementById('kpiLoc'), locTones[locCode] || 'is-warn');
 });
 
 onObstacle((o) => {

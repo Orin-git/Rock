@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Safety gate: gated cmd + scan/ultrasonic/depth -> /cmd_vel.
+"""Mode-aware safety gate: gated cmd + scan/ultra/depth -> /cmd_vel.
 
-Publishes:
-  safety_status (Bool) — overall gate pass
-  obstacle_status (String JSON) — overall + front/rear/left/right sectors
+- teleop/motion: gen1-style sector OA (stop, turn-escape, short reverse if rear clear)
+- nav/follow: hard-stop forward only; reverse allowed only if rear sector clear
+- recharge: optional near-dock forward pass-through (param)
 """
 
 from __future__ import annotations
@@ -29,20 +29,24 @@ _DEPTH_QOS = QoSProfile(
     depth=1,
 )
 
+_TELEOP_SOURCES = frozenset({'teleop', 'motion'})
+_NAV_SOURCES = frozenset({'nav', 'follow'})
+_RECHARGE_SOURCES = frozenset({'recharge'})
+
 
 def _ang_diff(a: float, b: float) -> float:
-    """Smallest signed difference a-b in (-pi, pi]."""
     return (a - b + math.pi) % (2.0 * math.pi) - math.pi
 
 
 class SafetyGateNode(Node):
     def __init__(self) -> None:
         super().__init__('xw_safety_gate')
+        # Shared sector / sensor params
         self.declare_parameter('safety_distance', 0.35)
+        self.declare_parameter('nav_safety_distance', 0.28)
+        self.declare_parameter('turn_safety_distance', 0.25)
         self.declare_parameter('front_angle_deg', 40.0)
         self.declare_parameter('sector_angle_deg', 40.0)
-        # Scan angles are in lidar_link. If lidar_joint yaw=π (180° mount), offset so
-        # sector "front" matches base_link +X. Keep in sync with xw_gen2.urdf lidar_joint.
         self.declare_parameter('lidar_yaw_offset_rad', 3.141592653589793)
         self.declare_parameter('lidar_ignore_below_m', 0.20)
         self.declare_parameter('ultrasonic_stop_m', 0.25)
@@ -56,14 +60,25 @@ class SafetyGateNode(Node):
         self.declare_parameter('depth_max_valid_m', 4.0)
         self.declare_parameter('depth_scale', 0.001)
         self.declare_parameter('depth_min_hits', 40)
+        # Teleop OA (gen1-style)
+        self.declare_parameter('enable_teleop_oa', True)
+        self.declare_parameter('avoid_turn_speed', 0.35)
+        self.declare_parameter('avoid_back_speed', 0.18)
+        self.declare_parameter('max_linear_speed', 0.45)
+        self.declare_parameter('max_angular_speed', 0.55)
+        self.declare_parameter('enable_recharge_pass_through', True)
+        self.declare_parameter('recharge_pass_linear_max', 0.08)
 
         self._last_cmd = Twist()
+        self._active_source = ''
         self._scan: Optional[LaserScan] = None
         self._ultra: Optional[UltrasonicArray] = None
         self._depth_min: Optional[float] = None
         self._safety_ok = True
+        self._prefer_turn_sign = -1.0
 
         self.create_subscription(Twist, '/xw/cmd/gated', self._on_cmd, 10)
+        self.create_subscription(String, '/xw/cmd/active_source', self._on_source, 10)
         self.create_subscription(LaserScan, 'scan', self._on_scan, 10)
         self.create_subscription(UltrasonicArray, '/ultrasonic_array', self._on_ultra, 10)
         if bool(self.get_parameter('use_depth').value):
@@ -75,10 +90,13 @@ class SafetyGateNode(Node):
         self._safe_pub = self.create_publisher(Bool, 'safety_status', 10)
         self._obs_pub = self.create_publisher(String, 'obstacle_status', 10)
         self.create_timer(0.05, self._tick)
-        self.get_logger().info('safety gate ready (4-sector obstacle_status)')
+        self.get_logger().info('safety gate ready (mode-aware teleop/nav)')
 
     def _on_cmd(self, msg: Twist) -> None:
         self._last_cmd = msg
+
+    def _on_source(self, msg: String) -> None:
+        self._active_source = (msg.data or '').strip().lower()
 
     def _on_scan(self, msg: LaserScan) -> None:
         self._scan = msg
@@ -185,38 +203,16 @@ class SafetyGateNode(Node):
                 src = name
         return best, src
 
-    def _sector_info(
-        self,
-        name: str,
-        stop_m: float,
-        lidar_m: Optional[float],
-        ultra_m: Optional[float],
-        depth_m: Optional[float] = None,
-    ) -> Dict[str, Any]:
-        dist, src = self._pick_range(
-            (lidar_m, 'lidar'),
-            (ultra_m, 'ultra'),
-            (depth_m, 'depth'),
-        )
-        blocked = dist is not None and dist < stop_m
-        return {
-            'name': name,
-            'blocked': blocked,
-            'range_m': None if dist is None else round(float(dist), 3),
-            'source': src or None,
-            'stop_m': round(float(stop_m), 3),
-        }
-
-    def _tick(self) -> None:
+    def _build_sectors(self) -> Dict[str, Dict[str, Any]]:
         stop_lidar = float(self.get_parameter('safety_distance').value)
         stop_ultra = float(self.get_parameter('ultrasonic_stop_m').value)
         stop_depth = float(self.get_parameter('depth_stop_m').value)
+        turn_stop = float(self.get_parameter('turn_safety_distance').value)
 
         half = math.radians(float(self.get_parameter('sector_angle_deg').value))
         front_half = math.radians(float(self.get_parameter('front_angle_deg').value))
         yaw_off = float(self.get_parameter('lidar_yaw_offset_rad').value)
 
-        # Robot frame: +X forward, +Y left. Scan angles live in lidar_link; apply yaw_off.
         lidar_front = self._sector_min_lidar(0.0 + yaw_off, front_half)
         lidar_left = self._sector_min_lidar(math.pi / 2.0 + yaw_off, half)
         lidar_right = self._sector_min_lidar(-math.pi / 2.0 + yaw_off, half)
@@ -226,18 +222,28 @@ class SafetyGateNode(Node):
         ultra_rear = self._ultra_min_for(('rear', 'back', 'aft', '后'))
         ultra_left = self._ultra_min_for(('left', 'l', '左'))
         ultra_right = self._ultra_min_for(('right', 'r', '右'))
-
         d_depth = self._depth_min if bool(self.get_parameter('use_depth').value) else None
 
-        # Per-sector stop: if winning source is ultra use ultra stop, else lidar/depth stop
-        def sector(name: str, lidar_m, ultra_m, depth_m=None) -> Dict[str, Any]:
-            dist, src = self._pick_range((lidar_m, 'lidar'), (ultra_m, 'ultra'), (depth_m, 'depth'))
-            if src == 'ultra':
+        def sector(
+            name: str,
+            lidar_m,
+            ultra_m,
+            depth_m=None,
+            stop_override: Optional[float] = None,
+        ) -> Dict[str, Any]:
+            dist, src = self._pick_range(
+                (lidar_m, 'lidar'), (ultra_m, 'ultra'), (depth_m, 'depth')
+            )
+            if stop_override is not None:
+                stop = stop_override
+            elif src == 'ultra':
                 stop = stop_ultra
             elif src == 'depth':
                 stop = stop_depth
             else:
-                stop = stop_lidar
+                stop = stop_lidar if name == 'front' else turn_stop
+                if name == 'rear':
+                    stop = stop_lidar
             blocked = dist is not None and dist < stop
             return {
                 'name': name,
@@ -247,43 +253,166 @@ class SafetyGateNode(Node):
                 'stop_m': round(float(stop), 3),
             }
 
-        sectors = {
+        return {
             'front': sector('front', lidar_front, ultra_front, d_depth),
             'rear': sector('rear', lidar_rear, ultra_rear),
-            'left': sector('left', lidar_left, ultra_left),
-            'right': sector('right', lidar_right, ultra_right),
+            'left': sector('left', lidar_left, ultra_left, stop_override=turn_stop),
+            'right': sector('right', lidar_right, ultra_right, stop_override=turn_stop),
+            '_depth_m': d_depth,
         }
 
-        # Gate behavior remains forward-biased (same as before): block forward motion on front obstacle
-        front = sectors['front']
-        blocked = bool(front['blocked'])
-        reason = 'clear'
-        if blocked:
-            rm = front.get('range_m')
-            src = front.get('source') or 'front'
-            reason = f'{src}:{rm:.2f}' if isinstance(rm, (int, float)) else src
+    def _clamp_speed(self, cmd: Twist) -> Twist:
+        vmax = float(self.get_parameter('max_linear_speed').value)
+        wmax = float(self.get_parameter('max_angular_speed').value)
+        cmd.linear.x = max(-vmax, min(vmax, cmd.linear.x))
+        cmd.angular.z = max(-wmax, min(wmax, cmd.angular.z))
+        return cmd
 
+    def _apply_teleop(self, cmd: Twist, sectors: Dict[str, Dict[str, Any]]) -> Tuple[Twist, bool]:
+        """Gen1-style local OA for teleop/motion."""
         out = Twist()
-        out.linear.x = self._last_cmd.linear.x
-        out.angular.z = self._last_cmd.angular.z
+        out.linear.x = cmd.linear.x
+        out.angular.z = cmd.angular.z
+        out = self._clamp_speed(out)
 
-        if blocked and out.linear.x > 0.0:
+        front_b = bool(sectors['front']['blocked'])
+        rear_b = bool(sectors['rear']['blocked'])
+        left_b = bool(sectors['left']['blocked'])
+        right_b = bool(sectors['right']['blocked'])
+        turn_spd = float(self.get_parameter('avoid_turn_speed').value)
+        back_spd = float(self.get_parameter('avoid_back_speed').value)
+        ok = True
+
+        if rear_b and out.linear.x < 0.0:
             out.linear.x = 0.0
-            self._safety_ok = False
-        else:
-            self._safety_ok = not blocked or out.linear.x <= 0.0
+            ok = False
 
+        if left_b and out.angular.z > 0.0:
+            out.angular.z = 0.0
+            ok = False
+        if right_b and out.angular.z < 0.0:
+            out.angular.z = 0.0
+            ok = False
+
+        if not bool(self.get_parameter('enable_teleop_oa').value):
+            if front_b and out.linear.x > 0.0:
+                out.linear.x = 0.0
+                ok = False
+            return out, ok
+
+        if front_b and out.linear.x > 0.0:
+            out.linear.x = 0.0
+            ok = False
+            can_l = not left_b
+            can_r = not right_b
+            if can_l and not can_r:
+                out.angular.z = abs(turn_spd)
+            elif can_r and not can_l:
+                out.angular.z = -abs(turn_spd)
+            elif can_l and can_r:
+                if abs(cmd.angular.z) > 1e-3:
+                    out.angular.z = math.copysign(abs(turn_spd), cmd.angular.z)
+                else:
+                    out.angular.z = self._prefer_turn_sign * abs(turn_spd)
+                    self._prefer_turn_sign *= -1.0
+            elif not rear_b:
+                out.linear.x = -abs(back_spd)
+                out.angular.z = 0.0
+            else:
+                out.linear.x = 0.0
+                out.angular.z = 0.0
+
+        return out, ok
+
+    def _apply_nav(self, cmd: Twist, sectors: Dict[str, Dict[str, Any]]) -> Tuple[Twist, bool]:
+        """Nav/follow: no turn injection; hard-stop forward; reverse iff rear clear."""
+        out = Twist()
+        out.linear.x = cmd.linear.x
+        out.angular.z = cmd.angular.z
+
+        # Slightly tighter front stop than teleop for nav (Collision Monitor is outer layer)
+        nav_stop = float(self.get_parameter('nav_safety_distance').value)
+        front = sectors['front']
+        front_dist = front.get('range_m')
+        front_b = front_dist is not None and float(front_dist) < nav_stop
+        if front.get('blocked'):
+            front_b = True
+
+        rear_b = bool(sectors['rear']['blocked'])
+        left_b = bool(sectors['left']['blocked'])
+        right_b = bool(sectors['right']['blocked'])
+        ok = True
+
+        if front_b and out.linear.x > 0.0:
+            out.linear.x = 0.0
+            ok = False
+
+        if out.linear.x < 0.0 and rear_b:
+            out.linear.x = 0.0
+            ok = False
+
+        if left_b and out.angular.z > 0.0:
+            out.angular.z = 0.0
+        if right_b and out.angular.z < 0.0:
+            out.angular.z = 0.0
+
+        return out, ok
+
+    def _apply_recharge(self, cmd: Twist, sectors: Dict[str, Dict[str, Any]]) -> Tuple[Twist, bool]:
+        out = Twist()
+        out.linear.x = cmd.linear.x
+        out.angular.z = cmd.angular.z
+        rear_b = bool(sectors['rear']['blocked'])
+        front_b = bool(sectors['front']['blocked'])
+        ok = True
+        if rear_b and out.linear.x < 0.0:
+            out.linear.x = 0.0
+            ok = False
+        if front_b and out.linear.x > 0.0:
+            if bool(self.get_parameter('enable_recharge_pass_through').value):
+                cap = float(self.get_parameter('recharge_pass_linear_max').value)
+                out.linear.x = min(out.linear.x, cap)
+            else:
+                out.linear.x = 0.0
+                ok = False
+        return out, ok
+
+    def _tick(self) -> None:
+        sectors = self._build_sectors()
+        d_depth = sectors.pop('_depth_m', None)
+        src = self._active_source
+        cmd = self._last_cmd
+
+        if src in _TELEOP_SOURCES:
+            out, ok = self._apply_teleop(cmd, sectors)
+        elif src in _NAV_SOURCES:
+            out, ok = self._apply_nav(cmd, sectors)
+        elif src in _RECHARGE_SOURCES:
+            out, ok = self._apply_recharge(cmd, sectors)
+        else:
+            # Idle / unknown: hard-stop forward only (no turn injection)
+            out, ok = self._apply_nav(cmd, sectors)
+
+        self._safety_ok = ok
         self._cmd_pub.publish(out)
         st = Bool()
         st.data = self._safety_ok
         self._safe_pub.publish(st)
 
-        any_sector = any(s['blocked'] for s in sectors.values())
+        front = sectors['front']
+        blocked = bool(front['blocked'])
+        reason = 'clear'
+        if blocked:
+            rm = front.get('range_m')
+            s = front.get('source') or 'front'
+            reason = f'{s}:{rm:.2f}' if isinstance(rm, (int, float)) else s
+
         payload = {
             'blocked': blocked,
-            'any_sector_blocked': any_sector,
+            'any_sector_blocked': any(s['blocked'] for s in sectors.values()),
             'safety_ok': bool(self._safety_ok),
             'reason': reason,
+            'active_source': src or None,
             'depth_m': None if d_depth is None else round(float(d_depth), 3),
             'sectors': sectors,
         }

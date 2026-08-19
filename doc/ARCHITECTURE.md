@@ -32,11 +32,13 @@
 
 ```
 /xw/cmd/teleop | motion | nav | follow | recharge
-        → xw_cmd_arbiter
-        → xw_safety_gate   (/scan + ultrasonic + depth ROI)
+        → xw_cmd_arbiter  (+ /xw/cmd/active_source)
+        → xw_safety_gate  (teleop: 扇区OA；nav: 硬停+后方安全后退)
         → /cmd_vel
         → xw_chassis
 ```
+
+导航支路：`Nav2 controller → velocity_smoother(cmd_vel_smoothed) → collision_monitor → /xw/cmd/nav`
 
 优先级：`teleop > motion > nav > follow > recharge`（MCU 失能见 `/xw/chassis/motor_disabled`，不进速度仲裁）
 
@@ -61,10 +63,11 @@
 
 | 方向 | 名字 | 说明 |
 |------|------|------|
-| Snap | `/xw/robot_state` | latched 全局态 |
+| Snap | `/xw/robot_state` | latched 全局态（含 `localization_status` 0–3） |
 | Progress | `/xw/task/progress` | 过程 |
 | Result | `/xw/task/result` | **唯一终态** |
 | Event | `/xw/event` | 急停/安全/定位 |
+| Loc | `/xw/localization_status` | Int8 0–3 定位健康 |
 | Power | `/xw/power` | 电量 |
 | Srv | `/xw/supervisor/set_mode` | 改模式 |
 | Srv | `/xw/supervisor/set_follow` | 跟随任务开关（不拆 Nav2） |
@@ -150,7 +153,7 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 |------|------|-------|-------|-----|
 | 建图 SLAM | 是 | 否 | 否 | 间接（稳 odom） |
 | AMCL | 是 | 否 | 否 | 间接 |
-| Local 避障 | 是 | 点云 | 点云 | 否 |
+| Local 避障 | 是 | points_nav | points_nav | 否 |
 | 安全门 | 是 | ROI | 后续 | 否 |
 | 人体跟随 | 否 | **是** | 否 | 否 |
 
@@ -180,18 +183,30 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
   - 前置：已进入导航（有地图）；开关跟随 **不拆 Nav2**
 - **跌倒**：正交开关与 `/xw/perception/fall` 契约不变
 
-### 导航要点
+### 导航要点（Gen2 重设计，非一代 MPPI 移植）
 
-- 参数：`xw_nav_session/config/nav2_params.yaml`（一代 MPPI 移植，`base_link`，`robot_radius: 0.23`）  
-- Launch：`xw_nav_session/launch/nav2.launch.py`（localization + navigation；`cmd_vel`→`/xw/cmd/nav`）  
-- 跟随 BT：`xw_nav_session/behavior_trees/follow_point.xml`（GoalUpdater + TruncatePath）  
-- 会话：`set_mode(2,{map_name})` → `/xw/nav/map_name` + `/xw/nav/enable` → 起 Nav2  
-- 单点：`POST /api/goal` → `/xw/goal_pose` → `NavigateToPose`（跟随中拒绝）  
-- 多点：`POST /api/nav/patrol` → `/xw/nav/patrol_cmd`  
-- 跟随：`POST /api/follow` → `/xw/supervisor/set_follow`（取消点位任务，Nav2 保活）  
-- 初位姿：`POST /api/initialpose` → `/initialpose`  
-- 取消：`POST /api/nav/cancel` → `/xw/nav/cancel`（软取消）  
-- Local costmap：`/scan` + `/camera/front_up/depth/points` + `/camera/front_down/depth/points`  
+| 层 | 选型 |
+|----|------|
+| 全局 | **SmacPlanner2D** |
+| 局部 | **RotationShim → Regulated Pure Pursuit**（禁止以 MPPI 作主控） |
+| 动态绕障 | local costmap 路径失效 → BT 重规划 |
+| 硬安全 | **Collision Monitor**（smoother 后）+ 模式感知 `xw_safety_gate` |
+| 前向 | 正常跟线 `allow_reversing: false`；后退仅 recovery + 后方扇区安全 |
+
+- 参数：`xw_nav_session/config/nav2_params.yaml`（多边形 footprint 0.45×0.35，`transform_tolerance` ≈0.3）
+- BT：`behavior_trees/navigate_to_pose_gen2.xml`；跟随仍用 `follow_point.xml`
+- Launch：`nav2.launch.py`：localization + navigation + collision_monitor → `/xw/cmd/nav`
+- 点云：`xw_pc_nav_filter` 将双深度 raw → `.../points_nav`（Crop+Voxel ≤5 Hz）；local costmap 订 `*_points_nav`
+- 仲裁：`/xw/cmd/active_source`；安全门 teleop=一代扇区避障，nav=硬停+后方安全后退
+- 定位健康：`xw_localization_health` → `/xw/localization_status`（0 正常 / 1 未就绪 / 2 漂移自愈 / 3 需重定位）；写入 `RobotState.localization_status`
+- 会话：`set_mode(2,{map_name})` → `/xw/nav/map_name` + `/xw/nav/enable` → 起 Nav2
+- 单点 / 多点 / 初位姿 / 取消 API 不变
+- Local costmap：`/scan` + `/camera/front_{up,down}/depth/points_nav`；Global：static + scan only
+
+### CPU（Rock 5T）
+
+- 导航稳态：过滤点云、costmap 不全量 publish、RPP@20 Hz、关可视化
+- `xw_health` 记录 TF fail rate、cmd_vel overdue、`localization_code`、`points_nav_*` 存活
 
 ### 指令优先级（跟随场景）
 

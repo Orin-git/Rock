@@ -1,9 +1,10 @@
 /**:
   ros__parameters:
-    safety_distance: 0.35
+    safety_distance: 0.40
+    nav_safety_distance: 0.28
+    turn_safety_distance: 0.25
     front_angle_deg: 40.0
     sector_angle_deg: 40.0
-    # Must match xw_gen2.urdf lidar_joint yaw (π) — physical lidar angle-0 faced rear
     lidar_yaw_offset_rad: 3.141592653589793
     lidar_ignore_below_m: 0.20
     ultrasonic_stop_m: 0.25
@@ -17,3 +18,10 @@
     depth_max_valid_m: 4.0
     depth_scale: 0.001
     depth_min_hits: 40
+    enable_teleop_oa: true
+    avoid_turn_speed: 0.35
+    avoid_back_speed: 0.18
+    max_linear_speed: 0.45
+    max_angular_speed: 0.55
+    enable_recharge_pass_through: true
+    recharge_pass_linear_max: 0.08

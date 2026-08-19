@@ -19,7 +19,7 @@ import rclpy
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, Int8, String
 from std_srvs.srv import SetBool
 
 from xw_interfaces.msg import PowerState, RobotEvent, RobotState, TaskProgress
@@ -31,6 +31,13 @@ MODE_NAMES = {
     2: 'NAVIGATING',
     3: 'FOLLOWING',
     4: 'FALL_DETECT',
+}
+
+LOC_STATUS_NAMES = {
+    0: 'ok',
+    1: 'not_ready',
+    2: 'drift',
+    3: 'needs_attention',
 }
 
 # Stack sessions only — follow/fall are orthogonal latches.
@@ -50,6 +57,7 @@ class SupervisorNode(Node):
         self._mode = 0
         self._estop = False
         self._safety_ok = True
+        self._loc_status = 1  # not ready until health publishes
         self._power = PowerState()
         self._active_map = ''
         self._detail = 'boot'
@@ -79,6 +87,9 @@ class SupervisorNode(Node):
         self.create_subscription(Bool, '/xw/chassis/motor_disabled', self._on_motor_disabled, 10)
         self.create_subscription(Bool, 'safety_status', self._on_safety, 10)
         self.create_subscription(PowerState, '/xw/power', self._on_power, 10)
+        self.create_subscription(
+            Int8, '/xw/localization_status', self._on_loc_status, latch
+        )
 
         self.create_service(SetMode, '/xw/supervisor/set_mode', self._on_set_mode, callback_group=self._cb)
         self.create_service(SetRunMode, '/xw/supervisor/set_run_mode', self._on_set_run_mode, callback_group=self._cb)
@@ -107,6 +118,9 @@ class SupervisorNode(Node):
     def _on_safety(self, msg: Bool) -> None:
         self._safety_ok = bool(msg.data)
 
+    def _on_loc_status(self, msg: Int8) -> None:
+        self._loc_status = int(msg.data)
+
     def _on_power(self, msg: PowerState) -> None:
         self._power = msg
 
@@ -118,13 +132,15 @@ class SupervisorNode(Node):
         s.run_mode = int(self.get_parameter('run_mode').value)
         s.emergency_stop = self._estop
         s.safety_ok = self._safety_ok
-        s.localization_ok = True
+        s.localization_status = int(self._loc_status)
+        s.localization_ok = self._loc_status == 0
         s.active_map = self._active_map
         s.profile = str(self.get_parameter('profile').value)
         s.power = self._power
         tags = []
         tags.append('follow=on' if self._follow_en else 'follow=off')
         tags.append('fall=on' if self._fall_en else 'fall=off')
+        tags.append(f'loc={LOC_STATUS_NAMES.get(self._loc_status, str(self._loc_status))}')
         base = self._detail or ''
         tag_s = ' '.join(tags)
         s.detail = f'{base} | {tag_s}' if base else tag_s

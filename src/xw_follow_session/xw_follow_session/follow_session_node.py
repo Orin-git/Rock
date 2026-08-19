@@ -79,6 +79,13 @@ class FollowSessionNode(Node):
         self._follow_stop = threading.Event()
         self._suspend_nav = False  # True during SEARCH/LOST — don't auto-restart NavigateToPose
 
+        # Heavy runtime (TF / tracks / 10Hz tick) is armed only while follow is enabled.
+        # Idle follow used to hold ~15–20% CPU just from /tf fan-in.
+        self._tf_buffer: Optional[Buffer] = None
+        self._tf_listener: Optional[TransformListener] = None
+        self._tracks_sub = None
+        self._tick_timer = None
+
         latch = QoSProfile(
             depth=1,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -93,21 +100,15 @@ class FollowSessionNode(Node):
         self._search_cmd_pub = self.create_publisher(Twist, '/xw/cmd/follow', 10)
 
         self.create_subscription(Bool, '/xw/follow/enable', self._on_enable, latch, callback_group=self._cb)
-        self.create_subscription(
-            PersonTracks, '/xw/perception/tracks', self._on_tracks, 10, callback_group=self._cb
-        )
         self.create_service(
             SessionControl, '/xw/session/follow/control', self._on_control, callback_group=self._cb
         )
 
-        self._tf_buffer = Buffer()
-        self._tf_listener = TransformListener(self._tf_buffer, self)
         self._nav_client = ActionClient(
             self, NavigateToPose, 'navigate_to_pose', callback_group=self._cb
         )
 
-        self.create_timer(0.1, self._tick, callback_group=self._cb)
-        self.get_logger().info('follow session ready (Nav2 dynamic goal)')
+        self.get_logger().info('follow session ready (idle until /xw/follow/enable)')
 
     def _bt_path(self) -> str:
         configured = str(self.get_parameter('follow_bt_xml').value or '').strip()
@@ -133,10 +134,51 @@ class FollowSessionNode(Node):
         res.state = self._state.value
         return res
 
+    def _arm_runtime(self) -> None:
+        """Subscribe to TF/tracks and start tick only while following."""
+        if self._tf_listener is not None:
+            return
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(self._tf_buffer, self)
+        self._tracks_sub = self.create_subscription(
+            PersonTracks, '/xw/perception/tracks', self._on_tracks, 10, callback_group=self._cb
+        )
+        self._tick_timer = self.create_timer(0.1, self._tick, callback_group=self._cb)
+        self.get_logger().info('follow runtime armed (tf+tracks+tick)')
+
+    def _disarm_runtime(self) -> None:
+        """Drop TF/tracks/tick so idle follow does not burn CPU on /tf."""
+        if self._tick_timer is not None:
+            try:
+                self._tick_timer.cancel()
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                self.destroy_timer(self._tick_timer)
+            except Exception:  # noqa: BLE001
+                pass
+            self._tick_timer = None
+        if self._tracks_sub is not None:
+            try:
+                self.destroy_subscription(self._tracks_sub)
+            except Exception:  # noqa: BLE001
+                pass
+            self._tracks_sub = None
+        if self._tf_listener is not None:
+            try:
+                self._tf_listener.unregister()
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warn(f'tf unregister failed: {exc}')
+            self._tf_listener = None
+            self._tf_buffer = None
+        with self._lock:
+            self._last_target_pose = None
+
     def _set_active(self, active: bool, source: str) -> None:
         if active == self._active:
             return
         if active:
+            self._arm_runtime()
             self._active = True
             self._follow_stop.clear()
             self._suspend_nav = False
@@ -159,6 +201,7 @@ class FollowSessionNode(Node):
             self._cancel_follow_nav()
             self._state = FollowState.IDLE
             self._legacy_cmd_pub.publish(Twist())
+            self._disarm_runtime()
             self._emit_result(0, 'follow stopped', source)
             self.get_logger().info(f'follow stopped ({source})')
 
@@ -190,6 +233,8 @@ class FollowSessionNode(Node):
         return x, y, z
 
     def _pose_in_map(self, bearing: float, distance: float, frame_id: str) -> Optional[PoseStamped]:
+        if self._tf_buffer is None:
+            return None
         cam_frame = frame_id or str(self.get_parameter('camera_frame').value)
         map_frame = str(self.get_parameter('map_frame').value)
         x, y, z = self._track_to_camera_point(bearing, distance)
@@ -467,7 +512,8 @@ class FollowSessionNode(Node):
 def main(args=None) -> None:
     rclpy.init(args=args)
     node = FollowSessionNode()
-    executor = MultiThreadedExecutor(num_threads=4)
+    # 2 threads enough for enable + action callbacks; idle cost stays near fall_session.
+    executor = MultiThreadedExecutor(num_threads=2)
     executor.add_node(node)
     try:
         executor.spin()

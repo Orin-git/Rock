@@ -137,6 +137,22 @@ def generate_launch_description() -> LaunchDescription:
             ],
             output='screen',
         ),
+        Node(
+            package='xw_sensors',
+            executable='pc_nav_filter_node',
+            name='xw_pc_nav_filter',
+            parameters=[os.path.join(
+                get_package_share_directory('xw_sensors'), 'config', 'pc_nav_filter.yaml'
+            )],
+            condition=IfCondition(use_depth_cam),
+            output='screen',
+        ),
+        Node(
+            package='xw_localization_health',
+            executable='localization_health_node',
+            name='xw_localization_health',
+            output='screen',
+        ),
         Node(package='xw_motion', executable='motion_node', name='xw_motion', output='screen'),
         Node(
             package='xw_map_manager',

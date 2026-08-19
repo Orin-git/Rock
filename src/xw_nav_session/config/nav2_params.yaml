@@ -1,76 +1,49 @@
-# Gen2 Nav2 params — ported from gen1 (MPPI + RotationShim), frames → base_link.
-# Local costmap: /scan + dual depth PointCloud2. Global: scan + static map.
-# Controller cmd_vel remapped to /xw/cmd/nav in nav2.launch.py.
-# robot_radius / inflation: 0.23 (gen1); bump to 0.25–0.28 after real collision checks.
+# Gen2 Nav2 — Smac2D + RotationShim/RPP + filtered dual-depth local costmap.
+# Rock 5T: no MPPI as primary. Collision Monitor sits after velocity_smoother.
+# Footprint: 0.45 x 0.35 body box. Frames: base_link.
 
 amcl:
   ros__parameters:
     use_sim_time: false
-    
-    # 1. 里程计噪声参数（核心调整）
-    # 差速轮噪声模型：alpha3(平移噪声) > alpha4(旋转噪声) > alpha1≈alpha2(交叉噪声)
-    # 养老院场景：地板打滑→alpha3↑，转弯侧滑→alpha4↑
-    alpha1: 0.15    # 旋转→平移：差速轮原地旋转不产生大平移
-    alpha2: 0.15    # 平移→旋转：直线前行通常不走偏
-    alpha3: 0.50    # 平移→平移：轮子打滑、地板误差（核心调整）
-    alpha4: 0.55    # 旋转→旋转：转弯时轮胎侧滑（核心调整）
-    alpha5: 0.2     # 全向运动噪声
-    
-    # 2. 激光雷达参数
+    alpha1: 0.15
+    alpha2: 0.15
+    alpha3: 0.50
+    alpha4: 0.55
+    alpha5: 0.2
     laser_model_type: "likelihood_field"
     laser_max_range: 10.0
-    laser_min_range: 0.35     # 过滤近距离行人，养老院走廊宽1.2m+墙壁距离足够
-    laser_likelihood_max_dist: 0.5  # 收紧匹配容差，减少行人腿与地图的误匹配
+    laser_min_range: 0.35
+    laser_likelihood_max_dist: 0.5
     max_beams: 50
-
-    # 3. 观测模型权重
-    z_hit: 0.85     # 降低命中权重，减少对行人遮挡时scan的过度信任
+    z_hit: 0.85
     z_short: 0.05
     z_max: 0.01
-    z_rand: 0.08    # 略提随机权重，行人遮挡时粒子保持分散
-    sigma_hit: 0.12 # 放宽命中分布，适应老人缓慢移动的不确定性
+    z_rand: 0.08
+    sigma_hit: 0.12
     lambda_short: 0.1
-
-    # 4. 光束跳过：养老院长走廊特征稀疏，保持关闭避免误跳有效光束
     do_beamskip: false
     beam_skip_distance: 0.3
     beam_skip_error_threshold: 0.5
     beam_skip_threshold: 0.5
-
-    # 5. 粒子滤波器
     min_particles: 300
-    max_particles: 2500
+    max_particles: 2000
     kld_err: 0.01
     kld_z: 0.99
-    resample_interval: 2  # 走廊特征少，隔帧重采样保持粒子多样性
+    resample_interval: 2
     pf_err: 0.01
     pf_z: 0.99
-
-    # 6. 恢复模型：slow 开极小值，走廊漂移时可缓慢自愈；fast 保持关闭防跑飞
     recovery_alpha_slow: 0.005
     recovery_alpha_fast: 0.02
-    
-    # 7. 更新阈值（降低：更勤更新 map→odom，减轻网页位姿滞后）
     update_min_a: 0.08
     update_min_d: 0.08
-    
-    # 8. 坐标帧
     base_frame_id: "base_link"
     odom_frame_id: "odom"
     global_frame_id: "map"
-    
-    # 9. TF和容差
     tf_broadcast: true
-    # 提高到 1.0：scan 的 timestamp 与 tf cache 不完全同步，AMCL 经常报
-    # "Message Filter dropping message ... timestamp earlier than all data in cache"，
-    # 提高容差让 scan 等到 TF 到来再处理，减少丢帧导致的定位中断。
-    transform_tolerance: 1.0
-    
-    # 10. 其他（提高 amcl_pose 发布频率，网页/调试更跟手）
+    # Target after stamp fixes; was 1.0 on gen1 port
+    transform_tolerance: 0.3
     save_pose_rate: 2.0
-    
-    # 初始位姿
-    set_initial_pose: False #true
+    set_initial_pose: False
     initial_pose:
       x: 0.0
       y: 0.0
@@ -79,42 +52,22 @@ amcl:
     initial_cov_xx: 0.15
     initial_cov_yy: 0.15
     initial_cov_aa: 0.15
-    
     scan_topic: "scan"
 
 bt_navigator:
   ros__parameters:
     use_sim_time: False
-    transform_tolerance: 0.5
-    # === 目标到达判定（BT 层）===
-    # Behavior Tree 中 GoalReached 条件节点使用的容差（米）。
-    # 机器人当前位置距目标点 < goal_reached_tol 时，BT 认为"已大致到达"。
-    # 注意区分：这是 BT 层的粗判，最终精确判定由 controller_server 的 goal_checker 负责。
-    # 调大(如 0.30)：BT 更早判定到达，减少不必要的路径重规划 → 但可能跳过精确对齐
-    # 调小(如 0.10)：BT 更严格，确保机器人靠得足够近才进入终判 → 可能多跑一段
-    # 建议 >= controller_server 中的 xy_goal_tolerance，避免 BT 在 controller 判定前就截断
-    goal_reached_tol: 0.30 #接受姿势作为目标的容忍度(m)，须 >= xy_goal_tolerance
+    transform_tolerance: 0.3
+    goal_reached_tol: 0.22
     global_frame: map
     robot_base_frame: base_link
     odom_topic: /odom
-    # BT 主循环周期（ms），控制 Behavior Tree 的 tick 频率。
-    # 10ms = 100Hz，远高于 controller_frequency(15Hz)，保证 BT 能及时响应状态变化。
-    # 调大(如 50)：降低 BT tick 频率，减少 CPU 开销 → 但目标更新/取消响应变慢
-    # 调小(如 5)：更频繁地检查条件节点 → 增加 CPU，但响应更快（对差速巡检差异不大）
     bt_loop_duration: 100
-    # 各 Action 节点的默认超时时间（ms）。
-    # 超时后 BT 会触发 failure → 进入 recovery 子树。
-    # ARM 板 CPU 负载高时 20ms 会导致 planner/costmap 尚未响应就 ABORT（日志已复现）。
     default_server_timeout: 5000
-    # 等待 Action Server 上线的超时（ms）。与 default_server_timeout 对齐，避免启动/高负载误超时。
     wait_for_service_timeout: 5000
-    # odom_qos_reliability: "RELIABLE"
-    # odom_qos_durability: "VOLATILE"
-    # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
-    # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
-    # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
-    # They can be set here or via a RewrittenYaml remap from a parent launch file to Nav2.
-    # 自定义行为树：最多 8 次导航尝试 + 5 分钟硬超时，防止门关/路堵时无限重试
+    # Overridden by RewrittenYaml in nav2.launch.py
+    default_nav_to_pose_bt_xml: ""
+    default_nav_through_poses_bt_xml: ""
     plugin_lib_names:
       - nav2_compute_path_to_pose_action_bt_node
       - nav2_compute_path_through_poses_action_bt_node
@@ -175,360 +128,83 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    # === 控制频率 ===
-    # 30Hz 对该 ARM 板(算力受限)来说 MPPI 跑不满，控制周期被拖长→无有效解→failure_tolerance
-    # 触发→ABORTED(6) 出现在半路。降到 15Hz 大幅降 CPU，配合下方 batch/steps/iter 减负。
-    # 调高(如 25~30)：每个周期更快响应，但单周期算不完→轨迹质量下降→无有效解→ABORT
-    # 调低(如 10)：CPU 充裕、每个周期都能算完→轨迹质量好 → 但控制响应慢、精度下降
-    # 经验值：ARM 板 10~15Hz，x86 可以 20~30Hz；需与 model_dt 配套（model_dt >= 1/controller_frequency）
-    controller_frequency: 12.0                      #运行控制器的频率 (hz)
-    # === 无解容忍 ===
-    # 控制器连续产生无效速度指令（如所有候选轨迹都碰撞/超约束）多少秒后判 ABORT。
-    # 调大(如 10.0)：容忍长时间无解，让机器人自己脱困 → 但卡死时恢复慢
-    # 调小(如 1.0)：快速判定失败并触发 BT recovery → 但 CPU 抖动/瞬时障碍时容易误 ABORT
-    # 3.5s：加快触发 BT recovery；仍留余量避免 ARM 板 CPU 抖动时 MPPI 短时无解误 ABORT
-    failure_tolerance: 3.5                          # 控制器连续无有效速度可容忍的秒数
-    controller_plugins: ["FollowPath"]              # 用于处理请求和参数的控制器插件的映射名称列表
-
+    controller_frequency: 20.0
+    failure_tolerance: 2.5
+    controller_plugins: ["FollowPath"]
     progress_checker_plugin: "progress_checker"
-    goal_checker_plugin: "goal_checker" # "precise_goal_checker"
+    goal_checker_plugin: "goal_checker"
 
-    # ============================================================
-    # Progress Checker（进度检测器）—— 反向判定：检测"卡住"
-    # 如果在 movement_time_allowance 秒内机器人移动距离 < required_movement_radius，
-    # 则判定为卡住 → controller 返回失败 → BT 进入 recovery。
-    # 这是"到点判定"的反面：离目标很近但微调不够 → 可能被误判为卡住。
-    # ============================================================
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      # 机器人在时间窗口内必须移动的最小距离（米）
-      # 调大(如 0.5)：要求机器人持续有明显位移 → 对远距离导航合理，但到点微调时易误判卡住
-      # 调小(如 0.05)：容忍微小位移 → 到点微调不误判，但真正卡住（顶墙）时可能很久才触发 recovery
-      # 0.08m：到点微调净位移较小，避免 progress checker 误判卡住
       required_movement_radius: 0.05
-      # 判定卡住前允许的时间窗口（秒）
-      # 20s：前方安全门控拦截线速度后，Nav2 需先原地转向再前进，给足转向+起步时间
-      movement_time_allowance: 8.0
+      movement_time_allowance: 12.0
 
-    # ============================================================
-    # Goal Checker（目标到达检测器）—— 正向判定：判断"到达"
-    # 当机器人同时满足 xy 位置容差和 yaw 角度容差时，判定为 SUCCEEDED(4)。
-    # 这是导航成功的最核心判定节点。
-    # ============================================================
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      # --- 位置容差（米）：机器人与目标点的欧氏距离阈值 ---
-      # 调大(如 0.30)：机器人更容易"判定到达"，减少目标附近的微调 → 但实际落点偏离更大
-      # 调小(如 0.10)：落点更精确 → 但机器人可能长时间在目标附近反复试探，无法满足条件
-      # Nav2 默认 0.25；放宽到 0.30 减少目标附近长时间微调引发的 progress checker 误触发
-      # 注意：goal_reached_tol(BT) 须 >= xy_goal_tolerance
-      xy_goal_tolerance: 0.30
-      # --- 角度容差（弧度）：机器人与目标朝向的角度差阈值 ---
-      # 调大(如 1.0≈57°)：几乎不管角度是否对齐 → 适合"只管到位置"的场景
-      # 调小(如 0.2≈11°)：要求角度精确对齐 → 但 wz_max 小且到点后位移不足时，角度微调极易触发
-      #   progress checker 误判 ABORTED(6) 而非 SUCCEEDED(4)
-      # 经验：0.4rad(≈23°) 配合 wz_max=0.5 是一个平衡点——既有一定的角度控制，
-      # 又不至于因为角度迟迟对不上而永远判不到成功
-      yaw_goal_tolerance: 0.4
-      # --- 有状态模式 ---
-      # True：一旦满足条件就锁定"已到达"，后续即使因传感器噪声/漂移暂时超差也不回退
-      # False：每个控制周期都重新判定——机器人可能在"到达/未到达"间反复横跳
-      # 强烈建议保持 True，避免到点后状态抖动
+      xy_goal_tolerance: 0.20
+      yaw_goal_tolerance: 0.35
       stateful: True
 
     FollowPath:
       plugin: "nav2_rotation_shim_controller::RotationShimController"
-      # 起步时若与路径朝向差过大，先原地转到大致朝向路径，再交给 MPPI
-      angular_dist_threshold: 0.785      # ~45°，大于此先转；过程中交权后由 MPPI 自由跟线
-      angular_disengage_threshold: 0.40  # 转到多近再交给 primary_controller
-      forward_sampling_distance: 0.5     # 用路径前方 0.5m 估朝向
-      rotate_to_heading_angular_vel: 0.48 # shim 原地转目标角速度（0.55→0.48 略降）
-      max_angular_accel: 0.8              # 几拍内爬到目标角速度（勿再绑 az_max）
-      closed_loop: false                  # 用上次指令爬升，避免 odom≈0 时被锁死
-      simulate_ahead_time: 1.0           # 原地转前做碰撞前视
-      rotate_to_goal_heading: false      # 到点朝向不由 shim 接管
+      angular_dist_threshold: 0.785
+      angular_disengage_threshold: 0.40
+      forward_sampling_distance: 0.5
+      rotate_to_heading_angular_vel: 0.50
+      max_angular_accel: 1.0
+      closed_loop: false
+      simulate_ahead_time: 1.0
+      rotate_to_goal_heading: false
+      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
 
-      primary_controller: "nav2_mppi_controller::MPPIController"  # Humble: 必须是字符串；MPPI 参数与 shim 同级
-      # ============================================================
-      # MPPI 采样参数 —— CPU 算力与轨迹质量的核心平衡
-      # CPU 负载 ≈ controller_frequency × batch_size × time_steps × iteration_count
-      # 该 ARM 板算力有限，大幅下调以保证每个控制周期都能算完
-      # ============================================================
-      time_steps: 24    #候选轨迹时间步(点)数：40→24，1.2s 预测窗对 0.4m/s 足够
-                        # 调大：预测更远的后果，生成更平滑的长远轨迹 → 但 CPU 暴涨
-                        # 调小：CPU 节约 → 但预测太短导致轨迹短视，转弯时容易"撞了才发现"
-      # 须 >= 1/controller_frequency；15Hz 时周期≈0.0667s，0.05 会触发 controller_server 配置失败
-      model_dt: 0.084   #每个时间步长 dt（秒）；与 controller_frequency: 12.0 配对
-                        # time_steps × model_dt = 1.6s 预测总时长，对 vx_max=0.4m/s 约覆盖 0.64m
-      batch_size: 290   #候选轨迹采样数，居家室内场景；导航 CPU 紧张时可再降
-                        # 调大(如 1000)：更多随机轨迹 → 更大概率找到最优解 → 但 CPU 加倍
-                        # 调小(如 200)：更快 → 但采样不足时轨迹质量下降，左右摇摆
-
-      # ============================================================
-      # 速度采样噪声 —— 控制轨迹随机探索的多样性
-      # ============================================================
-      vx_std: 0.10       # Vx 抽样标准差，略降减轻抖动
-                         # 调大：更多不同速度的候选轨迹 → 加减速选择多但轨迹更"碎"
-                         # 调小：候选速度更集中 → 运动更平滑，但遇到突发障碍变通能力下降
-      vy_std: 0.2       #Vy 的抽样标准差（差速模型下不起作用，vy 恒为 0）
-      wz_std: 0.18       # 角速度采样标准差
-                         # 调大：生成更多不同转向的候选 → 转弯灵活但左右摇摆
-                         # 调小：路径更直 → 但避障转向能力下降
-
-      # ============================================================
-      # 速度/Accl 约束 —— 机器人运动能力的硬边界
-      # ============================================================
-      # vx_max: 0.5       #目标最大前进速度（米/秒）
-      vx_max: 0.3 #0.4       #目标最大前进速度（米/秒）
-                             # 调大：走得更快但 pose 更新/控制频率跟不上时容易超调冲过目标
-                             # 调小：更安全但任务效率下降
-      # vx_min: -0.5      #目标最大反向速度（米/秒）
-      vx_min: -0.3      #目标最大反向速度（米/秒）
-                              # 允许适度倒车脱困；-0.28 配合 recovery backup 使用
-                              # 调更负(如 -0.4)：脱困更强→但可能倒退撞到盲区障碍
-      vy_max: 0.0       #如果使用Omni运动模型，目标最大横向速度（m/s）
-      # wz_max: 2.0       #最大旋转速度（弧度/秒）
-      wz_max: 0.5  #1.0       #最大旋转速度（弧度/秒）
-                              # 调大(如 1.0)：原地转向快，到点后 yaw 对齐快→但容易过冲导致震荡
-                              # 调小(如 0.3)：转向平缓稳定→但到点对角度时太慢，yaw 还没对上就触发 progress 超时
-      # ax_max: 1.5
-      ax_max: 0.8             # 最大前进加速度
-      ax_min: -0.8            # 最大减速度（负值）
-      ay_max: 0.0
-      # az_max: 1.5
-      az_max: 0.5             # 最大角加速度
-                              # 调大：旋转响应快 → 但急拉方向容易晕
-                              # 调小：旋转平缓 → 但避障转向不够快
-      iteration_count: 1 # 2→1：每周期只优化一次，CPU 减半；差速巡检 1 次足够
-                         # MPPI 内部迭代寻优次数，调大略提升轨迹质量但 CPU 线性增长
-      prune_distance: 1.5 #路径上距离机器人最近点的距离（米）
-      enforce_path_inversion: false
-      transform_tolerance: 0.5 # 与 AMCL/costmap 对齐，避免 scan 与 TF 缓存时间戳偏差时控制器频繁报 TF 过期
-      temperature: 0.60 # MPPI 温度参数：控制轨迹选择的"确定性"
-                        # 调大(如 1.0)：更均匀地考虑所有采样轨迹 → 控制更平滑、减少抖动 → 但太大会变"迟钝"
-                        # 调小(如 0.1)：只选最低 cost 的轨迹 → 控制更精确但也更"神经质"，容易左右晃
-                        # 经验：0.55 是平滑和灵敏的折中
-      gamma: 0.015 #平滑度（高）和低能耗（低）之间的权衡,保持默认值
-                   # 调大：更看重控制量平滑 → 轨迹更稳但可能忽略障碍
-                   # 调小：更看重能耗低 → 可能频繁加减速
-      motion_model: "DiffDrive" #用于轨迹规划的所需运动模型。选项包括DiffDrive、Omni或Ackermann。
-      visualize: false #是否发布调试轨迹以供可视化。
-      TrajectoryVisualizer: #轨迹可视化
-        trajectory_step: 5 #轨迹之间的步骤可视化以对候选轨迹池进行下采样
-        time_step: 3 #轨迹上点之间的步骤可视化以降低轨迹密度的采样
-      AckermannConstraints:
-        # min_turning_r: 0.15 #最小转弯半径（阿克曼运动模型）
-        min_turning_r: 0.3 #最小转弯半径（阿克曼运动模型）
-
-      # ============================================================
-      # MPPI Critics（成本函数评论家）—— 导航行为的核心调参
-      # 每个 critic 给每条候选轨迹打分（cost），MPPI 选择总 cost 最低的轨迹执行。
-      # cost = Σ(cost_weight × cost_value^cost_power) 对所有启用的 critic
-      # threshold_to_consider：机器人距目标 < 此距离时，该 critic 停止贡献成本，
-      #   让 GoalCritic/GoalAngleCritic 接管，实现"路径跟随→最终收敛"的切换
-      # ============================================================
-      critics: ["ConstraintCritic", "ObstaclesCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"] #评论插件
-
-      # --- 约束Critic：惩罚违反运动学/动力学约束的轨迹 ---
-      ConstraintCritic: #修复超出设定的动态或运动学约束的轨迹
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0  #权重参数
-                           # 调大：更严格惩罚不符约束的轨迹 → 执行轨迹更"合法"但可能过于保守
-                           # 调小：允许略微超约束 → 更灵活但可能执行不了
-
-      # --- 目标角度Critic ---
-      # 当机器人距离目标 < threshold_to_consider 时开始生效，
-      # 驱动机器人朝向目标姿态旋转对齐
-      GoalAngleCritic: #当距离目标较近时，GoalAngleCritic会激励导航以达到目标姿势的角度
-        enabled: true
-        cost_power: 1
-        cost_weight: 7.0 #权重参数，之前是3.0
-                          # 调大：角度对齐更"强势"，机器人在靠近目标时更积极地转对方向 →
-                          #   转角快但可能与 GoalCritic 竞争导致震荡
-                          # 调小：位置优先到达，角度对齐"随意" → 可能到点后歪着停
-        threshold_to_consider: 0.8  #距目标多少米内开始考虑角度对齐
-                                    # 调大(如 1.5)：从远处就开始对角度 → 路径更直但可能与 PathFollow 冲突
-                                    # 调小(如 0.3)：只在非常近时才对齐角度 → 先到位再转向，减少竞争
-
-      # --- 目标距离Critic ---
-      # 当机器人距离目标 < threshold_to_consider 时开始生效，
-      # 驱动机器人向目标点位置收敛
-      GoalCritic: #当距离目标较近时，GoalCritic会激励机器人在空间上向目标导航
-        enabled: true
-        cost_power: 1
-        cost_weight: 14.0 # 略降，减少接近目标时过猛纠偏
-                           # 调大：更强力地向目标拉扯 → 快速收敛但容易冲过/震荡
-                           # 调小：平缓接近 → 收敛慢但更平滑
-        threshold_to_consider: 2.0  #距目标多少米内开始向目标收敛
-                                    # 调大：从远处就开始向目标靠拢 → 不再严格跟着全局路径
-                                    # 调小：只在很近了才向目标收敛 → 前面全程跟随路径
-
-      # --- 避障Critic ---
-      ObstaclesCritic:
-        enabled: true
-        cost_power: 1
-        repulsion_weight: 1.4 # 斥力权重，窄走廊降低双侧排斥导致的卡死
-                              # 调大：更怕障碍，远离一切 → 可能在窄走廊中间被"夹住"
-                              # 调小：更敢接近障碍 → 可能蹭边
-        critical_weight: 30.0 # 临界碰撞权重：距离障碍物极近时的额外惩罚
-        consider_footprint: false # 须与 costmap robot_radius 一致；true 且膨胀半径过小时会触发 MPPI 崩溃
-        collision_cost: 10000.0 #应用于轨迹中真实碰撞的成本（极高值=硬约束）
-        collision_margin_distance: 0.08 #碰撞判定余量（米），低于此距离视为碰撞
-                                        # 调大(如 0.1)：更保守，留更大安全距离
-                                        # 调小(如 0.01)：更激进，允许更贴边的轨迹
-        near_goal_distance: 0.7 #靠近目标的距离（米），在此距离内停止 ObstaclesCritic，
-                                # 以允许机器人平稳地收敛到靠近障碍物的目标姿势
-                                # 调大(如 1.5)：更早停止避障 → 目标点附近有障碍时可能撞上
-                                # 调小(如 0.3)：避障持续到很靠近目标 → 目标附近有障碍时可能因
-                                #   避障推力无法到达目标（一直在外面转）
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.20  # MPPI 二次膨胀，配合 costmap 0.27 避免双重膨胀过紧
-
-      # --- 前向偏好Critic：给倒退轨迹加惩罚，使机器人优先前进 ---
-      PreferForwardCritic: 
-        enabled: true
-        cost_power: 1
-        cost_weight: 1.8 #权重参数（略降，窄门允许小幅倒车对准门洞）
-                          # 调大：强烈排斥倒车 → 机器人宁可大角度转也不倒车
-                          # 调小：无所谓前后 → 可能频繁前进/后退切换
-        threshold_to_consider: 0.5 #距目标多少米内停止前向偏好，让 GoalCritic 自由选择方向
-                                   # 调大：靠近目标时也坚持前进 → 如果须倒退才能到可能卡住
-                                   # 调小：更早允许倒退调整 → 目标点附近更灵活
-
-      # --- 路径对齐Critic ---
-      # 激励机器人与全局路径方向保持一致（不要求沿路径走，只要求同向）
-      PathAlignCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 8.0 # 过高易左右摇摆追线；与 PathFollow 平衡
-                           # 调大：更执着于路径方向 → 可能对偏离过度反应导致摆动
-                           # 调小：方向更自由 → 可能不走路径规划的路线
-        max_path_occupancy_ratio: 0.07 #最大路径占用率
-        trajectory_point_step: 4
-        threshold_to_consider: 0.5 #距目标多少米内停止路径对齐，让 GoalCritic 接管
-        offset_from_furthest: 20 #最远偏移量
-        use_path_orientations: false #是否在路径对齐中考虑路径的方向
-
-      # --- 路径角度Critic ---
-      # 激励机器人朝向与路径上最近点的方向对齐
-      PathAngleCritic: #路径角度评论，机器人在因累积角度误差较大而需要时进行急转弯。
-        enabled: true
-        cost_power: 1
-        cost_weight: 2.5
-        offset_from_furthest: 4 #最远偏移量
-        threshold_to_consider: 0.5 #距目标多少米内停止
-        max_angle_to_furthest: 1.0
-        mode: 0
-
-      # --- 路径跟随Critic ---
-      # 激励机器人紧贴全局路径前进（与 PathAlign 不同：这个是位置跟随，那边是方向对齐）
-      PathFollowCritic: #路径跟随评论家激励机器人沿着路径前进。
-        enabled: true
-        cost_power: 1
-        cost_weight: 15.0 # 提高：更沿前向走线，减轻横向摆动
-                           # 调大：更紧贴路径 → 不轻易切角/绕障，但可能对障碍反应不足
-                           # 调小：更自由地偏离路径 → 绕障灵活但可能绕远路
-        offset_from_furthest: 5
-        threshold_to_consider: 1.4 #距目标多少米内停止路径跟随，让 GoalCritic/GoalAngleCritic 接管
-                                    # 调大(如 3.0)：只在远距离跟路径，近距早切换 → 可能提前切角
-                                    # 调小(如 0.5)：跟路径到最后 → 但最终收敛靠 GoalCritic 而非路径
-#参数参考：https://docs.nav2.org/configuration/packages/configuring-mppic.html
-
-
-# controller_server:
-#   ros__parameters:
-#     use_sim_time: False
-#     controller_frequency: 20.0
-#     min_x_velocity_threshold: 0.001
-#     min_y_velocity_threshold: 0.5
-#     min_theta_velocity_threshold: 0.001
-#     failure_tolerance: 0.3
-#     progress_checker_plugin: "progress_checker"
-#     goal_checker_plugins: ["general_goal_checker"] # "precise_goal_checker"
-#     controller_plugins: ["FollowPath"]
-
-#     # Progress checker parameters
-#     progress_checker:
-#       plugin: "nav2_controller::SimpleProgressChecker"
-#       required_movement_radius: 0.5
-#       movement_time_allowance: 8.0
-#     # Goal checker parameters
-#     #precise_goal_checker:
-#     #  plugin: "nav2_controller::SimpleGoalChecker"
-#     #  xy_goal_tolerance: 0.25
-#     #  yaw_goal_tolerance: 0.25
-#     #  stateful: True
-#     general_goal_checker:
-#       stateful: True
-#       plugin: "nav2_controller::SimpleGoalChecker"
-#       xy_goal_tolerance: 0.25
-#       yaw_goal_tolerance: 0.25
-#     # DWB parameters
-#     FollowPath:
-#       plugin: "dwb_core::DWBLocalPlanner"
-#       debug_trajectory_details: True
-#       min_vel_x: -0.4
-#       min_vel_y: 0.0
-#       max_vel_x: 0.4
-#       max_vel_y: 0.0
-#       max_vel_theta: 0.7
-#       min_speed_xy: 0.0
-#       max_speed_xy: 0.26
-#       min_speed_theta: 0.0
-#       # Add high threshold velocity for turtlebot 3 issue.
-#       # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
-#       acc_lim_x: 2.5
-#       acc_lim_y: 0.0
-#       acc_lim_theta: 3.2
-#       decel_lim_x: -2.5
-#       decel_lim_y: 0.0
-#       decel_lim_theta: -3.2
-#       vx_samples: 20
-#       vy_samples: 5
-#       vtheta_samples: 20
-#       sim_time: 1.7
-#       linear_granularity: 0.05
-#       angular_granularity: 0.025
-#       transform_tolerance: 0.2
-#       xy_goal_tolerance: 0.25
-#       trans_stopped_velocity: 0.25
-#       short_circuit_trajectory_evaluation: True
-#       stateful: True
-#       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-#       BaseObstacle.scale: 0.02
-#       PathAlign.scale: 32.0
-#       PathAlign.forward_point_distance: 0.1
-#       GoalAlign.scale: 24.0
-#       GoalAlign.forward_point_distance: 0.1
-#       PathDist.scale: 32.0
-#       GoalDist.scale: 24.0
-#       RotateToGoal.scale: 32.0
-#       RotateToGoal.slowing_factor: 5.0
-#       RotateToGoal.lookahead_time: -1.0
+      # --- RPP (same level as shim; Humble string primary_controller) ---
+      desired_linear_vel: 0.28
+      lookahead_dist: 0.45
+      min_lookahead_dist: 0.25
+      max_lookahead_dist: 0.75
+      lookahead_time: 1.5
+      rotate_to_heading_angular_vel: 0.50
+      transform_tolerance: 0.2
+      use_velocity_scaled_lookahead_dist: true
+      min_approach_linear_velocity: 0.05
+      approach_velocity_scaling_dist: 0.60
+      max_allowed_time_to_collision_up_to_carrot: 1.0
+      use_collision_detection: true
+      use_regulated_linear_velocity_scaling: true
+      use_cost_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 0.55
+      regulated_linear_scaling_min_speed: 0.08
+      cost_scaling_dist: 0.40
+      cost_scaling_gain: 1.0
+      inflation_cost_scaling_factor: 3.0
+      allow_reversing: false
+      use_rotate_to_heading: true
+      rotate_to_heading_min_angle: 0.70
+      max_angular_accel: 1.0
+      max_robot_pose_search_dist: 1.5
+      use_interpolation: true
 
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0  # 10Hz 对 ARM 板过重；5Hz 与 10Hz 激光仍够用
-      publish_frequency: 2.0
+      update_frequency: 5.0
+      publish_frequency: 1.0
       global_frame: odom
-      robot_base_frame: base_link #base_scan #base_link #
+      robot_base_frame: base_link
       use_sim_time: False
-      # 与 AMCL/global_costmap 对齐。CPU 抖动时 scan 时间戳可落后 tf cache 1s+，
-      # 过小会导致 obstacle_layer 丢帧、网页障碍显示异常。
-      transform_tolerance: 1.5
+      transform_tolerance: 0.3
       rolling_window: true
       width: 4
       height: 4
       resolution: 0.05
-      robot_radius: 0.23
-        # plugins: ["voxel_layer", "inflation_layer"]
+      # 0.45 x 0.35 body (URDF collision box)
+      footprint: "[[0.225, 0.175], [0.225, -0.175], [-0.225, -0.175], [-0.225, 0.175]]"
       plugins: ["obstacle_layer", "inflation_layer"]
+      always_send_full_costmap: False
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 2.2
-        inflation_radius: 0.23  # 不得低于 robot_radius(0.23)，否则 Nav2 容器会崩溃
+        cost_scaling_factor: 3.5
+        inflation_radius: 0.26
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -547,8 +223,8 @@ local_costmap:
           expected_update_rate: 0.0
           inf_is_valid: true
         depth1:
-          topic: /camera/front_up/depth/points
-          max_obstacle_height: 1.6
+          topic: /camera/front_up/depth/points_nav
+          max_obstacle_height: 1.4
           min_obstacle_height: 0.05
           clearing: True
           marking: True
@@ -560,8 +236,8 @@ local_costmap:
           observation_persistence: 0.0
           expected_update_rate: 0.0
         depth2:
-          topic: /camera/front_down/depth/points
-          max_obstacle_height: 1.6
+          topic: /camera/front_down/depth/points_nav
+          max_obstacle_height: 1.4
           min_obstacle_height: 0.05
           clearing: True
           marking: True
@@ -572,39 +248,22 @@ local_costmap:
           obstacle_min_range: 0.2
           observation_persistence: 0.0
           expected_update_rate: 0.0
-      range_sensor_layer:
-        plugin: "nav2_costmap_2d::RangeSensorLayer"
-        enabled: True
-        # topics: ["/ultrasonic_1", "/ultrasonic_3"]
-        topics: ["/ultrasonic_1", "/ultrasonic_2", "/ultrasonic_3", "/ultrasonic_4"]
-        input_sensor_type: "VARIABLE"  # 超声波通常是可变距离传感器
-        phi: 1.2                      # 观测角度参数
-        inflate_cone: 0.8             # 锥形区域膨胀系数 (0-1)
-        clear_threshold: 0.2          # 清除障碍物的概率阈值
-        mark_threshold: 0.8           # 标记障碍物的概率阈值
-        clear_on_max_reading: True    # 当读到最大距离时是否清除区域
-        transform_tolerance: 0.3      # TF变换容差，原先为1
-      static_layer:
-        plugin: "nav2_costmap_2d::StaticLayer"
-        map_subscribe_transient_local: True
-      always_send_full_costmap: True
 
 global_costmap:
   global_costmap:
     ros__parameters:
       update_frequency: 2.0
-      publish_frequency: 3.0
+      publish_frequency: 1.0
       global_frame: map
-      robot_base_frame: base_link #base_scan #base_link ##!!
+      robot_base_frame: base_link
       use_sim_time: False
-      # global_costmap 经 map→odom 还要再过一层 TF，时间戳更易落到 cache 之外。
-      # 用 1.0 与 AMCL 对齐，配合 AMCL 的 transform_tolerance: 1.0 避免 scan 整批丢失。
-      transform_tolerance: 1.5
-      robot_radius: 0.23
+      transform_tolerance: 0.3
+      footprint: "[[0.225, 0.175], [0.225, -0.175], [-0.225, -0.175], [-0.225, 0.175]]"
       resolution: 0.05
-      unknown_cost_value: 255 # 将未知区域设置为高代价
-      track_unknown_space: true ## 启用未知区域跟踪
+      unknown_cost_value: 255
+      track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      always_send_full_costmap: False
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -619,7 +278,6 @@ global_costmap:
           raytrace_min_range: 0.0
           obstacle_max_range: 5.0
           obstacle_min_range: 0.0
-          # 同 local：只用最新帧 + inf 视为有效清扫，减少全局图上的鬼影绕路
           observation_persistence: 0.0
           expected_update_rate: 0.0
           inf_is_valid: true
@@ -629,15 +287,12 @@ global_costmap:
         track_unknown_space: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 2.2
+        cost_scaling_factor: 3.5
         inflation_radius: 0.28
-
 
 map_server:
   ros__parameters:
     use_sim_time: False
-    # Overridden in launch by the "map" launch configuration or provided default value.
-    # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
     yaml_filename: ""
 
 map_saver:
@@ -650,41 +305,21 @@ map_saver:
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 10.0
+    expected_planner_frequency: 5.0
     use_sim_time: False
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.50
-      use_astar: false
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.20
+      downsample_costmap: false
+      downsampling_factor: 1
       allow_unknown: true
-      cost_neutral_lambda: 0.2  # 添加中性代价权重
-
-# planner_server:
-#   ros__parameters:
-#     expected_planner_frequency: 10.0
-#     use_sim_time: True
-#     planner_plugins: ["GridBased"]
-    
-#     GridBased:
-#       plugin: "nav2_smac_planner/SmacPlanner2D"
-#       cache_obstacle_heuristic: true  # 启用启发式缓存（如使用SmacPlannerHybrid）
-#       tolerance: 0.125                     # tolerance for planning if unable to reach exact pose, in meters
-#       downsample_costmap: false             # whether or not to downsample the map
-#       downsampling_factor: 1                # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
-#       allow_unknown: false                 # allow traveling in unknown space
-#       max_iterations: 1000000               # maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
-#       max_on_approach_iterations: 1000      # maximum number of iterations to attempt to reach goal once in tolerance
-#       max_planning_time: 2.0                # max time in s for planner to plan, smooth
-#       motion_model_for_search: "MOORE"      # 2D Moore, Von Neumann
-#       cost_travel_multiplier: 2.0           # Cost multiplier to apply to search to steer away from high cost areas. Larger values will place in the center of aisles more exactly (if non-`FREE` cost potential field exists) but take slightly longer to compute. To optimize for speed, a value of 1.0 is reasonable. A reasonable tradeoff value is 2.0. A value of 0.0 effective disables steering away from obstacles and acts like a naive binary search A*.
-#       use_final_approach_orientation: false # Whether to set the final path pose at the goal's orientation to the requested orientation (false) or in line with the approach angle so the robot doesn't rotate to heading (true)
-#       smoother:
-#         max_iterations: 1000
-#         w_smooth: 0.3
-#         w_data: 0.2
-#         tolerance: 0.00000001 #1e-10
-          
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 2.0
+      motion_model_for_search: "MOORE"
+      cost_travel_multiplier: 2.0
+      use_final_approach_orientation: false
 
 smoother_server:
   ros__parameters:
@@ -706,8 +341,6 @@ behavior_server:
       plugin: "nav2_behaviors/Spin"
     backup:
       plugin: "nav2_behaviors/BackUp"
-      backup_distance: -0.55
-      backup_speed: -0.15
     drive_on_heading:
       plugin: "nav2_behaviors/DriveOnHeading"
     wait:
@@ -717,12 +350,12 @@ behavior_server:
     local_frame: odom
     global_frame: map
     robot_base_frame: base_link
-    transform_tolerance: 0.5
+    transform_tolerance: 0.3
     use_sim_time: False
     simulate_ahead_time: 2.0
-    max_rotational_vel: 0.4
-    min_rotational_vel: 0.2
-    rotational_acc_lim: 3.2
+    max_rotational_vel: 0.45
+    min_rotational_vel: 0.20
+    rotational_acc_lim: 1.5
 
 robot_state_publisher:
   ros__parameters:
@@ -745,11 +378,56 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [0.5, 0.0, 1.0]
-    min_velocity: [-0.5, 0.0, -1.0]
-    max_accel: [1.5, 0.0, 2.2]
-    max_decel: [-1.5, 0.0, -2.2]
+    max_velocity: [0.35, 0.0, 0.6]
+    min_velocity: [-0.20, 0.0, -0.6]
+    max_accel: [0.8, 0.0, 1.2]
+    max_decel: [-1.2, 0.0, -1.5]
     odom_topic: "odom"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
+
+# Collision Monitor: after smoother, before arbiter (/xw/cmd/nav)
+collision_monitor:
+  ros__parameters:
+    use_sim_time: False
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "/xw/cmd/nav"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.3
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 0.5
+    polygons: ["FrontStop", "SideLeft", "SideRight"]
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "/scan"
+      min_height: 0.05
+      max_height: 1.5
+      enabled: True
+      source_timeout: 1.0
+    FrontStop:
+      type: "polygon"
+      points: "[[0.38, 0.18], [0.38, -0.18], [0.12, -0.18], [0.12, 0.18]]"
+      action_type: "stop"
+      min_points: 2
+      visualize: False
+      polygon_pub_topic: "front_cm_polygon"
+      enabled: True
+    SideLeft:
+      type: "polygon"
+      points: "[[0.20, 0.28], [0.20, 0.18], [-0.10, 0.18], [-0.10, 0.28]]"
+      action_type: "stop"
+      min_points: 2
+      visualize: False
+      enabled: True
+    SideRight:
+      type: "polygon"
+      points: "[[0.20, -0.18], [0.20, -0.28], [-0.10, -0.28], [-0.10, -0.18]]"
+      action_type: "stop"
+      min_points: 2
+      visualize: False
+      enabled: True

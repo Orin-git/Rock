@@ -1,0 +1,17 @@
+/**:
+  ros__parameters:
+    input_topics:
+      - /camera/front_up/depth/points
+      - /camera/front_down/depth/points
+    output_topics:
+      - /camera/front_up/depth/points_nav
+      - /camera/front_down/depth/points_nav
+    z_min: 0.20
+    z_max: 2.50
+    abs_x_max: 1.20
+    y_min: -0.80
+    y_max: 0.40
+    voxel_leaf: 0.06
+    max_rate_hz: 5.0
+    max_points_out: 2500
+    stride: 4

@@ -7,7 +7,9 @@ string mode_name
 uint8 run_mode
 bool emergency_stop  # latched from /xw/chassis/motor_disabled (MCU Flag_Stop)
 bool safety_ok
-bool localization_ok
+bool localization_ok  # true iff localization_status == 0
+# 0 good 1 not ready 2 drift (self-heal) 3 needs intervention (latched)
+uint8 localization_status
 string active_map
 string profile
 xw_interfaces/PowerState power
