@@ -394,6 +394,24 @@ export async function setFallEnabled(enabled) {
   return j;
 }
 
+/** Body-follow orthogonal task (requires nav; does not tear down Nav2). */
+export async function fetchFollowStatus() {
+  const r = await fetch(`${apiBase()}/api/follow`, { cache: 'no-store' });
+  if (!r.ok) throw new Error(String(r.status));
+  return await r.json();
+}
+
+export async function setFollowEnabled(enabled) {
+  const r = await fetch(`${apiBase()}/api/follow`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !!enabled }),
+  });
+  const j = await r.json();
+  emitTask(j.message || `follow ${enabled ? 'on' : 'off'}`);
+  return j;
+}
+
 /** Publish nav goal → /api/goal → /xw/goal_pose */
 export async function publishGoal(x, y, yaw = 0, frame_id = 'map') {
   try {

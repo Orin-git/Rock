@@ -4,7 +4,7 @@
 # Vendor private:  /ascamera_hp60c_2/camera_publisher/...
 # Robot frame:     camera_front_down_link
 #
-# USB pin (Rock 5T USB3): bus 1 path 1.2  →  KERNEL 1-1.2 (HS companion of USB3 hub)
+# USB pin: black USB2 EHCI — bus 3 path 1.2 → KERNEL 3-1.2 (separate host from cam1)
 # Perception / safety gate stay on /camera/front_up; this cam is bring-up + future nav/face.
 
 camera_id: front_down
@@ -14,7 +14,7 @@ static_tf_node_name: camera_front_down_optical_static
 robot_frame: camera_front_down_link
 vendor_frame: ascamera_hp60c_2_camera_link_0
 
-usb_bus_no: 1
+usb_bus_no: 3
 usb_path: "1.2"
 color_pcl: false
 pub_tfTree: true

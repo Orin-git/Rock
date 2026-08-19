@@ -13,9 +13,18 @@ CHASSIS_FALLBACK="${CHASSIS_FALLBACK:-/dev/ttyACM0}"
 USE_IMU="${USE_IMU:-true}"
 IMU_PORT="${IMU_PORT:-/dev/imu}"
 IMU_BAUDRATE="${IMU_BAUDRATE:-9600}"
-# Enable cam2 only after cams sit on different USB host controllers (see ARCHITECTURE).
+# Default: fuse wheel odom + IMU. Set USE_EKF=false to let chassis own /odom+TF.
+USE_EKF="${USE_EKF:-true}"
+if [[ "${USE_EKF}" == "true" ]]; then
+  CHASSIS_ODOM_TOPIC="${CHASSIS_ODOM_TOPIC:-odom/wheel}"
+  CHASSIS_PUBLISH_ODOM_TF="${CHASSIS_PUBLISH_ODOM_TF:-false}"
+else
+  CHASSIS_ODOM_TOPIC="${CHASSIS_ODOM_TOPIC:-odom}"
+  CHASSIS_PUBLISH_ODOM_TF="${CHASSIS_PUBLISH_ODOM_TF:-true}"
+fi
+# Dual HP60C: cams must be on different USB host controllers (Bus1 + Bus3/5).
 USE_DEPTH_CAM="${USE_DEPTH_CAM:-true}"
-USE_DEPTH_CAM_2="${USE_DEPTH_CAM_2:-false}"
+USE_DEPTH_CAM_2="${USE_DEPTH_CAM_2:-true}"
 USE_WEB="${USE_WEB:-true}"
 # systemd may still export USE_SIM_HW=true; prefer real MCU when present
 # (set FORCE_SIM_HW=1 to keep mock despite /dev/chassis|/dev/ttyACM0).
@@ -121,7 +130,7 @@ docker exec "$CONTAINER" bash -c '
 ' || true
 sleep 1
 
-echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT imu=$IMU_PORT depth=$USE_DEPTH_CAM depth2=$USE_DEPTH_CAM_2)"
+echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT imu=$IMU_PORT ekf=$USE_EKF depth=$USE_DEPTH_CAM depth2=$USE_DEPTH_CAM_2)"
 
 # Foreground so systemd tracks the process
 exec docker exec -i "$CONTAINER" bash -lc "
@@ -141,6 +150,9 @@ exec docker exec -i "$CONTAINER" bash -lc "
     use_imu:=${USE_IMU} \
     imu_port:=${IMU_PORT} \
     imu_baudrate:=${IMU_BAUDRATE} \
+    use_ekf:=${USE_EKF} \
+    chassis_odom_topic:=${CHASSIS_ODOM_TOPIC} \
+    chassis_publish_odom_tf:=${CHASSIS_PUBLISH_ODOM_TF} \
     use_depth_cam:=${USE_DEPTH_CAM} \
     use_depth_cam_2:=${USE_DEPTH_CAM_2} \
     use_web:=${USE_WEB} \

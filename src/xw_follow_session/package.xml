@@ -3,7 +3,7 @@
 <package format="3">
   <name>xw_follow_session</name>
   <version>0.1.0</version>
-  <description>Depth body-follow session skeleton</description>
+  <description>Depth body-follow via Nav2 dynamic goal (follow_point BT)</description>
   <maintainer email="dev@xiaowei.local">xiaowei</maintainer>
   <license>Apache-2.0</license>
   <buildtool_depend>ament_python</buildtool_depend>
@@ -11,6 +11,9 @@
   <depend>xw_interfaces</depend>
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
+  <depend>nav2_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>ament_index_python</depend>
   <export>
     <build_type>ament_python</build_type>
   </export>

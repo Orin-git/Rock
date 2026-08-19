@@ -13,6 +13,8 @@ import {
   publishTeleop,
   onTask,
   onState,
+  fetchFollowStatus,
+  setFollowEnabled,
 } from '/js/api.js';
 import '/js/app.js';
 
@@ -32,6 +34,9 @@ const wpCount = $('wpCount');
 const navFlash = $('navFlash');
 const applyBtn = $('applyInitialPose');
 const patrolLoop = $('patrolLoop');
+const navFollowBtn = $('navFollowBtn');
+const navRechargeBtn = $('navRechargeBtn');
+const navTaskHint = $('navTaskHint');
 
 let navActive = false;
 let waypoints = [];
@@ -40,6 +45,10 @@ let selectedWpIdx = null;
 let poseTimer = null;
 let orientationControls = null;
 let flashTimer = null;
+let followEnabled = false;
+let followBusy = false;
+let rechargeActive = false;
+let rechargeBusy = false;
 
 const ORIENTATION_ROTATE_SPEED = Math.PI / 2;
 
@@ -233,7 +242,9 @@ function syncToolButtons(mode) {
 async function refreshMaps() {
   const j = await mapManage(2);
   const maps = j.map_list || [];
-  const prev = mapSelect.value;
+  const params = new URLSearchParams(window.location.search || '');
+  const fromQuery = (params.get('map') || '').trim();
+  const prev = mapSelect.value || fromQuery;
   mapSelect.innerHTML = '';
   if (!maps.length) {
     const opt = document.createElement('option');
@@ -249,7 +260,11 @@ async function refreshMaps() {
     mapSelect.appendChild(opt);
   });
   if (prev && maps.includes(prev)) mapSelect.value = prev;
-  await loadWaypoints();
+  if (currentMapName()) {
+    await loadMapPreview();
+  } else {
+    await loadWaypoints();
+  }
 }
 
 async function loadMapPreview() {
@@ -281,13 +296,17 @@ async function loadMapPreview() {
 
 async function loadWaypoints() {
   const name = currentMapName();
+  const wpMapTag = $('wpMapTag');
   waypoints = [];
   selectedWp = null;
   selectedWpIdx = null;
   $('gotoSelectedWp').disabled = true;
   $('deleteWp').disabled = true;
+  if (wpMapTag) wpMapTag.textContent = name ? `· ${name}_pointList` : '';
+  const fileHint = $('wpListFileHint');
+  if (fileHint) fileHint.textContent = name ? `${name}_pointList` : '{地图}_pointList';
   if (!name) {
-    wpList.innerHTML = '<p class="muted pad">未选择地图</p>';
+    wpList.innerHTML = '<p class="muted pad">未选择地图（航点按地图分别保存）</p>';
     wpCount.textContent = '0';
     if (window.XwMapCanvas) window.XwMapCanvas.setWaypoints([]);
     return;
@@ -298,6 +317,12 @@ async function loadWaypoints() {
     data = typeof j.data_json === 'string' ? JSON.parse(j.data_json || '{}') : j.data_json || {};
   } catch (_) {
     data = {};
+  }
+  if (!j.ok) {
+    wpList.innerHTML = `<p class="muted pad">加载失败：${escapeHtml(j.message || 'unknown')}</p>`;
+    wpCount.textContent = '0';
+    if (window.XwMapCanvas) window.XwMapCanvas.setWaypoints([]);
+    return;
   }
   const list = Array.isArray(data.waypoints) ? data.waypoints : [];
   waypoints = list
@@ -318,32 +343,179 @@ async function loadWaypoints() {
   renderWpList();
 }
 
+function isChargerWaypoint(wp) {
+  return !!(wp && (wp._kind === 'charger' || String(wp.name || '').toLowerCase() === 'charger'));
+}
+
+function isReservedWaypointName(name) {
+  return String(name || '').trim().toLowerCase() === 'charger';
+}
+
+function syncWaypointsToCanvas() {
+  if (!window.XwMapCanvas) return;
+  window.XwMapCanvas.setWaypoints(waypoints);
+  waypoints = window.XwMapCanvas.getWaypoints();
+  if (selectedWpIdx != null && waypoints[selectedWpIdx]) {
+    window.XwMapCanvas.setSelectedWaypointIndex(selectedWpIdx);
+    selectedWp = waypoints[selectedWpIdx].name;
+  }
+}
+
+function normalizeWaypointName(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
+function validateWaypointName(idx, raw) {
+  const name = normalizeWaypointName(raw);
+  if (!name) return { ok: false, message: '名称不能为空' };
+  if (name.length > 48) return { ok: false, message: '名称过长（最多 48 字符）' };
+  if (!/^[\w\u4e00-\u9fff\-./]+$/u.test(name)) {
+    return { ok: false, message: '仅支持中英文、数字、_ - . /' };
+  }
+  if (isReservedWaypointName(name)) {
+    return { ok: false, message: 'charger 为充电桩保留名，请换一个' };
+  }
+  const clash = waypoints.findIndex(
+    (w, i) => i !== idx && String(w.name || '').toLowerCase() === name.toLowerCase(),
+  );
+  if (clash >= 0) return { ok: false, message: `名称「${name}」已被占用` };
+  return { ok: true, name };
+}
+
+function commitWaypointRename(idx, raw) {
+  const wp = waypoints[idx];
+  if (!wp || isChargerWaypoint(wp)) return false;
+  const checked = validateWaypointName(idx, raw);
+  if (!checked.ok) {
+    flash(checked.message, 'err');
+    return false;
+  }
+  if (checked.name === wp.name) {
+    renderWpList();
+    return true;
+  }
+  wp.name = checked.name;
+  if (selectedWpIdx === idx) selectedWp = checked.name;
+  syncWaypointsToCanvas();
+  renderWpList();
+  pushLog(`<< 已重命名为「${checked.name}」（未写入文件，请点「保存航点」）`);
+  return true;
+}
+
+function beginWaypointRename(idx) {
+  const wp = waypoints[idx];
+  if (!wp) return;
+  if (isChargerWaypoint(wp)) {
+    flash('充电桩名称固定为 charger，不可重命名', 'err');
+    return;
+  }
+  selectWaypoint(idx, false);
+  const row = wpList.querySelector(`.nav-wp-item[data-wp-idx="${idx}"]`);
+  if (!row) return;
+  const nameEl = row.querySelector('.nav-wp-name');
+  if (!nameEl || nameEl.querySelector('input')) return;
+
+  const chips = Array.from(nameEl.querySelectorAll('.nav-wp-chip'));
+  nameEl.innerHTML = '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'nav-wp-rename-input';
+  input.value = wp.name;
+  input.maxLength = 48;
+  input.setAttribute('aria-label', '重命名航点');
+  nameEl.appendChild(input);
+  chips.forEach((c) => nameEl.appendChild(c));
+  input.focus();
+  input.select();
+
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    if (save) {
+      if (!commitWaypointRename(idx, input.value)) {
+        done = false;
+        input.focus();
+        input.select();
+        return;
+      }
+      return;
+    }
+    renderWpList();
+  };
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      ev.stopPropagation();
+      finish(true);
+    } else if (ev.key === 'Escape') {
+      ev.preventDefault();
+      ev.stopPropagation();
+      finish(false);
+    }
+  });
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('click', (ev) => ev.stopPropagation());
+  input.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+}
+
 function renderWpList() {
   wpList.innerHTML = '';
   if (!waypoints.length) {
-    wpList.innerHTML = '<p class="muted pad">无航点 · 点「编辑航点」后在地图空白处点击打点</p>';
+    wpList.innerHTML =
+      '<p class="muted pad">该地图暂无航点 · 点「编辑航点」后在地图空白处点击打点，再点「保存航点」</p>';
     return;
   }
   waypoints.forEach((wp, idx) => {
     const row = document.createElement('div');
     const bad = !!wp.bad;
     const selected = selectedWpIdx === idx || selectedWp === wp.name;
+    const charger = isChargerWaypoint(wp);
     row.className =
-      'map-item nav-wp-item' + (selected ? ' selected' : '') + (bad ? ' wp-bad' : '');
+      'nav-wp-item' +
+      (selected ? ' selected' : '') +
+      (bad ? ' wp-bad' : '') +
+      (charger ? ' wp-charger' : '');
+    row.dataset.wpIdx = String(idx);
     row.innerHTML = `
-      <div class="map-item-main">
-        <span class="index-badge">${bad ? '!' : idx + 1}</span>
-        <div>
-          <div class="map-item-name">${escapeHtml(wp.name)}${
-            wp._kind === 'charger' ? ' · 充电桩' : ''
-          }${bad ? ' · <span class="bad-tag">坏点</span>' : ''}</div>
-          <div class="map-item-meta mono">x=${wp.x.toFixed(2)} y=${wp.y.toFixed(2)} yaw=${wp.yaw.toFixed(2)}</div>
+      <div class="nav-wp-item-main">
+        <span class="nav-wp-badge">${bad ? '!' : charger ? 'C' : idx + 1}</span>
+        <div class="nav-wp-item-text">
+          <div class="nav-wp-name">
+            <span class="nav-wp-name-label" title="${charger ? '充电桩名称固定' : '双击重命名'}">${escapeHtml(wp.name)}</span>${
+              charger ? '<span class="nav-wp-chip">充电桩</span>' : ''
+            }${bad ? '<span class="nav-wp-chip bad">坏点</span>' : ''}
+          </div>
+          <div class="nav-wp-meta mono">x=${wp.x.toFixed(2)} · y=${wp.y.toFixed(2)} · yaw=${wp.yaw.toFixed(2)}</div>
         </div>
-      </div>`;
+      </div>
+      ${
+        charger
+          ? ''
+          : '<button type="button" class="nav-wp-rename-btn" title="重命名">重命名</button>'
+      }`;
     row.onclick = () => {
       selectWaypoint(idx, false);
       if (navActive && !bad) goToWaypoint(idx);
     };
+    const label = row.querySelector('.nav-wp-name-label');
+    if (label && !charger) {
+      label.ondblclick = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        beginWaypointRename(idx);
+      };
+    }
+    const renameBtn = row.querySelector('.nav-wp-rename-btn');
+    if (renameBtn) {
+      renameBtn.onclick = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        beginWaypointRename(idx);
+      };
+    }
     wpList.appendChild(row);
   });
 }
@@ -385,6 +557,14 @@ async function goToWaypoint(idx) {
     flash('尚未进入导航，请先「进入导航」并确认初位姿', 'err');
     return;
   }
+  if (followEnabled) {
+    const fj = await setFollowEnabled(false);
+    if (fj.ok) followEnabled = false;
+    renderFollowBtn();
+    pushLog('>> 前往航点前已关闭人体跟随');
+  }
+  if (rechargeActive) rechargeActive = false;
+  renderRechargeBtn();
   if (window.XwMapCanvas) window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
   const j = await publishGoal(wp.x, wp.y, wp.yaw || 0, 'map');
   flash(
@@ -425,7 +605,13 @@ function syncInputsFromCanvasMode(_mode, state) {
 $('refreshMaps').onclick = () => refreshMaps();
 $('loadMapPreview').onclick = () => loadMapPreview();
 $('reloadWp').onclick = () => loadWaypoints();
-$('mapSelect').onchange = () => loadWaypoints();
+$('mapSelect').onchange = async () => {
+  if (currentMapName()) {
+    await loadMapPreview();
+  } else {
+    await loadWaypoints();
+  }
+};
 
 $('startNav').onclick = async () => {
   const name = currentMapName();
@@ -634,3 +820,149 @@ if (window.XwMapCanvas) {
 
 poseTimer = setInterval(tickPose, 500);
 refreshMaps();
+
+function setTaskHint(msg) {
+  if (navTaskHint) navTaskHint.textContent = msg || '';
+}
+
+function renderFollowBtn() {
+  if (!navFollowBtn) return;
+  navFollowBtn.textContent = followEnabled ? '人体跟随 · 开' : '人体跟随';
+  navFollowBtn.className = followEnabled ? 'nav-task-btn is-on' : 'secondary nav-task-btn';
+  navFollowBtn.disabled = followBusy || !navActive;
+}
+
+function renderRechargeBtn() {
+  if (!navRechargeBtn) return;
+  navRechargeBtn.textContent = rechargeActive ? '回充中 · 点此取消' : '自动回充';
+  navRechargeBtn.className = rechargeActive ? 'nav-task-btn is-on' : 'secondary nav-task-btn';
+  navRechargeBtn.disabled = rechargeBusy || !navActive;
+}
+
+async function refreshFollowStatus() {
+  try {
+    const s = await fetchFollowStatus();
+    followEnabled = !!s.enabled;
+    renderFollowBtn();
+  } catch (_) {
+    /* keep last */
+  }
+}
+
+async function toggleFollow() {
+  if (followBusy) return;
+  if (!navActive) {
+    flash('请先进入导航后再开人体跟随', 'err');
+    return;
+  }
+  followBusy = true;
+  renderFollowBtn();
+  try {
+    const next = !followEnabled;
+    if (next && rechargeActive) {
+      rechargeActive = false;
+      await cancelNav();
+      renderRechargeBtn();
+    }
+    const j = await setFollowEnabled(next);
+    if (j.ok) {
+      followEnabled = !!j.enabled;
+      setTaskHint(
+        followEnabled
+          ? '跟随已开：点位/巡航已取消，Nav2 仍在运行'
+          : '跟随已关：可继续下发点位',
+      );
+      flash(followEnabled ? '人体跟随已开启' : '人体跟随已关闭', 'ok');
+      pushLog(followEnabled ? '>> 人体跟随 ON' : '>> 人体跟随 OFF');
+    } else {
+      setTaskHint(j.message || '跟随切换失败');
+      flash(j.message || '跟随切换失败', 'err');
+    }
+  } finally {
+    followBusy = false;
+    await refreshFollowStatus();
+  }
+}
+
+function findChargerIndex() {
+  return waypoints.findIndex((w) => isChargerWaypoint(w));
+}
+
+async function toggleRecharge() {
+  if (rechargeBusy) return;
+  if (!navActive) {
+    flash('请先进入导航后再回充', 'err');
+    return;
+  }
+  rechargeBusy = true;
+  renderRechargeBtn();
+  try {
+    if (rechargeActive) {
+      await cancelNav();
+      rechargeActive = false;
+      setTaskHint('已取消回充');
+      flash('已取消回充', 'ok');
+      pushLog('>> 取消自动回充');
+      return;
+    }
+    const idx = findChargerIndex();
+    if (idx < 0) {
+      flash('当前地图没有 charger 充电桩航点', 'err');
+      setTaskHint('缺少 charger 航点，请先在建图/编辑中保存充电桩');
+      return;
+    }
+    const wp = waypoints[idx];
+    if (wp.bad) {
+      flash('充电桩为坏点（距障碍过近），无法回充', 'err');
+      return;
+    }
+    if (followEnabled) {
+      const j = await setFollowEnabled(false);
+      if (j.ok) followEnabled = false;
+      renderFollowBtn();
+    }
+    selectWaypoint(idx, false);
+    const j = await publishGoal(wp.x, wp.y, wp.yaw || 0, 'map');
+    if (j.ok) {
+      rechargeActive = true;
+      setTaskHint(`正在前往充电桩 charger（${wp.x.toFixed(2)}, ${wp.y.toFixed(2)}）`);
+      flash('已开始自动回充（前往 charger）', 'ok');
+      pushLog('>> 自动回充 → charger');
+    } else {
+      flash(j.message || '回充目标下发失败', 'err');
+    }
+  } finally {
+    rechargeBusy = false;
+    renderRechargeBtn();
+  }
+}
+
+if (navFollowBtn) {
+  navFollowBtn.onclick = () => toggleFollow();
+  renderFollowBtn();
+  refreshFollowStatus();
+  setInterval(refreshFollowStatus, 4000);
+}
+if (navRechargeBtn) {
+  navRechargeBtn.onclick = () => toggleRecharge();
+  renderRechargeBtn();
+}
+
+onState((s) => {
+  const mode = Number(s.mode);
+  const wasNav = navActive;
+  navActive = mode === 2 || mode === 3;
+  if (!navActive && wasNav) {
+    followEnabled = false;
+    rechargeActive = false;
+  }
+  if (mode === 3) followEnabled = true;
+  if (typeof s.detail === 'string' && s.detail.includes('follow=off')) {
+    followEnabled = false;
+  }
+  if (typeof s.detail === 'string' && s.detail.includes('follow=on')) {
+    followEnabled = true;
+  }
+  renderFollowBtn();
+  renderRechargeBtn();
+});

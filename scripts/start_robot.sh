@@ -14,8 +14,16 @@ source "${ROOT}/scripts/ros_env.sh"
 : "${USE_IMU:=true}"
 : "${IMU_PORT:=/dev/imu}"
 : "${IMU_BAUDRATE:=9600}"
+: "${USE_EKF:=true}"
+if [[ "${USE_EKF}" == "true" ]]; then
+  : "${CHASSIS_ODOM_TOPIC:=odom/wheel}"
+  : "${CHASSIS_PUBLISH_ODOM_TF:=false}"
+else
+  : "${CHASSIS_ODOM_TOPIC:=odom}"
+  : "${CHASSIS_PUBLISH_ODOM_TF:=true}"
+fi
 : "${USE_DEPTH_CAM:=true}"
-: "${USE_DEPTH_CAM_2:=false}"
+: "${USE_DEPTH_CAM_2:=true}"
 : "${USE_WEB:=true}"
 : "${USE_FOXGLOVE:=true}"
 : "${PROFILE:=normal}"
@@ -34,6 +42,9 @@ exec ros2 launch xw_bringup robot.launch.py \
   use_imu:="${USE_IMU}" \
   imu_port:="${IMU_PORT}" \
   imu_baudrate:="${IMU_BAUDRATE}" \
+  use_ekf:="${USE_EKF}" \
+  chassis_odom_topic:="${CHASSIS_ODOM_TOPIC}" \
+  chassis_publish_odom_tf:="${CHASSIS_PUBLISH_ODOM_TF}" \
   use_depth_cam:="${USE_DEPTH_CAM}" \
   use_depth_cam_2:="${USE_DEPTH_CAM_2}" \
   use_web:="${USE_WEB}" \

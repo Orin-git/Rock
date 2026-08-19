@@ -1,6 +1,6 @@
 ### Gen2 EKF (robot_localization) — independent IMU + wheel odom
-### Default bringup: use_ekf:=false (chassis publishes /odom + TF).
-### When use_ekf:=true: chassis → /odom/wheel (no TF); this node → /odom + odom→base_link.
+### Default bringup: use_ekf:=true — chassis → /odom/wheel (no TF); this node → /odom + odom→base_link.
+### Fallback use_ekf:=false: chassis publishes /odom + TF (no fusion).
 ###
 ### Slip-aware fusion (vs naive absolute XY + dual vyaw + ax):
 ###   odom0: vx only (no absolute pose / no wheel yaw rate)

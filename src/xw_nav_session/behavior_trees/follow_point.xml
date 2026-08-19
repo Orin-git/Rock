@@ -1,0 +1,20 @@
+<!--
+  Dynamic person following (Nav2 GoalUpdater).
+  Goal poses are already standoff-offset by xw_follow_session (person minus
+  desired_follow_distance), so TruncatePath is a small residual buffer only.
+  Empty-path / collide-on-person aborts from a large TruncatePath are avoided.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithReplanning">
+      <RateController hz="2.0">
+        <GoalUpdater input_goal="{goal}" output_goal="{updated_goal}">
+          <ComputePathToPose goal="{updated_goal}" path="{path}" planner_id="GridBased"/>
+        </GoalUpdater>
+      </RateController>
+      <KeepRunningUntilFailure>
+        <FollowPath path="{path}" controller_id="FollowPath"/>
+      </KeepRunningUntilFailure>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

@@ -41,7 +41,7 @@
     <origin xyz="0.18 0 0.28" rpy="-1.1 0 -1.5708"/>
   </joint>
 
-  <!-- Independent IMU placeholder (robot center). Driver → /imu/data, frame_id=imu_link. -->
+  <!-- WT901C485 at robot center → /imu/data (frame_id=imu_link); fused by ekf_node (vyaw). -->
   <link name="imu_link"/>
   <joint name="imu_joint" type="fixed">
     <parent link="base_link"/>

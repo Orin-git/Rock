@@ -39,8 +39,21 @@ class CmdArbiterNode(Node):
         self.create_timer(1.0 / max(rate, 1.0), self._tick)
         self.get_logger().info('cmd arbiter ready')
 
+    @staticmethod
+    def _is_active(msg: Twist, eps: float = 1e-3) -> bool:
+        return (
+            abs(msg.linear.x) > eps
+            or abs(msg.linear.y) > eps
+            or abs(msg.angular.z) > eps
+        )
+
     def _on_cmd(self, name: str, msg: Twist) -> None:
-        self._sources[name] = (msg, self.get_clock().now().nanoseconds * 1e-9)
+        # Near-zero means this source is idle. If we kept zeros as "fresh nav",
+        # a stopped controller would starve other sources and force gated=0.
+        if self._is_active(msg):
+            self._sources[name] = (msg, self.get_clock().now().nanoseconds * 1e-9)
+        else:
+            self._sources.pop(name, None)
 
     def _select(self) -> Optional[Twist]:
         timeout = float(self.get_parameter('stale_timeout_sec').value)
@@ -49,6 +62,9 @@ class CmdArbiterNode(Node):
         best_twist = None
         for name, (twist, t) in list(self._sources.items()):
             if now - t > timeout:
+                self._sources.pop(name, None)
+                continue
+            if not self._is_active(twist):
                 continue
             pri = SOURCE_PRIORITY.get(name, 0)
             if pri > best_pri:

@@ -47,8 +47,8 @@ _SENSOR_LAYOUT = [
         'id': 'camera_front_down',
         'frame': 'camera_front_down_link',
         'xyz': [0.18, 0.0, 0.28],
-        'status': 'partial',
-        'label': '前下深度（需分 USB 总线）',
+        'status': 'live',
+        'label': '前下深度相机',
     },
     {
         'id': 'ultrasonic',
@@ -98,6 +98,8 @@ _HEAVY_TYPES = frozenset(
 _TOPIC_HINTS: Dict[str, str] = {
     '/xw/robot_state': '机器人总状态：模式、run_mode、急停、安全闸、定位、电池摘要',
     '/xw/supervisor/set_mode': '切换工作模式 IDLE/建图/导航/跟随/跌倒',
+    '/xw/supervisor/set_follow': '人体跟随正交开关（不拆 Nav2）',
+    '/xw/supervisor/set_fall': '跌倒检测正交开关',
     '/xw/supervisor/set_run_mode': '切换运行形态：0量产 / 1开发者（默认开发者）',
     '/xw/supervisor/get_state': '查询 Supervisor 当前状态',
     '/xw/power': '电源状态：电量、电压、充电/回充对接',
@@ -342,9 +344,11 @@ class BridgeNode(Node):
         self._wp_mgr = self.create_client(WaypointManage, '/xw/map/waypoint')
         self._set_pointcloud = self.create_client(SetBool, '/xw/camera/set_pointcloud')
         self._set_fall = self.create_client(SetBool, '/xw/supervisor/set_fall')
+        self._set_follow = self.create_client(SetBool, '/xw/supervisor/set_follow')
         self._motion_cli = self.create_client(MotionCommand, '/xw/motion/command')
         self._pointcloud_enabled = False
         self._fall_enabled = False
+        self._follow_enabled = False
         self.create_subscription(
             Bool,
             '/xw/camera/pointcloud_enabled',
@@ -355,6 +359,12 @@ class BridgeNode(Node):
             Bool,
             '/xw/fall/enable',
             self._on_fall_enabled,
+            _LATCHED_BOOL_QOS,
+        )
+        self.create_subscription(
+            Bool,
+            '/xw/follow/enable',
+            self._on_follow_enabled,
             _LATCHED_BOOL_QOS,
         )
         self.create_timer(5.0, self._watch_housekeep)
@@ -368,6 +378,10 @@ class BridgeNode(Node):
     def _on_fall_enabled(self, msg: Bool) -> None:
         with self._lock:
             self._fall_enabled = bool(msg.data)
+
+    def _on_follow_enabled(self, msg: Bool) -> None:
+        with self._lock:
+            self._follow_enabled = bool(msg.data)
 
     def pointcloud_status(self) -> Dict[str, Any]:
         with self._lock:
@@ -437,6 +451,44 @@ class BridgeNode(Node):
             'enabled': bool(enabled) if res.success else self._fall_enabled,
             'message': res.message,
             'topic': '/xw/fall/enable',
+        }
+
+    def follow_status(self) -> Dict[str, Any]:
+        with self._lock:
+            enabled = bool(self._follow_enabled)
+            mode = (self._state or {}).get('mode')
+        ready = self._set_follow.service_is_ready()
+        return {
+            'ok': True,
+            'enabled': enabled,
+            'service_ready': ready,
+            'topic': '/xw/follow/enable',
+            'mode': mode,
+            'hint': '正交任务：需已进导航；开跟随只取消点位/巡航，不拆 Nav2',
+        }
+
+    def set_follow(self, enabled: bool) -> Dict[str, Any]:
+        if not self._set_follow.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'set_follow service unavailable (supervisor down?)'}
+        req = SetBool.Request()
+        req.data = bool(enabled)
+        fut = self._set_follow.call_async(req)
+        for _ in range(60):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'set_follow timeout'}
+        res = fut.result()
+        with self._lock:
+            if res.success:
+                self._follow_enabled = bool(enabled)
+        self._push_task(f'[follow] {res.message}')
+        return {
+            'ok': bool(res.success),
+            'enabled': bool(self._follow_enabled),
+            'message': res.message,
+            'topic': '/xw/follow/enable',
         }
 
     def _push_task(self, line: str) -> None:
@@ -1218,6 +1270,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.fall_status())
+        if path == '/api/follow':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.follow_status())
         if path == '/api/sensors':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
@@ -1357,6 +1413,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if enabled is None:
                 return self._json(400, {'ok': False, 'message': 'missing enabled'})
             return self._json(200, self.bridge.set_fall(bool(enabled)))
+        if path == '/api/follow':
+            enabled = data.get('enabled')
+            if enabled is None:
+                enabled = data.get('enable')
+            if enabled is None:
+                return self._json(400, {'ok': False, 'message': 'missing enabled'})
+            return self._json(200, self.bridge.set_follow(bool(enabled)))
         if path == '/api/topic/watch':
             return self._json(
                 200,

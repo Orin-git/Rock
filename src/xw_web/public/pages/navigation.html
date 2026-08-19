@@ -70,34 +70,61 @@
       <div class="nav-flash" id="navFlash" hidden></div>
     </section>
 
-    <div class="section-title">地图与激光</div>
-    <section class="panel map-stage nav-map-stage">
-      <div id="map-container" class="nav-interactive">
-        <canvas id="map-canvas"></canvas>
-        <canvas id="overlay-canvas"></canvas>
-        <div id="orientation-controls-panel" class="orientation-controls-panel" style="display:none"></div>
+    <div class="nav-map-wp-grid">
+      <div class="nav-map-col">
+        <div class="section-title">地图与激光</div>
+        <section class="panel map-stage nav-map-stage">
+          <div id="map-container" class="nav-interactive">
+            <canvas id="map-canvas"></canvas>
+            <canvas id="overlay-canvas"></canvas>
+            <div id="orientation-controls-panel" class="orientation-controls-panel" style="display:none"></div>
+          </div>
+          <div class="map-stage-foot nav-map-foot">
+            <p class="map-meta" id="mapStatus">画布未启动</p>
+            <p class="map-meta" id="modeHint">模式：—</p>
+            <p class="map-meta" id="poseHint">位姿：—</p>
+            <p class="map-meta" id="toolHint">工具：浏览（点列表航点可前往）</p>
+          </div>
+        </section>
       </div>
-      <div class="map-stage-foot nav-map-foot">
-        <p class="map-meta" id="mapStatus">画布未启动</p>
-        <p class="map-meta" id="modeHint">模式：—</p>
-        <p class="map-meta" id="poseHint">位姿：—</p>
-        <p class="map-meta" id="toolHint">工具：浏览（点列表航点可前往）</p>
-      </div>
-    </section>
 
-    <div class="section-title">航点列表 <span class="section-count" id="wpCount">0</span></div>
-    <section class="panel nav-wp-panel">
-      <div class="btn-row nav-wp-bar">
-        <button type="button" class="secondary" id="reloadWp">刷新</button>
-        <button type="button" id="saveWp">保存航点</button>
-        <button type="button" class="secondary" id="deleteWp" disabled>删除选中</button>
-        <button type="button" class="secondary" id="gotoSelectedWp" disabled>前往选中</button>
+      <div class="nav-wp-col">
+        <div class="section-title">
+          航点列表
+          <span class="section-count" id="wpCount">0</span>
+          <span class="section-sub" id="wpMapTag"></span>
+        </div>
+        <section class="panel nav-wp-panel">
+          <div class="btn-row nav-wp-bar">
+            <button type="button" class="secondary" id="reloadWp">刷新</button>
+            <button type="button" id="saveWp">保存航点</button>
+            <button type="button" class="secondary" id="deleteWp" disabled>删除选中</button>
+            <button type="button" class="secondary" id="gotoSelectedWp" disabled>前往选中</button>
+          </div>
+          <p class="muted hint-sm" id="wpHint">
+            右侧是<strong>当前地图</strong>绑定的航点（文件
+            <code id="wpListFileHint">{地图}_pointList</code>）。
+            建图保存时会自动创建该列表，并写入起点 <code>charger</code>。
+            每个普通航点可点「重命名」或双击名称单独命名；充电桩名固定。
+            若要查看/删除<strong>所有</strong>导航点列表文件，请到
+            <a href="/pages/maps.html">地图管理</a>。
+            编辑/重命名后务必点「保存航点」。
+          </p>
+          <div class="list-panel nav-wp-list" id="wpList">
+            <p class="muted pad">选择地图后加载</p>
+          </div>
+          <div class="nav-task-actions" aria-label="导航任务">
+            <button type="button" class="secondary nav-task-btn" id="navFollowBtn" title="须先进入导航；开跟随只取消点位，不拆 Nav2">
+              人体跟随
+            </button>
+            <button type="button" class="secondary nav-task-btn" id="navRechargeBtn" title="前往地图中的 charger 充电桩">
+              自动回充
+            </button>
+          </div>
+          <p class="muted hint-sm nav-task-hint" id="navTaskHint"></p>
+        </section>
       </div>
-      <p class="muted hint-sm" id="wpHint">点「编辑航点」在地图打点/拖动，改完务必「保存航点」。导航中：点列表或地图上的航点即可前往。红点 = 距障碍 &lt;0.3m，不可保存/前往。</p>
-      <div class="list-panel nav-wp-list" id="wpList">
-        <p class="muted pad">选择地图后加载</p>
-      </div>
-    </section>
+    </div>
   </main>
 
   <script src="/js/vendor/foxglove_bundle.js"></script>

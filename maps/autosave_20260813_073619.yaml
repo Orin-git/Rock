@@ -1,7 +1,7 @@
-image: 20260811_142812.pgm
+image: autosave_20260813_073619.pgm
 mode: trinary
 resolution: 0.05
-origin: [-1.6, -0.72, 0]
+origin: [-6.63, -6.63, 0]
 negate: 0
 occupied_thresh: 0.65
 free_thresh: 0.25

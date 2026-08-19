@@ -24,7 +24,7 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_ekf',
-            default_value='false',
+            default_value='true',
             description='Start ekf_node (needs /imu/data + chassis /odom/wheel)',
         ),
         LogInfo(

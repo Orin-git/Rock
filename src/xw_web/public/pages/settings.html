@@ -41,18 +41,11 @@
       <div class="btn-row" style="align-items:center;gap:0.75rem">
         <button id="runDev" type="button">开发者</button>
         <button id="runProd" class="secondary" type="button">量产</button>
+        <button class="secondary" id="idle" type="button">回 IDLE</button>
         <span class="pill off" id="runPill">形态…</span>
       </div>
       <p class="muted" style="font-size:0.8rem;margin:0.6rem 0 0" id="runHint">默认开发者</p>
-    </section>
-
-    <section class="panel" style="margin-top:1rem">
-      <h2>模式快捷</h2>
-      <div class="btn-row">
-        <button id="follow">人体跟随</button>
-        <button class="secondary" id="idle">回 IDLE</button>
-      </div>
-      <pre id="log" class="log"></pre>
+      <pre id="log" class="log" style="margin-top:0.75rem"></pre>
     </section>
 
     <section class="panel" style="margin-top:1rem">
@@ -98,7 +91,6 @@ htop   # 容器内 apt install -y htop</pre>
     connect();
     const log = document.getElementById('log');
     onTask((l) => { log.textContent = l + '\n' + log.textContent; });
-    document.getElementById('follow').onclick = () => setMode(3, {});
     document.getElementById('idle').onclick = () => setMode(0, {});
 
     const runPill = document.getElementById('runPill');
@@ -113,8 +105,8 @@ htop   # 容器内 apt install -y htop</pre>
       runDev.className = isDev ? '' : 'secondary';
       runProd.className = isDev ? 'secondary' : '';
       runHint.textContent = isDev
-        ? '开发者模式：可随时切换建图/导航/跟随'
-        : '量产模式：运动能力互斥，不可直接互切';
+        ? '开发者模式：建图/导航可互切；人体跟随请到「导航」页开关'
+        : '量产模式：建图与导航互斥；人体跟随请到「导航」页开关';
     }
     onState((s) => renderRunMode(s.run_mode));
     runDev.onclick = () => setRunMode(1);

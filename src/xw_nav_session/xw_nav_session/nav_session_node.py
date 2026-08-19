@@ -62,6 +62,7 @@ class NavSessionNode(Node):
         self._patrol_thread: Optional[threading.Thread] = None
         self._patrol_stop = threading.Event()
         self._patrol_active = False
+        self._follow_en = False
 
         latch = QoSProfile(
             depth=1,
@@ -75,6 +76,9 @@ class NavSessionNode(Node):
         self.create_subscription(PoseStamped, '/xw/goal_pose', self._on_goal, 10, callback_group=self._cb)
         self.create_subscription(String, '/xw/nav/patrol_cmd', self._on_patrol_cmd, 10, callback_group=self._cb)
         self.create_subscription(Bool, '/xw/nav/cancel', self._on_cancel, 10, callback_group=self._cb)
+        self.create_subscription(
+            Bool, '/xw/follow/enable', self._on_follow_enable, latch, callback_group=self._cb
+        )
         self.create_service(SessionControl, '/xw/session/nav/control', self._on_control, callback_group=self._cb)
 
         self._wp_cli = self.create_client(WaypointManage, '/xw/map/waypoint', callback_group=self._cb)
@@ -126,7 +130,19 @@ class NavSessionNode(Node):
 
     def _on_cancel(self, msg: Bool) -> None:
         if msg.data:
+            # Soft cancel only — never stop Nav2 process here
             self._cancel_navigation('cancel-topic')
+
+    def _on_follow_enable(self, msg: Bool) -> None:
+        """Follow task preempts point/patrol; Nav2 process stays up."""
+        en = bool(msg.data)
+        was = self._follow_en
+        self._follow_en = en
+        if en and not was:
+            self._cancel_navigation('follow-preempt')
+            self.get_logger().info('follow on → cancelled point/patrol (Nav2 kept)')
+        elif not en and was:
+            self.get_logger().info('follow off → point/patrol accepted again')
 
     def _set_active(self, active: bool, source: str) -> None:
         if active and self._active:
@@ -222,6 +238,10 @@ class NavSessionNode(Node):
         if not self._active:
             self.get_logger().warn('goal ignored (nav inactive)')
             return
+        if self._follow_en:
+            self.get_logger().warn('goal rejected (follow active — stop follow first)')
+            self._emit_result(1, 'rejected: follow active', 'goal')
+            return
         # Single goal preempts patrol
         self._stop_patrol_loop()
         self._command_id = self._command_id or 'goal'
@@ -237,6 +257,10 @@ class NavSessionNode(Node):
     def _on_patrol_cmd(self, msg: String) -> None:
         if not self._active:
             self.get_logger().warn('patrol ignored (nav inactive)')
+            return
+        if self._follow_en:
+            self.get_logger().warn('patrol rejected (follow active — stop follow first)')
+            self._emit_result(1, 'rejected: follow active', 'patrol')
             return
         try:
             payload = json.loads(msg.data or '{}')

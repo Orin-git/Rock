@@ -36,6 +36,7 @@ def generate_launch_description() -> LaunchDescription:
     profile = LaunchConfiguration('profile')
     lidar_port = LaunchConfiguration('lidar_port')
     lidar_baudrate = LaunchConfiguration('lidar_baudrate')
+    lidar_scan_frequency = LaunchConfiguration('lidar_scan_frequency')
     imu_port = LaunchConfiguration('imu_port')
     imu_baudrate = LaunchConfiguration('imu_baudrate')
 
@@ -258,6 +259,7 @@ def generate_launch_description() -> LaunchDescription:
                     'angle_compensate': True,
                     'scan_mode': 'Standard',
                     'enable_filter': False,
+                    'scan_frequency': ParameterValue(lidar_scan_frequency, value_type=float),
                 }],
                 output='screen',
                 respawn=False,
@@ -283,7 +285,7 @@ def generate_launch_description() -> LaunchDescription:
                               description='Relay /camera/front_up/depth/points for Foxglove debug (CPU heavy)'),
         DeclareLaunchArgument(
             'use_ekf',
-            default_value='false',
+            default_value='true',
             description='Fuse /odom/wheel + /imu/data via robot_localization (needs independent IMU)',
         ),
         DeclareLaunchArgument(
@@ -293,16 +295,21 @@ def generate_launch_description() -> LaunchDescription:
         ),
         DeclareLaunchArgument(
             'chassis_odom_topic',
-            default_value='odom',
-            description='When use_ekf:=true set to odom/wheel',
+            default_value='odom/wheel',
+            description='Wheel odom topic; use odom only when use_ekf:=false',
         ),
         DeclareLaunchArgument(
             'chassis_publish_odom_tf',
-            default_value='true',
-            description='When use_ekf:=true set to false (EKF owns odom→base_link)',
+            default_value='false',
+            description='false when EKF owns odom→base_link; true only if use_ekf:=false',
         ),
         DeclareLaunchArgument('lidar_port', default_value='/dev/radar'),
         DeclareLaunchArgument('lidar_baudrate', default_value='1000000'),
+        DeclareLaunchArgument(
+            'lidar_scan_frequency',
+            default_value='20.0',
+            description='RPLidar motor scan rate (Hz)',
+        ),
         DeclareLaunchArgument('imu_port', default_value='/dev/imu'),
         DeclareLaunchArgument('imu_baudrate', default_value='9600'),
         DeclareLaunchArgument('use_web', default_value='true'),

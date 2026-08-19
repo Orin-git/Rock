@@ -4,8 +4,8 @@
 # Vendor private:  /ascamera_hp60c/camera_publisher/...
 # Robot frame:     camera_front_up_link
 #
-# USB pin (Rock 5T USB3): bus 1 path 1.1  →  KERNEL 1-1.1 (HS companion of USB3 hub)
-# If cams swap after replug, re-check: lsusb -t / sysfs 3482:6723
+# USB pin: blue port HS companion — bus 1 path 1.2 → KERNEL 1-1.2
+# Dock (chassis+IMU) shares same VIA hub on 1.1 (low bandwidth OK).
 
 camera_id: front_up
 vendor_namespace: ascamera_hp60c
@@ -15,7 +15,7 @@ robot_frame: camera_front_up_link
 vendor_frame: ascamera_hp60c_camera_link_0
 
 usb_bus_no: 1
-usb_path: "1.1"
+usb_path: "1.2"
 color_pcl: false
 pub_tfTree: true
 

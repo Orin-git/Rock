@@ -178,6 +178,14 @@ class ChassisNode(Node):
         odom.twist.twist.linear.x = self._meas_vx
         odom.twist.twist.linear.y = self._meas_vy
         odom.twist.twist.angular.z = self._meas_wz
+        # Non-zero diagonals required by robot_localization (EKF rejects all-zero cov).
+        # Pose unused when odom0 only fuses vx; twist vx trusted, vy/wz de-weighted.
+        odom.pose.covariance[0] = 0.05
+        odom.pose.covariance[7] = 0.05
+        odom.pose.covariance[35] = 0.1
+        odom.twist.covariance[0] = 0.02
+        odom.twist.covariance[7] = 0.05
+        odom.twist.covariance[35] = 0.15
         self._odom_pub.publish(odom)
 
         if self._publish_tf:

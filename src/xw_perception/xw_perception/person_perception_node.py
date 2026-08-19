@@ -22,6 +22,7 @@ from std_msgs.msg import Bool
 from xw_interfaces.msg import FallStatus, PersonTrack, PersonTracks
 
 from xw_perception.fall_geometry import FallGeometryParams, passes_fall_geometry
+from xw_perception.tracker import Detection, PersonLockTracker, bbox_iou
 from xw_perception.yolov8_pose_post import (
     OBJECT_THRESH,
     decode_rknn_outputs,
@@ -204,8 +205,13 @@ class PersonPerceptionNode(Node):
         self.declare_parameter('torso_compression_max', 0.40)
         self.declare_parameter('torso_inversion_margin_ratio', 0.0)
         self.declare_parameter('flat_aspect_min', 1.15)
+        self.declare_parameter('lock_strategy', 'center')  # center | nearest | largest
+        self.declare_parameter('coast_frames', 12)
+        self.declare_parameter('assoc_iou_thresh', 0.15)
+        self.declare_parameter('assoc_maha_thresh', 40.0)
 
         self._follow_en = False
+        self._follow_was_en = False
         self._fall_en = False
         self._last_infer = 0.0
         self._infer_period = 1.0 / max(1.0, float(self.get_parameter('infer_fps').value))
@@ -218,8 +224,13 @@ class PersonPerceptionNode(Node):
         self._last_fall_ids: List[int] = []
         self._fallen = False
         self._last_fall_time = 0.0
-        self._primary_id = 1
-        self._last_primary: Optional[Tuple[float, float, float, float]] = None  # xmin..ymax
+        self._tracker = PersonLockTracker(
+            lock_strategy=str(self.get_parameter('lock_strategy').value),
+            coast_frames=int(self.get_parameter('coast_frames').value),
+            iou_thresh=float(self.get_parameter('assoc_iou_thresh').value),
+            maha_thresh=float(self.get_parameter('assoc_maha_thresh').value),
+        )
+        self._need_lock = False
 
         self._geom = FallGeometryParams(
             kp_conf_min=float(self.get_parameter('kp_conf_min').value),
@@ -261,7 +272,18 @@ class PersonPerceptionNode(Node):
         self.get_logger().info(f'person perception ready — {status} model={model}')
 
     def _on_follow(self, msg: Bool) -> None:
-        self._follow_en = bool(msg.data)
+        en = bool(msg.data)
+        if en and not self._follow_was_en:
+            # Rising edge: lock on next detection frame
+            self._need_lock = True
+            self._tracker.reset()
+            self.get_logger().info('follow enable → arm target lock')
+        if not en and self._follow_was_en:
+            self._tracker.reset()
+            self._need_lock = False
+            self.get_logger().info('follow disable → clear target lock')
+        self._follow_en = en
+        self._follow_was_en = en
 
     def _on_fall(self, msg: Bool) -> None:
         self._fall_en = bool(msg.data)
@@ -307,37 +329,55 @@ class PersonPerceptionNode(Node):
 
         self._handle_detections(boxes)
 
-    def _match_track_id(self, xmin: float, ymin: float, xmax: float, ymax: float) -> int:
-        """Simple IoU sticky id for primary continuity."""
-        if self._last_primary is None:
-            self._last_primary = (xmin, ymin, xmax, ymax)
-            return self._primary_id
-        lx0, ly0, lx1, ly1 = self._last_primary
-        ix0, iy0 = max(xmin, lx0), max(ymin, ly0)
-        ix1, iy1 = min(xmax, lx1), min(ymax, ly1)
-        inter = max(0.0, ix1 - ix0) * max(0.0, iy1 - iy0)
-        a1 = max(1.0, (xmax - xmin) * (ymax - ymin))
-        a2 = max(1.0, (lx1 - lx0) * (ly1 - ly0))
-        iou = inter / (a1 + a2 - inter)
-        self._last_primary = (xmin, ymin, xmax, ymax)
-        if iou <= 0.2:
-            self._primary_id += 1
-        return self._primary_id
-
     def _handle_detections(self, boxes) -> None:
         frame_id = str(self.get_parameter('frame_id').value)
         stamp = self.get_clock().now().to_msg()
         cx_img = self._img_w * 0.5
+        self._tracker.set_image_size(self._img_w, self._img_h)
+        self._tracker.lock_strategy = str(self.get_parameter('lock_strategy').value)
+        self._tracker.coast_frames = int(self.get_parameter('coast_frames').value)
 
-        # Prefer nearest (by depth) else largest bbox area
+        # Prefer nearest (by depth) else largest bbox area → is_primary candidate
         scored = []
+        dets: List[Detection] = []
         for b in boxes:
             dist = 0.0
             if self._latest_depth is not None:
                 dist = _depth_median_m(self._latest_depth, b.xmin, b.ymin, b.xmax, b.ymax)
             area = max(1.0, (b.xmax - b.xmin) * (b.ymax - b.ymin))
-            scored.append((dist if dist > 0 else 1e6, -area, b, dist))
+            if dist <= 0.0:
+                dist = max(0.5, 2.5 * (self._img_h / max(1.0, b.ymax - b.ymin)))
+            bx = ((b.xmin + b.xmax) * 0.5 - cx_img) / max(1.0, cx_img)
+            det = Detection(
+                xmin=float(b.xmin),
+                ymin=float(b.ymin),
+                xmax=float(b.xmax),
+                ymax=float(b.ymax),
+                bearing=float(bx),
+                distance=float(dist),
+                confidence=float(b.score),
+                area=float(area),
+            )
+            dets.append(det)
+            scored.append((dist if dist > 0 else 1e6, -area, b, det))
         scored.sort(key=lambda t: (t[0], t[1]))
+
+        target_det: Optional[Detection] = None
+        coasting = False
+        lost = False
+        if self._follow_en:
+            if self._need_lock or not self._tracker.locked:
+                if dets and self._tracker.lock_now(dets):
+                    self._need_lock = False
+                    target_det = self._tracker.last_det
+                    self.get_logger().info(
+                        f'target locked id={self._tracker.target_id} '
+                        f'strategy={self._tracker.lock_strategy}'
+                    )
+                elif not dets:
+                    lost = True
+            else:
+                target_det, coasting, lost = self._tracker.update(dets, dt=1.0)
 
         tracks = PersonTracks()
         tracks.stamp = stamp
@@ -346,21 +386,29 @@ class PersonPerceptionNode(Node):
         fall_ids: List[int] = []
         geom_reasons: List[str] = []
         self._last_det_n = len(scored)
-        for i, (_k, _a, b, dist) in enumerate(scored):
-            tid = self._match_track_id(b.xmin, b.ymin, b.xmax, b.ymax) if i == 0 else (i + 2)
-            # Normalized bearing: -1 left … +1 right
-            bx = ((b.xmin + b.xmax) * 0.5 - cx_img) / max(1.0, cx_img)
-            if dist <= 0.0:
-                # Fallback: inverse bbox height proxy (rough)
-                dist = max(0.5, 2.5 * (self._img_h / max(1.0, b.ymax - b.ymin)))
+
+        # Emit one track per detection; mark is_primary (nearest) + is_target (locked)
+        target_bbox = target_det.as_bbox() if target_det is not None else None
+        for i, (_k, _a, b, det) in enumerate(scored):
+            is_tgt = False
+            tid = i + 2
+            if target_bbox is not None and self._tracker.locked and not lost:
+                if bbox_iou(det.as_bbox(), target_bbox) >= 0.2 or (
+                    target_det is not None
+                    and abs(det.cx - target_det.cx) < 8
+                    and abs(det.cy - target_det.cy) < 8
+                ):
+                    is_tgt = True
+                    tid = self._tracker.target_id
             pt = PersonTrack()
             pt.track_id = tid
-            pt.x = float(bx)
+            pt.x = float(det.bearing)
             pt.y = 0.0
-            pt.z = float(dist)
-            pt.distance = float(dist)
-            pt.confidence = float(b.score)
+            pt.z = float(det.distance)
+            pt.distance = float(det.distance)
+            pt.confidence = float(det.confidence)
             pt.is_primary = i == 0
+            pt.is_target = bool(is_tgt)
             tracks.tracks.append(pt)
 
             if self._fall_en:
@@ -371,6 +419,24 @@ class PersonPerceptionNode(Node):
                 if ok:
                     fall_ids.append(tid)
 
+        # If coasting with no overlapping detection, still publish predicted target
+        if (
+            self._follow_en
+            and coasting
+            and target_det is not None
+            and not any(t.is_target for t in tracks.tracks)
+        ):
+            pt = PersonTrack()
+            pt.track_id = self._tracker.target_id
+            pt.x = float(target_det.bearing)
+            pt.y = 0.0
+            pt.z = float(target_det.distance)
+            pt.distance = float(target_det.distance)
+            pt.confidence = float(target_det.confidence)
+            pt.is_primary = False
+            pt.is_target = True
+            tracks.tracks.append(pt)
+
         if not scored:
             self._last_geom_reason = 'no_det'
         elif geom_reasons:
@@ -378,6 +444,14 @@ class PersonPerceptionNode(Node):
 
         if self._follow_en:
             self._tracks_pub.publish(tracks)
+            now = time.monotonic()
+            if now - self._last_debug_log > 3.0:
+                self._last_debug_log = now
+                self.get_logger().info(
+                    f'follow dbg det={self._last_det_n} locked={self._tracker.locked} '
+                    f'coast={coasting} lost={lost or self._tracker.lost} '
+                    f'tid={self._tracker.target_id}'
+                )
 
         if self._fall_en:
             self._update_fall(fall_ids, stamp)

@@ -42,6 +42,7 @@ class PerceptionStubNode(Node):
                 p.distance = 1.5
                 p.confidence = 0.9
                 p.is_primary = True
+                p.is_target = True
                 t.tracks = [p]
             self._tracks_pub.publish(t)
 

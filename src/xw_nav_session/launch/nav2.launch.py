@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Nav2 bringup for Gen2: localization + navigation with /xw/cmd/nav remap.
+"""Nav2 bringup for Gen2: localization + navigation.
 
-Started by xw_nav_session when entering NAVIGATING (map yaml path as arg).
+Controller → cmd_vel_nav → velocity_smoother → /xw/cmd/nav (arbiter input).
+Do not remap raw cmd_vel to /xw/cmd/nav — that bypasses the smoother/safety path.
 """
 
 import os
@@ -38,8 +39,12 @@ def generate_launch_description() -> LaunchDescription:
             default_value='',
             description='Absolute path to map.yaml',
         ),
+        # Nav2 bringup chain is: controller(cmd_vel→cmd_vel_nav) → velocity_smoother
+        # → cmd_vel_smoothed. Remap ONLY the smoothed output into the arbiter input.
+        # Remapping raw cmd_vel breaks that chain (first-match): controller would publish
+        # straight to /xw/cmd/nav while smoother also writes /cmd_vel, bypassing safety.
         GroupAction([
-            SetRemap(src='cmd_vel', dst='/xw/cmd/nav'),
+            SetRemap(src='cmd_vel_smoothed', dst='/xw/cmd/nav'),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(bringup_dir, 'launch', 'localization_launch.py')

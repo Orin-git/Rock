@@ -49,7 +49,7 @@
       <div class="stat is-neutral" data-sensor="depth_camera_2"><h2>前下深度</h2><p>—</p><div class="sub">front_down</div></div>
       <div class="stat is-neutral" data-sensor="chassis"><h2>底盘</h2><p>—</p><div class="sub">odom · cmd_vel</div></div>
       <div class="stat is-neutral" data-sensor="ultrasonic"><h2>超声波</h2><p>—</p><div class="sub">占位</div></div>
-      <div class="stat is-neutral" data-sensor="imu"><h2>IMU</h2><p>—</p><div class="sub">占位</div></div>
+      <div class="stat is-neutral" data-sensor="imu"><h2>IMU</h2><p>—</p><div class="sub">/imu/data</div></div>
     </section>
 
     <div class="section-title">运行与安全</div>
@@ -140,7 +140,7 @@
       depth_camera_2: 'front_down',
       chassis: 'odom · cmd_vel',
       ultrasonic: '占位',
-      imu: '占位',
+      imu: '/imu/data',
     };
 
     async function refreshSensors() {

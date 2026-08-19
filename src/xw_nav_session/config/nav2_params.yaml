@@ -655,9 +655,9 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.20
+      tolerance: 0.50
       use_astar: false
-      allow_unknown: false
+      allow_unknown: true
       cost_neutral_lambda: 0.2  # 添加中性代价权重
 
 # planner_server:

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Mode FSM: sole business gate for Gen2 sessions.
 
-Motion modes (mapping/nav/follow) are mutually exclusive.
-Fall detection is an orthogonal feature latch (/xw/fall/enable) that survives
-mode switches (except estop → idle still keeps fall unless cleared elsewhere).
+Motion modes (mapping/nav) are mutually exclusive for the Nav2/SLAM stack.
+Body-follow is an orthogonal task latch (/xw/follow/enable) that requires Nav2
+to stay up: enabling follow cancels point/patrol goals but does NOT stop Nav2.
+Fall detection is also orthogonal (/xw/fall/enable).
 
 Session lifecycle is commanded via topics (no nested service calls)
 to avoid client/server deadlocks inside the same executor.
@@ -32,11 +33,10 @@ MODE_NAMES = {
     4: 'FALL_DETECT',
 }
 
-# Motion sessions only — fall is orthogonal and not listed here.
+# Stack sessions only — follow/fall are orthogonal latches.
 MOTION_SESSION = {
     1: '/xw/slam/enable',
     2: '/xw/nav/enable',
-    3: '/xw/follow/enable',
 }
 
 
@@ -54,6 +54,7 @@ class SupervisorNode(Node):
         self._active_map = ''
         self._detail = 'boot'
         self._fall_en = False
+        self._follow_en = False
 
         # Keep robot_state VOLATILE (high rate) so CLI/Foxglove default QoS always sees updates.
         self._state_pub = self.create_publisher(RobotState, '/xw/robot_state', 10)
@@ -69,6 +70,7 @@ class SupervisorNode(Node):
             mode: self.create_publisher(Bool, topic, latch)
             for mode, topic in MOTION_SESSION.items()
         }
+        self._follow_pub = self.create_publisher(Bool, '/xw/follow/enable', latch)
         self._fall_pub = self.create_publisher(Bool, '/xw/fall/enable', latch)
         self._nav_map_pub = self.create_publisher(String, '/xw/nav/map_name', latch)
 
@@ -82,12 +84,16 @@ class SupervisorNode(Node):
         self.create_service(SetRunMode, '/xw/supervisor/set_run_mode', self._on_set_run_mode, callback_group=self._cb)
         self.create_service(GetState, '/xw/supervisor/get_state', self._on_get_state, callback_group=self._cb)
         self.create_service(SetBool, '/xw/supervisor/set_fall', self._on_set_fall, callback_group=self._cb)
+        self.create_service(SetBool, '/xw/supervisor/set_follow', self._on_set_follow, callback_group=self._cb)
 
         self.create_timer(0.5, self._publish_state)
         for mode in MOTION_SESSION:
             self._session_pubs[mode].publish(Bool(data=False))
+        self._publish_follow()
         self._publish_fall()
-        self.get_logger().info('supervisor ready (fall orthogonal, nav auto pointcloud)')
+        self.get_logger().info(
+            'supervisor ready (follow orthogonal on nav; fall orthogonal; nav auto pointcloud)'
+        )
 
     def _on_motor_disabled(self, msg: Bool) -> None:
         """MCU Flag_Stop → RobotState.emergency_stop (UI); cancel motion mode if engaged."""
@@ -116,9 +122,12 @@ class SupervisorNode(Node):
         s.active_map = self._active_map
         s.profile = str(self.get_parameter('profile').value)
         s.power = self._power
-        fall_tag = 'fall=on' if self._fall_en else 'fall=off'
+        tags = []
+        tags.append('follow=on' if self._follow_en else 'follow=off')
+        tags.append('fall=on' if self._fall_en else 'fall=off')
         base = self._detail or ''
-        s.detail = f'{base} | {fall_tag}' if base else fall_tag
+        tag_s = ' '.join(tags)
+        s.detail = f'{base} | {tag_s}' if base else tag_s
         return s
 
     def _publish_state(self) -> None:
@@ -142,9 +151,54 @@ class SupervisorNode(Node):
     def _publish_fall(self) -> None:
         self._fall_pub.publish(Bool(data=bool(self._fall_en)))
 
+    def _publish_follow(self) -> None:
+        self._follow_pub.publish(Bool(data=bool(self._follow_en)))
+
     def _set_fall(self, active: bool) -> None:
         self._fall_en = bool(active)
         self._publish_fall()
+
+    def _set_follow(self, active: bool) -> tuple[bool, str]:
+        """Toggle follow task without tearing down Nav2.
+
+        Requires nav stack to be (or become) active. Returns (ok, message).
+        """
+        want = bool(active)
+        if want:
+            if self._mode == 1:
+                return False, 'cannot follow while mapping'
+            # Ensure Nav2 capability is on
+            if self._mode not in (2, 3):
+                if not self._active_map:
+                    return False, 'enter navigation with a map first (set_mode 2)'
+                # Re-latch map name (leaving nav clears /xw/nav/map_name)
+                self._nav_map_pub.publish(String(data=self._active_map))
+                self._set_pointcloud_nav(True)
+                self._disable_motion_sessions()
+                self._set_session(2, True)
+                self._mode = 3
+            else:
+                # Already navigating — keep nav enable true, only latch follow
+                if self._active_map:
+                    self._nav_map_pub.publish(String(data=self._active_map))
+                self._set_session(2, True)
+                self._mode = 3
+            self._follow_en = True
+            self._publish_follow()
+            self._detail = 'follow task on (nav kept)'
+            self._publish_state()
+            return True, 'follow on'
+        # Turn off follow; keep Nav2 if we were navigating/following
+        self._follow_en = False
+        self._publish_follow()
+        if self._mode == 3:
+            self._mode = 2
+            self._set_session(2, True)
+            self._detail = 'follow off (nav kept)'
+        else:
+            self._detail = 'follow off'
+        self._publish_state()
+        return True, 'follow off'
 
     def _on_set_fall(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
         self._set_fall(bool(req.data))
@@ -152,11 +206,16 @@ class SupervisorNode(Node):
             self._mode = 0
             self._detail = 'fall disabled → idle'
         elif self._fall_en and self._mode == 0:
-            # Stay IDLE but reflect fall in detail; mode 4 only via set_mode(4).
             self._detail = 'fall enabled (background)'
         res.success = True
         res.message = f'fall={"on" if self._fall_en else "off"}'
         self._publish_state()
+        return res
+
+    def _on_set_follow(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
+        ok, msg = self._set_follow(bool(req.data))
+        res.success = bool(ok)
+        res.message = msg
         return res
 
     def _set_pointcloud_nav(self, enabled: bool) -> None:
@@ -192,32 +251,64 @@ class SupervisorNode(Node):
             except json.JSONDecodeError:
                 map_name = ''
 
-        if target == 2 and map_name:
+        if target in (2, 3) and map_name:
             self._active_map = map_name
             msg = String()
             msg.data = map_name
             self._nav_map_pub.publish(msg)
-        elif target != 2:
-            # Clear latched map name when leaving nav
+        elif target not in (2, 3):
+            # Clear latched map name when leaving nav/follow capability
             self._nav_map_pub.publish(String(data=''))
 
-        if prev == 2 and target != 2:
+        # Pointcloud for local costmap while nav capability is up (incl. follow)
+        nav_cap_prev = prev in (2, 3)
+        nav_cap_next = target in (2, 3)
+        if nav_cap_prev and not nav_cap_next:
             self._set_pointcloud_nav(False)
-        if target == 2 and prev != 2:
+        if nav_cap_next and not nav_cap_prev:
             self._set_pointcloud_nav(True)
 
-        self._disable_motion_sessions()
-
         if target == 4:
+            # Fall-only mode display; do not tear nav if already up — but legacy
+            # set_mode(4) from idle just latches fall.
+            self._disable_motion_sessions()
+            self._set_follow(False)
             self._mode = 4
             self._set_fall(True)
-        elif target in MOTION_SESSION:
-            self._mode = target
-            self._set_session(target, True)
-            # Keep fall_en as-is (orthogonal).
+        elif target == 3:
+            # FOLLOWING = nav stack ON + follow latch ON (never stop Nav2 for this)
+            if map_name:
+                self._active_map = map_name
+            if self._active_map:
+                self._nav_map_pub.publish(String(data=self._active_map))
+            # Disable slam only; keep/enable nav
+            self._set_session(1, False)
+            self._set_session(2, True)
+            self._follow_en = True
+            self._publish_follow()
+            self._mode = 3
+        elif target == 2:
+            self._set_session(1, False)
+            self._set_session(2, True)
+            # Entering pure nav turns follow off
+            if self._follow_en:
+                self._follow_en = False
+                self._publish_follow()
+            self._mode = 2
+        elif target == 1:
+            self._disable_motion_sessions()
+            if self._follow_en:
+                self._follow_en = False
+                self._publish_follow()
+            self._set_session(1, True)
+            self._mode = 1
         else:
+            # IDLE
+            self._disable_motion_sessions()
+            if self._follow_en:
+                self._follow_en = False
+                self._publish_follow()
             self._mode = 0
-            # Keep fall_en as-is.
 
         self._detail = reason
         self._publish_state()
@@ -237,17 +328,27 @@ class SupervisorNode(Node):
 
         production = int(self.get_parameter('run_mode').value) == 0
         if production and self._mode != 0 and target != 0 and target != self._mode:
-            # set_mode(4) while in a motion mode → only latch fall, keep motion.
-            if target == 4 and self._mode in MOTION_SESSION:
+            if target == 4 and self._mode in (1, 2, 3):
                 self._set_fall(True)
                 res.success = True
                 res.message = 'fall on (kept motion mode)'
                 res.active_mode = self._mode
                 self._publish_state()
                 return res
-            if self._mode in MOTION_SESSION and target in MOTION_SESSION:
+            # Allow nav ↔ follow without idle in production (same nav stack)
+            if {self._mode, target} <= {2, 3}:
+                pass
+            elif self._mode in (1, 2, 3) and target in (1, 2, 3):
                 res.success = False
                 res.message = f'busy in {MODE_NAMES[self._mode]} (production)'
+                res.active_mode = self._mode
+                return res
+
+        if target == 3 and not self._active_map and not (req.payload_json or '').strip():
+            # Follow needs a map/nav context
+            if self._mode not in (2, 3):
+                res.success = False
+                res.message = 'follow requires navigation map (set_mode 2 with map_name first)'
                 res.active_mode = self._mode
                 return res
 

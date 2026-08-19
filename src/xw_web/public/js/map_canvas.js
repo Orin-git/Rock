@@ -423,8 +423,9 @@
     return v >= OCCUPIED_THRESH;
   }
 
-  /** True if point is at least clearanceM from any occupied cell. */
+  /** True if point is at least clearanceM from any occupied cell. No map → unknown (true). */
   function isClearanceOk(wx, wy, clearanceM) {
+    if (!latestMap) return true;
     const clr = typeof clearanceM === 'number' ? clearanceM : OBSTACLE_CLEARANCE_M;
     const cell = worldToMapCell(wx, wy);
     if (!cell) return false;
@@ -447,6 +448,7 @@
   function annotateWaypointBadness(list) {
     return (list || []).map((wp) => {
       if (!wp || typeof wp.x !== 'number') return wp;
+      if (!latestMap) return Object.assign({}, wp, { bad: false });
       const ok = isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M);
       return Object.assign({}, wp, { bad: !ok });
     });
@@ -483,6 +485,105 @@
       overlayCtx.lineWidth = 2.5;
       overlayCtx.stroke();
     }
+    return p;
+  }
+
+  /** Navigation waypoints — larger, themed markers with halo + label. */
+  function drawWaypointMarker(view, wp, idx, opts) {
+    opts = opts || {};
+    const bad = !!opts.bad;
+    const selected = !!opts.selected;
+    const isCharger = !!opts.isCharger;
+    const p = worldToPixel(wp.x, wp.y, view);
+    const r = Math.max(11, view.scale * 2.6);
+
+    let fill;
+    let stroke;
+    let halo;
+    if (bad) {
+      fill = 'rgba(192, 51, 69, 0.95)';
+      stroke = '#8f2433';
+      halo = 'rgba(192, 51, 69, 0.28)';
+    } else if (selected) {
+      fill = 'rgba(217, 145, 32, 0.96)';
+      stroke = '#a36b10';
+      halo = 'rgba(217, 145, 32, 0.32)';
+    } else if (isCharger) {
+      fill = 'rgba(15, 122, 79, 0.94)';
+      stroke = '#0a5c3c';
+      halo = 'rgba(15, 122, 79, 0.26)';
+    } else {
+      fill = 'rgba(12, 110, 138, 0.94)';
+      stroke = '#0a5c74';
+      halo = 'rgba(12, 110, 138, 0.26)';
+    }
+
+    overlayCtx.beginPath();
+    overlayCtx.arc(p.px, p.py, r + 5, 0, 2 * Math.PI);
+    overlayCtx.fillStyle = halo;
+    overlayCtx.fill();
+
+    overlayCtx.beginPath();
+    overlayCtx.arc(p.px, p.py, r + 1.5, 0, 2 * Math.PI);
+    overlayCtx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    overlayCtx.fill();
+
+    overlayCtx.beginPath();
+    overlayCtx.arc(p.px, p.py, r, 0, 2 * Math.PI);
+    overlayCtx.fillStyle = fill;
+    overlayCtx.fill();
+    overlayCtx.strokeStyle = stroke;
+    overlayCtx.lineWidth = 2.25;
+    overlayCtx.stroke();
+
+    if (typeof wp.yaw === 'number' && !Number.isNaN(wp.yaw)) {
+      const arrowLen = Math.max(20, view.scale * 4.2);
+      const tipX = p.px + arrowLen * Math.cos(wp.yaw);
+      const tipY = p.py - arrowLen * Math.sin(wp.yaw);
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(p.px, p.py);
+      overlayCtx.lineTo(tipX, tipY);
+      overlayCtx.strokeStyle = stroke;
+      overlayCtx.lineWidth = 3;
+      overlayCtx.lineCap = 'round';
+      overlayCtx.stroke();
+      overlayCtx.beginPath();
+      overlayCtx.arc(tipX, tipY, 3.2, 0, 2 * Math.PI);
+      overlayCtx.fillStyle = stroke;
+      overlayCtx.fill();
+    }
+
+    overlayCtx.fillStyle = '#fff';
+    overlayCtx.font = 'bold 13px "IBM Plex Mono", ui-monospace, sans-serif';
+    overlayCtx.textAlign = 'center';
+    overlayCtx.textBaseline = 'middle';
+    overlayCtx.fillText(bad ? '!' : isCharger ? 'C' : String(idx + 1), p.px, p.py + 0.5);
+
+    const labelY = p.py - r - 10;
+    overlayCtx.font = '600 11px "Noto Sans SC", sans-serif';
+    overlayCtx.textBaseline = 'bottom';
+    const label = bad ? '坏点' : String(wp.name || (isCharger ? '充电桩' : `wp_${idx + 1}`));
+    const tw = overlayCtx.measureText(label).width;
+    const padX = 5;
+    const padY = 3;
+    overlayCtx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+    overlayCtx.strokeStyle = 'rgba(11, 18, 32, 0.08)';
+    overlayCtx.lineWidth = 1;
+    const bx = p.px - tw / 2 - padX;
+    const by = labelY - 12 - padY;
+    const bw = tw + padX * 2;
+    const bh = 14 + padY;
+    overlayCtx.beginPath();
+    if (overlayCtx.roundRect) {
+      overlayCtx.roundRect(bx, by, bw, bh, 4);
+    } else {
+      overlayCtx.rect(bx, by, bw, bh);
+    }
+    overlayCtx.fill();
+    overlayCtx.stroke();
+    overlayCtx.fillStyle = bad ? '#c03345' : selected ? '#a36b10' : '#0c6e8a';
+    overlayCtx.fillText(label, p.px, labelY);
+
     return p;
   }
 
@@ -532,34 +633,15 @@
     if (Array.isArray(waypoints)) {
       waypoints.forEach((wp, idx) => {
         if (!wp || typeof wp.x !== 'number') return;
-        const bad = !!wp.bad || !isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M);
+        const bad = latestMap
+          ? !!wp.bad || !isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M)
+          : false;
         wp.bad = bad;
-        const selected = interactMode === 'edit_wp' && selectedWpIdx === idx;
-        const fill = bad
-          ? 'rgba(220, 38, 38, 0.9)'
-          : selected
-            ? 'rgba(234, 179, 8, 0.95)'
-            : 'rgba(124, 58, 237, 0.85)';
-        const stroke = bad ? '#7f1d1d' : selected ? '#a16207' : '#5b21b6';
-        const p = drawPoseMarker(
-          view,
-          wp.x,
-          wp.y,
-          typeof wp.yaw === 'number' ? wp.yaw : undefined,
-          fill,
-          stroke,
-          Math.max(6, view.scale * 1.5)
-        );
-        overlayCtx.fillStyle = '#fff';
-        overlayCtx.font = 'bold 11px sans-serif';
-        overlayCtx.textAlign = 'center';
-        overlayCtx.textBaseline = 'middle';
-        overlayCtx.fillText(bad ? '!' : String(idx + 1), p.px, p.py);
-        if (bad) {
-          overlayCtx.fillStyle = 'rgba(220,38,38,0.95)';
-          overlayCtx.font = '10px sans-serif';
-          overlayCtx.fillText('坏点', p.px, p.py - Math.max(12, view.scale * 2.2));
-        }
+        const selected = selectedWpIdx === idx;
+        const isCharger =
+          wp._kind === 'charger' ||
+          String(wp.name || '').toLowerCase() === 'charger';
+        drawWaypointMarker(view, wp, idx, { bad, selected, isCharger });
       });
     }
 
@@ -764,7 +846,7 @@
         };
       }
     }
-    if (next !== 'edit_wp') selectedWpIdx = null;
+    if (next === 'initial_pose') selectedWpIdx = null;
     if (overlayCanvas) {
       overlayCanvas.style.cursor =
         next === 'edit_wp' || next === 'initial_pose'
@@ -789,7 +871,7 @@
   }
 
   function findWaypointHit(clientX, clientY, view) {
-    const hitR = Math.max(14, view.scale * 3);
+    const hitR = Math.max(22, view.scale * 4.5);
     for (let i = waypoints.length - 1; i >= 0; i--) {
       const wp = waypoints[i];
       if (!wp) continue;

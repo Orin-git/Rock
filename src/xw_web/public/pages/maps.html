@@ -29,9 +29,9 @@
       <div class="tag">Map Store</div>
       <h1>地图管理</h1>
       <p class="muted">
-        列表 / 重命名 / 美化 / 删除 / 批量删除 / 批量保留 · 经
-        <code>/api/map</code> · 关联航点
-        <code>{name}_pointList</code>
+        建图保存地图 <code>vp</code> 时，会自动生成导航点列表
+        <code>vp_pointList</code>（含建图起点 <code>charger</code>）。
+        下方可分别管理「地图文件」与「导航点列表」。
       </p>
     </section>
 
@@ -47,6 +47,31 @@
         <p class="muted" id="batchHint">未选中</p>
       </div>
       <div class="list-panel" id="mapList">
+        <p class="muted pad">加载中…</p>
+      </div>
+    </section>
+
+    <div class="section-title">
+      导航点列表
+      <span class="section-count" id="wpListCount">0</span>
+    </div>
+    <section class="panel">
+      <p class="muted hint-sm" style="margin-top:0">
+        每张地图对应一份 <code>{地图名}_pointList</code>。此处管理的是「列表文件」本身（重命名 / 删除）；
+        列表里的具体航点请在
+        <a href="/pages/navigation.html">导航</a>
+        页选对应地图后编辑。
+      </p>
+      <div class="batch-bar">
+        <label class="check-inline">
+          <input type="checkbox" id="wpSelectAll" /> 全选
+        </label>
+        <button type="button" id="refreshWpLists">刷新</button>
+        <button type="button" class="secondary" id="wpBatchDelete">批量删除</button>
+        <button type="button" class="secondary" id="wpBatchKeep">批量保留</button>
+        <p class="muted" id="wpBatchHint">未选中</p>
+      </div>
+      <div class="list-panel" id="wpListCatalog">
         <p class="muted pad">加载中…</p>
       </div>
     </section>
@@ -68,10 +93,17 @@
     const mapCountEl = document.getElementById('mapCount');
     const batchHint = document.getElementById('batchHint');
     const selectAllEl = document.getElementById('selectAll');
+    const wpListCatalogEl = document.getElementById('wpListCatalog');
+    const wpListCountEl = document.getElementById('wpListCount');
+    const wpBatchHint = document.getElementById('wpBatchHint');
+    const wpSelectAllEl = document.getElementById('wpSelectAll');
 
     let currentMaps = [];
+    let pointListNames = [];
+    let pointListMeta = {}; // listName -> { count, hasCharger }
     let pointListSet = new Set();
     let busy = false;
+    let wpBusy = false;
 
     function pushLog(line) {
       logEl.textContent = line + '\n' + logEl.textContent;
@@ -84,9 +116,22 @@
       return mapName.endsWith('_pointList') ? mapName : `${mapName}_pointList`;
     }
 
+    function mapNameFromPointList(listName) {
+      if (!listName) return '';
+      return listName.endsWith('_pointList')
+        ? listName.slice(0, -'_pointList'.length)
+        : listName;
+    }
+
     function getSelected() {
       return Array.from(document.querySelectorAll('.map-item-checkbox:checked')).map(
         (cb) => cb.dataset.mapName
+      );
+    }
+
+    function getSelectedWpLists() {
+      return Array.from(document.querySelectorAll('.wp-list-checkbox:checked')).map(
+        (cb) => cb.dataset.listName
       );
     }
 
@@ -98,10 +143,44 @@
       selectAllEl.indeterminate = n > 0 && n < total;
     }
 
+    function updateWpBatchHint() {
+      const n = getSelectedWpLists().length;
+      const total = pointListNames.length;
+      wpBatchHint.textContent = n
+        ? `已选 ${n} / ${total}`
+        : total
+          ? `未选中（共 ${total}）`
+          : '暂无导航点列表';
+      wpSelectAllEl.checked = total > 0 && n === total;
+      wpSelectAllEl.indeterminate = n > 0 && n < total;
+    }
+
     async function loadPointLists() {
       const j = await waypointManage(5);
-      const names = j.names || (Array.isArray(j.map_list) ? j.map_list : []);
-      pointListSet = new Set(names || []);
+      const names = j.names || [];
+      pointListNames = Array.isArray(names) ? names.slice().sort() : [];
+      pointListSet = new Set(pointListNames);
+      pointListMeta = {};
+
+      await Promise.all(
+        pointListNames.map(async (listName) => {
+          const r = await waypointManage(2, listName);
+          let data = {};
+          try {
+            data =
+              typeof r.data_json === 'string'
+                ? JSON.parse(r.data_json || '{}')
+                : r.data_json || {};
+          } catch (_) {
+            data = {};
+          }
+          const wps = Array.isArray(data.waypoints) ? data.waypoints : [];
+          const hasCharger = wps.some(
+            (w) => String(w.name || '').toLowerCase() === 'charger'
+          );
+          pointListMeta[listName] = { count: wps.length, hasCharger };
+        })
+      );
     }
 
     function renderList() {
@@ -116,6 +195,7 @@
       currentMaps.forEach((name, index) => {
         const wp = pointListNameFor(name);
         const hasWp = pointListSet.has(wp);
+        const metaInfo = pointListMeta[wp];
 
         const row = document.createElement('div');
         row.className = 'map-item';
@@ -139,9 +219,13 @@
         title.textContent = name;
         const meta = document.createElement('div');
         meta.className = 'map-item-meta ' + (hasWp ? 'has-wp' : 'no-wp');
-        meta.textContent = hasWp
-          ? `关联航点：${wp}`
-          : `无关联 ${wp}（保存建图时会自动创建）`;
+        if (hasWp) {
+          const n = metaInfo ? metaInfo.count : '?';
+          const ch = metaInfo && metaInfo.hasCharger ? ' · 含 charger' : '';
+          meta.textContent = `关联导航点列表：${wp}（${n} 个航点${ch}）`;
+        } else {
+          meta.textContent = `无关联 ${wp}（保存建图时会自动创建）`;
+        }
         info.appendChild(title);
         info.appendChild(meta);
 
@@ -166,6 +250,14 @@
           location.href = `/pages/map_beautify.html?map=${encodeURIComponent(name)}`;
         };
 
+        const navBtn = document.createElement('button');
+        navBtn.type = 'button';
+        navBtn.className = 'secondary';
+        navBtn.textContent = '导航';
+        navBtn.onclick = () => {
+          location.href = `/pages/navigation.html?map=${encodeURIComponent(name)}`;
+        };
+
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
         delBtn.className = 'secondary';
@@ -174,6 +266,7 @@
 
         actions.appendChild(renameBtn);
         actions.appendChild(editBtn);
+        actions.appendChild(navBtn);
         actions.appendChild(delBtn);
         row.appendChild(main);
         row.appendChild(actions);
@@ -183,14 +276,119 @@
       updateBatchHint();
     }
 
+    function renderWpCatalog() {
+      wpListCountEl.textContent = String(pointListNames.length);
+      wpListCatalogEl.innerHTML = '';
+      if (!pointListNames.length) {
+        wpListCatalogEl.innerHTML =
+          '<p class="muted pad">暂无导航点列表 · 建图保存地图时会自动创建</p>';
+        updateWpBatchHint();
+        return;
+      }
+
+      pointListNames.forEach((listName, index) => {
+        const mapStem = mapNameFromPointList(listName);
+        const mapExists = currentMaps.includes(mapStem);
+        const metaInfo = pointListMeta[listName] || { count: 0, hasCharger: false };
+
+        const row = document.createElement('div');
+        row.className = 'map-item';
+
+        const main = document.createElement('div');
+        main.className = 'map-item-main';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'wp-list-checkbox';
+        cb.dataset.listName = listName;
+        cb.addEventListener('change', updateWpBatchHint);
+
+        const badge = document.createElement('span');
+        badge.className = 'index-badge';
+        badge.textContent = String(index + 1);
+
+        const info = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'map-item-name';
+        title.textContent = listName;
+        const meta = document.createElement('div');
+        meta.className = 'map-item-meta ' + (mapExists ? 'has-wp' : 'no-wp');
+        const parts = [
+          `${metaInfo.count} 个航点`,
+          metaInfo.hasCharger ? '含 charger（建图起点）' : '无 charger',
+          mapExists ? `绑定地图：${mapStem}` : `地图缺失：${mapStem}`,
+        ];
+        meta.textContent = parts.join(' · ');
+        info.appendChild(title);
+        info.appendChild(meta);
+
+        main.appendChild(cb);
+        main.appendChild(badge);
+        main.appendChild(info);
+
+        const actions = document.createElement('div');
+        actions.className = 'map-item-actions';
+
+        const openBtn = document.createElement('button');
+        openBtn.type = 'button';
+        openBtn.className = 'secondary';
+        openBtn.textContent = '打开编辑';
+        openBtn.disabled = !mapExists;
+        openBtn.title = mapExists
+          ? '在导航页打开对应地图并编辑航点'
+          : '关联地图不存在，无法打开';
+        openBtn.onclick = () => {
+          location.href = `/pages/navigation.html?map=${encodeURIComponent(mapStem)}`;
+        };
+
+        const renameBtn = document.createElement('button');
+        renameBtn.type = 'button';
+        renameBtn.className = 'secondary';
+        renameBtn.textContent = '重命名';
+        renameBtn.onclick = () => renameWpList(listName);
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'secondary';
+        delBtn.textContent = '删除';
+        delBtn.onclick = () => deleteWpListOne(listName);
+
+        actions.appendChild(openBtn);
+        actions.appendChild(renameBtn);
+        actions.appendChild(delBtn);
+        row.appendChild(main);
+        row.appendChild(actions);
+        wpListCatalogEl.appendChild(row);
+      });
+
+      updateWpBatchHint();
+    }
+
     async function refresh() {
-      pushLog('>> 刷新地图列表');
-      const [mapsRes] = await Promise.all([mapManage(2), loadPointLists().catch(() => {})]);
+      pushLog('>> 刷新地图与导航点列表');
+      const mapsRes = await mapManage(2);
       currentMaps = mapsRes.map_list || [];
       if (!mapsRes.ok && !currentMaps.length) {
-        pushLog(`!! 列表失败：${mapsRes.message || 'bridge offline'}`);
+        pushLog(`!! 地图列表失败：${mapsRes.message || 'bridge offline'}`);
+      }
+      try {
+        await loadPointLists();
+      } catch (e) {
+        pushLog(`!! 导航点列表失败：${e}`);
       }
       renderList();
+      renderWpCatalog();
+    }
+
+    async function refreshWpOnly() {
+      pushLog('>> 刷新导航点列表');
+      try {
+        await loadPointLists();
+      } catch (e) {
+        pushLog(`!! 导航点列表失败：${e}`);
+      }
+      renderList();
+      renderWpCatalog();
     }
 
     async function renameMap(oldName) {
@@ -198,18 +396,51 @@
       if (next === null) return;
       const newName = next.trim();
       if (!newName || newName === oldName) return;
-      pushLog(`>> 重命名 ${oldName} → ${newName}`);
+      pushLog(`>> 重命名地图 ${oldName} → ${newName}`);
       const j = await mapManage(3, oldName, { new_name: newName });
       pushLog(j.ok ? `<< ${j.message || 'renamed'}` : `!! ${j.message || 'rename failed'}`);
       await refresh();
     }
 
+    async function renameWpList(oldName) {
+      const mapStem = mapNameFromPointList(oldName);
+      const next = prompt(
+        '请输入新的导航点列表名称（可写地图名或完整 xxx_pointList）：',
+        mapStem || oldName
+      );
+      if (next === null) return;
+      const newName = next.trim();
+      if (!newName || newName === oldName || pointListNameFor(newName) === oldName) return;
+      pushLog(`>> 重命名导航点列表 ${oldName} → ${newName}`);
+      const j = await waypointManage(4, oldName, { new_name: newName });
+      pushLog(j.ok ? `<< ${j.message || 'renamed'}` : `!! ${j.message || 'rename failed'}`);
+      await refresh();
+    }
+
     async function deleteOne(name) {
-      if (!confirm(`确定删除地图「${name}」及其关联 ${pointListNameFor(name)}？\n此操作不可撤销。`)) {
+      if (
+        !confirm(
+          `确定删除地图「${name}」及其关联 ${pointListNameFor(name)}？\n此操作不可撤销。`
+        )
+      ) {
         return;
       }
-      pushLog(`>> 删除 ${name}`);
+      pushLog(`>> 删除地图 ${name}`);
       const j = await mapManage(4, name);
+      pushLog(j.ok ? `<< ${j.message || 'deleted'}` : `!! ${j.message || 'delete failed'}`);
+      await refresh();
+    }
+
+    async function deleteWpListOne(listName) {
+      if (
+        !confirm(
+          `确定删除导航点列表「${listName}」？\n只删航点文件，不会删除地图。\n此操作不可撤销。`
+        )
+      ) {
+        return;
+      }
+      pushLog(`>> 删除导航点列表 ${listName}`);
+      const j = await waypointManage(3, listName);
       pushLog(j.ok ? `<< ${j.message || 'deleted'}` : `!! ${j.message || 'delete failed'}`);
       await refresh();
     }
@@ -220,18 +451,37 @@
       let okN = 0;
       const failed = [];
       for (let i = 0; i < names.length; i++) {
-        pushLog(`>> 批量删除 (${i + 1}/${names.length}) ${names[i]}`);
+        pushLog(`>> 批量删除地图 (${i + 1}/${names.length}) ${names[i]}`);
         const j = await mapManage(4, names[i]);
         if (j.ok) okN++;
         else failed.push(`${names[i]}: ${j.message || 'fail'}`);
       }
       busy = false;
-      if (!failed.length) pushLog(`<< 成功删除 ${okN} 个`);
+      if (!failed.length) pushLog(`<< 成功删除 ${okN} 个地图`);
+      else pushLog(`!! 成功 ${okN}，失败 ${failed.length}：${failed.join('; ')}`);
+      await refresh();
+    }
+
+    async function deleteWpListsSequentially(names) {
+      if (wpBusy || !names.length) return;
+      wpBusy = true;
+      let okN = 0;
+      const failed = [];
+      for (let i = 0; i < names.length; i++) {
+        pushLog(`>> 批量删除导航点列表 (${i + 1}/${names.length}) ${names[i]}`);
+        const j = await waypointManage(3, names[i]);
+        if (j.ok) okN++;
+        else failed.push(`${names[i]}: ${j.message || 'fail'}`);
+      }
+      wpBusy = false;
+      if (!failed.length) pushLog(`<< 成功删除 ${okN} 个导航点列表`);
       else pushLog(`!! 成功 ${okN}，失败 ${failed.length}：${failed.join('; ')}`);
       await refresh();
     }
 
     document.getElementById('refresh').onclick = () => refresh();
+    document.getElementById('refreshWpLists').onclick = () => refreshWpOnly();
+
     selectAllEl.addEventListener('change', () => {
       const on = selectAllEl.checked;
       document.querySelectorAll('.map-item-checkbox').forEach((cb) => {
@@ -240,13 +490,22 @@
       updateBatchHint();
     });
 
+    wpSelectAllEl.addEventListener('change', () => {
+      const on = wpSelectAllEl.checked;
+      document.querySelectorAll('.wp-list-checkbox').forEach((cb) => {
+        cb.checked = on;
+      });
+      updateWpBatchHint();
+    });
+
     document.getElementById('batchDelete').onclick = () => {
       const selected = getSelected();
       if (!selected.length) {
         alert('请先勾选要删除的地图');
         return;
       }
-      if (!confirm(`确定删除选中的 ${selected.length} 个地图？\n此操作不可撤销。`)) return;
+      if (!confirm(`确定删除选中的 ${selected.length} 个地图及其关联航点列表？\n此操作不可撤销。`))
+        return;
       deleteSequentially(selected);
     };
 
@@ -269,6 +528,42 @@
         return;
       }
       deleteSequentially(toDelete);
+    };
+
+    document.getElementById('wpBatchDelete').onclick = () => {
+      const selected = getSelectedWpLists();
+      if (!selected.length) {
+        alert('请先勾选要删除的导航点列表');
+        return;
+      }
+      if (
+        !confirm(
+          `确定删除选中的 ${selected.length} 个导航点列表？\n只删航点文件，不删地图。\n此操作不可撤销。`
+        )
+      )
+        return;
+      deleteWpListsSequentially(selected);
+    };
+
+    document.getElementById('wpBatchKeep').onclick = () => {
+      const selected = getSelectedWpLists();
+      if (!selected.length) {
+        alert('请先勾选要保留的导航点列表');
+        return;
+      }
+      const toDelete = pointListNames.filter((n) => selected.indexOf(n) === -1);
+      if (!toDelete.length) {
+        alert('没有需要删除的导航点列表（已全选保留）');
+        return;
+      }
+      if (
+        !confirm(
+          `将保留 ${selected.length} 个导航点列表，删除其余 ${toDelete.length} 个。\n此操作不可撤销。`
+        )
+      ) {
+        return;
+      }
+      deleteWpListsSequentially(toDelete);
     };
 
     refresh();

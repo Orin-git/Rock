@@ -48,11 +48,14 @@
 |------|------|------|
 | IDLE | 0 | — |
 | MAPPING | 1 | slam_session |
-| NAVIGATING | 2 | nav_session |
-| FOLLOWING | 3 | follow_session |
-| FALL_DETECT | 4 | fall_session |
+| NAVIGATING | 2 | nav_session（Nav2 能力） |
+| FOLLOWING | 3 | **nav 保持** + `/xw/follow/enable` 任务 |
+| FALL_DETECT | 4 | fall latch（正交） |
 
-默认互斥；`SetMode` 的 `mode=0` 为取消回 IDLE。
+- 建图 ↔ 导航：运动栈互斥。
+- **跟随是导航上的正交任务**：`/xw/supervisor/set_follow` / 设置页开关；开跟随只取消点位/巡航，**不 `_stop_nav2`**；关跟随后 Nav2 仍在。
+- `set_mode(3)` 兼容入口：确保 `/xw/nav/enable=true` + follow on。
+- 跌倒仍走 `/xw/supervisor/set_fall`，与模式切换独立。
 
 ## 5. 统一契约
 
@@ -64,14 +67,17 @@
 | Event | `/xw/event` | 急停/安全/定位 |
 | Power | `/xw/power` | 电量 |
 | Srv | `/xw/supervisor/set_mode` | 改模式 |
+| Srv | `/xw/supervisor/set_follow` | 跟随任务开关（不拆 Nav2） |
+| Srv | `/xw/supervisor/set_fall` | 跌倒开关 |
 | Srv | `/xw/supervisor/get_state` | 拉快照 |
 | Srv | `/xw/map/manage` | 地图 CRUD |
 | Srv | `/xw/map/waypoint` | 航点 |
 | Srv | `/xw/motion/command` | 定距点动 |
 | In | `/xw/cmd/teleop` | 遥控白名单入口 |
-| In | `/xw/goal_pose` | 单点导航目标 |
-| In | `/xw/nav/patrol_cmd` | 多点巡航 JSON |
-| In | `/xw/nav/cancel` | 取消当前导航 |
+| In | `/xw/goal_pose` | 单点导航目标（跟随中拒绝） |
+| In | `/xw/nav/patrol_cmd` | 多点巡航 JSON（跟随中拒绝） |
+| In | `/xw/nav/cancel` | 软取消当前导航（不关 Nav2） |
+| In | `/goal_update` | 动态跟随目标（Nav2 GoalUpdater） |
 | In | `/xw/nav/map_name` | 导航地图名（latched） |
 | In | `/initialpose` | AMCL 初始位姿 |
 
@@ -103,7 +109,7 @@ ros2 launch xw_bringup robot.launch.py
 - **P1**：真底盘（`xw_chassis` 串口 `/dev/chassis` 或回退 `/dev/ttyACM0` @115200，一代 0x7B 协议；udev：`scripts/install_robot_udev.sh`）/ 雷达 / 超声（超声仍待）  
 - **P2**：手推建图已落地；**Nav2/AMCL 已接入**（`xw_nav_session`）；单点/多点/初位姿 Web API 已通  
 - **P3（部分）**：双前视深度 + 安全门深度 ROI；导航 local costmap 融合激光+双深度点云；**感知真节点**（YOLOv8n-pose RKNN）  
-- **P4（部分）**：**WT901C485 独立 IMU 已接入**（`/imu/data`）；EKF 真融合默认关（`use_ekf:=true` 启用）；回充 / 压测 / 精标定仍待  
+- **P4（部分）**：**WT901C485 + EKF 已默认启用**（`/odom/wheel` + `/imu/data` → `/odom`）；绝对 yaw/aX、回充、精标定仍待  
 
 ### USB 接口分配（Rock 5T）— HP60C 为 USB2.0 设备
 
@@ -112,19 +118,14 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 
 **推荐接线（双相机同时开的关键：相机分属不同 USB 主机控制器）：**
 
-| 板载口 | 设备 | 为何 |
-|--------|------|------|
-| 蓝色 USB3 A | 深度相机 front_up | 走 xhci 的 USB2 伴生（Bus1） |
-| 蓝色 USB3 B | 拓展坞 → 底盘+IMU | 串口流量极小，可与 cam1 共享 Bus1 |
-| 黑色 USB2 A | 深度相机 front_down | **独占**另一路 EHCI（Bus3 或 Bus5） |
-| 黑色 USB2 B | 激光雷达 | **独占**供电/电流 |
+| 板载口 | 设备 | 实测 Bus/path |
+|--------|------|----------------|
+| 蓝色 USB3 | 深度 front_up | Bus **1** path `1.2` |
+| 蓝色 USB3 | 拓展坞 → 底盘+IMU | Bus1 path `1.1`（与 cam1 分端口） |
+| 黑色 USB2 | 深度 front_down | Bus **3** path `1.2` |
+| 黑色 USB2 | 激光雷达 | `/dev/radar`（CP210x） |
 
-插完后执行 `lsusb -t`：两台 `3482:6723` 必须出现在**不同 Bus**（例如一台 Bus1、一台 Bus5），再开双相机。
-
-```bash
-# 确认分总线后打开第二路
-USE_DEPTH_CAM_2=true sudo systemctl restart xw-robot
-```
+默认 `USE_DEPTH_CAM_2=true`（两路已分主机控制器）。
 
 注意：HP60C SDK **不支持 fps=5**；深度用 **10**。已加 udev 解绑 `uvcvideo`，避免与 ascamera 抢接口。
 
@@ -136,8 +137,8 @@ USE_DEPTH_CAM_2=true sudo systemctl restart xw-robot
 | 前上深度 | `ascamera_hp60c/...` + bridge | `camera_front_up_link` | `/camera/front_up/{color,depth,...}` |
 | 前下深度 | `ascamera_hp60c_2/...` + bridge | `camera_front_down_link` | `/camera/front_down/...` |
 | 独立 IMU（WT901C485） | `xw_wt901_imu` | `imu_link` | `/imu/data`（Modbus RTU @9600，slave `0x50`） |
-| 底盘轮式里程计 | `xw_chassis` | `base_link` | 默认 `/odom`；EKF 时 `/odom/wheel` |
-| EKF 融合（可选） | `ekf_filter_node` | `odom→base_link` | `/odom` |
+| 底盘轮式里程计 | `xw_chassis` | `base_link` | `/odom/wheel`（默认；EKF 关时 `/odom`） |
+| EKF 融合（默认开） | `ekf_filter_node` | `odom→base_link` | `/odom` |
 
 厂商私有话题 `/ascamera_hp60c{,_2}/...` 仅 bridge 订阅，业务节点只用 `/camera/...`。
 
@@ -160,34 +161,49 @@ USE_DEPTH_CAM_2=true sudo systemctl restart xw-robot
 - **建图不参与深度**：slam_toolbox 只用 `/scan`  
 - raw RGB（#1）：仅在 `fall_en || follow_en` 时转发  
 
-### EKF 空槽（打滑友好）
+### EKF 融合（打滑友好，默认开）
 
-- 默认 `use_ekf:=false`：底盘直接发 `/odom` + TF  
-- `use_ekf:=true` 时：`chassis_odom_topic:=odom/wheel`、`chassis_publish_odom_tf:=false`，加载 `xw_sensors/config/ekf.yaml`  
+- 默认 `use_ekf:=true` / `USE_EKF=true`：底盘 `/odom/wheel`（不发 TF）+ IMU → EKF → `/odom` + TF  
+- 回退 `use_ekf:=false`：`chassis_odom_topic:=odom`、`chassis_publish_odom_tf:=true`  
 - 融合：`odom0` 只融 **vx**；`imu0` 只融 **vyaw**（绝对 yaw / aX 待标定后再开）  
 - **不用**底盘 MCU IMU 字节；只用中置 `imu_link` → `/imu/data`  
 - 标定参考：[imu_utils](https://github.com/gaowenliang/imu_utils)、[Nav2 camera calibration](https://docs.nav2.org/tutorials/docs/camera_calibration.html)  
 
 ### 感知 / 跌倒 / 跟随
 
-- 跟随仍用相机1：`/camera/front_up/{color,depth}` → `/xw/cmd/follow`  
-- 跌倒正交开关与输出契约不变（`/xw/perception/tracks`、`/xw/perception/fall`）  
+- **感知**：相机1 `/camera/front_up/{color,depth}` → YOLOv8n-pose RKNN ~6Hz → `/xw/perception/tracks`
+  - `is_primary`：最近/候选；`is_target`：跟随锁定（上升沿锁定 + Kalman/IoU 关联 + 遮挡 coast）
+- **跟随（动态目标）**：`xw_follow_session` 将 `is_target` 投影到 `map`，发 `NavigateToPose`（BT=`follow_point.xml`）+ `/goal_update`（1Hz + 迟滞）
+  - 绕障：复用 Nav2 规划 + local costmap（激光+双深度）
+  - 速度出口：`/xw/cmd/nav`（默认不发 `/xw/cmd/follow`）
+  - 丢失：TRACKING → COAST → SEARCH（旋转）→ LOST；不跟路人
+  - 前置：已进入导航（有地图）；开关跟随 **不拆 Nav2**
+- **跌倒**：正交开关与 `/xw/perception/fall` 契约不变
 
 ### 导航要点
 
 - 参数：`xw_nav_session/config/nav2_params.yaml`（一代 MPPI 移植，`base_link`，`robot_radius: 0.23`）  
 - Launch：`xw_nav_session/launch/nav2.launch.py`（localization + navigation；`cmd_vel`→`/xw/cmd/nav`）  
+- 跟随 BT：`xw_nav_session/behavior_trees/follow_point.xml`（GoalUpdater + TruncatePath）  
 - 会话：`set_mode(2,{map_name})` → `/xw/nav/map_name` + `/xw/nav/enable` → 起 Nav2  
-- 单点：`POST /api/goal` → `/xw/goal_pose` → `NavigateToPose`  
-- 多点：`POST /api/nav/patrol` → `/xw/nav/patrol_cmd`（读 `*_pointList.yaml`）  
+- 单点：`POST /api/goal` → `/xw/goal_pose` → `NavigateToPose`（跟随中拒绝）  
+- 多点：`POST /api/nav/patrol` → `/xw/nav/patrol_cmd`  
+- 跟随：`POST /api/follow` → `/xw/supervisor/set_follow`（取消点位任务，Nav2 保活）  
 - 初位姿：`POST /api/initialpose` → `/initialpose`  
-- 取消：`POST /api/nav/cancel` → `/xw/nav/cancel`  
+- 取消：`POST /api/nav/cancel` → `/xw/nav/cancel`（软取消）  
 - Local costmap：`/scan` + `/camera/front_up/depth/points` + `/camera/front_down/depth/points`  
+
+### 指令优先级（跟随场景）
+
+1. teleop / motion（调试遥控仍最高）
+2. 跟随任务与点位/巡航互斥：开跟随 → 软取消点位；跟随时点位被拒绝
+3. 跟随运动 = Nav2 → `/xw/cmd/nav`
+4. `/xw/cmd/follow` 仅用于丢失搜索旋转或 `publish_legacy_cmd:=true` 调试
 
 ### 手推建图要点
 
 - `set_mode(1)` → slam_toolbox；保存仍写 charger 到 pointList  
-- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`POST /api/initialpose`、`POST /api/nav/patrol`、`GET /api/sensors`  
+- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`POST /api/initialpose`、`POST /api/nav/patrol`、`POST /api/follow`、`GET /api/sensors`  
 
 ## 8. 验收（容器内）
 
@@ -196,12 +212,13 @@ USE_DEPTH_CAM_2=true sudo systemctl restart xw-robot
 3. teleop → `/cmd_vel` → mock odom  
 4. 浏览器连 9000/8765，`set_mode` 互斥可见  
 5. 选地图进入导航 → Nav2 起；`/api/initialpose` + `/api/goal` 有 TaskProgress/Result  
-6. 设置页：跌倒开关；跟随；导航进/出双相机点云自动开/关  
-7. 有 `yolov8n-pose.rknn` 时：跌倒可见 `/xw/perception/fall`  
+6. 设置页：跌倒开关；**跟随 toggle 不关 Nav2**；导航进/出双相机点云自动开/关  
+7. 有 `yolov8n-pose.rknn` 时：跌倒可见 `/xw/perception/fall`；跟随可见 `is_target` 锁定  
 
 ## 9. Supervisor 与 Session 协作
 
-- `SetMode` 改运动模式并在 `/xw/slam|nav|follow/enable` 上发命令；**跌倒**走独立 `/xw/supervisor/set_fall` / `/xw/fall/enable`（模式切换不清除）。
+- `SetMode` 改运动模式并在 `/xw/slam|nav/enable` 上发命令；**跟随**走 `/xw/supervisor/set_follow` / `/xw/follow/enable`；**跌倒**走 `/xw/supervisor/set_fall` / `/xw/fall/enable`。
 - Session 既可订阅 enable，也可暴露 `/xw/session/*/control` 供调试直连。
 - **禁止** Supervisor 在 service 回调里 `spin_until_future_complete` 再调 session service（会死锁）。
-- 进/出 NAVIGATING 时 supervisor 异步调 `/xw/camera/set_pointcloud_nav`（不写 persist）。
+- 进/出 NAVIGATING/FOLLOWING 时 supervisor 异步调 `/xw/camera/set_pointcloud_nav`（不写 persist）。
+- `/xw/nav/cancel` 与跟随抢占只 cancel goal，**禁止**在跟随路径调用 `_stop_nav2`。
