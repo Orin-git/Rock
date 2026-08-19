@@ -7,7 +7,9 @@
 (function (global) {
   'use strict';
 
-  // Web-only: rotate laser overlay on map canvas (does not affect /scan or SLAM).
+  // Scan lives in lidar_link (URDF yaw=π vs base_link). If map→lidar_link TF is
+  // available, that rotation is already applied — do not add another π.
+  // Extra π is only for base_link / initial-pose fallback (scan still in lidar_link).
   const LASER_DISPLAY_YAW_OFFSET = Math.PI;
   /** Waypoint / pose must stay this far from occupied cells (meters). */
   const OBSTACLE_CLEARANCE_M = 0.3;
@@ -603,15 +605,18 @@
 
     if (latestScan) {
       let tf = null;
+      let usedScanFrame = false;
       if (latestScan.header && latestScan.header.frame_id) {
         const fid = String(latestScan.header.frame_id).replace(/^\//, '');
         tf = getTransform('map', fid);
+        if (tf) usedScanFrame = true;
       }
       if (!tf) tf = robotTf || (initialPose ? initialPose : null);
       if (tf) {
         const robotX = tf.x;
         const robotY = tf.y;
-        const scanYaw = (typeof tf.yaw === 'number' ? tf.yaw : 0) + LASER_DISPLAY_YAW_OFFSET;
+        const extraYaw = usedScanFrame ? 0 : LASER_DISPLAY_YAW_OFFSET;
+        const scanYaw = (typeof tf.yaw === 'number' ? tf.yaw : 0) + extraYaw;
         overlayCtx.fillStyle = '#c23048';
         const ranges = latestScan.ranges || [];
         for (let i = 0; i < ranges.length; i++) {

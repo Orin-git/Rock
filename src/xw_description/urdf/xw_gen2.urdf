@@ -25,12 +25,13 @@
     <origin xyz="0 0 0.22" rpy="0 0 3.141592653589793"/>
   </joint>
 
-  <!-- front_up → /camera/front_up/... ; follow + safety depth. Optical-ish RPY (Z forward). -->
+  <!-- front_up → /camera/front_up/... ; follow + safety depth. Optical-ish RPY (Z forward).
+       Physically stacked: almost-level cam on TOP, slightly-up cam below. -->
   <link name="camera_front_up_link"/>
   <joint name="camera_front_up_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_front_up_link"/>
-    <origin xyz="0.18 0 0.25" rpy="-1.3955 0 -1.5708"/>
+    <origin xyz="0.18 0 0.28" rpy="-1.3955 0 -1.5708"/>
   </joint>
 
   <!-- front_down → /camera/front_down/... ; second depth for nav / near ground. -->
@@ -38,7 +39,7 @@
   <joint name="camera_front_down_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_front_down_link"/>
-    <origin xyz="0.18 0 0.28" rpy="-1.1 0 -1.5708"/>
+    <origin xyz="0.18 0 0.25" rpy="-1.1 0 -1.5708"/>
   </joint>
 
   <!-- WT901C485 at robot center → /imu/data (frame_id=imu_link); fused by ekf_node (vyaw). -->
