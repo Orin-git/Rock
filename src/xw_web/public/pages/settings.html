@@ -6,7 +6,7 @@
   <title>设置 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
 </head>
-<body>
+<body class="settings-body">
   <header class="top">
     <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
@@ -24,63 +24,102 @@
       <div id="conn" class="pill off">链路…</div>
     </div>
   </header>
-  <main>
-    <section class="page-head">
+
+  <main class="settings-page">
+    <section class="settings-page-head">
       <div class="tag">System</div>
       <h1>运行与能力</h1>
-      <p class="muted">工作区 /ros2_ws · Web :9000 · ROS_DOMAIN_ID=99（默认）</p>
-    </section>
-    <section class="panel">
-      <h2>运行形态（开发者 / 量产）</h2>
-      <p class="muted" style="margin-top:0">
-        对应 <code>/xw/robot_state.run_mode</code>：
-        <b>1 开发者（默认）</b>可随时切能力；
-        <b>0 量产</b>禁止在运动模式间直接互切（与一代逻辑一致，二代自有服务
-        <code>/xw/supervisor/set_run_mode</code>）。
-      </p>
-      <div class="btn-row" style="align-items:center;gap:0.75rem">
-        <button id="runDev" type="button">开发者</button>
-        <button id="runProd" class="secondary" type="button">量产</button>
-        <button class="secondary" id="idle" type="button">回 IDLE</button>
-        <span class="pill off" id="runPill">形态…</span>
-      </div>
-      <p class="muted" style="font-size:0.8rem;margin:0.6rem 0 0" id="runHint">默认开发者</p>
-      <pre id="log" class="log" style="margin-top:0.75rem"></pre>
+      <p class="settings-lead muted" id="taskFlash">切换形态与外设能力 · 跟随在导航页</p>
     </section>
 
-    <section class="panel" style="margin-top:1rem">
-      <h2>跌倒检测</h2>
-      <p class="muted" style="margin-top:0">
-        独立开关，可与 IDLE / 导航同时开启。前视 RGB 按需转发；约 5–6 FPS NPU 推理，≤2s 稳定确认。
-      </p>
-      <div class="btn-row" style="align-items:center;gap:0.75rem">
-        <button id="fallToggle" type="button">跌倒：…</button>
-        <span class="pill off" id="fallPill">状态…</span>
+    <section class="settings-kpis" aria-label="运行环境">
+      <div class="settings-kpi">
+        <div class="k-label">工作区</div>
+        <p class="k-value">/ros2_ws</p>
+        <div class="k-sub">源码与地图</div>
       </div>
-      <p class="muted" style="font-size:0.8rem;margin:0.6rem 0 0" id="fallHint">—</p>
+      <div class="settings-kpi">
+        <div class="k-label">Web</div>
+        <p class="k-value">:9000</p>
+        <div class="k-sub">本机控制台</div>
+      </div>
+      <div class="settings-kpi">
+        <div class="k-label">Domain</div>
+        <p class="k-value">99</p>
+        <div class="k-sub">ROS_DOMAIN_ID</div>
+      </div>
+      <div class="settings-kpi">
+        <div class="k-label">形态</div>
+        <p class="k-value" id="runKpi">—</p>
+        <div class="k-sub" id="runHint">等待状态…</div>
+      </div>
     </section>
 
-    <section class="panel" style="margin-top:1rem">
-      <h2>深度点云</h2>
-      <p class="muted" style="margin-top:0">
-        进导航自动开、退出自动关（不写持久化）。手动开关会写入偏好。
-        Foxglove Desktop：<b>3D → Point Cloud</b> → <code>/camera/front_up/depth/points</code>（约 3 FPS）。
-      </p>
-      <div class="btn-row" style="align-items:center;gap:0.75rem">
-        <button id="pcToggle" type="button">点云：…</button>
-        <span class="pill off" id="pcPill">状态…</span>
-      </div>
-      <p class="muted" style="font-size:0.8rem;margin:0.6rem 0 0" id="pcHint">—</p>
-    </section>
+    <div class="settings-body-grid">
+      <section class="panel settings-hero">
+        <div class="settings-hero-top">
+          <div>
+            <h2>运行形态</h2>
+            <p class="muted settings-hero-sub">
+              <code>run_mode</code> · 开发者可互切能力 · 量产禁运动模式直切 ·
+              <code>/xw/supervisor/set_run_mode</code>
+            </p>
+          </div>
+          <span class="pill off" id="runPill">形态…</span>
+        </div>
+        <div class="settings-seg" role="group" aria-label="运行形态">
+          <button id="runDev" type="button">开发者</button>
+          <button id="runProd" class="secondary" type="button">量产</button>
+          <button class="secondary" id="idle" type="button">回 IDLE</button>
+        </div>
+      </section>
 
-    <section class="panel" style="margin-top:1rem">
-      <h2>Docker 命令提示</h2>
-      <pre class="log">source /ros2_ws/scripts/ros_env.sh
-ros2 topic list
-ros2 node list
-htop   # 容器内 apt install -y htop</pre>
-    </section>
+      <section class="panel settings-caps">
+        <h2>外设能力</h2>
+        <div class="settings-cap-row">
+          <div class="settings-cap-text">
+            <div class="settings-cap-title">
+              跌倒检测
+              <span class="pill off" id="fallPill">OFF</span>
+            </div>
+            <p class="muted settings-cap-desc">
+              可与 IDLE / 导航同开 · 前视 RGB 按需 · NPU ≈5–6 FPS · ≤2s 确认
+            </p>
+            <p class="settings-cap-meta mono" id="fallHint">—</p>
+          </div>
+          <button id="fallToggle" type="button" class="settings-cap-btn secondary">关闭</button>
+        </div>
+        <div class="settings-cap-row">
+          <div class="settings-cap-text">
+            <div class="settings-cap-title">
+              深度点云
+              <span class="pill off" id="pcPill">OFF</span>
+            </div>
+            <p class="muted settings-cap-desc">
+              进导航自动开 / 退出关 · 手动写入偏好 · Foxglove
+              <code>/camera/front_up/depth/points</code>
+            </p>
+            <p class="settings-cap-meta mono" id="pcHint">—</p>
+          </div>
+          <button id="pcToggle" type="button" class="settings-cap-btn secondary">关闭</button>
+        </div>
+      </section>
+
+      <section class="panel settings-docker">
+        <div class="settings-docker-top">
+          <h2>容器内常用命令</h2>
+          <span class="muted mono settings-docker-tag">bash</span>
+        </div>
+        <div class="settings-cmd-grid">
+          <code>source /ros2_ws/scripts/ros_env.sh</code>
+          <code>ros2 topic list</code>
+          <code>ros2 node list</code>
+          <code>htop</code>
+        </div>
+      </section>
+    </div>
   </main>
+
   <script type="module">
     import {
       connect, setMode, setRunMode, onTask, onState,
@@ -89,12 +128,24 @@ htop   # 容器内 apt install -y htop</pre>
     } from '/js/api.js';
     import '/js/app.js';
     connect();
-    const log = document.getElementById('log');
-    onTask((l) => { log.textContent = l + '\n' + log.textContent; });
+
+    const taskFlash = document.getElementById('taskFlash');
+    const defaultLead = taskFlash ? taskFlash.textContent : '';
+    let flashTimer = null;
+    function flashTask(line) {
+      if (!taskFlash) return;
+      taskFlash.textContent = String(line || '').replace(/^(>>|!!|<<)\s*/, '') || defaultLead;
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => {
+        taskFlash.textContent = defaultLead;
+      }, 4500);
+    }
+    onTask((l) => flashTask(l));
     document.getElementById('idle').onclick = () => setMode(0, {});
 
     const runPill = document.getElementById('runPill');
     const runHint = document.getElementById('runHint');
+    const runKpi = document.getElementById('runKpi');
     const runDev = document.getElementById('runDev');
     const runProd = document.getElementById('runProd');
     function renderRunMode(rm) {
@@ -102,11 +153,12 @@ htop   # 容器内 apt install -y htop</pre>
       const isDev = code !== 0;
       runPill.textContent = isDev ? '开发者' : '量产';
       runPill.className = isDev ? 'pill on' : 'pill warn';
+      if (runKpi) runKpi.textContent = isDev ? '开发者' : '量产';
       runDev.className = isDev ? '' : 'secondary';
       runProd.className = isDev ? 'secondary' : '';
       runHint.textContent = isDev
-        ? '开发者模式：建图/导航可互切；人体跟随请到「导航」页开关'
-        : '量产模式：建图与导航互斥；人体跟随请到「导航」页开关';
+        ? '建图/导航可互切'
+        : '建图与导航互斥';
     }
     onState((s) => renderRunMode(s.run_mode));
     runDev.onclick = () => setRunMode(1);
@@ -116,8 +168,8 @@ htop   # 容器内 apt install -y htop</pre>
       let enabled = false;
       let busy = false;
       function render() {
-        btn.textContent = enabled ? `${btn.dataset.label}：开 → 点此关闭` : `${btn.dataset.label}：关 → 点此打开`;
-        btn.className = enabled ? '' : 'secondary';
+        btn.textContent = enabled ? '关闭' : '开启';
+        btn.className = 'settings-cap-btn ' + (enabled ? '' : 'secondary');
         pill.textContent = enabled ? 'ON' : 'OFF';
         pill.className = enabled ? 'pill on' : 'pill off';
       }
@@ -152,20 +204,16 @@ htop   # 容器内 apt install -y htop</pre>
       setInterval(refresh, 4000);
     }
 
-    const fallBtn = document.getElementById('fallToggle');
-    fallBtn.dataset.label = '跌倒';
     wireToggle({
-      btn: fallBtn,
+      btn: document.getElementById('fallToggle'),
       pill: document.getElementById('fallPill'),
       hint: document.getElementById('fallHint'),
       fetchStatus: fetchFallStatus,
       setEnabled: setFallEnabled,
     });
 
-    const pcBtn = document.getElementById('pcToggle');
-    pcBtn.dataset.label = '点云';
     wireToggle({
-      btn: pcBtn,
+      btn: document.getElementById('pcToggle'),
       pill: document.getElementById('pcPill'),
       hint: document.getElementById('pcHint'),
       fetchStatus: fetchPointcloudStatus,

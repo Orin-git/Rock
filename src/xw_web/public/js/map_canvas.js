@@ -15,10 +15,11 @@
   const OBSTACLE_CLEARANCE_M = 0.3;
   const OCCUPIED_THRESH = 50;
 
+  // Soft edge only — keep cheap (1px dilate + light blur). Warm ivory glow, not cyan.
   const GLOW_CONFIG = {
     dilateRadius: 1,
-    blurPx: 0.8,
-    alpha: 0.35,
+    blurPx: 0.55,
+    alpha: 0.28,
   };
 
   /** Default sensor frames relative to base_link (from xw_gen2.urdf). */
@@ -187,22 +188,25 @@
         const value = readOccupancyCell(message.data, srcRow + x);
         const pixelOffset = dstRow + x * 4;
         if (value === -1) {
-          pixels[pixelOffset] = 38;
-          pixels[pixelOffset + 1] = 34;
-          pixels[pixelOffset + 2] = 48;
+          // Unknown: deep ink (neutral, no purple cast)
+          pixels[pixelOffset] = 20;
+          pixels[pixelOffset + 1] = 22;
+          pixels[pixelOffset + 2] = 26;
           pixels[pixelOffset + 3] = 255;
           glowPixels[pixelOffset + 3] = 0;
         } else if (value === 0) {
-          pixels[pixelOffset] = 50;
-          pixels[pixelOffset + 1] = 72;
-          pixels[pixelOffset + 2] = 110;
+          // Free: warm slate floor
+          pixels[pixelOffset] = 46;
+          pixels[pixelOffset + 1] = 50;
+          pixels[pixelOffset + 2] = 56;
           pixels[pixelOffset + 3] = 255;
           glowPixels[pixelOffset + 3] = 0;
         } else {
+          // Occupied: soft taupe → warm ivory (architectural, not ice-blue)
           const t = value / 100;
-          const wr = Math.round(55 + t * 145);
-          const wg = Math.round(115 + t * 140);
-          const wb = Math.round(160 + t * 95);
+          const wr = Math.round(118 + t * 118);
+          const wg = Math.round(108 + t * 118);
+          const wb = Math.round(96 + t * 112);
           glowPixels[pixelOffset] = wr;
           glowPixels[pixelOffset + 1] = wg;
           glowPixels[pixelOffset + 2] = wb;
@@ -350,7 +354,7 @@
     const gridStartY = Math.floor(worldBottom / spacing) * spacing;
 
     mapCtx.save();
-    mapCtx.strokeStyle = 'rgba(0, 200, 240, 0.12)';
+    mapCtx.strokeStyle = 'rgba(232, 224, 208, 0.07)';
     mapCtx.lineWidth = 0.5;
     for (let wx = gridStartX; wx <= worldRight; wx += spacing) {
       const sx = offsetX + ((wx - worldLeft) / mapRes) * scale;
@@ -466,9 +470,30 @@
     return Math.sqrt(dx * dx + dy * dy);
   }
 
+  function fxMode() {
+    return (document.documentElement && document.documentElement.dataset.fx) || 'high';
+  }
+
   function drawPoseMarker(view, x, y, yaw, fill, stroke, radius) {
     const p = worldToPixel(x, y, view);
     const r = radius || Math.max(7, view.scale * 1.8);
+    const fx = fxMode();
+    if (fx !== 'off') {
+      const pulse = 0.55 + 0.45 * Math.sin(Date.now() / 420);
+      const haloR = r + 6 + pulse * 5;
+      overlayCtx.beginPath();
+      overlayCtx.arc(p.px, p.py, haloR, 0, 2 * Math.PI);
+      overlayCtx.strokeStyle = 'rgba(34, 211, 238, ' + (0.18 + pulse * 0.2) + ')';
+      overlayCtx.lineWidth = 2;
+      overlayCtx.stroke();
+      if (fx === 'high') {
+        overlayCtx.beginPath();
+        overlayCtx.arc(p.px, p.py, haloR + 4, 0, 2 * Math.PI);
+        overlayCtx.strokeStyle = 'rgba(232, 121, 249, ' + (0.08 + pulse * 0.12) + ')';
+        overlayCtx.lineWidth = 1.5;
+        overlayCtx.stroke();
+      }
+    }
     overlayCtx.beginPath();
     overlayCtx.arc(p.px, p.py, r, 0, 2 * Math.PI);
     overlayCtx.fillStyle = fill;
@@ -617,9 +642,13 @@
         const robotY = tf.y;
         const extraYaw = usedScanFrame ? 0 : LASER_DISPLAY_YAW_OFFSET;
         const scanYaw = (typeof tf.yaw === 'number' ? tf.yaw : 0) + extraYaw;
-        overlayCtx.fillStyle = '#c23048';
+        const fx = fxMode();
+        // Laser as sole cool accent against warm ivory walls
+        const laserColor = fx === 'off' ? '#e85d4c' : '#3dd6c6';
+        overlayCtx.fillStyle = laserColor;
         const ranges = latestScan.ranges || [];
-        for (let i = 0; i < ranges.length; i++) {
+        const step = fx === 'high' ? 1 : fx === 'low' ? 2 : 3;
+        for (let i = 0; i < ranges.length; i += step) {
           const range = ranges[i];
           if (range < latestScan.range_min || range > latestScan.range_max) continue;
           const angle = latestScan.angle_min + i * latestScan.angle_increment;
@@ -629,7 +658,7 @@
           const wy = robotY + Math.sin(scanYaw) * lx + Math.cos(scanYaw) * ly;
           const p = worldToPixel(wx, wy, view);
           overlayCtx.beginPath();
-          overlayCtx.arc(p.px, p.py, Math.max(2.5, view.scale * 0.9), 0, 2 * Math.PI);
+          overlayCtx.arc(p.px, p.py, Math.max(2.2, view.scale * 0.85), 0, 2 * Math.PI);
           overlayCtx.fill();
         }
       }
@@ -669,14 +698,14 @@
         displayRobot.x,
         displayRobot.y,
         typeof displayRobot.yaw === 'number' ? displayRobot.yaw : 0,
-        isPreview ? 'rgba(14, 165, 233, 0.9)' : 'rgba(0, 150, 255, 0.85)',
-        isPreview ? '#0369a1' : '#0b6e99',
+        isPreview ? 'rgba(34, 211, 238, 0.92)' : 'rgba(103, 232, 249, 0.9)',
+        isPreview ? '#0891b2' : '#22d3ee',
         Math.max(9, view.scale * 2.2)
       );
       if (isPreview) {
         const p = worldToPixel(displayRobot.x, displayRobot.y, view);
-        overlayCtx.fillStyle = '#0ea5e9';
-        overlayCtx.font = '11px sans-serif';
+        overlayCtx.fillStyle = '#67e8f9';
+        overlayCtx.font = '11px "IBM Plex Mono", sans-serif';
         overlayCtx.textAlign = 'center';
         overlayCtx.fillText('初位姿', p.px, p.py + Math.max(16, view.scale * 3));
       }

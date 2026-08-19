@@ -27,6 +27,7 @@ def generate_launch_description() -> LaunchDescription:
     use_sim = LaunchConfiguration('use_sim_hw')
     use_sim_lidar = LaunchConfiguration('use_sim_lidar')
     use_web = LaunchConfiguration('use_web')
+    use_gesture = LaunchConfiguration('use_gesture')
     use_foxglove = LaunchConfiguration('use_foxglove')
     use_depth_cam = LaunchConfiguration('use_depth_cam')
     use_depth_cam_2 = LaunchConfiguration('use_depth_cam_2')
@@ -49,6 +50,14 @@ def generate_launch_description() -> LaunchDescription:
 
     web_share = get_package_share_directory('xw_web')
     web_public = os.path.join(web_share, 'public')
+    # Prefer live source tree for gesture HTTPS so UI edits don't require reinstall.
+    _ws = os.environ.get('XW_WS', '/ros2_ws')
+    _src_public = os.path.join(_ws, 'src', 'xw_web', 'public')
+    gesture_web = _src_public if os.path.isdir(_src_public) else web_public
+    gesture_certs = os.path.join(web_share, 'certs', 'gesture')
+    _src_certs = os.path.join(_ws, 'src', 'xw_web', 'certs', 'gesture')
+    if os.path.isfile(os.path.join(_src_certs, 'cert.pem')):
+        gesture_certs = _src_certs
     maps_dir = os.environ.get('XW_MAPS', '/ros2_ws/maps')
 
     safety_yaml = os.path.join(
@@ -240,6 +249,21 @@ def generate_launch_description() -> LaunchDescription:
         condition=IfCondition(use_foxglove),
     )
 
+    gesture_https = Node(
+        package='xw_web',
+        executable='gesture_https',
+        name='xw_gesture_https',
+        arguments=[
+            '--web-dir', gesture_web,
+            '--port', '9443',
+            '--cert-dir', gesture_certs,
+        ],
+        condition=IfCondition(use_gesture),
+        output='screen',
+        respawn=True,
+        respawn_delay=3.0,
+    )
+
     delayed_lidar = TimerAction(
         period=lidar_delay,
         actions=[
@@ -313,6 +337,11 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument('imu_port', default_value='/dev/imu'),
         DeclareLaunchArgument('imu_baudrate', default_value='9600'),
         DeclareLaunchArgument('use_web', default_value='true'),
+        DeclareLaunchArgument(
+            'use_gesture',
+            default_value='true',
+            description='HTTPS:9443 HOLO PILOT gesture teleop → /xw/cmd/teleop',
+        ),
         DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('profile', default_value='normal'),
         *nodes,
@@ -320,5 +349,6 @@ def generate_launch_description() -> LaunchDescription:
         depth_cam_2,
         ekf_launch,
         foxglove,
+        gesture_https,
         delayed_lidar,
     ])

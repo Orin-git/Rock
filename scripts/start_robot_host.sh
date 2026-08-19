@@ -39,6 +39,7 @@ USE_FOXGLOVE="${USE_FOXGLOVE:-true}"
 if [[ "${XW_ALLOW_NO_FOXGLOVE:-}" != "1" ]]; then
   USE_FOXGLOVE=true
 fi
+USE_GESTURE="${USE_GESTURE:-true}"
 PROFILE="${PROFILE:-normal}"
 # PointCloud2 debug relay (default off). Set USE_POINTCLOUD=true to enable for Foxglove.
 USE_POINTCLOUD="${USE_POINTCLOUD:-false}"
@@ -130,7 +131,7 @@ docker exec "$CONTAINER" bash -c '
 ' || true
 sleep 1
 
-echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT imu=$IMU_PORT ekf=$USE_EKF depth=$USE_DEPTH_CAM depth2=$USE_DEPTH_CAM_2)"
+echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB gesture=$USE_GESTURE pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT imu=$IMU_PORT ekf=$USE_EKF depth=$USE_DEPTH_CAM depth2=$USE_DEPTH_CAM_2)"
 
 # Foreground so systemd tracks the process
 exec docker exec -i "$CONTAINER" bash -lc "
@@ -156,6 +157,7 @@ exec docker exec -i "$CONTAINER" bash -lc "
     use_depth_cam:=${USE_DEPTH_CAM} \
     use_depth_cam_2:=${USE_DEPTH_CAM_2} \
     use_web:=${USE_WEB} \
+    use_gesture:=${USE_GESTURE} \
     use_foxglove:=${USE_FOXGLOVE} \
     enable_pointcloud:=${USE_POINTCLOUD} \
     profile:=${PROFILE}

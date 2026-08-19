@@ -24,83 +24,90 @@
       <div id="conn" class="pill off">链路…</div>
     </div>
   </header>
-  <main class="viz-main">
-    <section class="page-head">
+
+  <main class="viz-page">
+    <section class="viz-page-head">
       <div class="tag">Foxglove</div>
       <h1>三维可视化</h1>
-      <p class="muted">
-        机器人上的 <code>foxglove_bridge</code>（8765）只负责桥数据。
-        <b>Studio 界面是 Foxglove 云端产品</b>，官方禁止被其它网站 iframe 嵌套（因此会出现「已拒绝连接」）。
-        正确用法：本页生成一键链接 → <b>新标签打开</b>，或用桌面端连 WS。
-      </p>
+      <p class="viz-lead muted">桥在本机 · Studio 新标签打开（不可 iframe）</p>
+      <div class="viz-head-actions">
+        <button type="button" id="btnRefresh">刷新状态</button>
+        <button type="button" class="secondary" id="btnCopyWs">复制 WS</button>
+      </div>
     </section>
 
-    <div class="section-title">数据桥</div>
-    <section class="panel">
-      <div class="viz-status-row">
-        <div>
-          <h2>Foxglove Bridge 状态</h2>
-          <p class="probe-meta" id="foxMeta">检测中…</p>
-          <p class="muted" id="foxDetail" style="margin:0.4rem 0 0;font-size:0.8rem">—</p>
+    <div class="viz-grid">
+      <section class="panel viz-card viz-primary">
+        <div class="viz-status-row">
+          <div>
+            <h2>数据桥</h2>
+            <p class="probe-meta" id="foxMeta">检测中…</p>
+            <p class="muted viz-detail" id="foxDetail">—</p>
+          </div>
         </div>
-        <div class="btn-row" style="margin:0">
-          <button type="button" id="btnRefresh">刷新状态</button>
-          <button type="button" class="secondary" id="btnCopyWs">复制 WS</button>
+
+        <div class="viz-fields">
+          <label>WebSocket（本机器人）</label>
+          <input id="wsUrl" type="text" readonly />
+
+          <label>组织路径</label>
+          <input id="orgPath" type="text" placeholder="例如 5144c9b7" />
+
+          <label>布局 ID（可留空）</label>
+          <input id="layoutId" type="text" placeholder="例如 lay_0eXiBaencBo8VMDx" />
+
+          <label>Studio 链接</label>
+          <input id="studioUrl" type="text" readonly />
         </div>
-      </div>
-      <label>WebSocket（本机器人）</label>
-      <input id="wsUrl" type="text" readonly />
-    </section>
 
-    <div class="section-title">打开方式</div>
-    <section class="panel">
-      <h2>一键打开（推荐）</h2>
-      <p class="muted" style="margin-top:0;font-size:0.82rem">
-        用你已登录的组织路径 + 布局。电脑与机器人需在同一局域网。
-      </p>
-      <label>组织路径（浏览器地址栏里 app.foxglove.dev 后第一段）</label>
-      <input id="orgPath" type="text" placeholder="例如 5144c9b7" />
-      <label>布局 ID（layoutId= 后面那串，可留空）</label>
-      <input id="layoutId" type="text" placeholder="例如 lay_0eXiBaencBo8VMDx" />
-      <label>生成的 Studio 链接</label>
-      <input id="studioUrl" type="text" readonly />
-      <div class="btn-row">
-        <button type="button" id="btnOpen">新标签打开 Studio</button>
-        <button type="button" class="secondary" id="btnCopyLink">复制链接</button>
-        <button type="button" class="secondary" id="btnSave">保存设置</button>
-        <a class="btn secondary" href="https://foxglove.dev/download" target="_blank" rel="noopener">下载桌面端</a>
-      </div>
-      <div class="viz-steps">
-        <div class="viz-step"><b>1</b> 确认上方 Bridge 为「在线」</div>
-        <div class="viz-step"><b>2</b> 点「新标签打开 Studio」（会带上本机 <code>ws://IP:8765</code>）</div>
-        <div class="viz-step"><b>3</b> 若已登录，会直接进你的布局；未登录则先登录一次</div>
-        <div class="viz-step"><b>4</b> 在 3D 面板加 LaserScan → 话题 <code>/scan</code>，并打开 TF</div>
-        <div class="viz-step"><b>5</b> 前上相机：加 <b>Image</b> 面板 → <code>/camera/front_up/color/image_raw/compressed</code></div>
-      </div>
-      <p class="muted" style="font-size:0.78rem;margin:0.75rem 0 0">
-        你之前能用的链接格式即：
-        <code>https://app.foxglove.dev/&lt;组织&gt;/view?ds=foxglove-websocket&amp;ds.url=ws://板子:8765&amp;layoutId=...</code>
-        官方文档见
-        <a href="https://docs.foxglove.dev/docs/getting-started/frameworks/ros2" target="_blank" rel="noopener">ROS 2 连接说明</a>。
-      </p>
-    </section>
+        <div class="btn-row viz-actions">
+          <button type="button" id="btnOpen">新标签打开 Studio</button>
+          <button type="button" class="secondary" id="btnCopyLink">复制链接</button>
+          <button type="button" class="secondary" id="btnSave">保存设置</button>
+          <a class="btn secondary" href="https://foxglove.dev/download" target="_blank" rel="noopener">下载桌面端</a>
+        </div>
+      </section>
 
-    <div class="section-title">桌面端</div>
-    <section class="panel">
-      <h2>桌面端（更稳）</h2>
-      <ol class="viz-ol">
-        <li>安装 Foxglove Desktop</li>
-        <li>Open connection → <b>Foxglove WebSocket</b></li>
-        <li>填入上面的 WS 地址（如 <code id="wsHint">ws://192.168.x.x:8765</code>）</li>
-        <li>Open → 添加 3D / LaserScan / TF 面板</li>
-        <li>看相机：添加 <b>Image</b> → 话题 <code>/camera/front_up/color/image_raw/compressed</code></li>
-        <li>看点云：先在 <a href="/pages/settings.html">设置</a> 打开点云开关，再加 <b>3D</b> → Point Cloud → <code>/camera/front_up/depth/points</code></li>
-      </ol>
-      <p class="muted" style="font-size:0.78rem;margin:0">
-        桌面端无 iframe 限制，也更少碰到 HTTPS 页面连 <code>ws://</code> 的混合内容问题。
-      </p>
-    </section>
+      <aside class="viz-side">
+        <section class="panel viz-card">
+          <h2>打开步骤</h2>
+          <div class="viz-scroll">
+            <div class="viz-steps">
+              <div class="viz-step"><b>1</b> 确认左侧 Bridge「在线」</div>
+              <div class="viz-step"><b>2</b> 点「新标签打开 Studio」（带上 <code>ws://IP:8765</code>）</div>
+              <div class="viz-step"><b>3</b> 已登录进布局；未登录则先登录一次</div>
+              <div class="viz-step"><b>4</b> 3D 面板加 LaserScan → <code>/scan</code>，打开 TF</div>
+              <div class="viz-step"><b>5</b> Image → <code>/camera/front_up/color/image_raw/compressed</code></div>
+            </div>
+            <p class="muted viz-footnote">
+              链接格式：
+              <code>https://app.foxglove.dev/&lt;组织&gt;/view?ds=foxglove-websocket&amp;ds.url=ws://板子:8765&amp;layoutId=...</code>
+              ·
+              <a href="https://docs.foxglove.dev/docs/getting-started/frameworks/ros2" target="_blank" rel="noopener">ROS 2 说明</a>
+            </p>
+          </div>
+        </section>
+
+        <section class="panel viz-card">
+          <h2>桌面端（更稳）</h2>
+          <div class="viz-scroll">
+            <ol class="viz-ol">
+              <li>安装 Foxglove Desktop</li>
+              <li>Open connection → <b>Foxglove WebSocket</b></li>
+              <li>填入 WS：<code id="wsHint">ws://192.168.x.x:8765</code></li>
+              <li>Open → 添加 3D / LaserScan / TF</li>
+              <li>相机：Image → <code>/camera/front_up/color/image_raw/compressed</code></li>
+              <li>点云：先在 <a href="/pages/settings.html">设置</a> 打开，再 3D → Point Cloud → <code>/camera/front_up/depth/points</code></li>
+            </ol>
+            <p class="muted viz-footnote">
+              无 iframe 限制，也更少碰到 HTTPS 连 <code>ws://</code> 的混合内容问题。
+            </p>
+          </div>
+        </section>
+      </aside>
+    </div>
   </main>
+
   <script type="module">
     import { connect, fetchFoxgloveStatus } from '/js/api.js';
     import '/js/app.js';
@@ -109,7 +116,6 @@
 
     const LS_ORG = 'xw_foxglove_org';
     const LS_LAYOUT = 'xw_foxglove_layout';
-    // Defaults from your working deep-link
     const DEFAULT_ORG = '5144c9b7';
     const DEFAULT_LAYOUT = 'lay_0eXiBaencBo8VMDx';
 

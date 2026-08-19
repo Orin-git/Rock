@@ -1,4 +1,14 @@
 // Ensure header status chips + active nav on every page
+(function loadHudFx() {
+  if (document.getElementById('hud-fx-script')) return;
+  if (!document.querySelector('script[src*="hud_fx.js"]')) {
+    const s = document.createElement('script');
+    s.id = 'hud-fx-script';
+    s.src = '/js/hud_fx.js?v=20260819-hud1';
+    s.async = false;
+    document.head.appendChild(s);
+  }
+})();
 
 function bootDesktopPet() {
   if (document.getElementById('desktop-pet') || document.getElementById('desktop-pet-script')) {

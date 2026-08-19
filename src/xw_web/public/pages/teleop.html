@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>遥控 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/teleop.css?v=20260819-tele2" />
 </head>
-<body>
+<body class="teleop-body">
   <header class="top">
     <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
@@ -24,43 +25,101 @@
       <div id="conn" class="pill off">链路…</div>
     </div>
   </header>
-  <main>
-    <section class="page-head">
-      <div class="tag">Manual Drive</div>
-      <h1>遥控与点动</h1>
-      <p class="muted">速度经 /xw/cmd/teleop → 仲裁 → 安全门 → /cmd_vel</p>
+
+  <main class="teleop-main">
+    <section class="teleop-head">
+      <div>
+        <span class="tag">Manual Drive</span>
+        <h1>遥控与点动</h1>
+      </div>
+      <p class="muted teleop-lead">
+        /xw/cmd/teleop → 仲裁 → 安全门 → /cmd_vel · 空挡手势走 HTTPS:9443
+      </p>
     </section>
-    <div class="cols-2">
-      <section class="panel">
-        <h2>遥控摇杆</h2>
-        <div class="joystick-wrap" id="stick"><div class="knob" id="knob"></div></div>
-        <p class="muted" id="vel" style="font-family:var(--font-mono)">vx=0.00 wz=0.00</p>
-        <div class="btn-row"><button class="secondary" id="stop">急停归零</button></div>
-      </section>
-      <section class="panel">
-        <h2>定距点动</h2>
-        <p class="muted" style="margin-top:0">角度：+左转 / −右转；距离：+前进 / −后退</p>
-        <label>角度 (°)</label>
-        <input id="ang" type="number" value="0" step="5" />
-        <label>距离 (m)</label>
-        <input id="dist" type="number" value="0.3" step="0.1" />
-        <div class="btn-row" style="flex-wrap:wrap;gap:0.5rem">
-          <button type="button" class="secondary" data-jog="90,0">左转 90°</button>
-          <button type="button" class="secondary" data-jog="-90,0">右转 90°</button>
-          <button type="button" class="secondary" data-jog="180,0">掉头 180°</button>
-          <button type="button" class="secondary" data-jog="0,1">前进 1m</button>
-          <button type="button" class="secondary" data-jog="0,-1">后退 1m</button>
-          <button type="button" class="secondary" data-jog="0,0.3">前进 0.3m</button>
-          <button type="button" class="secondary" data-jog="0,-0.3">后退 0.3m</button>
+
+    <section class="teleop-grid" aria-label="遥控面板">
+      <!-- 摇杆 -->
+      <div class="panel teleop-card">
+        <div class="teleop-card-head">
+          <h2>遥控摇杆</h2>
+          <span class="pill on">可用</span>
         </div>
-        <div class="btn-row">
-          <button id="jog">执行</button>
-          <button type="button" class="secondary" id="jogStop">停止点动</button>
+        <div class="teleop-card-body teleop-stick-body">
+          <div class="joystick-wrap teleop-stick" id="stick">
+            <div class="knob" id="knob"></div>
+          </div>
+          <p class="teleop-vel" id="vel">vx=0.00 · wz=0.00</p>
+          <button class="secondary teleop-stop" id="stop" type="button">急停归零</button>
         </div>
-        <p class="muted" id="jogStatus" style="font-family:var(--font-mono);font-size:0.75rem">/api/motion → /xw/motion/command</p>
-      </section>
-    </div>
+      </div>
+
+      <!-- 点动 -->
+      <div class="panel teleop-card">
+        <div class="teleop-card-head">
+          <h2>定距点动</h2>
+          <span class="pill on">可用</span>
+        </div>
+        <div class="teleop-card-body">
+          <p class="muted teleop-hint">角度 +左转 / −右转 · 距离 +前进 / −后退</p>
+          <div class="teleop-fields">
+            <label>角度 (°)<input id="ang" type="number" value="0" step="5" /></label>
+            <label>距离 (m)<input id="dist" type="number" value="0.3" step="0.1" /></label>
+          </div>
+          <div class="teleop-jog-grid">
+            <button type="button" class="secondary" data-jog="90,0">左转 90°</button>
+            <button type="button" class="secondary" data-jog="-90,0">右转 90°</button>
+            <button type="button" class="secondary" data-jog="180,0">掉头 180°</button>
+            <button type="button" class="secondary" data-jog="0,1">前进 1m</button>
+            <button type="button" class="secondary" data-jog="0,-1">后退 1m</button>
+            <button type="button" class="secondary" data-jog="0,0.3">前进 0.3m</button>
+            <button type="button" class="secondary" data-jog="0,-0.3">后退 0.3m</button>
+          </div>
+          <div class="teleop-actions">
+            <button id="jog" type="button">执行</button>
+            <button type="button" class="secondary" id="jogStop">停止点动</button>
+          </div>
+          <p class="teleop-status" id="jogStatus">/api/motion → /xw/motion/command</p>
+        </div>
+      </div>
+
+      <!-- 空挡 · 手势（一代 HOLO PILOT） -->
+      <div class="panel teleop-card teleop-card-gesture">
+        <div class="teleop-card-head">
+          <h2>空挡 · 手势控制</h2>
+          <span class="pill on">可用</span>
+        </div>
+        <div class="teleop-card-body teleop-gesture">
+          <div class="gesture-stage" aria-hidden="true">
+            <div class="gesture-hand">
+              <span class="gh gh-palm"></span>
+              <span class="gh gh-f1"></span>
+              <span class="gh gh-f2"></span>
+              <span class="gh gh-f3"></span>
+              <span class="gh gh-f4"></span>
+              <span class="gh gh-f5"></span>
+            </div>
+            <div class="gesture-ring"></div>
+            <div class="gesture-ring delay"></div>
+          </div>
+          <div class="gesture-modes">
+            <span class="gesture-chip">指上 · 前进</span>
+            <span class="gesture-chip">指下 · 后退</span>
+            <span class="gesture-chip">指左 · 左转</span>
+            <span class="gesture-chip">指右 · 右转</span>
+            <span class="gesture-chip">张手 · 自旋</span>
+            <span class="gesture-chip">握拳 · 停止</span>
+          </div>
+          <a class="teleop-gesture-open" id="gestureOpen" href="#" target="_blank" rel="noopener">
+            打开 HOLO PILOT
+          </a>
+          <p class="muted teleop-hint" id="gestureHint">
+            摄像头需 HTTPS · 首次请在浏览器信任自签证书 · → /xw/cmd/teleop
+          </p>
+        </div>
+      </div>
+    </section>
   </main>
+
   <script type="module">
     import { connect, publishTeleop, callMotion } from '/js/api.js';
     import '/js/app.js';
@@ -74,10 +133,10 @@
     let jogging = false;
 
     function setKnob(nx, ny) {
-      const r = 78;
+      const r = 70;
       knob.style.transform = `translate(calc(-50% + ${nx * r}px), calc(-50% + ${ny * r}px))`;
       const vx = -ny * 0.35, wz = -nx * 0.8;
-      vel.textContent = `vx=${vx.toFixed(2)} wz=${wz.toFixed(2)}`;
+      vel.textContent = `vx=${vx.toFixed(2)} · wz=${wz.toFixed(2)}`;
       publishTeleop(vx, wz);
     }
     function fromEvent(e) {
@@ -89,7 +148,11 @@
       if (mag > 1) { dx /= mag; dy /= mag; }
       setKnob(dx, dy);
     }
-    stick.addEventListener('pointerdown', (e) => { active = true; stick.setPointerCapture(e.pointerId); fromEvent(e); });
+    stick.addEventListener('pointerdown', (e) => {
+      active = true;
+      stick.setPointerCapture(e.pointerId);
+      fromEvent(e);
+    });
     stick.addEventListener('pointermove', (e) => { if (active) fromEvent(e); });
     const end = () => { active = false; setKnob(0, 0); publishTeleop(0, 0); };
     stick.addEventListener('pointerup', end);
@@ -105,11 +168,9 @@
       const dir = Number(dist) > 0 ? '前进' : Number(dist) < 0 ? '后退' : '转向';
       status.textContent = `${label || dir} 下发中… ang=${ang} dist=${dist}`;
       const j = await callMotion(ang, dist);
-      if (j.ok) {
-        status.textContent = `ok: ${j.message || 'accepted'}`;
-      } else {
-        status.textContent = `fail: ${j.message || 'error'}`;
-      }
+      status.textContent = j.ok
+        ? `ok: ${j.message || 'accepted'}`
+        : `fail: ${j.message || 'error'}`;
       jogBtn.disabled = false;
       jogging = false;
     }
@@ -130,6 +191,13 @@
       const j = await callMotion(0, 0);
       status.textContent = j.ok ? '已停止点动' : `stop: ${j.message || ''}`;
     };
+
+    const gestureOpen = document.getElementById('gestureOpen');
+    const gestureHint = document.getElementById('gestureHint');
+    const gestureUrl = `https://${location.hostname || '127.0.0.1'}:9443/gesture_control.html`;
+    gestureOpen.href = gestureUrl;
+    gestureHint.textContent =
+      `摄像头需 HTTPS · ${gestureUrl} · 首次请信任自签证书 · → /xw/cmd/teleop`;
   </script>
 </body>
 </html>

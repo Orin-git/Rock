@@ -9,9 +9,15 @@ data_files = [
         ('share/xw_web', ['package.xml']),
 ]
 
-# install public web assets
+# install public web assets + TLS certs for gesture HTTPS
 if package_name == 'xw_web':
     for dirpath, _, filenames in os.walk('public'):
+        if not filenames:
+            continue
+        install_dir = os.path.join('share', package_name, dirpath)
+        files = [os.path.join(dirpath, f) for f in filenames]
+        data_files.append((install_dir, files))
+    for dirpath, _, filenames in os.walk('certs'):
         if not filenames:
             continue
         install_dir = os.path.join('share', package_name, dirpath)
@@ -32,7 +38,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-        'web_server = xw_web.web_server:main',
+            'web_server = xw_web.web_server:main',
+            'gesture_https = xw_web.gesture_https_server:main',
         ],
     },
 )

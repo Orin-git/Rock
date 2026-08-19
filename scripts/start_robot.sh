@@ -25,6 +25,7 @@ fi
 : "${USE_DEPTH_CAM:=true}"
 : "${USE_DEPTH_CAM_2:=true}"
 : "${USE_WEB:=true}"
+: "${USE_GESTURE:=true}"
 : "${USE_FOXGLOVE:=true}"
 : "${PROFILE:=normal}"
 # Delay real lidar motor start so Web/SSH settle (lidar inrush can brown-out SBC)
@@ -48,5 +49,6 @@ exec ros2 launch xw_bringup robot.launch.py \
   use_depth_cam:="${USE_DEPTH_CAM}" \
   use_depth_cam_2:="${USE_DEPTH_CAM_2}" \
   use_web:="${USE_WEB}" \
+  use_gesture:="${USE_GESTURE}" \
   use_foxglove:="${USE_FOXGLOVE}" \
   profile:="${PROFILE}"

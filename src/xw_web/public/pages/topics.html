@@ -6,7 +6,7 @@
   <title>话题与节点 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
 </head>
-<body>
+<body class="topics-body">
   <header class="top">
     <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
@@ -24,42 +24,55 @@
       <div id="conn" class="pill off">链路…</div>
     </div>
   </header>
-  <main>
-    <section class="page-head">
+
+  <main class="topics-page">
+    <section class="topics-page-head">
       <div class="tag">ROS Graph</div>
       <h1>话题与节点</h1>
-      <p class="muted">点击话题后按 <code>ros2 topic echo</code> 方式显示该话题消息内容；离开或停止监听后自动断开。</p>
-    </section>
-
-    <div class="section-title">监听</div>
-    <section class="panel probe-panel">
-      <div class="probe-head">
-        <div>
-          <h2>当前监听</h2>
-          <p class="probe-meta" id="probeMeta">未监听任何话题</p>
-        </div>
-        <div class="btn-row" style="margin:0">
-          <button type="button" class="secondary" id="btnRefresh">刷新图</button>
-          <button type="button" class="secondary" id="btnUnwatch" disabled>停止监听</button>
-        </div>
+      <p class="topics-lead muted">点选话题 echo · 列表在栏内滚动 · 离开自动断开</p>
+      <div class="topics-head-actions">
+        <button type="button" class="secondary" id="btnRefresh">刷新图</button>
+        <button type="button" class="secondary" id="btnUnwatch" disabled>停止监听</button>
       </div>
-      <pre class="log probe-log" id="probeData">点击下方话题开始 echo…</pre>
     </section>
 
-    <div class="section-title">话题 <span class="section-count" id="topicCount">0</span></div>
-    <div class="tool-bar">
-      <input id="topicFilter" type="search" placeholder="过滤话题名 / 说明…" />
-      <label class="check-inline"><input type="checkbox" id="xwOnly" checked /> 优先 /xw</label>
+    <div class="topics-grid">
+      <aside class="topics-side">
+        <section class="panel topics-card">
+          <div class="topics-card-head">
+            <h2>话题 <span class="section-count" id="topicCount">0</span></h2>
+            <div class="topics-tools">
+              <input id="topicFilter" type="search" placeholder="过滤话题 / 说明…" />
+              <label class="check-inline"><input type="checkbox" id="xwOnly" checked /> /xw</label>
+            </div>
+          </div>
+          <div class="topics-scroll" id="topicList">
+            <p class="muted pad">加载图…</p>
+          </div>
+        </section>
+
+        <section class="panel topics-card topics-nodes">
+          <div class="topics-card-head">
+            <h2>节点 <span class="section-count" id="nodeCount">0</span></h2>
+          </div>
+          <div class="topics-scroll" id="nodeList">
+            <p class="muted pad">加载节点…</p>
+          </div>
+        </section>
+      </aside>
+
+      <section class="panel topics-probe">
+        <div class="probe-head">
+          <div>
+            <h2>当前监听</h2>
+            <p class="probe-meta" id="probeMeta">未监听任何话题</p>
+          </div>
+        </div>
+        <pre class="log probe-log topics-probe-log" id="probeData">点击左侧话题开始 echo…</pre>
+      </section>
     </div>
-    <section class="list-panel" id="topicList">
-      <p class="muted pad">加载图…</p>
-    </section>
-
-    <div class="section-title">节点 <span class="section-count" id="nodeCount">0</span></div>
-    <section class="list-panel" id="nodeList">
-      <p class="muted pad">加载节点…</p>
-    </section>
   </main>
+
   <script type="module">
     import {
       connect,
@@ -93,7 +106,7 @@
       activeTopic = null;
       btnUnwatch.disabled = true;
       probeMeta.textContent = msg || '未监听任何话题';
-      probeData.textContent = '点击下方话题开始 echo…';
+      probeData.textContent = '点击左侧话题开始 echo…';
       document.querySelectorAll('.row-item.active').forEach((el) => el.classList.remove('active'));
     }
 
@@ -138,7 +151,7 @@
           const types = (t.types || []).join(', ');
           const heavy = t.heavy ? '<span class="chip heavy">大消息</span>' : '';
           const on = activeTopic === t.name ? ' active' : '';
-          return `<button type="button" class="row-item${on}" data-topic="${escapeAttr(t.name)}" data-type="${escapeAttr((t.types || [])[0] || '')}">
+          return `<button type="button" class="row-item topics-row${on}" data-topic="${escapeAttr(t.name)}" data-type="${escapeAttr((t.types || [])[0] || '')}">
             <div class="row-main">
               <span class="row-name">${escapeHtml(t.name)}</span>
               ${heavy}
@@ -163,7 +176,7 @@
       }
       nodeList.innerHTML = nodes
         .map(
-          (n) => `<div class="row-item static">
+          (n) => `<div class="row-item static topics-row">
             <div class="row-main"><span class="row-name">${escapeHtml(n.name)}</span></div>
             <div class="row-hint">${escapeHtml(n.hint || '')}</div>
           </div>`,
@@ -237,7 +250,6 @@
         }
       };
       tick();
-      // ~2 Hz UI refresh; backend already rate-limits samples.
       peekTimer = setInterval(tick, 500);
     }
 
@@ -253,7 +265,6 @@
     btnRefresh.addEventListener('click', () => loadGraph(true));
     btnUnwatch.addEventListener('click', stopWatch);
 
-    // Graph only while page open; slow refresh keeps CPU low.
     loadGraph(true);
     graphTimer = setInterval(() => loadGraph(false), 4000);
 

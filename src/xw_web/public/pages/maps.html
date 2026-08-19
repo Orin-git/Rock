@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>地图 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/maps.css?v=20260819-maps2" />
 </head>
-<body>
+<body class="maps-body">
   <header class="top">
     <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
@@ -24,61 +25,62 @@
       <div id="conn" class="pill off">链路…</div>
     </div>
   </header>
-  <main>
-    <section class="page-head">
-      <div class="tag">Map Store</div>
-      <h1>地图管理</h1>
-      <p class="muted">
-        建图保存地图 <code>vp</code> 时，会自动生成导航点列表
-        <code>vp_pointList</code>（含建图起点 <code>charger</code>）。
-        下方可分别管理「地图文件」与「导航点列表」。
+
+  <main class="maps-main">
+    <section class="maps-head">
+      <div>
+        <span class="tag">Map Store</span>
+        <h1>地图管理</h1>
+      </div>
+      <p class="muted maps-head-lead">
+        左列地图文件 · 右列导航点列表（<code>{地图}_pointList</code>）· 航点内容请到
+        <a href="/pages/navigation.html">导航</a> 编辑
       </p>
+      <p class="maps-status muted" id="mapsStatus" aria-live="polite"></p>
     </section>
 
-    <div class="section-title">地图列表 <span class="section-count" id="mapCount">0</span></div>
-    <section class="panel">
-      <div class="batch-bar">
-        <label class="check-inline">
-          <input type="checkbox" id="selectAll" /> 全选
-        </label>
-        <button type="button" id="refresh">刷新</button>
-        <button type="button" class="secondary" id="batchDelete">批量删除</button>
-        <button type="button" class="secondary" id="batchKeep">批量保留</button>
-        <p class="muted" id="batchHint">未选中</p>
+    <section class="maps-split" aria-label="地图与导航点">
+      <div class="panel maps-col">
+        <div class="maps-col-head">
+          <div class="section-title maps-col-title">
+            地图列表
+            <span class="section-count" id="mapCount">0</span>
+          </div>
+          <div class="batch-bar maps-batch">
+            <label class="check-inline">
+              <input type="checkbox" id="selectAll" /> 全选
+            </label>
+            <button type="button" id="refresh">刷新</button>
+            <button type="button" class="secondary" id="batchDelete">批量删除</button>
+            <button type="button" class="secondary" id="batchKeep">批量保留</button>
+            <span class="muted maps-batch-hint" id="batchHint">未选中</span>
+          </div>
+        </div>
+        <div class="list-panel maps-scroll" id="mapList">
+          <p class="muted pad">加载中…</p>
+        </div>
       </div>
-      <div class="list-panel" id="mapList">
-        <p class="muted pad">加载中…</p>
-      </div>
-    </section>
 
-    <div class="section-title">
-      导航点列表
-      <span class="section-count" id="wpListCount">0</span>
-    </div>
-    <section class="panel">
-      <p class="muted hint-sm" style="margin-top:0">
-        每张地图对应一份 <code>{地图名}_pointList</code>。此处管理的是「列表文件」本身（重命名 / 删除）；
-        列表里的具体航点请在
-        <a href="/pages/navigation.html">导航</a>
-        页选对应地图后编辑。
-      </p>
-      <div class="batch-bar">
-        <label class="check-inline">
-          <input type="checkbox" id="wpSelectAll" /> 全选
-        </label>
-        <button type="button" id="refreshWpLists">刷新</button>
-        <button type="button" class="secondary" id="wpBatchDelete">批量删除</button>
-        <button type="button" class="secondary" id="wpBatchKeep">批量保留</button>
-        <p class="muted" id="wpBatchHint">未选中</p>
+      <div class="panel maps-col">
+        <div class="maps-col-head">
+          <div class="section-title maps-col-title">
+            导航点列表
+            <span class="section-count" id="wpListCount">0</span>
+          </div>
+          <div class="batch-bar maps-batch">
+            <label class="check-inline">
+              <input type="checkbox" id="wpSelectAll" /> 全选
+            </label>
+            <button type="button" id="refreshWpLists">刷新</button>
+            <button type="button" class="secondary" id="wpBatchDelete">批量删除</button>
+            <button type="button" class="secondary" id="wpBatchKeep">批量保留</button>
+            <span class="muted maps-batch-hint" id="wpBatchHint">未选中</span>
+          </div>
+        </div>
+        <div class="list-panel maps-scroll" id="wpListCatalog">
+          <p class="muted pad">加载中…</p>
+        </div>
       </div>
-      <div class="list-panel" id="wpListCatalog">
-        <p class="muted pad">加载中…</p>
-      </div>
-    </section>
-
-    <div class="section-title">日志</div>
-    <section class="panel">
-      <pre id="log" class="log"></pre>
     </section>
   </main>
 
@@ -88,7 +90,7 @@
 
     connect();
 
-    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('mapsStatus');
     const mapListEl = document.getElementById('mapList');
     const mapCountEl = document.getElementById('mapCount');
     const batchHint = document.getElementById('batchHint');
@@ -100,16 +102,26 @@
 
     let currentMaps = [];
     let pointListNames = [];
-    let pointListMeta = {}; // listName -> { count, hasCharger }
+    let pointListMeta = {};
     let pointListSet = new Set();
     let busy = false;
     let wpBusy = false;
+    let statusTimer = null;
 
-    function pushLog(line) {
-      logEl.textContent = line + '\n' + logEl.textContent;
+    function setStatus(line, isErr) {
+      if (!statusEl) return;
+      statusEl.textContent = line || '';
+      statusEl.classList.toggle('is-err', !!isErr);
+      if (statusTimer) clearTimeout(statusTimer);
+      if (line) {
+        statusTimer = setTimeout(() => {
+          statusEl.textContent = '';
+          statusEl.classList.remove('is-err');
+        }, 5000);
+      }
     }
 
-    onTask((l) => pushLog(l));
+    onTask((l) => setStatus(l, /!!|fail|失败|错误/i.test(l)));
 
     function pointListNameFor(mapName) {
       if (!mapName) return '';
@@ -222,9 +234,9 @@
         if (hasWp) {
           const n = metaInfo ? metaInfo.count : '?';
           const ch = metaInfo && metaInfo.hasCharger ? ' · 含 charger' : '';
-          meta.textContent = `关联导航点列表：${wp}（${n} 个航点${ch}）`;
+          meta.textContent = `关联：${wp}（${n} 航点${ch}）`;
         } else {
-          meta.textContent = `无关联 ${wp}（保存建图时会自动创建）`;
+          meta.textContent = `无关联 ${wp}`;
         }
         info.appendChild(title);
         info.appendChild(meta);
@@ -281,7 +293,7 @@
       wpListCatalogEl.innerHTML = '';
       if (!pointListNames.length) {
         wpListCatalogEl.innerHTML =
-          '<p class="muted pad">暂无导航点列表 · 建图保存地图时会自动创建</p>';
+          '<p class="muted pad">暂无导航点列表 · 建图保存时会自动创建</p>';
         updateWpBatchHint();
         return;
       }
@@ -314,9 +326,9 @@
         const meta = document.createElement('div');
         meta.className = 'map-item-meta ' + (mapExists ? 'has-wp' : 'no-wp');
         const parts = [
-          `${metaInfo.count} 个航点`,
-          metaInfo.hasCharger ? '含 charger（建图起点）' : '无 charger',
-          mapExists ? `绑定地图：${mapStem}` : `地图缺失：${mapStem}`,
+          `${metaInfo.count} 航点`,
+          metaInfo.hasCharger ? '含 charger' : '无 charger',
+          mapExists ? `地图 ${mapStem}` : `缺地图 ${mapStem}`,
         ];
         meta.textContent = parts.join(' · ');
         info.appendChild(title);
@@ -365,30 +377,32 @@
     }
 
     async function refresh() {
-      pushLog('>> 刷新地图与导航点列表');
+      setStatus('刷新中…');
       const mapsRes = await mapManage(2);
       currentMaps = mapsRes.map_list || [];
       if (!mapsRes.ok && !currentMaps.length) {
-        pushLog(`!! 地图列表失败：${mapsRes.message || 'bridge offline'}`);
+        setStatus(`地图列表失败：${mapsRes.message || 'bridge offline'}`, true);
       }
       try {
         await loadPointLists();
       } catch (e) {
-        pushLog(`!! 导航点列表失败：${e}`);
+        setStatus(`导航点列表失败：${e}`, true);
       }
       renderList();
       renderWpCatalog();
+      setStatus('已刷新');
     }
 
     async function refreshWpOnly() {
-      pushLog('>> 刷新导航点列表');
+      setStatus('刷新导航点列表…');
       try {
         await loadPointLists();
       } catch (e) {
-        pushLog(`!! 导航点列表失败：${e}`);
+        setStatus(`导航点列表失败：${e}`, true);
       }
       renderList();
       renderWpCatalog();
+      setStatus('导航点列表已刷新');
     }
 
     async function renameMap(oldName) {
@@ -396,9 +410,9 @@
       if (next === null) return;
       const newName = next.trim();
       if (!newName || newName === oldName) return;
-      pushLog(`>> 重命名地图 ${oldName} → ${newName}`);
+      setStatus(`重命名地图 ${oldName} → ${newName}`);
       const j = await mapManage(3, oldName, { new_name: newName });
-      pushLog(j.ok ? `<< ${j.message || 'renamed'}` : `!! ${j.message || 'rename failed'}`);
+      setStatus(j.ok ? j.message || '已重命名' : j.message || '重命名失败', !j.ok);
       await refresh();
     }
 
@@ -411,9 +425,9 @@
       if (next === null) return;
       const newName = next.trim();
       if (!newName || newName === oldName || pointListNameFor(newName) === oldName) return;
-      pushLog(`>> 重命名导航点列表 ${oldName} → ${newName}`);
+      setStatus(`重命名列表 ${oldName} → ${newName}`);
       const j = await waypointManage(4, oldName, { new_name: newName });
-      pushLog(j.ok ? `<< ${j.message || 'renamed'}` : `!! ${j.message || 'rename failed'}`);
+      setStatus(j.ok ? j.message || '已重命名' : j.message || '重命名失败', !j.ok);
       await refresh();
     }
 
@@ -425,9 +439,8 @@
       ) {
         return;
       }
-      pushLog(`>> 删除地图 ${name}`);
       const j = await mapManage(4, name);
-      pushLog(j.ok ? `<< ${j.message || 'deleted'}` : `!! ${j.message || 'delete failed'}`);
+      setStatus(j.ok ? j.message || '已删除' : j.message || '删除失败', !j.ok);
       await refresh();
     }
 
@@ -439,9 +452,8 @@
       ) {
         return;
       }
-      pushLog(`>> 删除导航点列表 ${listName}`);
       const j = await waypointManage(3, listName);
-      pushLog(j.ok ? `<< ${j.message || 'deleted'}` : `!! ${j.message || 'delete failed'}`);
+      setStatus(j.ok ? j.message || '已删除' : j.message || '删除失败', !j.ok);
       await refresh();
     }
 
@@ -451,14 +463,14 @@
       let okN = 0;
       const failed = [];
       for (let i = 0; i < names.length; i++) {
-        pushLog(`>> 批量删除地图 (${i + 1}/${names.length}) ${names[i]}`);
+        setStatus(`删除地图 ${i + 1}/${names.length}：${names[i]}`);
         const j = await mapManage(4, names[i]);
         if (j.ok) okN++;
         else failed.push(`${names[i]}: ${j.message || 'fail'}`);
       }
       busy = false;
-      if (!failed.length) pushLog(`<< 成功删除 ${okN} 个地图`);
-      else pushLog(`!! 成功 ${okN}，失败 ${failed.length}：${failed.join('; ')}`);
+      if (!failed.length) setStatus(`成功删除 ${okN} 个地图`);
+      else setStatus(`成功 ${okN}，失败 ${failed.length}`, true);
       await refresh();
     }
 
@@ -468,14 +480,14 @@
       let okN = 0;
       const failed = [];
       for (let i = 0; i < names.length; i++) {
-        pushLog(`>> 批量删除导航点列表 (${i + 1}/${names.length}) ${names[i]}`);
+        setStatus(`删除列表 ${i + 1}/${names.length}：${names[i]}`);
         const j = await waypointManage(3, names[i]);
         if (j.ok) okN++;
         else failed.push(`${names[i]}: ${j.message || 'fail'}`);
       }
       wpBusy = false;
-      if (!failed.length) pushLog(`<< 成功删除 ${okN} 个导航点列表`);
-      else pushLog(`!! 成功 ${okN}，失败 ${failed.length}：${failed.join('; ')}`);
+      if (!failed.length) setStatus(`成功删除 ${okN} 个导航点列表`);
+      else setStatus(`成功 ${okN}，失败 ${failed.length}`, true);
       await refresh();
     }
 

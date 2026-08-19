@@ -1,0 +1,295 @@
+/* Teleop — one-screen three columns */
+
+body.teleop-body {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+body.teleop-body .top { flex-shrink: 0; }
+
+body.teleop-body main.teleop-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(100% - 2rem, 90rem);
+  max-width: none;
+  margin: 0 auto;
+  padding: 0.7rem 0 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  overflow: hidden;
+}
+
+.teleop-head {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--line, #d7e0ea);
+}
+.teleop-head .tag {
+  display: inline-flex;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.64rem;
+  font-weight: 500;
+  color: var(--accent, #0c7f96);
+  background: var(--accent-soft, #e6f5f8);
+  border: 1px solid #b9dce4;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-right: 0.35rem;
+}
+.teleop-head h1 {
+  display: inline;
+  margin: 0;
+  font-family: var(--font-brand, sans-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink, #0f1b2d);
+}
+.teleop-lead {
+  margin: 0;
+  flex: 1 1 16rem;
+  font-size: 0.76rem;
+}
+
+.teleop-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.teleop-card {
+  margin: 0 !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: 0.7rem 0.8rem 0.75rem;
+  overflow: hidden;
+}
+.teleop-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-bottom: 0.45rem;
+}
+.teleop-card-head h2 {
+  margin: 0 !important;
+}
+.teleop-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.teleop-stick-body {
+  align-items: center;
+  justify-content: center;
+}
+.teleop-stick.joystick-wrap {
+  width: min(200px, 42vw);
+  height: min(200px, 42vw);
+  margin: 0.25rem auto 0.35rem;
+  flex-shrink: 0;
+}
+.teleop-vel {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.78rem;
+  color: var(--muted, #5b6c80);
+}
+.teleop-stop {
+  width: min(200px, 100%);
+}
+
+.teleop-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.teleop-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+.teleop-fields label {
+  margin: 0;
+  font-size: 0.72rem;
+}
+.teleop-fields input {
+  margin-top: 0.2rem;
+  max-width: none;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+}
+.teleop-jog-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  align-content: start;
+}
+.teleop-jog-grid button {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.78rem;
+}
+.teleop-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.teleop-actions button {
+  flex: 1;
+}
+.teleop-status {
+  margin: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  color: var(--muted, #5b6c80);
+  flex-shrink: 0;
+}
+
+/* Gesture / neutral — Gen1 HOLO PILOT entry */
+.teleop-card-gesture {
+  background:
+    linear-gradient(165deg, rgba(230, 245, 248, 0.55), rgba(255, 255, 255, 0.92));
+}
+.teleop-gesture {
+  align-items: center;
+}
+.gesture-stage {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0.35rem auto 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.gesture-ring {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(12, 127, 150, 0.28);
+  animation: gest-spin 10s linear infinite;
+}
+.gesture-ring.delay {
+  inset: 0;
+  border-color: rgba(12, 127, 150, 0.18);
+  animation-duration: 14s;
+  animation-direction: reverse;
+}
+@keyframes gest-spin {
+  to { transform: rotate(360deg); }
+}
+.gesture-hand {
+  position: relative;
+  width: 56px;
+  height: 64px;
+  z-index: 1;
+}
+.gh-palm {
+  position: absolute;
+  left: 10px;
+  bottom: 4px;
+  width: 36px;
+  height: 34px;
+  border-radius: 12px 12px 14px 14px;
+  background: linear-gradient(180deg, #f6d7b8, #e8b98a);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.06);
+}
+.gh-f1, .gh-f2, .gh-f3, .gh-f4, .gh-f5 {
+  position: absolute;
+  bottom: 34px;
+  width: 8px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #f8debf, #e8b98a);
+}
+.gh-f1 { left: 8px; height: 22px; transform: rotate(-18deg); }
+.gh-f2 { left: 18px; }
+.gh-f3 { left: 28px; height: 30px; }
+.gh-f4 { left: 38px; }
+.gh-f5 { left: 46px; height: 20px; transform: rotate(16deg); bottom: 28px; }
+
+.gesture-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  width: 100%;
+}
+.gesture-chip {
+  display: block;
+  text-align: center;
+  padding: 0.32rem 0.4rem;
+  font-size: 0.7rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--muted, #5b6c80);
+  border: 1px solid var(--line, #d7e0ea);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.teleop-gesture-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.15rem;
+  padding: 0.55rem 0.75rem;
+  font-family: var(--font-brand, sans-serif);
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(135deg, #0c7f96, #0a5f72);
+  border-radius: 8px;
+  border: 1px solid #086070;
+  flex-shrink: 0;
+}
+.teleop-gesture-open:hover {
+  filter: brightness(1.06);
+}
+
+@media (max-width: 1000px) {
+  .teleop-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .teleop-card-gesture {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 720px) {
+  body.teleop-body {
+    height: auto;
+    max-height: none;
+    overflow: auto;
+  }
+  body.teleop-body main.teleop-main {
+    overflow: visible;
+    padding-bottom: 1.25rem;
+  }
+  .teleop-grid {
+    grid-template-columns: 1fr;
+    flex: none;
+  }
+  .teleop-card-gesture { grid-column: auto; }
+  .teleop-card { height: auto; }
+}

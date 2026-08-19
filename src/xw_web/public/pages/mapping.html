@@ -6,7 +6,7 @@
   <title>建图 · 小维二代</title>
   <link rel="stylesheet" href="/css/app.css" />
 </head>
-<body>
+<body class="mapping-body">
   <header class="top">
     <div class="brand">小维<span>GEN-2 / ROCK 5T</span></div>
     <nav>
@@ -24,83 +24,69 @@
       <div id="conn" class="pill off">链路…</div>
     </div>
   </header>
-  <main>
-    <section class="page-head">
+
+  <main class="mapping-page">
+    <section class="mapping-page-head">
       <div class="tag">SLAM</div>
       <h1>建图</h1>
-      <p class="muted">
-        Supervisor <code>mode=1</code> 启停 SLAM · Foxglove 画布叠
-        <code>/map</code> + <code>/scan</code> · 随时保存写入
-        <code>{name}_pointList/charger</code>
-      </p>
+      <p class="mapping-lead muted">mode=1 启停 · 画布叠 /map+/scan · 随时保存</p>
+      <p class="map-meta mapping-mode" id="modeHint">模式：—</p>
     </section>
 
-    <div class="section-title">实时地图</div>
-    <section class="panel map-stage">
-      <div id="map-container">
-        <canvas id="map-canvas"></canvas>
-        <canvas id="overlay-canvas"></canvas>
-      </div>
-      <div class="map-stage-foot">
-        <p class="map-meta" id="mapStatus">画布未启动</p>
-        <p class="map-meta" id="modeHint">模式：—</p>
-      </div>
-    </section>
-
-    <section class="panel map-save-bar">
-      <div class="map-save-fields">
-        <label for="mapName">地图名</label>
-        <div class="map-name-row">
-          <input id="mapName" type="text" autocomplete="off" spellcheck="false" />
-          <button type="button" id="save">保存地图</button>
+    <div class="mapping-grid">
+      <section class="panel map-stage mapping-stage">
+        <div id="map-container">
+          <canvas id="map-canvas"></canvas>
+          <canvas id="overlay-canvas"></canvas>
         </div>
-      </div>
-      <p class="muted hint-sm map-save-hint">
-        默认 <code>YYYYMMDD_HHMMSS</code> · 同名将覆盖
-      </p>
-    </section>
-
-    <div class="section-title">建图方式</div>
-    <div class="map-actions">
-      <section class="panel map-action-card">
-        <h2>手推建图</h2>
-        <p class="muted hint-sm map-action-desc">遥控推动机器人扫描环境</p>
-        <div class="map-action-body">
-          <div class="btn-stack">
-            <button type="button" id="startManual">开始手推建图</button>
-            <button type="button" class="secondary" id="stop">结束建图</button>
-          </div>
+        <div class="map-stage-foot">
+          <p class="map-meta" id="mapStatus">画布未启动</p>
         </div>
       </section>
 
-      <section class="panel map-action-card">
-        <h2>自主建图</h2>
-        <p class="muted hint-sm map-action-desc">机器人自主规划路径建图</p>
-        <div class="map-action-body">
-          <div class="btn-stack">
-            <button type="button" id="startAuto">开始自主建图</button>
-            <p class="muted hint-sm text-center mt-0" id="autoHint">功能开发中，敬请期待</p>
+      <aside class="mapping-side">
+        <section class="panel mapping-card mapping-save">
+          <h2>保存地图</h2>
+          <div class="map-name-row">
+            <input id="mapName" type="text" autocomplete="off" spellcheck="false" placeholder="地图名" />
+            <button type="button" id="save">保存</button>
           </div>
-        </div>
-      </section>
+          <p class="muted hint-sm map-save-hint">默认 <code>YYYYMMDD_HHMMSS</code> · 同名覆盖</p>
+        </section>
 
-      <section class="panel map-action-card">
-        <h2>手推遥控</h2>
-        <p class="muted hint-sm map-action-desc">建图过程中手动驱动</p>
-        <div class="map-action-body map-action-teleop">
-          <div class="joystick-wrap" id="stick"><div class="knob" id="knob"></div></div>
-          <p class="muted mono text-center mt-0" id="vel">vx=0.00 wz=0.00</p>
-          <div class="btn-stack">
-            <button type="button" class="secondary" id="teleopStop">急停归零</button>
-          </div>
+        <div class="mapping-actions">
+          <section class="panel mapping-card map-action-card">
+            <h2>手推建图</h2>
+            <p class="muted hint-sm map-action-desc">遥控推动扫描环境</p>
+            <div class="btn-stack">
+              <button type="button" id="startManual">开始手推建图</button>
+              <button type="button" class="secondary" id="stop">结束建图</button>
+            </div>
+          </section>
+
+          <section class="panel mapping-card map-action-card">
+            <h2>自主建图</h2>
+            <p class="muted hint-sm map-action-desc">自主规划路径建图</p>
+            <div class="btn-stack">
+              <button type="button" id="startAuto">开始自主建图</button>
+              <p class="muted hint-sm text-center mt-0" id="autoHint">功能开发中</p>
+            </div>
+          </section>
+
+          <section class="panel mapping-card map-action-card map-action-teleop">
+            <h2>手推遥控</h2>
+            <p class="muted hint-sm map-action-desc">建图过程中手动驱动</p>
+            <div class="map-action-body map-action-teleop">
+              <div class="joystick-wrap" id="stick"><div class="knob" id="knob"></div></div>
+              <p class="muted mono text-center mt-0" id="vel">vx=0.00 wz=0.00</p>
+              <div class="btn-stack">
+                <button type="button" class="secondary" id="teleopStop">急停归零</button>
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
+      </aside>
     </div>
-
-    <div class="section-title">日志</div>
-    <section class="panel">
-      <pre id="log" class="log"></pre>
-    </section>
   </main>
 
   <script src="/js/vendor/foxglove_bundle.js"></script>
@@ -120,7 +106,6 @@
 
     connect();
 
-    const logEl = document.getElementById('log');
     const mapNameEl = document.getElementById('mapName');
     const mapStatus = document.getElementById('mapStatus');
     const modeHint = document.getElementById('modeHint');
@@ -144,13 +129,13 @@
       );
     }
 
-    function pushLog(line) {
-      logEl.textContent = line + '\n' + logEl.textContent;
+    function flashStatus(line) {
+      mapStatus.textContent = String(line || '').replace(/^(>>|!!|<<)\s*/, '');
     }
 
     mapNameEl.value = defaultMapName();
 
-    onTask((l) => pushLog(l));
+    onTask((l) => flashStatus(l));
     onState((s) => {
       const name = s.mode_name || String(s.mode);
       modeHint.textContent = `模式：${name} (${s.mode}) · ${s.detail || ''}`;
@@ -170,12 +155,12 @@
     document.getElementById('startManual').onclick = async () => {
       savedOnce = false;
       if (!mapNameEl.value.trim()) mapNameEl.value = defaultMapName();
-      pushLog('>> 手推建图 setMode(1)');
+      flashStatus('手推建图 setMode(1)');
       await setMode(1, {});
     };
 
     document.getElementById('startAuto').onclick = () => {
-      pushLog('!! 自主建图尚未开放');
+      flashStatus('自主建图尚未开放');
       alert('自主建图功能开发中，敬请期待。');
     };
 
@@ -186,7 +171,7 @@
         );
         if (!ok) return;
       }
-      pushLog('>> 结束建图 setMode(0)');
+      flashStatus('结束建图 setMode(0)');
       await setMode(0, {});
     };
 
@@ -201,13 +186,13 @@
       if (maps.indexOf(name) !== -1) {
         if (!confirm(`地图「${name}」已存在，继续保存将覆盖。是否继续？`)) return;
       }
-      pushLog(`>> 保存地图 ${name}`);
+      flashStatus(`保存地图 ${name}…`);
       const j = await mapManage(1, name);
       if (j && j.ok) {
         savedOnce = true;
-        pushLog(`<< 保存成功 ${j.message || ''}`);
+        flashStatus(`保存成功 ${j.message || name}`);
       } else {
-        pushLog(`!! 保存失败 ${j && j.message ? j.message : ''}`);
+        flashStatus(`保存失败 ${j && j.message ? j.message : ''}`);
       }
     };
 
@@ -215,14 +200,13 @@
       if (e.key === 'Enter') document.getElementById('save').click();
     });
 
-    // Teleop pad
     const stick = document.getElementById('stick');
     const knob = document.getElementById('knob');
     const vel = document.getElementById('vel');
     let active = false;
 
     function setKnob(nx, ny) {
-      const r = 56;
+      const r = 48;
       knob.style.transform = `translate(calc(-50% + ${nx * r}px), calc(-50% + ${ny * r}px))`;
       const vx = -ny * 0.35;
       const wz = -nx * 0.8;
