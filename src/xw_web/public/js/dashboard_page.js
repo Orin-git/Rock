@@ -56,6 +56,7 @@ function resolvePower(power) {
       simulated: false,
       charging: !!power?.charging,
       docked: !!power?.docked,
+      current: Number(power?.charging_current ?? 0) || 0,
     };
   }
   // Slow breathing drain around ~78%
@@ -68,6 +69,7 @@ function resolvePower(power) {
     simulated: true,
     charging: false,
     docked: false,
+    current: 0,
   };
 }
 
@@ -300,7 +302,8 @@ function applyPowerUi(pw, { pushHist = true } = {}) {
   const el = document.getElementById('dPower');
   el.innerHTML = `${pw.pct.toFixed(0)}%${pw.simulated ? '<span class="sim-tag">SIM</span>' : ''}`;
   const chg = pw.charging ? '充电中' : pw.docked ? '已对接' : pw.simulated ? '拟合放电' : '放电';
-  document.getElementById('dPowerSub').textContent = `${pw.volt.toFixed(1)}V · ${chg}`;
+  const cur = pw.charging && pw.current > 0.01 ? ` · ${pw.current.toFixed(2)}A` : '';
+  document.getElementById('dPowerSub').textContent = `${pw.volt.toFixed(1)}V · ${chg}${cur}`;
   tone(document.getElementById('kpiPower'), pw.pct >= 40 ? 'is-ok' : pw.pct >= 20 ? 'is-warn' : 'is-bad');
 
   if (pushHist) {

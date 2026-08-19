@@ -14,6 +14,7 @@ import ssl
 import subprocess
 import sys
 import threading
+import time
 import traceback
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -26,6 +27,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool
 
 DEFAULT_PORT = 9443
+# Launch without --serve parks (0% CPU). Web /api/gesture starts a managed --serve child.
 
 
 class GestureBridge(Node):
@@ -128,7 +130,38 @@ def resolve_cert_dir(explicit: str, web_dir: str) -> str:
     return str(share / 'certs' / 'gesture')
 
 
-def make_handler(web_dir: str, bridge: GestureBridge):
+class _Activity:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.last = time.monotonic()
+        self.hits = 0
+
+    def hit(self) -> None:
+        with self._lock:
+            self.last = time.monotonic()
+            self.hits += 1
+
+    def idle_s(self) -> float:
+        with self._lock:
+            return time.monotonic() - self.last
+
+    def seen(self) -> bool:
+        with self._lock:
+            return self.hits > 0
+
+
+def _park_until_killed() -> int:
+    """Bringup leftover / use_gesture without --serve: occupy no port, burn no CPU."""
+    print('[gesture_https] parked (start from teleop /api/gesture when needed)')
+    sys.stdout.flush()
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        return 0
+
+
+def make_handler(web_dir: str, bridge: GestureBridge, activity: _Activity, httpd_holder: list):
     class Handler(SimpleHTTPRequestHandler):
         # Prefer close: keep-alive + SSL + ThreadingHTTPServer is flaky on some boards.
         protocol_version = 'HTTP/1.0'
@@ -142,6 +175,9 @@ def make_handler(web_dir: str, bridge: GestureBridge):
                 return
             sys.stdout.write('[gesture_https] ' + (fmt % args) + '\n')
             sys.stdout.flush()
+
+        def _touch(self) -> None:
+            activity.hit()
 
         def _send_json(self, code: int, payload: dict) -> None:
             body = json.dumps(payload).encode('utf-8')
@@ -169,6 +205,7 @@ def make_handler(web_dir: str, bridge: GestureBridge):
             self.close_connection = True
 
         def do_GET(self) -> None:
+            self._touch()
             path = self.path.split('?', 1)[0]
             if path == '/api/status':
                 self._send_json(
@@ -181,11 +218,24 @@ def make_handler(web_dir: str, bridge: GestureBridge):
                     },
                 )
                 return
+            if path == '/api/shutdown':
+                self._request_shutdown()
+                return
             return super().do_GET()
 
+        def _request_shutdown(self) -> None:
+            self._send_json(200, {'ok': True, 'stopping': True})
+            httpd = httpd_holder[0] if httpd_holder else None
+            if httpd is not None:
+                threading.Thread(target=httpd.shutdown, daemon=True).start()
+
         def do_POST(self) -> None:
+            self._touch()
             path = self.path.split('?', 1)[0]
             try:
+                if path == '/api/shutdown':
+                    self._request_shutdown()
+                    return
                 if path != '/api/cmd_vel':
                     self._send_json(404, {'ok': False, 'error': 'not found'})
                     return
@@ -253,7 +303,22 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument('--web-dir', default='', help='Static web root (xw_web/public)')
     parser.add_argument('--port', type=int, default=DEFAULT_PORT)
     parser.add_argument('--cert-dir', default='', help='Directory for cert.pem/key.pem')
+    parser.add_argument(
+        '--serve',
+        action='store_true',
+        help='Bind HTTPS immediately (web /api/gesture or use_gesture:=true debug)',
+    )
+    parser.add_argument(
+        '--idle-exit',
+        type=float,
+        default=0.0,
+        help='Exit after N seconds with no HTTP (0=never). On-demand web spawn uses 10.',
+    )
     args = parser.parse_args(argv)
+
+    managed = os.environ.get('XW_GESTURE_MANAGED', '') == '1'
+    if not args.serve and not managed:
+        return _park_until_killed()
 
     try:
         web_dir = resolve_web_dir(args.web_dir)
@@ -270,18 +335,41 @@ def main(argv: Optional[list] = None) -> int:
     ros_thread = threading.Thread(target=spin_ros, args=(bridge, stop_event), daemon=True)
     ros_thread.start()
 
-    handler = make_handler(web_dir, bridge)
+    activity = _Activity()
+    httpd_holder: list = []
+    handler = make_handler(web_dir, bridge, activity, httpd_holder)
     httpd = ThreadingHTTPServer(('0.0.0.0', args.port), handler)
     httpd.daemon_threads = True
+    httpd_holder.append(httpd)
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.minimum_version = ssl.TLSVersion.TLSv1_2
     context.load_cert_chain(certfile=cert_file, keyfile=key_file)
     httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
 
+    idle_s = float(args.idle_exit or 0.0)
     print(f'[gesture_https] serving {web_dir} on https://0.0.0.0:{args.port}')
     print('[gesture_https] publishing → /xw/cmd/teleop')
+    if idle_s > 0:
+        print(f'[gesture_https] idle-exit after {idle_s:.0f}s without HTTP')
     print('[gesture_https] first visit: accept self-signed certificate in browser')
     sys.stdout.flush()
+
+    def _idle_watch() -> None:
+        # No HTTP yet: wait longer so the self-signed cert dialog can be accepted.
+        boot_grace = max(idle_s, 45.0)
+        while not stop_event.is_set() and idle_s > 0:
+            limit = idle_s if activity.seen() else boot_grace
+            if activity.idle_s() >= limit:
+                print('[gesture_https] idle timeout — exiting')
+                sys.stdout.flush()
+                httpd.shutdown()
+                return
+            stop_event.wait(0.5)
+
+    idle_thread = None
+    if idle_s > 0:
+        idle_thread = threading.Thread(target=_idle_watch, daemon=True)
+        idle_thread.start()
 
     try:
         httpd.serve_forever()

@@ -7,16 +7,18 @@ import functools
 import json
 import os
 import socket
+import subprocess
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import math
 
 import rclpy
+from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -73,6 +75,22 @@ _SENSOR_LAYOUT = [
     },
 ]
 
+GESTURE_PORT = 9443
+GESTURE_IDLE_EXIT_S = 10.0
+
+
+def _gesture_paths() -> Tuple[str, str, str]:
+    ws = Path(os.environ.get('XW_WS', '/ros2_ws'))
+    share = Path(get_package_share_directory('xw_web'))
+    src_public = ws / 'src' / 'xw_web' / 'public'
+    web = src_public if src_public.is_dir() else share / 'public'
+    src_certs = ws / 'src' / 'xw_web' / 'certs' / 'gesture'
+    share_certs = share / 'certs' / 'gesture'
+    certs = src_certs if (src_certs / 'cert.pem').is_file() else share_certs
+    exe = Path(get_package_prefix('xw_web')) / 'lib' / 'xw_web' / 'gesture_https'
+    return str(exe), str(web), str(certs)
+
+
 _LATCHED_BOOL_QOS = QoSProfile(
     history=HistoryPolicy.KEEP_LAST,
     depth=1,
@@ -99,6 +117,7 @@ _TOPIC_HINTS: Dict[str, str] = {
     '/xw/robot_state': '机器人总状态：模式、run_mode、急停、安全闸、定位、电池摘要',
     '/xw/supervisor/set_mode': '切换工作模式 IDLE/建图/导航/跟随/跌倒',
     '/xw/supervisor/set_follow': '人体跟随正交开关（不拆 Nav2）',
+    '/xw/supervisor/set_recharge': '自动回充正交开关（不拆 Nav2）',
     '/xw/supervisor/set_fall': '跌倒检测正交开关',
     '/xw/supervisor/set_run_mode': '切换运行形态：0量产 / 1开发者（默认开发者）',
     '/xw/supervisor/get_state': '查询 Supervisor 当前状态',
@@ -112,6 +131,12 @@ _TOPIC_HINTS: Dict[str, str] = {
     '/xw/cmd/gated': '仲裁后送入安全门的速度',
     '/xw/cmd/active_source': '当前胜出的速度源名（teleop/nav/…）',
     '/xw/cmd/nav': '导航/CollisionMonitor 输出 → 仲裁',
+    '/xw/cmd/recharge': '回充近场速度 → 仲裁',
+    '/xw/recharge/enable': '自动回充任务使能',
+    '/xw/recharge/status': '回充阶段/成败 JSON（网页状态条）',
+    '/xw/recharge/staging': '回充接近点（map）',
+    '/xw/recharge/detection': '激光认桩位姿（base_link）',
+    '/xw/chassis/charge_mode': '底盘 TX[1] 回充模式闩锁',
     '/xw/localization_status': '定位健康 0正常/1未就绪/2漂移自愈/3需重定位',
     '/cmd_vel': '安全门输出 → 底盘最终速度',
     '/scan': '激光雷达扫描（原始）',
@@ -159,6 +184,8 @@ _TOPIC_HINTS: Dict[str, str] = {
 _NODE_HINTS: Dict[str, str] = {
     'xw_supervisor': '总控：模式切换、状态汇总、会话使能',
     'xw_web_bridge': '网页 HTTP 桥（本节点）',
+    'xw_gesture_https': '手势遥控 HTTPS:9443（按需）',
+    'xw_gesture_https_bridge': '手势遥控 ROS 桥（按需）',
     'xw_map_manager': '地图/航点存储与管理',
     'xw_cmd_arbiter': '多路速度指令仲裁',
     'xw_safety_gate': '激光/超声安全门，输出 cmd_vel',
@@ -167,6 +194,7 @@ _NODE_HINTS: Dict[str, str] = {
     'xw_slam_session': '建图会话',
     'xw_nav_session': '导航会话',
     'xw_follow_session': '跟随会话',
+    'xw_recharge': '自动回充（Laser-Lock Dock）',
     'xw_fall_session': '跌倒巡视会话',
     'xw_perception_stub': '感知（人体/跌倒 stub）',
     'xw_perception': '感知（YOLOv8-pose RKNN → tracks/fall）',
@@ -197,6 +225,8 @@ def _state_to_dict(msg: RobotState) -> Dict[str, Any]:
             'voltage': float(msg.power.voltage),
             'charging': bool(msg.power.charging),
             'docked': bool(msg.power.docked),
+            'charging_current': float(getattr(msg.power, 'charging_current', 0.0) or 0.0),
+            'ir_red': int(getattr(msg.power, 'ir_red', 0) or 0),
             'detail': msg.power.detail,
         },
     }
@@ -303,6 +333,8 @@ class BridgeNode(Node):
                 'voltage': 0.0,
                 'charging': False,
                 'docked': False,
+                'charging_current': 0.0,
+                'ir_red': 0,
                 'detail': '',
             },
         }
@@ -358,6 +390,20 @@ class BridgeNode(Node):
         self._pointcloud_enabled = False
         self._fall_enabled = False
         self._follow_enabled = False
+        self._gesture_proc: Optional[subprocess.Popen] = None
+        self._gesture_lock = threading.Lock()
+        self._recharge: Dict[str, Any] = {
+            'enabled': False,
+            'active': False,
+            'phase': 'idle',
+            'message': '待命',
+            'charging': False,
+            'retries': 0,
+            'result': '',
+            'staging': None,
+            'label': '待命',
+        }
+        self._set_recharge = self.create_client(SetBool, '/xw/supervisor/set_recharge')
         self.create_subscription(
             Bool,
             '/xw/camera/pointcloud_enabled',
@@ -376,6 +422,13 @@ class BridgeNode(Node):
             self._on_follow_enabled,
             _LATCHED_BOOL_QOS,
         )
+        self.create_subscription(
+            Bool,
+            '/xw/recharge/enable',
+            self._on_recharge_enabled,
+            _LATCHED_BOOL_QOS,
+        )
+        self.create_subscription(String, '/xw/recharge/status', self._on_recharge_status, _LATCHED_BOOL_QOS)
         self.create_timer(5.0, self._watch_housekeep)
         domain = os.environ.get('ROS_DOMAIN_ID', '?')
         self.get_logger().info(f'web ROS bridge ready (DOMAIN={domain})')
@@ -391,6 +444,25 @@ class BridgeNode(Node):
     def _on_follow_enabled(self, msg: Bool) -> None:
         with self._lock:
             self._follow_enabled = bool(msg.data)
+
+    def _on_recharge_enabled(self, msg: Bool) -> None:
+        with self._lock:
+            self._recharge['enabled'] = bool(msg.data)
+            if not msg.data and self._recharge.get('phase') not in ('fail', 'success'):
+                self._recharge['active'] = False
+
+    def _on_recharge_status(self, msg: String) -> None:
+        raw = (msg.data or '').strip()
+        if not raw:
+            return
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return
+        if not isinstance(parsed, dict):
+            return
+        with self._lock:
+            self._recharge.update(parsed)
 
     def pointcloud_status(self) -> Dict[str, Any]:
         with self._lock:
@@ -500,6 +572,142 @@ class BridgeNode(Node):
             'topic': '/xw/follow/enable',
         }
 
+    def _gesture_port_up(self) -> bool:
+        try:
+            with socket.create_connection(('127.0.0.1', GESTURE_PORT), timeout=0.35):
+                return True
+        except OSError:
+            return False
+
+    def _gesture_proc_alive(self) -> bool:
+        p = self._gesture_proc
+        return p is not None and p.poll() is None
+
+    def gesture_status(self) -> Dict[str, Any]:
+        alive = self._gesture_proc_alive()
+        up = self._gesture_port_up()
+        return {
+            'ok': True,
+            'enabled': bool(up),
+            'managed': bool(alive),
+            'port': GESTURE_PORT,
+            'url_path': '/gesture_control.html',
+            'idle_exit_s': GESTURE_IDLE_EXIT_S,
+            'hint': '按需启动：遥控页打开 HOLO PILOT 时拉起；关页约 10 秒无请求后自动退出',
+        }
+
+    def set_gesture(self, enabled: bool) -> Dict[str, Any]:
+        with self._gesture_lock:
+            if enabled:
+                return self._start_gesture_locked()
+            return self._stop_gesture_locked()
+
+    def _start_gesture_locked(self) -> Dict[str, Any]:
+        if self._gesture_port_up():
+            st = self.gesture_status()
+            st['message'] = 'already up'
+            return st
+        if self._gesture_proc is not None and self._gesture_proc.poll() is not None:
+            self._gesture_proc = None
+        exe, web, certs = _gesture_paths()
+        if not os.path.isfile(exe):
+            return {'ok': False, 'enabled': False, 'message': f'gesture_https missing: {exe}'}
+        env = os.environ.copy()
+        env['XW_GESTURE_MANAGED'] = '1'
+        log_f = open('/tmp/xw_gesture_https.log', 'ab')
+        try:
+            self._gesture_proc = subprocess.Popen(
+                [
+                    exe,
+                    '--web-dir', web,
+                    '--port', str(GESTURE_PORT),
+                    '--cert-dir', certs,
+                    '--serve',
+                    '--idle-exit', str(int(GESTURE_IDLE_EXIT_S)),
+                ],
+                env=env,
+                stdout=log_f,
+                stderr=log_f,
+                start_new_session=True,
+            )
+        except OSError as exc:
+            return {'ok': False, 'enabled': False, 'message': str(exc)}
+        finally:
+            log_f.close()
+        deadline = time.monotonic() + 8.0
+        while time.monotonic() < deadline:
+            if self._gesture_proc.poll() is not None:
+                code = self._gesture_proc.returncode
+                self._gesture_proc = None
+                return {'ok': False, 'enabled': False, 'message': f'gesture_https exited ({code})'}
+            if self._gesture_port_up():
+                self._push_task('[gesture] https :9443 up')
+                st = self.gesture_status()
+                st['message'] = 'started'
+                return st
+            time.sleep(0.15)
+        return {'ok': False, 'enabled': False, 'message': 'gesture_https start timeout'}
+
+    def _stop_gesture_locked(self) -> Dict[str, Any]:
+        p = self._gesture_proc
+        self._gesture_proc = None
+        if p is not None and p.poll() is None:
+            try:
+                p.terminate()
+                p.wait(timeout=3)
+            except Exception:  # noqa: BLE001
+                try:
+                    p.kill()
+                except Exception:  # noqa: BLE001
+                    pass
+        self._push_task('[gesture] https stopped')
+        st = self.gesture_status()
+        st['ok'] = True
+        st['enabled'] = False
+        st['message'] = 'stopped'
+        return st
+
+
+    def recharge_status(self) -> Dict[str, Any]:
+        with self._lock:
+            body = dict(self._recharge)
+            mode = (self._state or {}).get('mode')
+        ready = self._set_recharge.service_is_ready()
+        body.update({
+            'ok': True,
+            'service_ready': ready,
+            'topic': '/xw/recharge/enable',
+            'mode': mode,
+            'hint': '正交任务：需已进导航；近场走激光反光条锁 odom，不拆 Nav2',
+        })
+        return body
+
+    def set_recharge(self, enabled: bool) -> Dict[str, Any]:
+        if not self._set_recharge.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'set_recharge service unavailable (supervisor down?)'}
+        req = SetBool.Request()
+        req.data = bool(enabled)
+        fut = self._set_recharge.call_async(req)
+        for _ in range(60):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'set_recharge timeout'}
+        res = fut.result()
+        with self._lock:
+            if res.success:
+                self._recharge['enabled'] = bool(enabled)
+                if not enabled and self._recharge.get('phase') not in ('fail', 'success'):
+                    self._recharge['phase'] = 'idle'
+                    self._recharge['label'] = '待命'
+                    self._recharge['active'] = False
+        self._push_task(f'[recharge] {res.message}')
+        out = self.recharge_status()
+        out['ok'] = bool(res.success)
+        out['message'] = res.message
+        return out
+
     def _push_task(self, line: str) -> None:
         with self._lock:
             self._tasks.insert(0, line)
@@ -608,6 +816,7 @@ class BridgeNode(Node):
                 'services': svc,
                 'foxglove': fox,
                 'watching': self._watch_topic,
+                'recharge': dict(self._recharge),
             }
 
     def publish_teleop(self, linear_x: float, angular_z: float) -> Dict[str, Any]:
@@ -1283,6 +1492,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.follow_status())
+        if path == '/api/gesture':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.gesture_status())
+        if path == '/api/recharge':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.recharge_status())
         if path == '/api/sensors':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
@@ -1429,6 +1646,20 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if enabled is None:
                 return self._json(400, {'ok': False, 'message': 'missing enabled'})
             return self._json(200, self.bridge.set_follow(bool(enabled)))
+        if path == '/api/gesture':
+            enabled = data.get('enabled')
+            if enabled is None:
+                enabled = data.get('enable')
+            if enabled is None:
+                return self._json(400, {'ok': False, 'message': 'missing enabled'})
+            return self._json(200, self.bridge.set_gesture(bool(enabled)))
+        if path == '/api/recharge':
+            enabled = data.get('enabled')
+            if enabled is None:
+                enabled = data.get('enable')
+            if enabled is None:
+                return self._json(400, {'ok': False, 'message': 'missing enabled'})
+            return self._json(200, self.bridge.set_recharge(bool(enabled)))
         if path == '/api/topic/watch':
             return self._json(
                 200,
@@ -1477,6 +1708,10 @@ def main(args=None) -> None:
     try:
         executor.spin()
     finally:
+        try:
+            bridge.set_gesture(False)
+        except Exception:  # noqa: BLE001
+            pass
         httpd.shutdown()
         executor.shutdown()
         bridge.destroy_node()

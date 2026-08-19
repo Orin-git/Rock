@@ -1975,6 +1975,84 @@ main.beautify-page {
   color: #0a5f70;
 }
 
+.nav-recharge-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem 0.55rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--line, rgba(148, 163, 184, 0.28));
+  border-radius: 8px;
+  background: var(--surface-2, #f8fafc);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.nav-recharge-dot {
+  width: 0.48rem;
+  height: 0.48rem;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex: 0 0 auto;
+}
+.nav-recharge-tag {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  font-weight: 600;
+}
+.nav-recharge-phase {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+.nav-recharge-msg {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.78;
+}
+.nav-recharge-strip[data-phase="nav"],
+.nav-recharge-strip[data-phase="prep"],
+.nav-recharge-strip[data-phase="detect"],
+.nav-recharge-strip[data-phase="sweep"],
+.nav-recharge-strip[data-phase="align"],
+.nav-recharge-strip[data-phase="flip"],
+.nav-recharge-strip[data-phase="commit"],
+.nav-recharge-strip[data-phase="retry"] {
+  border-color: rgba(12, 127, 150, 0.35);
+}
+.nav-recharge-strip[data-phase="nav"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="prep"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="detect"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="sweep"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="align"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="flip"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="commit"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="retry"] .nav-recharge-dot {
+  background: #0c7f96;
+}
+.nav-recharge-strip[data-phase="success"] {
+  border-color: rgba(15, 138, 90, 0.4);
+}
+.nav-recharge-strip[data-phase="success"] .nav-recharge-dot {
+  background: #0f8a5a;
+}
+.nav-recharge-strip[data-phase="fail"] {
+  border-color: rgba(194, 49, 69, 0.4);
+}
+.nav-recharge-strip[data-phase="fail"] .nav-recharge-dot,
+.nav-recharge-strip[data-phase="fail"] .nav-recharge-phase {
+  color: #9f2438;
+}
+.nav-recharge-strip[data-phase="fail"] .nav-recharge-dot {
+  background: #c23145;
+}
+
 .nav-map-stage {
   margin-bottom: 0;
 }
@@ -2760,6 +2838,12 @@ body.nav-body .nav-flash {
   margin-top: 0.45rem;
   padding: 0.4rem 0.65rem;
   font-size: 0.8rem;
+}
+body.nav-body .nav-recharge-strip {
+  margin: 0;
+  min-height: 1.55rem;
+  padding: 0.12rem 0.5rem;
+  font-size: 0.74rem;
 }
 body.nav-body .nav-map-wp-grid {
   flex: 1 1 auto;

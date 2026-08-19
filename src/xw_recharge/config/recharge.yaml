@@ -1,0 +1,48 @@
+# Laser-Lock Dock — gen2 auto recharge
+# Strip on dock at lidar height (~0.22 m), code = width,gap,width,gap,width (m)
+
+xw_recharge:
+  ros__parameters:
+    scan_topic: /scan
+    lidar_frame: lidar_link
+    base_frame: base_link
+    odom_frame: odom
+    map_frame: map
+    cmd_topic: /xw/cmd/recharge
+
+    approach_standoff: 0.70
+    nav_xy_tol: 0.25
+    align_standoff: 0.45
+    lateral_ok: 0.04
+    yaw_ok_deg: 8.0
+    contact_distance: 0.40
+    reverse_speed: 0.04
+    align_linear: 0.10
+    align_angular: 0.28
+    flip_omega: 0.35
+    sweep_omega: 0.25
+    sweep_angle_deg: 40.0
+    retreat_speed: 0.08
+    retreat_distance: 0.25
+    max_retries: 3
+    detect_timeout_sec: 8.0
+    align_timeout_sec: 25.0
+    commit_timeout_sec: 20.0
+    session_timeout_sec: 180.0
+    loc2_wait_sec: 15.0
+    charging_stable_sec: 1.5
+    control_hz: 20.0
+
+    laser_intensity_threshold: 200.0
+    laser_code: [0.06, 0.025, 0.08, 0.025, 0.06]
+    laser_code_tol: 0.02
+    laser_confirm_frames: 3
+    laser_confirm_std_m: 0.03
+    laser_window_min_x: 0.25
+    laser_window_max_x: 1.5
+    laser_window_min_y: -0.8
+    laser_window_max_y: 0.8
+
+    low_battery_auto: false
+    low_battery_percent: 12.5
+    diagnose_always: false

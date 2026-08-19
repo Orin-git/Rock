@@ -25,7 +25,7 @@ fi
 : "${USE_DEPTH_CAM:=true}"
 : "${USE_DEPTH_CAM_2:=true}"
 : "${USE_WEB:=true}"
-: "${USE_GESTURE:=true}"
+: "${USE_GESTURE:=false}"
 : "${USE_FOXGLOVE:=true}"
 : "${PROFILE:=normal}"
 # Delay real lidar motor start so Web/SSH settle (lidar inrush can brown-out SBC)

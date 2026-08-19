@@ -71,6 +71,13 @@
       <div class="nav-flash" id="navFlash" hidden></div>
     </section>
 
+    <div class="nav-recharge-strip" id="navRechargeStrip" data-phase="idle" title="自动回充">
+      <span class="nav-recharge-dot" aria-hidden="true"></span>
+      <span class="nav-recharge-tag">回充</span>
+      <span class="nav-recharge-phase" id="navRechargePhase">待命</span>
+      <span class="nav-recharge-msg" id="navRechargeMsg"></span>
+    </div>
+
     <div class="nav-map-wp-grid">
       <div class="nav-map-col">
         <section class="panel map-stage nav-map-stage">
@@ -115,7 +122,7 @@
             <button type="button" class="secondary nav-task-btn" id="navFollowBtn" title="须先进入导航；开跟随只取消点位，不拆 Nav2">
               人体跟随
             </button>
-            <button type="button" class="secondary nav-task-btn" id="navRechargeBtn" title="前往地图中的 charger 充电桩">
+            <button type="button" class="secondary nav-task-btn" id="navRechargeBtn" title="激光认桩后倒车对接；须先进入导航">
               自动回充
             </button>
           </div>

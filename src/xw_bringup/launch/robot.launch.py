@@ -180,6 +180,15 @@ def generate_launch_description() -> LaunchDescription:
             output='screen',
         ),
         Node(package='xw_follow_session', executable='follow_session_node', name='xw_follow_session', output='screen'),
+        Node(
+            package='xw_recharge',
+            executable='recharge_node',
+            name='xw_recharge',
+            parameters=[os.path.join(
+                get_package_share_directory('xw_recharge'), 'config', 'recharge.yaml'
+            )],
+            output='screen',
+        ),
         Node(package='xw_fall_session', executable='fall_session_node', name='xw_fall_session', output='screen'),
         Node(
             package='xw_perception',
@@ -273,11 +282,11 @@ def generate_launch_description() -> LaunchDescription:
             '--web-dir', gesture_web,
             '--port', '9443',
             '--cert-dir', gesture_certs,
+            '--serve',
         ],
         condition=IfCondition(use_gesture),
         output='screen',
-        respawn=True,
-        respawn_delay=3.0,
+        respawn=False,
     )
 
     delayed_lidar = TimerAction(
@@ -355,8 +364,8 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument('use_web', default_value='true'),
         DeclareLaunchArgument(
             'use_gesture',
-            default_value='true',
-            description='HTTPS:9443 HOLO PILOT gesture teleop → /xw/cmd/teleop',
+            default_value='false',
+            description='Always-on HTTPS:9443 gesture teleop (debug). Default off; web /api/gesture starts it on demand.',
         ),
         DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('profile', default_value='normal'),

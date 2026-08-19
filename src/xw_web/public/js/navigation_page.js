@@ -15,6 +15,8 @@ import {
   onState,
   fetchFollowStatus,
   setFollowEnabled,
+  fetchRechargeStatus,
+  setRechargeEnabled,
 } from '/js/api.js';
 import '/js/app.js';
 
@@ -37,6 +39,9 @@ const patrolLoop = $('patrolLoop');
 const navFollowBtn = $('navFollowBtn');
 const navRechargeBtn = $('navRechargeBtn');
 const navTaskHint = $('navTaskHint');
+const navRechargeStrip = $('navRechargeStrip');
+const navRechargePhase = $('navRechargePhase');
+const navRechargeMsg = $('navRechargeMsg');
 
 let navActive = false;
 let waypoints = [];
@@ -49,6 +54,8 @@ let followEnabled = false;
 let followBusy = false;
 let rechargeActive = false;
 let rechargeBusy = false;
+let lastRechargePhase = 'idle';
+let lastFailHeld = '';
 
 const ORIENTATION_ROTATE_SPEED = Math.PI / 2;
 
@@ -210,7 +217,8 @@ onTask((l) => {
 onState((s) => {
   const name = s.mode_name || String(s.mode);
   modeHint.textContent = `模式：${name} (${s.mode}) · ${s.detail || ''}`;
-  navActive = Number(s.mode) === 2;
+  const mode = Number(s.mode);
+  navActive = mode === 2 || mode === 3;
   sessionHint.textContent = navActive
     ? '导航中 · 拖设初位姿后点「确认初位姿」'
     : '选地图 → 进入导航 → 拖设初位姿并确认';
@@ -563,8 +571,16 @@ async function goToWaypoint(idx) {
     renderFollowBtn();
     pushLog('>> 前往航点前已关闭人体跟随');
   }
-  if (rechargeActive) rechargeActive = false;
-  renderRechargeBtn();
+  if (rechargeActive) {
+    const rj = await setRechargeEnabled(false);
+    if (rj.ok) {
+      lastFailHeld = '';
+      rechargeActive = false;
+      applyRechargeSnapshot({ enabled: false, phase: 'idle', label: '待命' });
+    }
+    renderRechargeBtn();
+    pushLog('>> 前往航点前已停止回充');
+  }
   if (window.XwMapCanvas) window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
   const j = await publishGoal(wp.x, wp.y, wp.yaw || 0, 'map');
   flash(
@@ -728,6 +744,15 @@ $('startPatrol').onclick = async () => {
     flash('没有航点，请先编辑并保存航点', 'err');
     return;
   }
+  if (rechargeActive) {
+    const rj = await setRechargeEnabled(false);
+    if (rj.ok) {
+      lastFailHeld = '';
+      rechargeActive = false;
+      applyRechargeSnapshot({ enabled: false, phase: 'idle', label: '待命' });
+    }
+    renderRechargeBtn();
+  }
   const loop = !!(patrolLoop && patrolLoop.checked);
   const j = await startPatrol({ map_name: name, loop });
   pushLog(j.ok ? `<< 多点巡航已启动${loop ? '（循环）' : ''}` : `!! ${j.message || 'failed'}`);
@@ -834,9 +859,49 @@ function renderFollowBtn() {
 
 function renderRechargeBtn() {
   if (!navRechargeBtn) return;
-  navRechargeBtn.textContent = rechargeActive ? '回充中 · 点此取消' : '自动回充';
+  if (rechargeActive) {
+    navRechargeBtn.textContent =
+      lastRechargePhase === 'success' ? '停止回充' : '回充中 · 取消';
+  } else {
+    navRechargeBtn.textContent = '自动回充';
+  }
   navRechargeBtn.className = rechargeActive ? 'nav-task-btn is-on' : 'secondary nav-task-btn';
   navRechargeBtn.disabled = rechargeBusy || !navActive;
+}
+
+function applyRechargeSnapshot(rc) {
+  if (!rc || typeof rc !== 'object') return;
+  const phase = String(rc.phase || 'idle');
+  lastRechargePhase = phase;
+  const label = String(rc.label || phase);
+  const msg = String(rc.message || '');
+  const enabled = !!rc.enabled || !!rc.active;
+  if (phase === 'fail') lastFailHeld = msg || label;
+  if (phase === 'idle' && enabled === false && !lastFailHeld) lastFailHeld = '';
+  if (phase === 'success' || (enabled && phase !== 'fail')) lastFailHeld = '';
+  rechargeActive = enabled && phase !== 'fail';
+  if (navRechargeStrip) {
+    navRechargeStrip.dataset.phase = lastFailHeld && !rechargeActive ? 'fail' : phase;
+    const title = lastFailHeld && !rechargeActive ? lastFailHeld : msg || label;
+    navRechargeStrip.title = title;
+  }
+  if (navRechargePhase) {
+    navRechargePhase.textContent =
+      lastFailHeld && !rechargeActive ? '失败' : label;
+  }
+  if (navRechargeMsg) {
+    navRechargeMsg.textContent =
+      lastFailHeld && !rechargeActive ? lastFailHeld : msg && msg !== label ? msg : '';
+  }
+  const stg = rc.staging;
+  if (window.XwMapCanvas && window.XwMapCanvas.setStaging) {
+    if (stg && typeof stg.x === 'number') {
+      window.XwMapCanvas.setStaging(stg);
+    } else if (!rechargeActive) {
+      window.XwMapCanvas.setStaging(null);
+    }
+  }
+  renderRechargeBtn();
 }
 
 async function refreshFollowStatus() {
@@ -844,6 +909,14 @@ async function refreshFollowStatus() {
     const s = await fetchFollowStatus();
     followEnabled = !!s.enabled;
     renderFollowBtn();
+  } catch (_) {
+    /* keep last */
+  }
+}
+
+async function refreshRechargeStatus() {
+  try {
+    applyRechargeSnapshot(await fetchRechargeStatus());
   } catch (_) {
     /* keep last */
   }
@@ -860,8 +933,8 @@ async function toggleFollow() {
   try {
     const next = !followEnabled;
     if (next && rechargeActive) {
+      await setRechargeEnabled(false);
       rechargeActive = false;
-      await cancelNav();
       renderRechargeBtn();
     }
     const j = await setFollowEnabled(next);
@@ -898,17 +971,22 @@ async function toggleRecharge() {
   renderRechargeBtn();
   try {
     if (rechargeActive) {
-      await cancelNav();
-      rechargeActive = false;
-      setTaskHint('已取消回充');
-      flash('已取消回充', 'ok');
-      pushLog('>> 取消自动回充');
+      const j = await setRechargeEnabled(false);
+      if (j.ok) {
+        lastFailHeld = '';
+        applyRechargeSnapshot({ ...j, enabled: false, phase: j.phase || 'idle', label: '待命' });
+        rechargeActive = false;
+        renderRechargeBtn();
+        flash('已停止回充', 'ok');
+        pushLog('>> 停止自动回充');
+      } else {
+        flash(j.message || '停止回充失败', 'err');
+      }
       return;
     }
     const idx = findChargerIndex();
     if (idx < 0) {
       flash('当前地图没有 charger 充电桩航点', 'err');
-      setTaskHint('缺少 charger 航点，请先在建图/编辑中保存充电桩');
       return;
     }
     const wp = waypoints[idx];
@@ -916,20 +994,14 @@ async function toggleRecharge() {
       flash('充电桩为坏点（距障碍过近），无法回充', 'err');
       return;
     }
-    if (followEnabled) {
-      const j = await setFollowEnabled(false);
-      if (j.ok) followEnabled = false;
-      renderFollowBtn();
-    }
-    selectWaypoint(idx, false);
-    const j = await publishGoal(wp.x, wp.y, wp.yaw || 0, 'map');
+    lastFailHeld = '';
+    const j = await setRechargeEnabled(true);
     if (j.ok) {
-      rechargeActive = true;
-      setTaskHint(`正在前往充电桩 charger（${wp.x.toFixed(2)}, ${wp.y.toFixed(2)}）`);
-      flash('已开始自动回充（前往 charger）', 'ok');
-      pushLog('>> 自动回充 → charger');
+      applyRechargeSnapshot(j);
+      flash('已开始自动回充', 'ok');
+      pushLog('>> 自动回充');
     } else {
-      flash(j.message || '回充目标下发失败', 'err');
+      flash(j.message || '回充启动失败', 'err');
     }
   } finally {
     rechargeBusy = false;
@@ -946,6 +1018,7 @@ if (navFollowBtn) {
 if (navRechargeBtn) {
   navRechargeBtn.onclick = () => toggleRecharge();
   renderRechargeBtn();
+  refreshRechargeStatus();
 }
 
 onState((s) => {
@@ -954,7 +1027,6 @@ onState((s) => {
   navActive = mode === 2 || mode === 3;
   if (!navActive && wasNav) {
     followEnabled = false;
-    rechargeActive = false;
   }
   if (mode === 3) followEnabled = true;
   if (typeof s.detail === 'string' && s.detail.includes('follow=off')) {
@@ -963,6 +1035,7 @@ onState((s) => {
   if (typeof s.detail === 'string' && s.detail.includes('follow=on')) {
     followEnabled = true;
   }
+  if (s.recharge) applyRechargeSnapshot(s.recharge);
   renderFollowBtn();
   renderRechargeBtn();
 });

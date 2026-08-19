@@ -39,7 +39,7 @@ USE_FOXGLOVE="${USE_FOXGLOVE:-true}"
 if [[ "${XW_ALLOW_NO_FOXGLOVE:-}" != "1" ]]; then
   USE_FOXGLOVE=true
 fi
-USE_GESTURE="${USE_GESTURE:-true}"
+USE_GESTURE="${USE_GESTURE:-false}"
 PROFILE="${PROFILE:-normal}"
 # PointCloud2 debug relay (default off). Set USE_POINTCLOUD=true to enable for Foxglove.
 USE_POINTCLOUD="${USE_POINTCLOUD:-false}"

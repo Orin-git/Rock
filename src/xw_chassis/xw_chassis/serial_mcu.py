@@ -2,22 +2,26 @@
 
 Frames:
   ROS → MCU  11 bytes: 0x7B | mode | 0 | vx_be | vy_be | wz_be | bcc | 0x7D
+               mode = TX[1] AutoRecharge latch (0 idle / 1 dock assist)
   MCU → ROS  24 bytes: 0x7B | Flag_Stop | vx | vy | vz | imu... | bcc | 0x7D
+  MCU → ROS   8 bytes: 0x7C | I_hi | I_lo | Red | Charging | set_state | bcc | 0x7F
 Speeds are int16 big-endian in mm/s (angular ×1000); BCC = XOR of preceding bytes.
 """
 
 from __future__ import annotations
 
-import os
 import struct
 import time
 from dataclasses import dataclass
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 FRAME_HEADER = 0x7B
 FRAME_TAIL = 0x7D
 SEND_SIZE = 11
 RECV_SIZE = 24
+AUTOCHARGE_HEADER = 0x7C
+AUTOCHARGE_TAIL = 0x7F
+AUTOCHARGE_SIZE = 8
 
 
 def xor_bcc(data: Sequence[int]) -> int:
@@ -63,6 +67,30 @@ class MotionFrame:
     wz: float
 
 
+@dataclass
+class ChargeFrame:
+    current: float
+    red: int
+    charging: bool
+    charge_set_state: int
+
+
+def parse_charge_frame(buf: bytes) -> Optional[ChargeFrame]:
+    if len(buf) != AUTOCHARGE_SIZE:
+        return None
+    if buf[0] != AUTOCHARGE_HEADER or buf[7] != AUTOCHARGE_TAIL:
+        return None
+    if xor_bcc(buf[0:6]) != buf[6]:
+        return None
+    current = ((buf[1] << 8) | buf[2]) / 1000.0
+    return ChargeFrame(
+        current=float(current),
+        red=int(buf[3]),
+        charging=bool(buf[4]),
+        charge_set_state=int(buf[5]),
+    )
+
+
 def parse_motion_frame(buf: bytes) -> Optional[MotionFrame]:
     if len(buf) != RECV_SIZE:
         return None
@@ -78,7 +106,7 @@ def parse_motion_frame(buf: bytes) -> Optional[MotionFrame]:
 
 
 class FrameParser:
-    """Byte-stream reassembler for 24-byte motion frames."""
+    """Byte-stream reassembler for motion (0x7B/24) and charge (0x7C/8) frames."""
 
     def __init__(self) -> None:
         self._buf = bytearray()
@@ -86,33 +114,52 @@ class FrameParser:
     def reset(self) -> None:
         self._buf.clear()
 
-    def feed(self, data: bytes) -> List[MotionFrame]:
-        out: List[MotionFrame] = []
-        if not data:
-            return out
-        self._buf.extend(data)
+    @staticmethod
+    def _next_header(buf: bytearray) -> int:
+        i_m = buf.find(bytes((FRAME_HEADER,)))
+        i_c = buf.find(bytes((AUTOCHARGE_HEADER,)))
+        if i_m < 0 and i_c < 0:
+            return -1
+        if i_m < 0:
+            return i_c
+        if i_c < 0:
+            return i_m
+        return min(i_m, i_c)
+
+    def feed(self, data: bytes) -> Tuple[List[MotionFrame], List[ChargeFrame]]:
+        motion: List[MotionFrame] = []
+        charge: List[ChargeFrame] = []
+        if data:
+            self._buf.extend(data)
         while True:
             if not self._buf:
                 break
-            # Seek header
-            try:
-                start = self._buf.index(FRAME_HEADER)
-            except ValueError:
+            start = self._next_header(self._buf)
+            if start < 0:
                 self._buf.clear()
                 break
             if start > 0:
                 del self._buf[:start]
+            kind = self._buf[0]
+            if kind == AUTOCHARGE_HEADER:
+                if len(self._buf) < AUTOCHARGE_SIZE:
+                    break
+                frame = parse_charge_frame(bytes(self._buf[:AUTOCHARGE_SIZE]))
+                if frame is not None:
+                    del self._buf[:AUTOCHARGE_SIZE]
+                    charge.append(frame)
+                    continue
+                del self._buf[0]
+                continue
             if len(self._buf) < RECV_SIZE:
                 break
-            candidate = bytes(self._buf[:RECV_SIZE])
-            frame = parse_motion_frame(candidate)
-            if frame is not None:
+            frame_m = parse_motion_frame(bytes(self._buf[:RECV_SIZE]))
+            if frame_m is not None:
                 del self._buf[:RECV_SIZE]
-                out.append(frame)
+                motion.append(frame_m)
                 continue
-            # Bad frame: drop header byte and resync
             del self._buf[0]
-        return out
+        return motion, charge
 
 
 class ChassisSerial:
@@ -215,8 +262,12 @@ class ChassisSerial:
             return b''
         return bytes(self._ser.read(n))
 
-    def drain_frames(self) -> List[MotionFrame]:
+    def drain(self) -> Tuple[List[MotionFrame], List[ChargeFrame]]:
         return self.parser.feed(self.read_available())
+
+    def drain_frames(self) -> List[MotionFrame]:
+        motion, _charge = self.drain()
+        return motion
 
 
 def wait_for_port(paths: Sequence[str], timeout_sec: float = 5.0) -> Optional[str]:

@@ -18,6 +18,7 @@
   <exec_depend>xw_slam_session</exec_depend>
   <exec_depend>xw_nav_session</exec_depend>
   <exec_depend>xw_follow_session</exec_depend>
+  <exec_depend>xw_recharge</exec_depend>
   <exec_depend>xw_fall_session</exec_depend>
   <exec_depend>xw_perception</exec_depend>
   <exec_depend>xw_health</exec_depend>

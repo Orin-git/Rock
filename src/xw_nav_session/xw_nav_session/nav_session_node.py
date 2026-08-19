@@ -63,6 +63,7 @@ class NavSessionNode(Node):
         self._patrol_stop = threading.Event()
         self._patrol_active = False
         self._follow_en = False
+        self._recharge_en = False
 
         latch = QoSProfile(
             depth=1,
@@ -78,6 +79,9 @@ class NavSessionNode(Node):
         self.create_subscription(Bool, '/xw/nav/cancel', self._on_cancel, 10, callback_group=self._cb)
         self.create_subscription(
             Bool, '/xw/follow/enable', self._on_follow_enable, latch, callback_group=self._cb
+        )
+        self.create_subscription(
+            Bool, '/xw/recharge/enable', self._on_recharge_enable, latch, callback_group=self._cb
         )
         self.create_service(SessionControl, '/xw/session/nav/control', self._on_control, callback_group=self._cb)
 
@@ -143,6 +147,16 @@ class NavSessionNode(Node):
             self.get_logger().info('follow on → cancelled point/patrol (Nav2 kept)')
         elif not en and was:
             self.get_logger().info('follow off → point/patrol accepted again')
+
+    def _on_recharge_enable(self, msg: Bool) -> None:
+        en = bool(msg.data)
+        was = self._recharge_en
+        self._recharge_en = en
+        if en and not was:
+            self._cancel_navigation('recharge-preempt')
+            self.get_logger().info('recharge on → cancelled point/patrol (Nav2 kept)')
+        elif not en and was:
+            self.get_logger().info('recharge off → point/patrol accepted again')
 
     def _set_active(self, active: bool, source: str) -> None:
         if active and self._active:
@@ -242,6 +256,10 @@ class NavSessionNode(Node):
             self.get_logger().warn('goal rejected (follow active — stop follow first)')
             self._emit_result(1, 'rejected: follow active', 'goal')
             return
+        if self._recharge_en:
+            self.get_logger().warn('goal rejected (recharge active)')
+            self._emit_result(1, 'rejected: recharge active', 'goal')
+            return
         # Single goal preempts patrol
         self._stop_patrol_loop()
         self._command_id = self._command_id or 'goal'
@@ -261,6 +279,10 @@ class NavSessionNode(Node):
         if self._follow_en:
             self.get_logger().warn('patrol rejected (follow active — stop follow first)')
             self._emit_result(1, 'rejected: follow active', 'patrol')
+            return
+        if self._recharge_en:
+            self.get_logger().warn('patrol rejected (recharge active)')
+            self._emit_result(1, 'rejected: recharge active', 'patrol')
             return
         try:
             payload = json.loads(msg.data or '{}')

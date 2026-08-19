@@ -56,6 +56,7 @@
 
 - 建图 ↔ 导航：运动栈互斥。
 - **跟随是导航上的正交任务**：`/xw/supervisor/set_follow` / 设置页开关；开跟随只取消点位/巡航，**不 `_stop_nav2`**；关跟随后 Nav2 仍在。
+- **回充是导航上的正交任务**：`/xw/supervisor/set_recharge` → `/xw/recharge/enable`；与跟随互斥；远场 Nav2 接近点，近场 `/xw/cmd/recharge`。
 - `set_mode(3)` 兼容入口：确保 `/xw/nav/enable=true` + follow on。
 - 跌倒仍走 `/xw/supervisor/set_fall`，与模式切换独立。
 
@@ -68,17 +69,22 @@
 | Result | `/xw/task/result` | **唯一终态** |
 | Event | `/xw/event` | 急停/安全/定位 |
 | Loc | `/xw/localization_status` | Int8 0–3 定位健康 |
-| Power | `/xw/power` | 电量 |
+| Power | `/xw/power` | 电量、`charging`/`docked`/`charging_current`（MCU `0x7C` 回充帧） |
+| In | `/xw/recharge/enable` | 回充正交使能（latched） |
+| Out | `/xw/recharge/status` | 回充阶段 JSON（网页状态条） |
+| In | `/xw/cmd/recharge` | 近场贴桩速度 → 仲裁 |
+| In | `/xw/chassis/charge_mode` | 底盘 TX[1] 回充模式闩锁 |
 | Srv | `/xw/supervisor/set_mode` | 改模式 |
 | Srv | `/xw/supervisor/set_follow` | 跟随任务开关（不拆 Nav2） |
+| Srv | `/xw/supervisor/set_recharge` | 自动回充开关（不拆 Nav2） |
 | Srv | `/xw/supervisor/set_fall` | 跌倒开关 |
 | Srv | `/xw/supervisor/get_state` | 拉快照 |
 | Srv | `/xw/map/manage` | 地图 CRUD |
 | Srv | `/xw/map/waypoint` | 航点 |
 | Srv | `/xw/motion/command` | 定距点动 |
 | In | `/xw/cmd/teleop` | 遥控白名单入口 |
-| In | `/xw/goal_pose` | 单点导航目标（跟随中拒绝） |
-| In | `/xw/nav/patrol_cmd` | 多点巡航 JSON（跟随中拒绝） |
+| In | `/xw/goal_pose` | 单点导航目标（跟随/回充中拒绝） |
+| In | `/xw/nav/patrol_cmd` | 多点巡航 JSON（跟随/回充中拒绝） |
 | In | `/xw/nav/cancel` | 软取消当前导航（不关 Nav2） |
 | In | `/goal_update` | 动态跟随目标（Nav2 GoalUpdater） |
 | In | `/xw/nav/map_name` | 导航地图名（latched） |
@@ -112,7 +118,7 @@ ros2 launch xw_bringup robot.launch.py
 - **P1**：真底盘（`xw_chassis` 串口 `/dev/chassis` 或回退 `/dev/ttyACM0` @115200，一代 0x7B 协议；udev：`scripts/install_robot_udev.sh`）/ 雷达 / 超声（超声仍待）  
 - **P2**：手推建图已落地；**Nav2/AMCL 已接入**（`xw_nav_session`）；单点/多点/初位姿 Web API 已通  
 - **P3（部分）**：双前视深度 + 安全门深度 ROI；导航 local costmap 融合激光+双深度点云；**感知真节点**（YOLOv8n-pose RKNN）  
-- **P4（部分）**：**WT901C485 + EKF 已默认启用**（`/odom/wheel` + `/imu/data` → `/odom`）；绝对 yaw/aX、回充、精标定仍待  
+- P4（部分）：**WT901C485 + EKF 已默认启用**（`/odom/wheel` + `/imu/data` → `/odom`）；**自动回充 Laser-Lock Dock 已接入**（`xw_recharge` + MCU `0x7C` 电流确认）  
 
 ### USB 接口分配（Rock 5T）— HP60C 为 USB2.0 设备
 
@@ -218,7 +224,7 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 ### 手推建图要点
 
 - `set_mode(1)` → slam_toolbox；保存仍写 charger 到 pointList  
-- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`POST /api/initialpose`、`POST /api/nav/patrol`、`POST /api/follow`、`GET /api/sensors`  
+- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`POST /api/initialpose`、`POST /api/nav/patrol`、`POST /api/follow`、`POST /api/recharge`、`GET /api/sensors`  
 
 ## 8. 验收（容器内）
 
@@ -232,7 +238,7 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 
 ## 9. Supervisor 与 Session 协作
 
-- `SetMode` 改运动模式并在 `/xw/slam|nav/enable` 上发命令；**跟随**走 `/xw/supervisor/set_follow` / `/xw/follow/enable`；**跌倒**走 `/xw/supervisor/set_fall` / `/xw/fall/enable`。
+- `SetMode` 改运动模式并在 `/xw/slam|nav/enable` 上发命令；**跟随**走 `/xw/supervisor/set_follow` / `/xw/follow/enable`；**回充**走 `/xw/supervisor/set_recharge` / `/xw/recharge/enable`；**跌倒**走 `/xw/supervisor/set_fall` / `/xw/fall/enable`。
 - Session 既可订阅 enable，也可暴露 `/xw/session/*/control` 供调试直连。
 - **禁止** Supervisor 在 service 回调里 `spin_until_future_complete` 再调 session service（会死锁）。
 - 进/出 NAVIGATING/FOLLOWING 时 supervisor 异步调 `/xw/camera/set_pointcloud_nav`（不写 persist）。

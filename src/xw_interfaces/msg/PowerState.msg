@@ -4,4 +4,6 @@ float32 battery_percent
 float32 voltage
 bool charging
 bool docked
+float32 charging_current
+uint8 ir_red
 string detail

@@ -11,7 +11,7 @@ import rclpy
 from geometry_msgs.msg import Quaternion, TransformStamped, Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int8
 from tf2_ros import TransformBroadcaster
 
 from xw_chassis.serial_mcu import ChassisSerial, pack_speed, wait_for_port
@@ -43,6 +43,8 @@ class ChassisNode(Node):
         self.declare_parameter('serial_fallback', '/dev/ttyACM0')
         self.declare_parameter('cmd_timeout_sec', 0.5)
         self.declare_parameter('serial_no_frame_reopen_sec', 2.0)
+        self.declare_parameter('charge_current_dock_min', 0.05)
+        self.declare_parameter('lock_motion_when_docked', True)
 
         self._use_sim = bool(self.get_parameter('use_sim_hw').value)
         self._publish_tf = bool(self.get_parameter('publish_tf').value) and bool(
@@ -74,8 +76,16 @@ class ChassisNode(Node):
         self._rx_count = 0
         self._last_tx_hex = ''
         self._write_errors = 0
+        self._charge_mode = 0
+        self._charging = False
+        self._charging_current = 0.0
+        self._ir_red = 0
+        self._charge_set_state = 0
+        self._docked = False
+        self._saw_charge_frame = False
 
         self._cmd_sub = self.create_subscription(Twist, 'cmd_vel', self._on_cmd, 10)
+        self.create_subscription(Int8, '/xw/chassis/charge_mode', self._on_charge_mode, 10)
         self._odom_pub = self.create_publisher(Odometry, self._odom_topic, 10)
         self._power_pub = self.create_publisher(PowerState, '/xw/power', 10)
         # true = cannot drive; false = enabled (ready). Maps MCU Flag_Stop inverted vs gen1 comments.
@@ -110,14 +120,25 @@ class ChassisNode(Node):
         wz = max(-max_ang, min(max_ang, float(msg.angular.z)))
         return vx, vy, wz
 
+    def _on_charge_mode(self, msg: Int8) -> None:
+        self._charge_mode = int(msg.data) & 0xFF
+
+    def _effective_cmd(self) -> tuple[float, float, float]:
+        vx, vy, wz = self._cmd_vx, self._cmd_vy, self._cmd_wz
+        lock = bool(self.get_parameter('lock_motion_when_docked').value)
+        if lock and self._charging and self._charge_mode == 0:
+            return 0.0, 0.0, 0.0
+        return vx, vy, wz
+
     def _on_cmd(self, msg: Twist) -> None:
         self._cmd_vx, self._cmd_vy, self._cmd_wz = self._clamp_cmd(msg)
         self._last_cmd_wall = time.monotonic()
+        vx, vy, wz = self._effective_cmd()
         if self._use_sim:
-            self._meas_vx = self._cmd_vx
-            self._meas_wz = self._cmd_wz
+            self._meas_vx = vx
+            self._meas_wz = wz
         else:
-            self._send_speed(self._cmd_vx, self._cmd_vy, self._cmd_wz)
+            self._send_speed(vx, vy, wz)
 
     def _try_open_serial(self, initial: bool = False) -> bool:
         if self._serial is None:
@@ -145,7 +166,7 @@ class ChassisNode(Node):
         if self._serial is None or not self._serial.is_open:
             return
         try:
-            payload = pack_speed(vx, vy, wz, mode=0)
+            payload = pack_speed(vx, vy, wz, mode=self._charge_mode)
             self._serial.write(payload)
             self._tx_count += 1
             self._last_tx_hex = payload.hex()
@@ -200,11 +221,12 @@ class ChassisNode(Node):
 
     def _tick_sim(self) -> None:
         dt = 0.05
-        self._yaw += self._cmd_wz * dt
-        self._x += self._cmd_vx * math.cos(self._yaw) * dt
-        self._y += self._cmd_vx * math.sin(self._yaw) * dt
-        self._meas_vx = self._cmd_vx
-        self._meas_wz = self._cmd_wz
+        vx, vy, wz = self._effective_cmd()
+        self._yaw += wz * dt
+        self._x += vx * math.cos(self._yaw) * dt
+        self._y += vx * math.sin(self._yaw) * dt
+        self._meas_vx = vx
+        self._meas_wz = wz
         self._publish_odom()
 
     def _tick_serial(self) -> None:
@@ -220,15 +242,26 @@ class ChassisNode(Node):
             self._cmd_vy = 0.0
             self._cmd_wz = 0.0
 
-        # Always forward (gen1 does not gate TX on Flag_Stop)
-        self._send_speed(self._cmd_vx, self._cmd_vy, self._cmd_wz)
+        # Always forward (gen1 does not gate TX on Flag_Stop); TX[1] carries charge mode
+        evx, evy, ewz = self._effective_cmd()
+        self._send_speed(evx, evy, ewz)
 
         try:
-            frames = self._serial.drain_frames()
+            frames, charge_frames = self._serial.drain()
         except Exception as exc:  # noqa: BLE001
             self.get_logger().error(f'chassis serial read failed: {exc}')
             self._serial.close()
             return
+
+        if charge_frames:
+            ch = charge_frames[-1]
+            self._saw_charge_frame = True
+            self._charging_current = float(ch.current)
+            self._ir_red = int(ch.red)
+            self._charging = bool(ch.charging)
+            self._charge_set_state = int(ch.charge_set_state)
+            imin = float(self.get_parameter('charge_current_dock_min').value)
+            self._docked = self._charging and self._charging_current >= imin
 
         if frames:
             self._last_frame_wall = now
@@ -293,21 +326,24 @@ class ChassisNode(Node):
     def _publish_power(self) -> None:
         p = PowerState()
         p.stamp = self.get_clock().now().to_msg()
+        p.charging = bool(self._charging)
+        p.docked = bool(self._docked)
+        p.charging_current = float(self._charging_current)
+        p.ir_red = int(self._ir_red) & 0xFF
         if self._use_sim:
             p.battery_percent = 88.0
             p.voltage = 24.5
-            p.charging = False
-            p.docked = False
-            p.detail = 'mock'
+            p.detail = f'mock charge_mode={self._charge_mode}'
         else:
             p.battery_percent = 0.0
             p.voltage = 0.0
-            p.charging = False
-            p.docked = False
             port = self._serial.active_port if self._serial else ''
+            seen = '0x7c' if self._saw_charge_frame else 'no-0x7c'
             p.detail = (
                 f'serial:{port or "closed"} tx={self._tx_count} rx={self._rx_count} '
                 f'err={self._write_errors} flag_stop={self._flag_stop} '
+                f'{seen} mode={self._charge_mode} ir={self._ir_red} '
+                f'I={self._charging_current:.3f}A '
                 f'last={self._last_tx_hex} '
                 f'cmd=({self._cmd_vx:.2f},{self._cmd_wz:.2f}) '
                 f'meas=({self._meas_vx:.2f},{self._meas_wz:.2f})'

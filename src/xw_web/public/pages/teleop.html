@@ -86,7 +86,7 @@
       <div class="panel teleop-card teleop-card-gesture">
         <div class="teleop-card-head">
           <h2>空挡 · 手势控制</h2>
-          <span class="pill on">可用</span>
+          <span class="pill off" id="gesturePill">待命</span>
         </div>
         <div class="teleop-card-body teleop-gesture">
           <div class="gesture-stage" aria-hidden="true">
@@ -113,7 +113,7 @@
             打开 HOLO PILOT
           </a>
           <p class="muted teleop-hint" id="gestureHint">
-            摄像头需 HTTPS · 首次请在浏览器信任自签证书 · → /xw/cmd/teleop
+            按需启动 HTTPS:9443 · 关页约 10 秒后自动停 · 首次请信任自签证书
           </p>
         </div>
       </div>
@@ -121,7 +121,7 @@
   </main>
 
   <script type="module">
-    import { connect, publishTeleop, callMotion } from '/js/api.js';
+    import { connect, publishTeleop, callMotion, setGestureHttps, gestureHttpsStatus } from '/js/api.js';
     import '/js/app.js';
     connect();
     const stick = document.getElementById('stick');
@@ -194,10 +194,45 @@
 
     const gestureOpen = document.getElementById('gestureOpen');
     const gestureHint = document.getElementById('gestureHint');
+    const gesturePill = document.getElementById('gesturePill');
     const gestureUrl = `https://${location.hostname || '127.0.0.1'}:9443/gesture_control.html`;
     gestureOpen.href = gestureUrl;
-    gestureHint.textContent =
-      `摄像头需 HTTPS · ${gestureUrl} · 首次请信任自签证书 · → /xw/cmd/teleop`;
+
+    function syncGesturePill(on) {
+      if (!gesturePill) return;
+      gesturePill.textContent = on ? '运行中' : '待命';
+      gesturePill.className = on ? 'pill on' : 'pill off';
+    }
+
+    async function refreshGestureStatus() {
+      const j = await gestureHttpsStatus();
+      syncGesturePill(!!j.enabled);
+      return j;
+    }
+
+    gestureOpen.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const w = window.open('about:blank', 'xw-holo-pilot');
+      const prev = gestureOpen.textContent;
+      gestureOpen.textContent = '正在启动 HTTPS…';
+      gestureHint.textContent = '正在拉起 :9443 …';
+      const j = await setGestureHttps(true);
+      if (!j.ok) {
+        if (w) w.close();
+        gestureOpen.textContent = prev;
+        gestureHint.textContent = `启动失败：${j.message || 'error'}`;
+        syncGesturePill(false);
+        return;
+      }
+      syncGesturePill(true);
+      if (w) w.location.replace(gestureUrl);
+      else window.open(gestureUrl, 'xw-holo-pilot');
+      gestureOpen.textContent = prev;
+      gestureHint.textContent =
+        `已启动 · ${gestureUrl} · 首次请信任自签证书 · 关页约 10 秒后自动停`;
+    });
+    refreshGestureStatus();
+    setInterval(refreshGestureStatus, 4000);
   </script>
 </body>
 </html>

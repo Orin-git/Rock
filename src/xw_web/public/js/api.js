@@ -18,6 +18,15 @@ let state = {
   power: { battery_percent: 0 },
   detail: '',
   profile: 'normal',
+  recharge: {
+    enabled: false,
+    phase: 'idle',
+    message: '待命',
+    label: '待命',
+    result: '',
+    retries: 0,
+    staging: null,
+  },
 };
 
 let obstacle = {
@@ -148,7 +157,7 @@ async function fetchState() {
     const r = await fetch(`${apiBase()}/api/state`, { cache: 'no-store' });
     if (!r.ok) throw new Error(String(r.status));
     const j = await r.json();
-    if (j.state) emitState(j.state);
+    if (j.state) emitState({ ...j.state, recharge: j.recharge || state.recharge || {} });
     if (j.obstacle) emitObstacle(j.obstacle);
     if (Array.isArray(j.tasks)) {
       j.tasks.slice().reverse().forEach((t) => emitTask(t));
@@ -197,6 +206,29 @@ export function onMeta(fn) {
 
 export function isConnected() {
   return connected;
+}
+
+/** On-demand HTTPS:9443 gesture teleop (idle-exits when unused). */
+export async function setGestureHttps(enabled) {
+  try {
+    const r = await fetch(`${apiBase()}/api/gesture`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: !!enabled }),
+    });
+    return await r.json();
+  } catch (_) {
+    return { ok: false, message: 'request failed' };
+  }
+}
+
+export async function gestureHttpsStatus() {
+  try {
+    const r = await fetch(`${apiBase()}/api/gesture`, { cache: 'no-store' });
+    return await r.json();
+  } catch (_) {
+    return { ok: false, enabled: false };
+  }
 }
 
 export function publishTeleop(linearX, angularZ) {
@@ -409,6 +441,24 @@ export async function setFollowEnabled(enabled) {
   });
   const j = await r.json();
   emitTask(j.message || `follow ${enabled ? 'on' : 'off'}`);
+  return j;
+}
+
+/** Auto-recharge orthogonal task (requires nav; Laser-Lock Dock). */
+export async function fetchRechargeStatus() {
+  const r = await fetch(`${apiBase()}/api/recharge`, { cache: 'no-store' });
+  if (!r.ok) throw new Error(String(r.status));
+  return await r.json();
+}
+
+export async function setRechargeEnabled(enabled) {
+  const r = await fetch(`${apiBase()}/api/recharge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !!enabled }),
+  });
+  const j = await r.json();
+  emitTask(j.message || `recharge ${enabled ? 'on' : 'off'}`);
   return j;
 }
 

@@ -63,6 +63,7 @@ class SupervisorNode(Node):
         self._detail = 'boot'
         self._fall_en = False
         self._follow_en = False
+        self._recharge_en = False
 
         # Keep robot_state VOLATILE (high rate) so CLI/Foxglove default QoS always sees updates.
         self._state_pub = self.create_publisher(RobotState, '/xw/robot_state', 10)
@@ -80,6 +81,7 @@ class SupervisorNode(Node):
         }
         self._follow_pub = self.create_publisher(Bool, '/xw/follow/enable', latch)
         self._fall_pub = self.create_publisher(Bool, '/xw/fall/enable', latch)
+        self._recharge_pub = self.create_publisher(Bool, '/xw/recharge/enable', latch)
         self._nav_map_pub = self.create_publisher(String, '/xw/nav/map_name', latch)
 
         self._set_pc_nav = self.create_client(SetBool, '/xw/camera/set_pointcloud_nav')
@@ -96,14 +98,16 @@ class SupervisorNode(Node):
         self.create_service(GetState, '/xw/supervisor/get_state', self._on_get_state, callback_group=self._cb)
         self.create_service(SetBool, '/xw/supervisor/set_fall', self._on_set_fall, callback_group=self._cb)
         self.create_service(SetBool, '/xw/supervisor/set_follow', self._on_set_follow, callback_group=self._cb)
+        self.create_service(SetBool, '/xw/supervisor/set_recharge', self._on_set_recharge, callback_group=self._cb)
 
         self.create_timer(0.5, self._publish_state)
         for mode in MOTION_SESSION:
             self._session_pubs[mode].publish(Bool(data=False))
         self._publish_follow()
         self._publish_fall()
+        self._publish_recharge()
         self.get_logger().info(
-            'supervisor ready (follow orthogonal on nav; fall orthogonal; nav auto pointcloud)'
+            'supervisor ready (follow/recharge orthogonal on nav; fall orthogonal)'
         )
 
     def _on_motor_disabled(self, msg: Bool) -> None:
@@ -139,6 +143,7 @@ class SupervisorNode(Node):
         s.power = self._power
         tags = []
         tags.append('follow=on' if self._follow_en else 'follow=off')
+        tags.append('recharge=on' if self._recharge_en else 'recharge=off')
         tags.append('fall=on' if self._fall_en else 'fall=off')
         tags.append(f'loc={LOC_STATUS_NAMES.get(self._loc_status, str(self._loc_status))}')
         base = self._detail or ''
@@ -169,6 +174,14 @@ class SupervisorNode(Node):
 
     def _publish_follow(self) -> None:
         self._follow_pub.publish(Bool(data=bool(self._follow_en)))
+
+    def _publish_recharge(self) -> None:
+        self._recharge_pub.publish(Bool(data=bool(self._recharge_en)))
+
+    def _clear_recharge(self) -> None:
+        if self._recharge_en:
+            self._recharge_en = False
+            self._publish_recharge()
 
     def _set_fall(self, active: bool) -> None:
         self._fall_en = bool(active)
@@ -201,6 +214,7 @@ class SupervisorNode(Node):
                 self._mode = 3
             self._follow_en = True
             self._publish_follow()
+            self._clear_recharge()
             self._detail = 'follow task on (nav kept)'
             self._publish_state()
             return True, 'follow on'
@@ -230,6 +244,35 @@ class SupervisorNode(Node):
 
     def _on_set_follow(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
         ok, msg = self._set_follow(bool(req.data))
+        res.success = bool(ok)
+        res.message = msg
+        return res
+
+    def _set_recharge(self, active: bool) -> tuple[bool, str]:
+        want = bool(active)
+        if want:
+            if self._mode == 1:
+                return False, 'cannot recharge while mapping'
+            if self._mode not in (2, 3):
+                return False, 'enter navigation with a map first (set_mode 2)'
+            if self._follow_en:
+                self._follow_en = False
+                self._publish_follow()
+                if self._mode == 3:
+                    self._mode = 2
+                    self._set_session(2, True)
+            self._recharge_en = True
+            self._publish_recharge()
+            self._detail = 'recharge task on (nav kept)'
+            self._publish_state()
+            return True, 'recharge on'
+        self._clear_recharge()
+        self._detail = 'recharge off'
+        self._publish_state()
+        return True, 'recharge off'
+
+    def _on_set_recharge(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
+        ok, msg = self._set_recharge(bool(req.data))
         res.success = bool(ok)
         res.message = msg
         return res
@@ -289,6 +332,7 @@ class SupervisorNode(Node):
             # set_mode(4) from idle just latches fall.
             self._disable_motion_sessions()
             self._set_follow(False)
+            self._clear_recharge()
             self._mode = 4
             self._set_fall(True)
         elif target == 3:
@@ -302,6 +346,7 @@ class SupervisorNode(Node):
             self._set_session(2, True)
             self._follow_en = True
             self._publish_follow()
+            self._clear_recharge()
             self._mode = 3
         elif target == 2:
             self._set_session(1, False)
@@ -310,12 +355,15 @@ class SupervisorNode(Node):
             if self._follow_en:
                 self._follow_en = False
                 self._publish_follow()
+            if prev != 2:
+                self._clear_recharge()
             self._mode = 2
         elif target == 1:
             self._disable_motion_sessions()
             if self._follow_en:
                 self._follow_en = False
                 self._publish_follow()
+            self._clear_recharge()
             self._set_session(1, True)
             self._mode = 1
         else:
@@ -324,6 +372,7 @@ class SupervisorNode(Node):
             if self._follow_en:
                 self._follow_en = False
                 self._publish_follow()
+            self._clear_recharge()
             self._mode = 0
 
         self._detail = reason

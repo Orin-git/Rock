@@ -66,6 +66,7 @@
   let preferLiveMap = true;
   let showSensorFrames = false;
   let goalPose = null; // { x, y, yaw }
+  let stagingPose = null; // recharge approach pose { x, y, yaw }
   let waypoints = []; // [{ name, x, y, yaw?, bad? }]
   let scanAgeMs = 0;
   let lastScanTs = 0;
@@ -679,6 +680,23 @@
       });
     }
 
+    if (stagingPose && typeof stagingPose.x === 'number') {
+      drawPoseMarker(
+        view,
+        stagingPose.x,
+        stagingPose.y,
+        typeof stagingPose.yaw === 'number' ? stagingPose.yaw : 0,
+        'rgba(5, 150, 105, 0.92)',
+        '#047857',
+        Math.max(7, view.scale * 1.7)
+      );
+      const sp = worldToPixel(stagingPose.x, stagingPose.y, view);
+      overlayCtx.fillStyle = '#047857';
+      overlayCtx.font = '11px "IBM Plex Mono", sans-serif';
+      overlayCtx.textAlign = 'center';
+      overlayCtx.fillText('接近点', sp.px, sp.py - Math.max(14, view.scale * 2.6));
+    }
+
     if (goalPose && typeof goalPose.x === 'number') {
       drawPoseMarker(
         view,
@@ -1051,6 +1069,19 @@
     drawOverlay();
   }
 
+  function setStaging(pose) {
+    if (!pose || typeof pose.x !== 'number') {
+      stagingPose = null;
+    } else {
+      stagingPose = {
+        x: Number(pose.x),
+        y: Number(pose.y),
+        yaw: typeof pose.yaw === 'number' ? pose.yaw : 0,
+      };
+    }
+    drawOverlay();
+  }
+
   function setWaypoints(list) {
     waypoints = annotateWaypointBadness(Array.isArray(list) ? list : []);
     drawOverlay();
@@ -1269,6 +1300,7 @@
     },
     setGoal: setGoal,
     clearGoal: clearGoal,
+    setStaging: setStaging,
     setWaypoints: setWaypoints,
     getWaypoints: getWaypoints,
     setInitialPose: setInitialPose,
