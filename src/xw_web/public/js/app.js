@@ -17,12 +17,12 @@ function bootDesktopPet() {
   if (!document.querySelector('link[href*="desktop_pet.css"]')) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/css/desktop_pet.css?v=20260812-pet9';
+    link.href = '/css/desktop_pet.css?v=20260820-pet18';
     document.head.appendChild(link);
   }
   const script = document.createElement('script');
   script.id = 'desktop-pet-script';
-  script.src = '/js/desktop_pet.js?v=20260812-pet9';
+  script.src = '/js/desktop_pet.js?v=20260820-pet18';
   script.async = true;
   document.head.appendChild(script);
 }

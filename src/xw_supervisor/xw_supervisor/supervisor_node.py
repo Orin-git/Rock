@@ -4,6 +4,9 @@
 Motion modes (mapping/nav) are mutually exclusive for the Nav2/SLAM stack.
 Body-follow is an orthogonal task latch (/xw/follow/enable) that requires Nav2
 to stay up: enabling follow cancels point/patrol goals but does NOT stop Nav2.
+Auto-recharge is orthogonal on nav (/xw/recharge/enable).
+Autonomous mapping (frontier) is orthogonal on MAPPING (/xw/explore/enable):
+SLAM stays up; a separate explore Nav2 (no AMCL) is managed by xw_explore.
 Fall detection is also orthogonal (/xw/fall/enable).
 
 Session lifecycle is commanded via topics (no nested service calls)
@@ -64,6 +67,8 @@ class SupervisorNode(Node):
         self._fall_en = False
         self._follow_en = False
         self._recharge_en = False
+        self._explore_en = False
+        self._explore_map = ''
 
         # Keep robot_state VOLATILE (high rate) so CLI/Foxglove default QoS always sees updates.
         self._state_pub = self.create_publisher(RobotState, '/xw/robot_state', 10)
@@ -82,6 +87,8 @@ class SupervisorNode(Node):
         self._follow_pub = self.create_publisher(Bool, '/xw/follow/enable', latch)
         self._fall_pub = self.create_publisher(Bool, '/xw/fall/enable', latch)
         self._recharge_pub = self.create_publisher(Bool, '/xw/recharge/enable', latch)
+        self._explore_pub = self.create_publisher(Bool, '/xw/explore/enable', latch)
+        self._explore_map_pub = self.create_publisher(String, '/xw/explore/map_name', latch)
         self._nav_map_pub = self.create_publisher(String, '/xw/nav/map_name', latch)
 
         self._set_pc_nav = self.create_client(SetBool, '/xw/camera/set_pointcloud_nav')
@@ -92,6 +99,9 @@ class SupervisorNode(Node):
         self.create_subscription(
             Int8, '/xw/localization_status', self._on_loc_status, latch
         )
+        self.create_subscription(
+            Bool, '/xw/explore/request_disable', self._on_explore_request_disable, 10
+        )
 
         self.create_service(SetMode, '/xw/supervisor/set_mode', self._on_set_mode, callback_group=self._cb)
         self.create_service(SetRunMode, '/xw/supervisor/set_run_mode', self._on_set_run_mode, callback_group=self._cb)
@@ -99,6 +109,7 @@ class SupervisorNode(Node):
         self.create_service(SetBool, '/xw/supervisor/set_fall', self._on_set_fall, callback_group=self._cb)
         self.create_service(SetBool, '/xw/supervisor/set_follow', self._on_set_follow, callback_group=self._cb)
         self.create_service(SetBool, '/xw/supervisor/set_recharge', self._on_set_recharge, callback_group=self._cb)
+        self.create_service(SetBool, '/xw/supervisor/set_explore', self._on_set_explore, callback_group=self._cb)
 
         self.create_timer(0.5, self._publish_state)
         for mode in MOTION_SESSION:
@@ -106,8 +117,9 @@ class SupervisorNode(Node):
         self._publish_follow()
         self._publish_fall()
         self._publish_recharge()
+        self._publish_explore()
         self.get_logger().info(
-            'supervisor ready (follow/recharge orthogonal on nav; fall orthogonal)'
+            'supervisor ready (follow/recharge on nav; explore on mapping; fall orthogonal)'
         )
 
     def _on_motor_disabled(self, msg: Bool) -> None:
@@ -144,6 +156,7 @@ class SupervisorNode(Node):
         tags = []
         tags.append('follow=on' if self._follow_en else 'follow=off')
         tags.append('recharge=on' if self._recharge_en else 'recharge=off')
+        tags.append('explore=on' if self._explore_en else 'explore=off')
         tags.append('fall=on' if self._fall_en else 'fall=off')
         tags.append(f'loc={LOC_STATUS_NAMES.get(self._loc_status, str(self._loc_status))}')
         base = self._detail or ''
@@ -178,14 +191,60 @@ class SupervisorNode(Node):
     def _publish_recharge(self) -> None:
         self._recharge_pub.publish(Bool(data=bool(self._recharge_en)))
 
+    def _publish_explore(self) -> None:
+        self._explore_pub.publish(Bool(data=bool(self._explore_en)))
+
     def _clear_recharge(self) -> None:
         if self._recharge_en:
             self._recharge_en = False
             self._publish_recharge()
 
+    def _clear_explore(self) -> None:
+        if self._explore_en:
+            self._explore_en = False
+            self._publish_explore()
+
+    def _on_explore_request_disable(self, msg: Bool) -> None:
+        """Frontier finished / session asks to drop the orthogonal latch."""
+        if msg.data and self._explore_en:
+            self._clear_explore()
+            self._detail = 'explore finished (latch cleared)'
+            self._publish_state()
+
     def _set_fall(self, active: bool) -> None:
         self._fall_en = bool(active)
         self._publish_fall()
+
+    def _set_explore(self, active: bool, map_name: str = '') -> tuple[bool, str]:
+        """Toggle frontier explore while staying in MAPPING (SLAM kept)."""
+        want = bool(active)
+        if want:
+            name = (map_name or self._explore_map or '').strip()
+            if name:
+                self._explore_map = name
+                self._explore_map_pub.publish(String(data=name))
+            if self._mode != 1:
+                # Enter mapping; disables nav/follow/recharge
+                self._apply_mode(1, 'explore → mapping')
+            self._clear_recharge()
+            if self._follow_en:
+                self._follow_en = False
+                self._publish_follow()
+            self._explore_en = True
+            self._publish_explore()
+            self._detail = 'explore task on (slam kept)'
+            self._publish_state()
+            return True, 'explore on'
+        self._clear_explore()
+        self._detail = 'explore off'
+        self._publish_state()
+        return True, 'explore off'
+
+    def _on_set_explore(self, req: SetBool.Request, res: SetBool.Response) -> SetBool.Response:
+        ok, msg = self._set_explore(bool(req.data))
+        res.success = bool(ok)
+        res.message = msg
+        return res
 
     def _set_follow(self, active: bool) -> tuple[bool, str]:
         """Toggle follow task without tearing down Nav2.
@@ -333,6 +392,7 @@ class SupervisorNode(Node):
             self._disable_motion_sessions()
             self._set_follow(False)
             self._clear_recharge()
+            self._clear_explore()
             self._mode = 4
             self._set_fall(True)
         elif target == 3:
@@ -347,6 +407,7 @@ class SupervisorNode(Node):
             self._follow_en = True
             self._publish_follow()
             self._clear_recharge()
+            self._clear_explore()
             self._mode = 3
         elif target == 2:
             self._set_session(1, False)
@@ -357,6 +418,7 @@ class SupervisorNode(Node):
                 self._publish_follow()
             if prev != 2:
                 self._clear_recharge()
+            self._clear_explore()
             self._mode = 2
         elif target == 1:
             self._disable_motion_sessions()
@@ -364,6 +426,9 @@ class SupervisorNode(Node):
                 self._follow_en = False
                 self._publish_follow()
             self._clear_recharge()
+            # Keep explore latch if already on (re-entry); otherwise leave cleared
+            if prev != 1:
+                self._clear_explore()
             self._set_session(1, True)
             self._mode = 1
         else:
@@ -373,6 +438,7 @@ class SupervisorNode(Node):
                 self._follow_en = False
                 self._publish_follow()
             self._clear_recharge()
+            self._clear_explore()
             self._mode = 0
 
         self._detail = reason

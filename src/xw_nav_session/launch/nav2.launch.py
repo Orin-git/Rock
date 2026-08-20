@@ -26,6 +26,7 @@ def generate_launch_description() -> LaunchDescription:
     map_yaml = LaunchConfiguration('map')
 
     bt_xml = os.path.join(share, 'behavior_trees', 'navigate_to_pose_gen2.xml')
+    cm_params = os.path.join(share, 'config', 'collision_monitor.yaml')
     configured_params = RewrittenYaml(
         source_file=params_file,
         root_key=namespace,
@@ -64,9 +65,10 @@ def generate_launch_description() -> LaunchDescription:
                     'use_composition': 'False',
                 }.items(),
             ),
+            # Gen2 fork: do NOT remap cmd_vel_smoothed → cmd_vel (conflicts with safety_gate).
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    os.path.join(bringup_dir, 'launch', 'navigation_launch.py')
+                    os.path.join(share, 'launch', 'navigation_gen2_launch.py')
                 ),
                 launch_arguments={
                     'namespace': namespace,
@@ -82,7 +84,8 @@ def generate_launch_description() -> LaunchDescription:
                 executable='collision_monitor',
                 name='collision_monitor',
                 output='screen',
-                parameters=[configured_params],
+                # Dedicated YAML — full multi-node RewrittenYaml drops nested CM overrides.
+                parameters=[cm_params],
             ),
             Node(
                 package='nav2_lifecycle_manager',

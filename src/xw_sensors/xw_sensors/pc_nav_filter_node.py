@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-"""Crop + voxel downsample depth PointCloud2 for Nav2 local costmap.
+"""Crop + voxel + outlier filters for Nav2 local costmap depth clouds.
 
-Subscribes gated raw clouds (already opened by set_pointcloud_nav) and publishes
-sparse ``*_points_nav`` at a capped rate to keep Rock 5T CPU bounded.
+Pipeline (market-standard depth cleanup, same order as typical PCL stacks):
+  1. Pass-through / ROI crop (optical frame: Z forward, X right, Y down)
+  2. Voxel downsample
+  3. Statistical outlier removal (SOR)
+  4. Radius outlier removal
+
+Subscribes gated raw clouds (opened by set_pointcloud_nav) and publishes sparse
+``*_points_nav`` at a capped rate for Rock 5T. All stages are yaml-tunable;
+SOR/Radius can be toggled independently for A/B tuning.
 """
 
 from __future__ import annotations
 
 import math
 import struct
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
@@ -35,11 +43,12 @@ def _find_xyz_offsets(msg: PointCloud2) -> Optional[Tuple[int, int, int, int]]:
     return offs['x'], offs['y'], offs['z'], int(msg.point_step)
 
 
-def _pack_xyz_cloud(header: Header, points: List[Tuple[float, float, float]]) -> PointCloud2:
+def _pack_xyz_cloud(header: Header, points: np.ndarray) -> PointCloud2:
     msg = PointCloud2()
     msg.header = header
     msg.height = 1
-    msg.width = len(points)
+    n = int(points.shape[0])
+    msg.width = n
     msg.is_bigendian = False
     msg.is_dense = True
     msg.point_step = 12
@@ -49,11 +58,54 @@ def _pack_xyz_cloud(header: Header, points: List[Tuple[float, float, float]]) ->
         PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
         PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
     ]
-    buf = bytearray(msg.row_step)
-    for i, (x, y, z) in enumerate(points):
-        struct.pack_into('<fff', buf, i * 12, x, y, z)
-    msg.data = bytes(buf)
+    if n == 0:
+        msg.data = b''
+        return msg
+    # Contiguous float32 xyz → bytes (little-endian host assumed, same as before).
+    msg.data = np.ascontiguousarray(points, dtype=np.float32).tobytes()
     return msg
+
+
+def _pairwise_sq(pts: np.ndarray) -> np.ndarray:
+    """NxN squared Euclidean distances (float32). N is post-voxel (≤ few k)."""
+    # ||a-b||^2 = ||a||^2 + ||b||^2 - 2 a·b
+    sq = np.einsum('ij,ij->i', pts, pts, dtype=np.float32)
+    d2 = sq[:, None] + sq[None, :] - 2.0 * (pts @ pts.T)
+    np.maximum(d2, 0.0, out=d2)
+    return d2
+
+
+def statistical_outlier_removal(
+    pts: np.ndarray, mean_k: int, stddev_mul: float
+) -> np.ndarray:
+    """PCL-style StatisticalOutlierRemoval on (N,3) xyz."""
+    n = pts.shape[0]
+    k = max(int(mean_k), 1)
+    if n <= k + 1:
+        return pts
+    d2 = _pairwise_sq(pts)
+    # Exclude self: partition so index 0..k are the k+1 smallest (self + k nbrs).
+    part = np.partition(d2, k, axis=1)[:, 1 : k + 1]
+    mean_dist = np.sqrt(part, dtype=np.float32).mean(axis=1)
+    mu = float(mean_dist.mean())
+    sigma = float(mean_dist.std())
+    keep = mean_dist <= (mu + float(stddev_mul) * sigma)
+    return pts[keep]
+
+
+def radius_outlier_removal(
+    pts: np.ndarray, radius: float, min_neighbors: int
+) -> np.ndarray:
+    """PCL-style RadiusOutlierRemoval on (N,3) xyz."""
+    n = pts.shape[0]
+    if n == 0:
+        return pts
+    r2 = float(radius) * float(radius)
+    need = max(int(min_neighbors), 1)
+    d2 = _pairwise_sq(pts)
+    # Count neighbors inside radius, excluding self.
+    counts = (d2 <= r2).sum(axis=1) - 1
+    return pts[counts >= need]
 
 
 class PcNavFilterNode(Node):
@@ -67,7 +119,7 @@ class PcNavFilterNode(Node):
             '/camera/front_up/depth/points_nav',
             '/camera/front_down/depth/points_nav',
         ])
-        # Optical frame: Z forward depth, X right, Y down — crop in sensor frame.
+        # Optical frame ROI (PassThrough / CropBox equivalent).
         self.declare_parameter('z_min', 0.20)
         self.declare_parameter('z_max', 2.50)
         self.declare_parameter('abs_x_max', 1.20)
@@ -77,6 +129,14 @@ class PcNavFilterNode(Node):
         self.declare_parameter('max_rate_hz', 5.0)
         self.declare_parameter('max_points_out', 2500)
         self.declare_parameter('stride', 4)
+        # Statistical outlier removal (after voxel).
+        self.declare_parameter('sor_enable', True)
+        self.declare_parameter('sor_mean_k', 8)
+        self.declare_parameter('sor_stddev_mul', 1.0)
+        # Radius outlier removal (after SOR).
+        self.declare_parameter('radius_enable', True)
+        self.declare_parameter('radius_search', 0.12)
+        self.declare_parameter('radius_min_neighbors', 5)
 
         inputs = list(self.get_parameter('input_topics').value)
         outputs = list(self.get_parameter('output_topics').value)
@@ -94,9 +154,14 @@ class PcNavFilterNode(Node):
                 lambda msg, idx=i: self._on_cloud(idx, msg),
                 _PC_QOS,
             )
+        sor_on = bool(self.get_parameter('sor_enable').value)
+        rad_on = bool(self.get_parameter('radius_enable').value)
         self.get_logger().info(
             f'pc_nav_filter ready: {len(inputs)} streams → *_points_nav @'
-            f'{float(self.get_parameter("max_rate_hz").value):.1f} Hz'
+            f'{float(self.get_parameter("max_rate_hz").value):.1f} Hz '
+            f'(crop+voxel'
+            f'{"+SOR" if sor_on else ""}'
+            f'{"+radius" if rad_on else ""})'
         )
 
     def _on_cloud(self, idx: int, msg: PointCloud2) -> None:
@@ -143,15 +208,40 @@ class PcNavFilterNode(Node):
                 continue
             if y < y_min or y > y_max:
                 continue
-            key = (int(math.floor(x / leaf)), int(math.floor(y / leaf)), int(math.floor(z / leaf)))
+            key = (
+                int(math.floor(x / leaf)),
+                int(math.floor(y / leaf)),
+                int(math.floor(z / leaf)),
+            )
             if key not in voxels:
                 voxels[key] = (x, y, z)
                 if len(voxels) >= max_out:
                     break
 
-        points = list(voxels.values())
+        if not voxels:
+            out = _pack_xyz_cloud(msg.header, np.empty((0, 3), dtype=np.float32))
+            self._pubs[idx].publish(out)
+            self._last_pub[idx] = now
+            return
+
+        pts = np.asarray(list(voxels.values()), dtype=np.float32)
+
+        if bool(self.get_parameter('sor_enable').value):
+            pts = statistical_outlier_removal(
+                pts,
+                int(self.get_parameter('sor_mean_k').value),
+                float(self.get_parameter('sor_stddev_mul').value),
+            )
+
+        if bool(self.get_parameter('radius_enable').value) and pts.shape[0] > 0:
+            pts = radius_outlier_removal(
+                pts,
+                float(self.get_parameter('radius_search').value),
+                int(self.get_parameter('radius_min_neighbors').value),
+            )
+
         # Preserve acquisition stamp (do not stamp with now()).
-        out = _pack_xyz_cloud(msg.header, points)
+        out = _pack_xyz_cloud(msg.header, pts)
         self._pubs[idx].publish(out)
         self._last_pub[idx] = now
 

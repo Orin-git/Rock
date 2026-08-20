@@ -6,12 +6,31 @@
     output_topics:
       - /camera/front_up/depth/points_nav
       - /camera/front_down/depth/points_nav
+
+    # --- 1) Pass-through / ROI (optical frame: Z forward, X right, Y down) ---
+    # Tune to workspace; drop near-field noise and far clutter.
     z_min: 0.20
     z_max: 2.50
     abs_x_max: 1.20
     y_min: -0.80
     y_max: 0.40
+
+    # --- 2) Voxel downsample (larger leaf = fewer points, faster, coarser) ---
     voxel_leaf: 0.06
-    max_rate_hz: 5.0
-    max_points_out: 2500
     stride: 4
+    max_points_out: 2500
+    max_rate_hz: 5.0
+
+    # --- 3) Statistical outlier removal (sparse speckles) ---
+    # More aggressive: raise mean_k and/or lower stddev_mul (e.g. 0.5 like PCL demos).
+    # Milder if walls look eaten: raise stddev_mul to 1.5–2.0 or set sor_enable false.
+    sor_enable: true
+    sor_mean_k: 8
+    sor_stddev_mul: 1.0
+
+    # --- 4) Radius outlier removal (isolated floating points) ---
+    # More aggressive: larger radius_search and/or higher min_neighbors.
+    # If thin poles disappear: lower min_neighbors or set radius_enable false.
+    radius_enable: true
+    radius_search: 0.12
+    radius_min_neighbors: 5

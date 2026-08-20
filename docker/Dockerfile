@@ -10,8 +10,12 @@ ENV XW_WS=/ros2_ws
 WORKDIR /ros2_ws
 
 # Optional Foxglove WebSocket bridge (RViz-class viz in browser / desktop)
+# PCL already via desktop base on many images; pin conversions + pcl_ros for filter tools.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-foxglove-bridge \
+    libpcl-dev \
+    ros-humble-pcl-conversions \
+    ros-humble-pcl-ros \
   && rm -rf /var/lib/apt/lists/*
 
 CMD ["bash"]

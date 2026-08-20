@@ -1,0 +1,44 @@
+# Nav2 Collision Monitor (Humble) — flat point lists, max_points (not min_points).
+collision_monitor:
+  ros__parameters:
+    use_sim_time: False
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "/xw/cmd/nav"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.3
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 0.5
+    polygons: ["FrontStop", "SideLeft", "SideRight"]
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "/scan"
+      min_height: 0.05
+      max_height: 1.5
+      enabled: True
+      source_timeout: 1.0
+    FrontStop:
+      type: "polygon"
+      points: [0.38, 0.18, 0.38, -0.18, 0.12, -0.18, 0.12, 0.18]
+      action_type: "stop"
+      max_points: 2
+      visualize: False
+      polygon_pub_topic: "front_cm_polygon"
+      enabled: True
+    SideLeft:
+      type: "polygon"
+      points: [0.20, 0.28, 0.20, 0.18, -0.10, 0.18, -0.10, 0.28]
+      action_type: "stop"
+      max_points: 2
+      visualize: False
+      enabled: True
+    SideRight:
+      type: "polygon"
+      points: [0.20, -0.18, 0.20, -0.28, -0.10, -0.28, -0.10, -0.18]
+      action_type: "stop"
+      max_points: 2
+      visualize: False
+      enabled: True

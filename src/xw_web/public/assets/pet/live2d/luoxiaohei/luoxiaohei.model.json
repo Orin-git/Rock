@@ -1,0 +1,82 @@
+{
+  "version": "Sample 1.0.0",
+  "model": "moc/luoxiaohei.moc",
+  "textures": [
+    "moc/luoxiaohei.2048/texture_00.png"
+  ],
+  "motions": {
+    "idle": [
+      {
+        "file": "mtn/00_idle.mtn"
+      }
+    ],
+    "tap_body": [
+      {
+        "file": "mtn/01_happy.mtn"
+      },
+      {
+        "file": "mtn/05_fun.mtn"
+      },
+      {
+        "file": "mtn/04_surprise.mtn"
+      },
+      {
+        "file": "mtn/15_joy.mtn"
+      }
+    ],
+    "happy": [
+      {
+        "file": "mtn/01_happy.mtn"
+      },
+      {
+        "file": "mtn/15_joy.mtn"
+      },
+      {
+        "file": "mtn/06_love.mtn"
+      },
+      {
+        "file": "mtn/10_yeah.mtn"
+      }
+    ],
+    "wow": [
+      {
+        "file": "mtn/04_surprise.mtn"
+      },
+      {
+        "file": "mtn/03_fear.mtn"
+      }
+    ],
+    "sad": [
+      {
+        "file": "mtn/08_sad.mtn"
+      },
+      {
+        "file": "mtn/13_cry.mtn"
+      },
+      {
+        "file": "mtn/14_sigh.mtn"
+      }
+    ],
+    "smirk": [
+      {
+        "file": "mtn/05_fun.mtn"
+      },
+      {
+        "file": "mtn/16_menace.mtn"
+      }
+    ],
+    "focus": [
+      {
+        "file": "mtn/11_muscle.mtn"
+      },
+      {
+        "file": "mtn/10_yeah.mtn"
+      },
+      {
+        "file": "mtn/00_idle.mtn"
+      }
+    ]
+  },
+  "physics": "luoxiaohei.physics.json",
+  "pose": "luoxiaohei.pose.json"
+}

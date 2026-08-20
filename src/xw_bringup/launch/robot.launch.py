@@ -189,6 +189,13 @@ def generate_launch_description() -> LaunchDescription:
             )],
             output='screen',
         ),
+        Node(
+            package='xw_explore',
+            executable='explore_session_node',
+            name='xw_explore_session',
+            parameters=[{'maps_dir': maps_dir}],
+            output='screen',
+        ),
         Node(package='xw_fall_session', executable='fall_session_node', name='xw_fall_session', output='screen'),
         Node(
             package='xw_perception',
@@ -259,7 +266,7 @@ def generate_launch_description() -> LaunchDescription:
             '-p port:=8765 '
             '-p address:=0.0.0.0 '
             '-p topic_whitelist:=["^/tf$","^/tf_static$","^/scan$","^/odom$","^/cmd_vel$",'
-            '"^/imu/data$","^/map$","^/xw/.*","^/safety_status$",'
+            '"^/imu/data$","^/map$","^/plan$","^/local_plan$","^/xw/.*","^/safety_status$",'
             '"^/camera/front_up/color/image_raw/compressed$","^/camera/front_up/.*/camera_info$",'
             '"^/camera/front_up/depth/points$",'
             '"^/camera/front_down/color/image_raw/compressed$","^/camera/front_down/.*/camera_info$",'

@@ -1,0 +1,5 @@
+Desktop pet character: Live2D Luo Xiaohei (罗小黑)
+Model package: live2d-widget-model-luoxiaohei (npm)
+Loader: live2d-widget.js (MIT) — vendored under /js/vendor/
+Personal / non-commercial viewing on this robot UI.
+Character © MTJJ / 罗小黑战记 — use at your own risk for private hobby display.

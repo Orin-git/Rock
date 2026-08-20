@@ -98,8 +98,9 @@ class MotionNode(Node):
             res.message = 'noop'
             return res
         res.success = True
-        direction = 'fwd' if self._drive_sign > 0 else 'back'
-        res.message = f'accepted {self._cmd_id} ({direction} {self._target_dist:.2f}m)'
+        direction = '往后走' if self._drive_sign < 0 else '往前走'
+        dist_s = f'{self._target_dist:.1f}'.rstrip('0').rstrip('.')
+        res.message = f'{direction} {dist_s}米'
         self._publish_status(
             self.TURN if self._state == self.TURN else self.DRIVE, 'started'
         )
@@ -119,7 +120,7 @@ class MotionNode(Node):
 
         if self._deadline > 0.0 and time.monotonic() > self._deadline:
             self._cmd_pub.publish(Twist())
-            self._finish(2, f'timeout traveled={self._traveled():.2f}m')
+            self._finish(2, '走动超时了')
             return
 
         out = Twist()
@@ -142,7 +143,7 @@ class MotionNode(Node):
                 return
             out.angular.z = ang_sp if err > 0 else -ang_sp
             self._cmd_pub.publish(out)
-            self._publish_progress(f'turn err_deg={math.degrees(err):.1f}')
+            self._publish_progress('turn')
             return
 
         if self._state == self.DRIVE:
@@ -158,9 +159,9 @@ class MotionNode(Node):
                 if self._target_dist > 1e-6
                 else 100.0
             )
-            tag = 'fwd' if self._drive_sign > 0 else 'back'
+            # Stable phase text (no distance spam) for pet / UI.
             self._publish_progress(
-                f'{tag} {traveled:.2f}/{self._target_dist:.2f}m', percent=pct
+                'back' if self._drive_sign < 0 else 'fwd', percent=pct
             )
 
     def _publish_progress(self, phase: str, percent: float = 0.0) -> None:

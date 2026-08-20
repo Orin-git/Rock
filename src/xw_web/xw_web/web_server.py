@@ -6,6 +6,7 @@ from __future__ import annotations
 import functools
 import json
 import os
+import re
 import socket
 import subprocess
 import threading
@@ -34,6 +35,278 @@ from rosidl_runtime_py.utilities import get_message
 
 from xw_interfaces.msg import RobotState, TaskProgress, TaskResult
 from xw_interfaces.srv import MapManage, MotionCommand, SetMode, SetRunMode, WaypointManage
+
+# Task lines → desktop pet / UI log: short plain Chinese only.
+_CAPABILITY_ZH = {
+    'nav': '导航',
+    'navigation': '导航',
+    'navigating': '导航',
+    'slam': '建图',
+    'mapping': '建图',
+    'explore': '自主建图',
+    'follow': '跟随',
+    'following': '跟随',
+    'recharge': '回充',
+    'motion': '',
+    'fall': '跌倒监测',
+    'fall_detect': '跌倒监测',
+    'idle': '空闲',
+    'supervisor': '',
+    'localization': '定位',
+    'gesture': '手势',
+    'pointcloud': '点云',
+    'map': '地图',
+    'waypoint': '航点',
+    'patrol': '巡航',
+    'goal': '前往',
+    'initialpose': '定位',
+    'set_mode': '模式',
+    'run_mode': '形态',
+}
+
+_PHASE_ZH = {
+    'idle': '待命',
+    'active': '进行中',
+    'executing': '进行中',
+    'started': '开始走动',
+    'driving': '走动中',
+    'done': '走到啦',
+    'fwd': '往前走中',
+    'back': '往后走中',
+    'turn': '转身中',
+    'goal_accepted': '开始前往',
+    'patrol_start': '开始巡航',
+    'patrol_next': '去下一个点',
+    'follow_start': '开始跟着你',
+    'tracking': '跟着你',
+    'follow_nav_executing': '跟着你走',
+    'coast': '靠近你',
+    'search': '找你中',
+    'nav': '去充电桩',
+    'detect': '找充电桩',
+    'align': '对准中',
+    'flip': '掉头中',
+    'commit': '贴桩中',
+    'retry': '再试一次',
+    'success': '充上电了',
+    'fail': '回充失败',
+    'prep': '准备中',
+    'lock': '对准中',
+    'retreat': '退开一点',
+}
+
+_MODE_ZH = {
+    'IDLE': '空闲',
+    'MAPPING': '建图',
+    'NAVIGATING': '导航',
+    'FOLLOWING': '跟随',
+    'FALL_DETECT': '跌倒监测',
+    'UNKNOWN': '未知',
+}
+
+_MSG_ZH = {
+    'ok': '好了',
+    'done': '走到啦',
+    'started': '开始走动',
+    'driving': '走动中',
+    'preempted': '换了新动作',
+    'recharge on': '开始回充',
+    'recharge off': '回充已停',
+    'follow on': '开始跟着你',
+    'follow off': '不跟了',
+    'follow started': '开始跟着你',
+    'follow stopped': '不跟了',
+    'fall=on': '跌倒监测开了',
+    'fall=off': '跌倒监测关了',
+    'nav started': '开始导航',
+    'nav stopped': '导航停了',
+    'stopped': '停了',
+    'goal succeeded': '到啦',
+    'goal failed/aborted': '没走到',
+    'patrol complete': '巡航走完了',
+    'patrol stopped': '巡航停了',
+    'target lost': '找不到人了',
+    'nav2 not ready for follow': '导航还没好，先别跟',
+    'rejected: follow active': '正跟着人，稍后再试',
+    'rejected: recharge active': '正在回充，稍后再试',
+    'Nav2 start failed': '导航没启动起来',
+    'cannot recharge while mapping': '建图中不能回充',
+    'cannot follow while mapping': '建图中不能跟随',
+    'explore on': '开始自主建图',
+    'explore off': '自主建图已停',
+    'enter navigation with a map first (set_mode 2)': '请先进入导航再回充',
+    'follow requires navigation map (set_mode 2 with map_name first)': '请先进入导航再跟随',
+    'motor disabled (MCU Flag_Stop)': '电机已停，动不了',
+    'production': '量产',
+    'developer': '开发者',
+    'busy': '正忙着',
+    'noop': '不用动',
+    'no odom yet': '还没准备好',
+    'not found': '没找到',
+    'renamed': '改名好了',
+    'deleted': '删掉了',
+    'https :9443 up': '手势开了',
+    'https stopped': '手势关了',
+}
+
+
+def _zh_capability(name: str) -> str:
+    key = (name or '').strip().lower()
+    return _CAPABILITY_ZH.get(key, name or '')
+
+
+def _zh_phase(phase: str) -> str:
+    raw = (phase or '').strip()
+    if not raw:
+        return '进行中'
+    low = raw.lower()
+    if low in _PHASE_ZH:
+        return _PHASE_ZH[low]
+    # motion: "fwd 0.12/0.50m" / "back ..." → no numbers (dedupe-friendly)
+    if low.startswith('fwd '):
+        return '往前走中'
+    if low.startswith('back '):
+        return '往后走中'
+    if low.startswith('turn'):
+        return '转身中'
+    return raw
+
+
+def _zh_message(text: str) -> str:
+    raw = (text or '').strip()
+    if not raw:
+        return ''
+    if raw in _MSG_ZH:
+        return _MSG_ZH[raw]
+    if raw in _MODE_ZH:
+        return _MODE_ZH[raw]
+    low = raw.lower()
+    if low in _MSG_ZH:
+        return _MSG_ZH[low]
+    m = re.search(r'\(\s*(fwd|back)\s+([\d.]+)\s*m\s*\)', raw, re.I)
+    if m:
+        dist = m.group(2)
+        try:
+            d = float(dist)
+            dist_s = f'{d:.1f}'.rstrip('0').rstrip('.')
+        except ValueError:
+            dist_s = dist
+        return f'往后走 {dist_s}米' if m.group(1).lower() == 'back' else f'往前走 {dist_s}米'
+    if raw.startswith('fall='):
+        return '跌倒监测开了' if 'on' in raw else '跌倒监测关了'
+    if raw.startswith('busy in '):
+        return '正忙着，稍后再试'
+    if raw.startswith('accepted '):
+        return '收到，开始动'
+    if raw.startswith('no waypoints for '):
+        return '这个地图还没有航点'
+    if raw.startswith('patrol failed at index '):
+        return '巡航没走完'
+    if raw.startswith('timeout'):
+        return '走动超时了'
+    if 'service unavailable' in low:
+        return '服务还没好'
+    if 'timeout' in low:
+        return '等超时了'
+    return raw
+
+
+def _is_clean_zh(text: str) -> bool:
+    s = (text or '').strip()
+    if not s or not any('\u4e00' <= c <= '\u9fff' for c in s):
+        return False
+    if any(c.isascii() and c.isalpha() for c in s):
+        return False
+    if '=' in s or '[' in s or ']' in s:
+        return False
+    return True
+
+
+def _to_task_zh(line: str) -> str:
+    raw = (line or '').strip()
+    if not raw:
+        return ''
+    if _is_clean_zh(raw):
+        return raw
+    low = raw.lower()
+    if 'set_mode' in low or 'active=' in low:
+        m = re.search(r'(IDLE|MAPPING|NAVIGATING|FOLLOWING|FALL_DETECT|\b[0-4]\b)', raw, re.I)
+        if m:
+            key = m.group(1).upper()
+            return f'切换到{_MODE_ZH.get(key, _MODE_ZH.get(m.group(1), "新状态"))}'
+        return '切换模式了'
+    m = re.match(r'^\[progress\]\s*(\w+)\s+(.+)$', raw, re.I)
+    if m:
+        cap, phase = m.group(1).lower(), m.group(2).strip()
+        if cap == 'motion':
+            return _zh_phase(phase)
+        body = _zh_phase(phase)
+        prefix = _zh_capability(cap)
+        return body if not prefix else (body if body.startswith(prefix) else f'{prefix}：{body}')
+    m = re.match(r'^\[result\]\s*(\w+)\s+code=(\d+)\s*(.*)$', raw, re.I)
+    if m:
+        cap, code, msg = m.group(1).lower(), int(m.group(2)), m.group(3).strip()
+        body = _zh_message(msg) or _zh_phase(msg)
+        if cap == 'motion':
+            if code == 0:
+                return body if _is_clean_zh(body) else '走到啦'
+            return body if _is_clean_zh(body) else '没走成'
+        prefix = _zh_capability(cap) or '任务'
+        if code == 0:
+            return body if _is_clean_zh(body) else f'{prefix}好了'
+        return body if _is_clean_zh(body) else f'{prefix}失败'
+    m = re.match(r'^\[(\w+)\]\s*(.*)$', raw)
+    if m:
+        return _to_task_zh(f'{m.group(1)} {m.group(2)}'.strip())
+    zh = _zh_message(raw)
+    if _is_clean_zh(zh):
+        return zh
+    # Strip Latin leftovers from mixed lines
+    stripped = re.sub(r'[A-Za-z][A-Za-z0-9_./-]*', ' ', raw)
+    stripped = re.sub(r'[=\[\]<>(){}|]+', ' ', stripped)
+    stripped = re.sub(r'\s+', ' ', stripped).strip()
+    if _is_clean_zh(stripped):
+        return stripped
+    return ''
+
+
+def _format_task_progress(msg: TaskProgress) -> str:
+    cap = (msg.capability or '').strip().lower()
+    detail = (msg.detail or '').strip()
+    phase = (msg.phase or '').strip()
+    if cap == 'motion' or phase.lower() in ('started', 'driving', 'done') or phase.lower().startswith(('fwd ', 'back ', 'turn')):
+        return _zh_phase(phase) if phase else '走动中'
+    if detail and not detail.startswith('{'):
+        # recharge already Chinese
+        if any('\u4e00' <= ch <= '\u9fff' for ch in detail):
+            return detail
+        return _zh_message(detail) or _zh_phase(phase)
+    body = _zh_phase(phase)
+    prefix = _zh_capability(cap)
+    if not prefix:
+        return body
+    if body.startswith(prefix):
+        return body
+    return f'{prefix}：{body}'
+
+
+def _format_task_result(msg: TaskResult) -> str:
+    cap = (msg.capability or '').strip().lower()
+    body = _zh_message(msg.message)
+    code = int(getattr(msg, 'code', 0) or 0)
+    if cap == 'motion':
+        if code == 0:
+            return body if body in ('走到啦', '不用动', '好了') else (body or '走到啦')
+        if code == 2:
+            return '走动取消了'
+        return body or '没走成'
+    prefix = _zh_capability(cap) or '任务'
+    if code == 0:
+        return body if body and any('\u4e00' <= ch <= '\u9fff' for ch in body) else f'{prefix}好了'
+    if code == 2:
+        return f'{prefix}取消了'
+    return (body or f'{prefix}失败')
+
 
 # URDF xw_gen2.urdf — relative to base_link (fill sensors later without UI rewrite)
 _SENSOR_LAYOUT = [
@@ -118,6 +391,7 @@ _TOPIC_HINTS: Dict[str, str] = {
     '/xw/supervisor/set_mode': '切换工作模式 IDLE/建图/导航/跟随/跌倒',
     '/xw/supervisor/set_follow': '人体跟随正交开关（不拆 Nav2）',
     '/xw/supervisor/set_recharge': '自动回充正交开关（不拆 Nav2）',
+    '/xw/supervisor/set_explore': '自主建图正交开关（建图模式 + frontier）',
     '/xw/supervisor/set_fall': '跌倒检测正交开关',
     '/xw/supervisor/set_run_mode': '切换运行形态：0量产 / 1开发者（默认开发者）',
     '/xw/supervisor/get_state': '查询 Supervisor 当前状态',
@@ -136,6 +410,10 @@ _TOPIC_HINTS: Dict[str, str] = {
     '/xw/recharge/status': '回充阶段/成败 JSON（网页状态条）',
     '/xw/recharge/staging': '回充接近点（map）',
     '/xw/recharge/detection': '激光认桩位姿（base_link）',
+    '/xw/explore/enable': '自主建图任务使能',
+    '/xw/explore/status': '自主建图阶段 JSON',
+    '/xw/explore/map_name': '自主建图保存名',
+    '/xw/explore/finished': '探索完成信号',
     '/xw/chassis/charge_mode': '底盘 TX[1] 回充模式闩锁',
     '/xw/localization_status': '定位健康 0正常/1未就绪/2漂移自愈/3需重定位',
     '/cmd_vel': '安全门输出 → 底盘最终速度',
@@ -164,8 +442,8 @@ _TOPIC_HINTS: Dict[str, str] = {
     '/camera/front_up/depth/image_raw': '前上深度图（本机算法/安全门）',
     '/camera/front_up/depth/camera_info': '前上深度内参',
     '/camera/front_up/depth/points': '前上点云（调试开关 enable_pointcloud，默认关）',
-    '/camera/front_up/depth/points_nav': '前上导航点云（Crop+Voxel 过滤）',
-    '/camera/front_down/depth/points_nav': '前下导航点云（Crop+Voxel 过滤）',
+    '/camera/front_up/depth/points_nav': '前上导航点云（Crop+Voxel+SOR+Radius）',
+    '/camera/front_down/depth/points_nav': '前下导航点云（Crop+Voxel+SOR+Radius）',
     '/camera/front_down/color/image_raw': '前下彩色图（raw）',
     '/camera/front_down/color/image_raw/compressed': '前下彩色预览（JPEG）',
     '/camera/front_down/color/camera_info': '前下彩色内参',
@@ -195,6 +473,7 @@ _NODE_HINTS: Dict[str, str] = {
     'xw_nav_session': '导航会话',
     'xw_follow_session': '跟随会话',
     'xw_recharge': '自动回充（Laser-Lock Dock）',
+    'xw_explore': '自主建图（frontier）',
     'xw_fall_session': '跌倒巡视会话',
     'xw_perception_stub': '感知（人体/跌倒 stub）',
     'xw_perception': '感知（YOLOv8-pose RKNN → tracks/fall）',
@@ -203,7 +482,7 @@ _NODE_HINTS: Dict[str, str] = {
     'camera_publisher': 'Angstrong 深度相机驱动',
     'xw_health': '话题健康监测',
     'xw_localization_health': '定位健康 0–3 与自愈',
-    'xw_pc_nav_filter': '导航点云 Crop+Voxel 过滤',
+    'xw_pc_nav_filter': '导航点云 Crop+Voxel+SOR+Radius 过滤',
     'robot_state_publisher': '根据 URDF 发布 TF',
 }
 
@@ -403,7 +682,17 @@ class BridgeNode(Node):
             'staging': None,
             'label': '待命',
         }
+        self._explore: Dict[str, Any] = {
+            'enabled': False,
+            'active': False,
+            'phase': 'idle',
+            'message': '待命',
+            'map_name': '',
+            'iteration': 0,
+        }
         self._set_recharge = self.create_client(SetBool, '/xw/supervisor/set_recharge')
+        self._set_explore = self.create_client(SetBool, '/xw/supervisor/set_explore')
+        self._explore_map_pub = self.create_publisher(String, '/xw/explore/map_name', _LATCHED_BOOL_QOS)
         self.create_subscription(
             Bool,
             '/xw/camera/pointcloud_enabled',
@@ -428,7 +717,14 @@ class BridgeNode(Node):
             self._on_recharge_enabled,
             _LATCHED_BOOL_QOS,
         )
+        self.create_subscription(
+            Bool,
+            '/xw/explore/enable',
+            self._on_explore_enabled,
+            _LATCHED_BOOL_QOS,
+        )
         self.create_subscription(String, '/xw/recharge/status', self._on_recharge_status, _LATCHED_BOOL_QOS)
+        self.create_subscription(String, '/xw/explore/status', self._on_explore_status, _LATCHED_BOOL_QOS)
         self.create_timer(5.0, self._watch_housekeep)
         domain = os.environ.get('ROS_DOMAIN_ID', '?')
         self.get_logger().info(f'web ROS bridge ready (DOMAIN={domain})')
@@ -464,6 +760,25 @@ class BridgeNode(Node):
         with self._lock:
             self._recharge.update(parsed)
 
+    def _on_explore_enabled(self, msg: Bool) -> None:
+        with self._lock:
+            self._explore['enabled'] = bool(msg.data)
+            if not msg.data and self._explore.get('phase') not in ('fail', 'success'):
+                self._explore['active'] = False
+
+    def _on_explore_status(self, msg: String) -> None:
+        raw = (msg.data or '').strip()
+        if not raw:
+            return
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return
+        if not isinstance(parsed, dict):
+            return
+        with self._lock:
+            self._explore.update(parsed)
+
     def pointcloud_status(self) -> Dict[str, Any]:
         with self._lock:
             enabled = bool(self._pointcloud_enabled)
@@ -491,7 +806,7 @@ class BridgeNode(Node):
         res = fut.result()
         with self._lock:
             self._pointcloud_enabled = bool(enabled) if res.success else self._pointcloud_enabled
-        self._push_task(f'[pointcloud] {res.message}')
+        self._push_task(f'点云调试已{"开启" if enabled else "关闭"}')
         return {
             'ok': bool(res.success),
             'enabled': bool(enabled) if res.success else self._pointcloud_enabled,
@@ -526,7 +841,7 @@ class BridgeNode(Node):
         res = fut.result()
         with self._lock:
             self._fall_enabled = bool(enabled) if res.success else self._fall_enabled
-        self._push_task(f'[fall] {res.message}')
+        self._push_task(_zh_message(res.message) or f'跌倒监测已{"开启" if enabled else "关闭"}')
         return {
             'ok': bool(res.success),
             'enabled': bool(enabled) if res.success else self._fall_enabled,
@@ -564,7 +879,7 @@ class BridgeNode(Node):
         with self._lock:
             if res.success:
                 self._follow_enabled = bool(enabled)
-        self._push_task(f'[follow] {res.message}')
+        self._push_task(_zh_message(res.message) or f'跟随已{"开启" if enabled else "关闭"}')
         return {
             'ok': bool(res.success),
             'enabled': bool(self._follow_enabled),
@@ -641,7 +956,7 @@ class BridgeNode(Node):
                 self._gesture_proc = None
                 return {'ok': False, 'enabled': False, 'message': f'gesture_https exited ({code})'}
             if self._gesture_port_up():
-                self._push_task('[gesture] https :9443 up')
+                self._push_task('手势服务已启动')
                 st = self.gesture_status()
                 st['message'] = 'started'
                 return st
@@ -660,7 +975,7 @@ class BridgeNode(Node):
                     p.kill()
                 except Exception:  # noqa: BLE001
                     pass
-        self._push_task('[gesture] https stopped')
+        self._push_task('手势服务已停止')
         st = self.gesture_status()
         st['ok'] = True
         st['enabled'] = False
@@ -702,15 +1017,65 @@ class BridgeNode(Node):
                     self._recharge['phase'] = 'idle'
                     self._recharge['label'] = '待命'
                     self._recharge['active'] = False
-        self._push_task(f'[recharge] {res.message}')
+        self._push_task(_zh_message(res.message) or f'回充已{"开启" if enabled else "关闭"}')
         out = self.recharge_status()
         out['ok'] = bool(res.success)
-        out['message'] = res.message
+        out['message'] = _zh_message(res.message) or res.message
+        return out
+
+    def explore_status(self) -> Dict[str, Any]:
+        with self._lock:
+            body = dict(self._explore)
+            mode = (self._state or {}).get('mode')
+        ready = self._set_explore.service_is_ready()
+        body.update({
+            'ok': True,
+            'service_ready': ready,
+            'topic': '/xw/explore/enable',
+            'mode': mode,
+            'hint': '正交任务：建图模式 + frontier；Nav2 无 AMCL，跟随 SLAM /map',
+        })
+        return body
+
+    def set_explore(self, enabled: bool, map_name: str = '') -> Dict[str, Any]:
+        name = (map_name or '').strip()
+        if enabled and name:
+            msg = String()
+            msg.data = name
+            self._explore_map_pub.publish(msg)
+            with self._lock:
+                self._explore['map_name'] = name
+        if not self._set_explore.wait_for_service(timeout_sec=2.0):
+            return {'ok': False, 'message': 'set_explore service unavailable (supervisor down?)'}
+        req = SetBool.Request()
+        req.data = bool(enabled)
+        fut = self._set_explore.call_async(req)
+        for _ in range(80):
+            if fut.done():
+                break
+            threading.Event().wait(0.05)
+        if not fut.done() or fut.result() is None:
+            return {'ok': False, 'message': 'set_explore timeout'}
+        res = fut.result()
+        with self._lock:
+            if res.success:
+                self._explore['enabled'] = bool(enabled)
+                if not enabled and self._explore.get('phase') not in ('fail', 'success'):
+                    self._explore['phase'] = 'idle'
+                    self._explore['message'] = '待命'
+                    self._explore['active'] = False
+        self._push_task(_zh_message(res.message) or f'自主建图已{"开启" if enabled else "关闭"}')
+        out = self.explore_status()
+        out['ok'] = bool(res.success)
+        out['message'] = _zh_message(res.message) or res.message
         return out
 
     def _push_task(self, line: str) -> None:
+        text = _to_task_zh(line)
+        if not text:
+            return
         with self._lock:
-            self._tasks.insert(0, line)
+            self._tasks.insert(0, text)
             del self._tasks[80:]
 
     def _on_state(self, msg: RobotState) -> None:
@@ -752,10 +1117,10 @@ class BridgeNode(Node):
             }
 
     def _on_progress(self, msg: TaskProgress) -> None:
-        self._push_task(f'[progress] {msg.capability} {msg.phase}')
+        self._push_task(_format_task_progress(msg))
 
     def _on_result(self, msg: TaskResult) -> None:
-        self._push_task(f'[result] {msg.capability} code={msg.code} {msg.message}')
+        self._push_task(_format_task_result(msg))
 
     def service_status(self) -> Dict[str, Any]:
         """Quick view of whether core ROS services are up (for web domain hub)."""
@@ -817,6 +1182,7 @@ class BridgeNode(Node):
                 'foxglove': fox,
                 'watching': self._watch_topic,
                 'recharge': dict(self._recharge),
+                'explore': dict(self._explore),
             }
 
     def publish_teleop(self, linear_x: float, angular_z: float) -> Dict[str, Any]:
@@ -846,12 +1212,16 @@ class BridgeNode(Node):
         if not fut.done() or fut.result() is None:
             return {'ok': False, 'message': 'motion command timeout'}
         res = fut.result()
-        self._push_task(
-            f'[motion] id={req.command_id} ang={angle_deg} dist={distance_m} → {res.message}'
-        )
+        tip = _zh_message(res.message)
+        if not tip or tip == '收到，开始动':
+            sign = '往后走' if float(distance_m) < 0 else '往前走'
+            tip = f'{sign} {abs(float(distance_m)):.1f}'.rstrip('0').rstrip('.') + '米'
+            if abs(float(angle_deg)) > 0.5:
+                tip = ('左转' if float(angle_deg) > 0 else '右转') + f'{abs(float(angle_deg)):.0f}°，' + tip
+        self._push_task(tip if res.success else f'没动起来 · {tip}')
         return {
             'ok': bool(res.success),
-            'message': res.message,
+            'message': tip if res.success else res.message,
             'command_id': req.command_id,
             'angle_deg': float(angle_deg),
             'distance_m': float(distance_m),
@@ -875,9 +1245,7 @@ class BridgeNode(Node):
         msg.pose.orientation.z = math.sin(half)
         msg.pose.orientation.w = math.cos(half)
         self._goal_pub.publish(msg)
-        self._push_task(
-            f'[goal] frame={msg.header.frame_id} x={x:.3f} y={y:.3f} yaw={yaw:.3f}'
-        )
+        self._push_task(f'去那边')
         return {
             'ok': True,
             'topic': '/xw/goal_pose',
@@ -907,9 +1275,7 @@ class BridgeNode(Node):
         msg.pose.covariance[7] = 0.25
         msg.pose.covariance[35] = 0.068
         self._initialpose_pub.publish(msg)
-        self._push_task(
-            f'[initialpose] x={x:.3f} y={y:.3f} yaw={yaw:.3f}'
-        )
+        self._push_task('位置定好了')
         return {
             'ok': True,
             'topic': '/initialpose',
@@ -938,12 +1304,16 @@ class BridgeNode(Node):
         msg = String()
         msg.data = json.dumps(payload, ensure_ascii=False)
         self._patrol_pub.publish(msg)
-        self._push_task(f'[patrol] {msg.data}')
+        act = str(action or 'start')
+        if act == 'stop':
+            self._push_task('巡航已停止')
+        else:
+            self._push_task(f'巡航已启动{"（循环）" if loop else ""}')
         return {'ok': True, 'topic': '/xw/nav/patrol_cmd', **payload}
 
     def cancel_nav(self) -> Dict[str, Any]:
         self._nav_cancel_pub.publish(Bool(data=True))
-        self._push_task('[nav] cancel')
+        self._push_task('导航已取消')
         return {'ok': True, 'topic': '/xw/nav/cancel'}
 
     def sensor_hub_status(self) -> Dict[str, Any]:
@@ -1058,10 +1428,11 @@ class BridgeNode(Node):
         if not fut.done() or fut.result() is None:
             return {'ok': False, 'message': 'set_mode timeout'}
         res = fut.result()
-        self._push_task(f'[set_mode] {res.message} active={res.active_mode}')
+        mode_zh = _MODE_ZH.get(str(res.message), _zh_message(res.message) or str(res.message))
+        self._push_task(f'已切换到{mode_zh}' if res.success else f'模式切换失败 · {mode_zh}')
         return {
             'ok': bool(res.success),
-            'message': res.message,
+            'message': mode_zh,
             'active_mode': int(res.active_mode),
         }
 
@@ -1080,7 +1451,7 @@ class BridgeNode(Node):
             return {'ok': False, 'message': 'set_run_mode timeout', 'run_mode': 1}
         res = fut.result()
         label = '量产' if int(res.run_mode) == 0 else '开发者'
-        self._push_task(f'[run_mode] {label} ({res.message})')
+        self._push_task(f'已切换为{label}形态')
         return {
             'ok': bool(res.success),
             'message': res.message,
@@ -1108,7 +1479,7 @@ class BridgeNode(Node):
         if not fut.done() or fut.result() is None:
             return {'ok': False, 'message': 'map timeout'}
         res = fut.result()
-        self._push_task(f'[map] op={operation} {res.message}')
+        self._push_task(f'地图：{_to_task_zh(res.message) or ("好了" if res.success else "没成功")}')
         return {
             'ok': bool(res.success),
             'message': res.message,
@@ -1140,7 +1511,7 @@ class BridgeNode(Node):
         if not fut.done() or fut.result() is None:
             return {'ok': False, 'message': 'waypoint timeout', 'names': []}
         res = fut.result()
-        self._push_task(f'[waypoint] op={operation} {res.message}')
+        self._push_task(f'航点：{_to_task_zh(res.message) or ("好了" if res.success else "没成功")}')
         return {
             'ok': bool(res.success),
             'message': res.message,
@@ -1500,6 +1871,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.recharge_status())
+        if path == '/api/explore':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.explore_status())
         if path == '/api/sensors':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
@@ -1660,6 +2035,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if enabled is None:
                 return self._json(400, {'ok': False, 'message': 'missing enabled'})
             return self._json(200, self.bridge.set_recharge(bool(enabled)))
+        if path == '/api/explore':
+            enabled = data.get('enabled')
+            if enabled is None:
+                enabled = data.get('enable')
+            if enabled is None:
+                return self._json(400, {'ok': False, 'message': 'missing enabled'})
+            map_name = str(data.get('map_name') or data.get('map') or '')
+            return self._json(
+                200,
+                self.bridge.set_explore(bool(enabled), map_name=map_name),
+            )
         if path == '/api/topic/watch':
             return self._json(
                 200,

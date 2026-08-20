@@ -1,8 +1,13 @@
 /**
- * Gen2 Q-panda desktop pet (xw_web).
+ * Gen2 desktop pet (xw_web).
+ * Character: Live2D Luo Xiaohei (罗小黑) — local model under
+ *   /assets/pet/live2d/luoxiaohei/ + L2Dwidget under /js/vendor/.
  * Low-CPU eco by default. Driven by /js/api.js from Gen2:
  *   /xw/robot_state (mode + run_mode), /xw/task/* via HTTP bridge.
  * No Gen1 mapping_service topics.
+ *
+ * Speech rule: bubble text is ALWAYS short plain Chinese about what
+ * the robot is doing. Never show opcodes, key=value, or English jargon.
  */
 (function (global) {
     'use strict';
@@ -11,7 +16,9 @@
         return;
     }
 
-    var PET_ASSET_VER = '20260812-pet9';
+    var PET_ASSET_VER = '20260820-pet18';
+    var L2D_SCRIPT = '/js/vendor/L2Dwidget.min.js?v=' + PET_ASSET_VER;
+    var L2D_MODEL = '/assets/pet/live2d/luoxiaohei/luoxiaohei.model.json?v=' + PET_ASSET_VER;
     var TASK_LABELS = { 0: '空闲', 1: '导航', 2: '建图', 3: '跟随' };
     var STORAGE_X = 'desktop_pet_shift_x';
     var BUBBLE_MS = 4200;
@@ -23,7 +30,16 @@
     var RECEIPT_OBSERVER_DEBOUNCE_MS = 220;
     var EXPR_CLASSES = ['expr-idle', 'expr-happy', 'expr-wow', 'expr-sad', 'expr-smirk', 'expr-focus'];
     var ACTION_CLASSES = ['anim-jump', 'anim-head', 'anim-roll', 'anim-wave', 'anim-bounce', 'anim-look', 'anim-speak'];
-
+    var EXPR_TO_MOTION = {
+        idle: 'idle',
+        happy: 'happy',
+        wow: 'wow',
+        sad: 'sad',
+        smirk: 'smirk',
+        focus: 'focus'
+    };
+    var PRIORITY_IDLE = 1;
+    var PRIORITY_FORCE = 3;
     var TASK_CATCHPHRASES = {
         0: ['摸鱼中～', '随时待命！', '呼呼睡着了…不对，醒着！', '空闲也要可爱～'],
         1: ['出发咯～', '导航小能手上线！', '路在脚下～', '方向盘交给我啦！'],
@@ -46,10 +62,159 @@
     ];
 
     var GREETING_LINES = [
-        'Q熊猫报到～二代开发者模式，有任务回执我会告诉你哦！',
-        '我来啦～点我可看当前能力与开发/量产形态～',
-        '桌宠上线～省电模式，不抢CPU～'
+        '罗小黑报到～有事我会告诉你哦！',
+        '我来啦～点我可看当前状态～',
+        '桌宠上线～省电模式，不费电～'
     ];
+
+    var MODE_ZH = {
+        '0': '空闲', '1': '建图', '2': '导航', '3': '跟随', '4': '跌倒监测',
+        IDLE: '空闲', MAPPING: '建图', NAVIGATING: '导航', FOLLOWING: '跟随', FALL_DETECT: '跌倒监测'
+    };
+
+    /**
+     * Hard gate for EVERY bubble. Returns short Chinese or '' to silence.
+     */
+    function toPetSpeech(input) {
+        var raw = String(input || '').replace(/\s+/g, ' ').trim();
+        if (!raw) return '';
+
+        raw = raw.replace(/[呢呀哦喵～~]+$/u, '').trim();
+        raw = raw.replace(/^任务回执[：:]\s*/, '').replace(/^结果[：:]\s*/, '');
+
+        // Pure Chinese already (digits/°/米/标点 OK) — keep
+        if (isCleanChinese(raw)) return raw;
+
+        var out = translateTechLine(raw);
+        if (out && isCleanChinese(out)) return out;
+
+        // Last resort: strip Latin leftovers; if still Chinese-ish keep, else silence
+        out = raw
+            .replace(/[A-Za-z][A-Za-z0-9_./-]*/g, ' ')
+            .replace(/[=\[\]<>(){}|]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (out && isCleanChinese(out) && out.length >= 2) return out;
+        return '';
+    }
+
+    function isCleanChinese(s) {
+        if (!s) return false;
+        if (/[A-Za-z]{2,}/.test(s)) return false;
+        if (/[A-Za-z]+\s*=/.test(s) || /=\s*[A-Za-z0-9]/.test(s)) return false;
+        if (/[\[\]]/.test(s)) return false;
+        return /[\u4e00-\u9fff]/.test(s);
+    }
+
+    function modeZh(v) {
+        var k = String(v || '').toUpperCase();
+        if (MODE_ZH[k]) return MODE_ZH[k];
+        if (MODE_ZH[String(v)]) return MODE_ZH[String(v)];
+        return '';
+    }
+
+    function fmtM(n) {
+        var x = Math.abs(Number(n));
+        if (isNaN(x)) return '';
+        var t = x >= 1 ? x.toFixed(1) : x.toFixed(2);
+        return t.replace(/\.0$/, '') + '米';
+    }
+
+    function translateTechLine(raw) {
+        var m;
+        var low = raw.toLowerCase();
+
+        // set_mode IDLE active=0  /  [set_mode] ...  /  >> set_mode 2
+        m = raw.match(/set[_\s-]?mode\s*(?:→|->|:)?\s*([A-Za-z_]+|\d+)/i);
+        if (m) {
+            var mz = modeZh(m[1]);
+            return mz ? ('切换到' + mz) : '切换模式了';
+        }
+        m = raw.match(/\b(IDLE|MAPPING|NAVIGATING|FOLLOWING|FALL_DETECT)\b/i);
+        if (m && /active\s*=/i.test(raw)) {
+            return '切换到' + (modeZh(m[1]) || '新状态');
+        }
+
+        m = raw.match(/run[_\s-]?mode\s*(?:→|->|:)?\s*(量产|开发者|production|developer|\d)/i);
+        if (m) {
+            var rm = m[1];
+            if (rm === '0' || /prod/i.test(rm) || rm === '量产') return '换成量产形态';
+            return '换成开发者形态';
+        }
+
+        // [progress] motion started / [result] ...
+        m = raw.match(/^\[progress\]\s*(\w+)\s+(.+)$/i);
+        if (m) return translateTechLine(m[1] + ' ' + m[2]);
+        m = raw.match(/^\[result\]\s*(\w+)\s+code=\d+\s*(.*)$/i);
+        if (m) return translateTechLine((m[2] || m[1] + ' done').trim());
+        m = raw.match(/^\[(\w+)\]\s*(.*)$/);
+        if (m) return translateTechLine((m[2] ? m[1] + ' ' + m[2] : m[1]).trim());
+
+        // motion accepted / back / fwd
+        m = raw.match(/\(\s*(fwd|back)\s+([\d.]+)\s*m\s*\)/i);
+        if (m) return (m[1].toLowerCase() === 'back' ? '往后走 ' : '往前走 ') + fmtM(m[2]);
+        if (/\bback\b/i.test(raw) && !/fallback/i.test(raw)) {
+            if (/started|accept/i.test(raw)) return '开始往后走';
+            return '往后走中';
+        }
+        if (/\bfwd\b|\bforward\b/i.test(raw)) {
+            if (/started|accept/i.test(raw)) return '开始往前走';
+            return '往前走中';
+        }
+        if (/\bturn\b|err_deg/i.test(raw)) return '转身中';
+        if (/^motion\b/i.test(raw) || /\bmotion\b/i.test(raw)) {
+            if (/start/i.test(raw)) return '开始走动';
+            if (/driv/i.test(raw)) return '走动中';
+            if (/done|success|ok/i.test(raw)) return '走到啦';
+            if (/fail|error|timeout/i.test(raw)) return '没走成';
+            return '走动中';
+        }
+
+        if (/\bfollow\b/i.test(raw)) {
+            if (/off|stop|false|0\b/i.test(raw) && !/start/i.test(raw)) return '不跟了';
+            if (/search/i.test(raw)) return '找你中';
+            if (/coast|lost/i.test(raw)) return /lost/i.test(raw) ? '找不到人了' : '靠近你';
+            return '跟着你';
+        }
+        if (/\brecharge\b|\bdock\b/i.test(raw)) {
+            if (/off|stop|cancel/i.test(raw)) return '回充停了';
+            if (/fail/i.test(raw)) return '回充失败';
+            if (/success|charg/i.test(raw)) return '充上电了';
+            if (/detect/i.test(raw)) return '找充电桩';
+            if (/align|lock/i.test(raw)) return '对准充电桩';
+            if (/commit|dock/i.test(raw)) return '贴桩中';
+            if (/nav/i.test(raw)) return '去充电桩';
+            return '正在回充';
+        }
+        if (/\bnav\b|navigate|goal|patrol/i.test(raw)) {
+            if (/cancel/i.test(raw)) return '导航取消了';
+            if (/fail|abort/i.test(raw)) return '没走到';
+            if (/success|complete|done|succeed/i.test(raw)) return '到啦';
+            if (/patrol/i.test(raw)) return /stop/i.test(raw) ? '巡航停了' : '开始巡航';
+            if (/goal/i.test(raw)) return '去那边';
+            return '正在前往';
+        }
+        if (/\bslam\b|\bmapping\b|map\b/i.test(raw) && !/map_name/i.test(raw)) {
+            if (/save|ok|success/i.test(raw)) return '地图好了';
+            if (/delete/i.test(raw)) return '地图删了';
+            return '建图中';
+        }
+        if (/\bwaypoint\b/i.test(raw)) return '航点更新了';
+        if (/\bfall\b/i.test(raw)) return /off|false|0\b/i.test(raw) ? '跌倒监测关了' : '跌倒监测开了';
+        if (/\bpointcloud\b/i.test(raw)) return /off|false|0\b/i.test(raw) ? '点云关了' : '点云开了';
+        if (/\bgesture\b/i.test(raw)) return /stop|off/i.test(raw) ? '手势关了' : '手势开了';
+        if (/initialpose|initial.?pose/i.test(raw)) return '位置定好了';
+        if (/\bteleop\b/i.test(raw)) return '遥控中';
+
+        if (MODE_ZH[raw.toUpperCase()]) return '切换到' + MODE_ZH[raw.toUpperCase()];
+
+        if (/fail|error|timeout|unavailable|reject|invalid/i.test(low)) return '没成功，再试一次';
+        if (/^(ok|done|success|ready)$/i.test(raw)) return '好了';
+        if (/busy/i.test(low)) return '正忙着';
+        if (/accepted|started|active/i.test(low)) return '开始干活了';
+
+        return '';
+    }
 
     var reducedMotion =
         typeof matchMedia === 'function' &&
@@ -93,137 +258,116 @@
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function pandaSvg() {
+    function petBodyMarkup() {
         return [
-            '<svg viewBox="0 0 148 136" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">',
-            '  <defs>',
-            '    <linearGradient id="petLidarGrad" x1="0" y1="0" x2="0" y2="1">',
-            '      <stop offset="0%" stop-color="#38bdf8"/>',
-            '      <stop offset="100%" stop-color="#0369a1"/>',
-            '    </linearGradient>',
-            '    <linearGradient id="petBeamGrad" x1="0" y1="0" x2="1" y2="0">',
-            '      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.55"/>',
-            '      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>',
-            '    </linearGradient>',
-            '    <linearGradient id="petCarGrad" x1="0" y1="0" x2="0" y2="1">',
-            '      <stop offset="0%" stop-color="#60a5fa"/>',
-            '      <stop offset="100%" stop-color="#2563eb"/>',
-            '    </linearGradient>',
-            '  </defs>',
-            '  <g class="pet-scene">',
-            '    <g class="pet-prop-car">',
-            '      <ellipse cx="74" cy="126" rx="42" ry="5" fill="rgba(15,23,42,0.14)"/>',
-            '      <g class="pet-car-body">',
-            '        <path d="M34 108 C36 98 48 92 74 92 C100 92 112 98 114 108 L118 118 C118 122 114 124 110 124 L38 124 C34 124 30 122 30 118 Z" fill="url(#petCarGrad)"/>',
-            '        <path d="M48 100 C54 94 64 90 74 90 C84 90 94 94 100 100 L98 108 L50 108 Z" fill="#93c5fd" opacity="0.9"/>',
-            '        <rect x="52" y="96" width="14" height="8" rx="2" fill="#e0f2fe" opacity="0.85"/>',
-            '        <rect x="82" y="96" width="14" height="8" rx="2" fill="#e0f2fe" opacity="0.85"/>',
-            '        <circle cx="44" cy="120" r="3" fill="#fde68a"/>',
-            '        <circle cx="104" cy="120" r="3" fill="#fca5a5"/>',
-            '        <g class="pet-speed-lines" opacity="0.7">',
-            '          <line x1="18" y1="104" x2="28" y2="104" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>',
-            '          <line x1="14" y1="112" x2="26" y2="112" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>',
-            '          <line x1="20" y1="120" x2="30" y2="120" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>',
-            '        </g>',
-            '      </g>',
-            '      <g class="pet-wheel pet-wheel-l" transform="translate(48 124)"><g class="pet-wheel-spin"><circle cx="0" cy="0" r="8" fill="#1e293b"/><circle cx="0" cy="0" r="3.5" fill="#94a3b8"/><line x1="0" y1="-7" x2="0" y2="7" stroke="#64748b" stroke-width="1.5"/><line x1="-7" y1="0" x2="7" y2="0" stroke="#64748b" stroke-width="1.5"/></g></g>',
-            '      <g class="pet-wheel pet-wheel-r" transform="translate(100 124)"><g class="pet-wheel-spin"><circle cx="0" cy="0" r="8" fill="#1e293b"/><circle cx="0" cy="0" r="3.5" fill="#94a3b8"/><line x1="0" y1="-7" x2="0" y2="7" stroke="#64748b" stroke-width="1.5"/><line x1="-7" y1="0" x2="7" y2="0" stroke="#64748b" stroke-width="1.5"/></g></g>',
-            '    </g>',
-            '    <g class="pet-lidar-beams">',
-            '      <g class="pet-beam-r">',
-            '        <path d="M0 0 L46 -12 A48 48 0 0 1 46 12 Z" fill="url(#petBeamGrad)"/>',
-            '        <path d="M0 0 L40 -24 A48 48 0 0 1 44 -8 Z" fill="#67e8f9" opacity="0.25"/>',
-            '        <path d="M0 0 L40 8 A48 48 0 0 1 38 26 Z" fill="#67e8f9" opacity="0.18"/>',
-            '      </g>',
-            '      <g class="pet-beam-l">',
-            '        <path d="M0 0 L-46 -12 A48 48 0 0 0 -46 12 Z" fill="url(#petBeamGrad)"/>',
-            '        <path d="M0 0 L-40 -24 A48 48 0 0 0 -44 -8 Z" fill="#67e8f9" opacity="0.25"/>',
-            '        <path d="M0 0 L-40 8 A48 48 0 0 0 -38 26 Z" fill="#67e8f9" opacity="0.18"/>',
-            '      </g>',
-            '    </g>',
-            '    <g class="pet-body-group">',
-            '      <ellipse class="pet-ground-shadow" cx="74" cy="128" rx="30" ry="4.5" fill="rgba(15,23,42,0.14)"/>',
-            '      <ellipse class="pet-tail" cx="106" cy="96" rx="7" ry="5" fill="#1f2937"/>',
-            '      <g class="pet-legs pet-legs-stand">',
-            '        <g class="pet-leg-l">',
-            '          <ellipse cx="58" cy="112" rx="13" ry="11" fill="#1f2937"/>',
-            '          <ellipse cx="58" cy="115" rx="7.5" ry="5" fill="#f8fafc"/>',
-            '        </g>',
-            '        <g class="pet-leg-r">',
-            '          <ellipse cx="90" cy="112" rx="13" ry="11" fill="#1f2937"/>',
-            '          <ellipse cx="90" cy="115" rx="7.5" ry="5" fill="#f8fafc"/>',
-            '        </g>',
-            '      </g>',
-            '      <g class="pet-walk-dust">',
-            '        <circle class="pet-dust-1" cx="48" cy="122" r="2.2" fill="#cbd5e1"/>',
-            '        <circle class="pet-dust-2" cx="42" cy="118" r="1.6" fill="#94a3b8"/>',
-            '        <circle class="pet-dust-3" cx="100" cy="122" r="2" fill="#cbd5e1"/>',
-            '      </g>',
-            '      <ellipse cx="74" cy="90" rx="31" ry="27" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>',
-            '      <ellipse cx="74" cy="95" rx="17" ry="13" fill="#1f2937"/>',
-            '      <g class="pet-arms">',
-            '        <ellipse class="pet-arm-l" cx="44" cy="86" rx="11" ry="15" fill="#1f2937" transform="rotate(-20 44 86)"/>',
-            '        <ellipse class="pet-arm-r" cx="104" cy="86" rx="11" ry="15" fill="#1f2937" transform="rotate(20 104 86)"/>',
-            '      </g>',
-            '      <g class="pet-prop-lidar">',
-            '        <g class="pet-lidar-hold pet-lidar-hold-r" transform="translate(112 72)">',
-            '          <rect x="-3" y="8" width="6" height="16" rx="2" fill="#64748b"/>',
-            '          <g class="pet-lidar-unit">',
-            '            <rect x="-11" y="-14" width="22" height="26" rx="5" fill="#0f172a"/>',
-            '            <rect x="-9" y="-11" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)"/>',
-            '            <rect x="-9" y="-5" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)" opacity="0.85"/>',
-            '            <rect x="-9" y="1" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)" opacity="0.7"/>',
-            '            <rect x="-9" y="7" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)" opacity="0.55"/>',
-            '            <circle cx="0" cy="-16" r="3.5" fill="#38bdf8"/>',
-            '            <circle cx="0" cy="-16" r="1.6" fill="#e0f2fe"/>',
-            '          </g>',
-            '        </g>',
-            '        <g class="pet-lidar-hold pet-lidar-hold-l" transform="translate(36 72)">',
-            '          <rect x="-3" y="8" width="6" height="16" rx="2" fill="#64748b"/>',
-            '          <g class="pet-lidar-unit">',
-            '            <rect x="-11" y="-14" width="22" height="26" rx="5" fill="#0f172a"/>',
-            '            <rect x="-9" y="-11" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)"/>',
-            '            <rect x="-9" y="-5" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)" opacity="0.85"/>',
-            '            <rect x="-9" y="1" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)" opacity="0.7"/>',
-            '            <rect x="-9" y="7" width="18" height="4" rx="1.5" fill="url(#petLidarGrad)" opacity="0.55"/>',
-            '            <circle cx="0" cy="-16" r="3.5" fill="#38bdf8"/>',
-            '            <circle cx="0" cy="-16" r="1.6" fill="#e0f2fe"/>',
-            '          </g>',
-            '        </g>',
-            '      </g>',
-            '      <g class="pet-head-group">',
-            '        <ellipse class="pet-ear-l" cx="48" cy="48" rx="15" ry="13" fill="#1f2937"/>',
-            '        <ellipse class="pet-ear-r" cx="100" cy="48" rx="15" ry="13" fill="#1f2937"/>',
-            '        <ellipse cx="50" cy="50" rx="7" ry="6" fill="#374151"/>',
-            '        <ellipse cx="98" cy="50" rx="7" ry="6" fill="#374151"/>',
-            '        <ellipse cx="74" cy="63" rx="33" ry="29" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>',
-            '        <ellipse class="pet-eye-patch" cx="58" cy="61" rx="12" ry="14" fill="#1f2937"/>',
-            '        <ellipse class="pet-eye-patch" cx="90" cy="61" rx="12" ry="14" fill="#1f2937"/>',
-            '        <g class="pet-pupils">',
-            '          <circle cx="58" cy="62" r="5" fill="#0f172a"/>',
-            '          <circle cx="90" cy="62" r="5" fill="#0f172a"/>',
-            '          <circle cx="59.8" cy="60.2" r="1.8" fill="#fff"/>',
-            '          <circle cx="91.8" cy="60.2" r="1.8" fill="#fff"/>',
-            '          <circle cx="56.5" cy="64" r="0.9" fill="#fff" opacity="0.7"/>',
-            '          <circle cx="88.5" cy="64" r="0.9" fill="#fff" opacity="0.7"/>',
-            '        </g>',
-            '        <ellipse class="pet-blush" cx="48" cy="74" rx="7" ry="4" fill="#fda4af" opacity="0.7"/>',
-            '        <ellipse class="pet-blush" cx="100" cy="74" rx="7" ry="4" fill="#fda4af" opacity="0.7"/>',
-            '        <ellipse cx="74" cy="71" rx="5.5" ry="4" fill="#1f2937"/>',
-            '        <ellipse cx="74" cy="72.5" rx="2.2" ry="1.4" fill="#475569"/>',
-            '        <path class="pet-mouth-idle" d="M67 81 Q74 86 81 81" fill="none" stroke="#1f2937" stroke-width="2.2" stroke-linecap="round"/>',
-            '        <path class="pet-mouth-happy" d="M64 79 Q74 92 84 79" fill="none" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round"/>',
-            '        <ellipse class="pet-mouth-wow" cx="74" cy="84" rx="5" ry="6.5" fill="#1f2937"/>',
-            '        <path class="pet-mouth-sad" d="M66 86 Q74 80 82 86" fill="none" stroke="#1f2937" stroke-width="2.2" stroke-linecap="round"/>',
-            '        <path class="pet-mouth-smirk" d="M68 82 Q76 88 84 80" fill="none" stroke="#1f2937" stroke-width="2.2" stroke-linecap="round"/>',
-            '        <g class="pet-heart">',
-            '          <path d="M98 42 C98 38 104 38 104 42 C104 38 110 38 110 42 C110 48 104 53 104 53 C104 53 98 48 98 42Z" fill="#fb7185"/>',
-            '        </g>',
-            '      </g>',
-            '    </g>',
-            '  </g>',
-            '</svg>'
+            '<div class="pet-body-group">',
+            '  <div class="pet-ground-shadow" aria-hidden="true"></div>',
+            '  <div class="pet-live2d-host" id="desktop-pet-l2d-host" aria-hidden="true"></div>',
+            '  <div class="pet-heart" aria-hidden="true">♥</div>',
+            '  <div class="pet-mode-glow" aria-hidden="true"></div>',
+            '</div>'
         ].join('');
+    }
+
+    function loadScriptOnce(src) {
+        return new Promise(function (resolve, reject) {
+            var existing = document.querySelector('script[data-pet-l2d="1"]');
+            if (existing && global.L2Dwidget) {
+                resolve();
+                return;
+            }
+            var s = document.createElement('script');
+            s.src = src;
+            s.async = true;
+            s.dataset.petL2d = '1';
+            s.onload = function () { resolve(); };
+            s.onerror = function () { reject(new Error('L2Dwidget load failed')); };
+            document.head.appendChild(s);
+        });
+    }
+
+    function mountLive2DContainer(el) {
+        var host = state.els && state.els.l2dHost;
+        if (!host || !el) return;
+        el.style.setProperty('position', 'absolute');
+        el.style.setProperty('left', '0');
+        el.style.setProperty('top', '0');
+        el.style.setProperty('right', 'auto');
+        el.style.setProperty('bottom', 'auto');
+        el.style.setProperty('width', '100%');
+        el.style.setProperty('height', '100%');
+        el.style.setProperty('z-index', '1');
+        el.style.setProperty('opacity', '1');
+        el.style.setProperty('pointer-events', 'none');
+        host.appendChild(el);
+        state.l2dReady = true;
+    }
+
+    function playPetMotion(expr) {
+        var group = EXPR_TO_MOTION[expr] || 'idle';
+        var mgr = global.__petL2DMgr;
+        if (!mgr || typeof mgr.getModel !== 'function') return;
+        var model = mgr.getModel(0);
+        if (!model || typeof model.startRandomMotion !== 'function') return;
+        try {
+            model.startRandomMotion(group, group === 'idle' ? PRIORITY_IDLE : PRIORITY_FORCE);
+        } catch (_) { /* noop */ }
+    }
+
+    function initLive2D() {
+        if (state.l2dInitStarted) return;
+        state.l2dInitStarted = true;
+        loadScriptOnce(L2D_SCRIPT).then(function () {
+            if (!global.L2Dwidget) {
+                console.warn('[DesktopPet] L2Dwidget missing');
+                return;
+            }
+            try {
+                global.L2Dwidget.on('create-container', mountLive2DContainer);
+            } catch (_) { /* noop */ }
+            global.L2Dwidget.init({
+                model: {
+                    jsonPath: L2D_MODEL,
+                    scale: 1
+                },
+                display: {
+                    superSample: ecoMode ? 1 : 1.25,
+                    width: 168,
+                    height: 220,
+                    position: 'right',
+                    hOffset: 14,
+                    vOffset: 12
+                },
+                mobile: {
+                    show: true,
+                    scale: 1,
+                    motion: !reducedMotion
+                },
+                name: {
+                    canvas: 'desktop-pet-live2d-canvas',
+                    div: 'desktop-pet-live2d'
+                },
+                react: {
+                    opacity: 1
+                },
+                dialog: {
+                    enable: false
+                }
+            });
+            /* Motions load async; retry a few times after init. */
+            var tries = 0;
+            var timer = setInterval(function () {
+                tries += 1;
+                if (global.__petL2DMgr && global.__petL2DMgr.getModel(0)) {
+                    clearInterval(timer);
+                    playPetMotion(state.expression || 'idle');
+                    return;
+                }
+                if (tries > 40) clearInterval(timer);
+            }, 250);
+        }).catch(function (err) {
+            console.warn('[DesktopPet] Live2D init failed', err);
+        });
     }
 
     function buildDom() {
@@ -231,7 +375,7 @@
         root.className = 'desktop-pet expr-idle task-mode-0';
         root.id = 'desktop-pet';
         root.setAttribute('aria-live', 'polite');
-        root.setAttribute('title', 'Q熊猫桌宠（点击查看状态）');
+        root.setAttribute('title', '罗小黑桌宠（点击查看状态）');
 
         if (reducedMotion || ecoMode) {
             root.classList.add('no-motion');
@@ -246,7 +390,7 @@
             '  <div class="desktop-pet__stage">',
             '    <div class="desktop-pet__sign mode-dev">开发者</div>',
             '    <div class="desktop-pet__flip">',
-            '      <div class="desktop-pet__svg-wrap">' + pandaSvg() + '</div>',
+            '      <div class="desktop-pet__svg-wrap">' + petBodyMarkup() + '</div>',
             '    </div>',
             '    <div class="desktop-pet__badge task-0">空闲</div>',
             '  </div>',
@@ -262,7 +406,8 @@
             sign: root.querySelector('.desktop-pet__sign'),
             badge: root.querySelector('.desktop-pet__badge'),
             flip: root.querySelector('.desktop-pet__flip'),
-            svgWrap: root.querySelector('.desktop-pet__svg-wrap')
+            svgWrap: root.querySelector('.desktop-pet__svg-wrap'),
+            l2dHost: root.querySelector('.pet-live2d-host')
         };
 
         var saved = parseFloat(localStorage.getItem(STORAGE_X) || '0');
@@ -273,8 +418,9 @@
         try {
             sessionStorage.removeItem('desktop_pet_hidden');
         } catch (_) { /* noop */ }
-    }
 
+        initLive2D();
+    }
     function setShift(px, animate) {
         state.shiftX = px;
         if (!state.root) return;
@@ -357,7 +503,7 @@
                 if (state.els.badge) state.els.badge.classList.remove('is-pulse');
             }, 500);
             setExpression(taskDefaultExpr(), 0);
-            showBubble(pick(TASK_CATCHPHRASES[n] || TASK_CATCHPHRASES[0]), 'info');
+            showBubble(pick(TASK_CATCHPHRASES[n] || TASK_CATCHPHRASES[0]), 'info', { cute: true });
             if (!reducedMotion) {
                 if (n === 1) runAction('bounce', 700, true);
                 else if (n === 2) runAction('look', 900, true);
@@ -380,12 +526,8 @@
     }
 
     function cuteify(message, level) {
-        var msg = String(message || '').trim();
+        var msg = toPetSpeech(message);
         if (!msg) return '';
-
-        /* strip prior decoration if re-piped */
-        msg = msg.replace(/^任务回执[：:]\s*/, '');
-        msg = msg.replace(/^结果[：:]\s*/, '');
 
         var lv = level || 'info';
         var out = msg;
@@ -405,53 +547,56 @@
             }
             out = out + pick(TAIL_BY_LEVEL.info);
         }
-        return out;
+        /* cute tails are Chinese-only; re-gate in case */
+        return toPetSpeech(out) || msg;
     }
 
-    function showBubble(message, level) {
+    function showBubble(message, level, opts) {
         if (!message || !state.els.bubble) return;
 
         var lv = level || 'info';
-        var cute = cuteify(message, lv);
+        var plain = !opts || opts.plain !== false;
+        /* Default plain for all external/status speech; only intentional cute lines opt in. */
+        if (opts && opts.cute) plain = false;
+
+        var text = plain ? toPetSpeech(message) : cuteify(message, lv);
+        if (!text) return;
 
         var now = Date.now();
-        if (cute === state.lastMsg && now - state.lastMsgAt < DEDUPE_MS) {
+        if (text === state.lastMsg && now - state.lastMsgAt < DEDUPE_MS) {
             return;
         }
-        state.lastMsg = cute;
+        state.lastMsg = text;
         state.lastMsgAt = now;
 
         if (state.speaking) {
             if (state.speakQueue.length < 3) {
-                state.speakQueue.push({ message: cute, level: lv, raw: true });
+                state.speakQueue.push({ message: text, level: lv, raw: true });
             }
             return;
         }
 
-        speakNow(cute, lv);
+        speakNow(text, lv);
     }
 
     function inferReceiptLevel(text) {
         var msg = String(text || '');
         if (!msg) return 'info';
-        /* "停止/关闭" often means intentional success, not failure */
-        if (/(失败|错误|异常|超时|未就绪|未连接|断开|拒绝|无法|invalid|error|failed)/i.test(msg)) {
+        if (/(失败|错误|异常|超时|未就绪|未连接|断开|拒绝|无法|没成功|没走)/.test(msg)) {
             return 'error';
         }
-        if (/(成功|完成|已启动|已停止|已关闭|已刷新|ok|ready|done|success)/i.test(msg)) {
+        if (/(成功|完成|已启动|已停止|已关闭|好了|到啦|走到|开了)/.test(msg)) {
             return 'success';
         }
         return 'info';
     }
 
     function relayServiceReceipt(rawText) {
-        var text = String(rawText || '').replace(/\s+/g, ' ').trim();
-        if (!text || text === '等待操作...') return;
-        /* ignore noisy loc-health alone unless paired with result change */
-        if (/^定位状态/.test(text) && text.indexOf('；') < 0) return;
+        var text = toPetSpeech(rawText);
+        if (!text) return;
         if (text === state.lastReceiptText) return;
         state.lastReceiptText = text;
-        showBubble(text, inferReceiptLevel(text));
+        showBubble(text, inferReceiptLevel(text), { plain: true });
     }
 
     function speakNow(message, level) {
@@ -492,7 +637,7 @@
         var run = state.production ? '量产模式' : '开发者模式';
         var task = TASK_LABELS[state.task] || '空闲';
         var slogan = pick(TASK_CATCHPHRASES[state.task] || TASK_CATCHPHRASES[0]);
-        showBubble(slogan + ' 当前：' + task + ' · ' + run, 'info');
+        showBubble(slogan + ' 当前：' + task + ' · ' + run, 'info', { cute: true });
     }
 
     function clearActionClasses() {
@@ -741,7 +886,7 @@
         if (state.greeted) return;
         state.greeted = true;
         setTimeout(function () {
-            showBubble(pick(GREETING_LINES), 'info');
+            showBubble(pick(GREETING_LINES), 'info', { cute: true });
             if (!reducedMotion) runAction('wave', 900, true);
         }, 600);
     }
@@ -766,6 +911,7 @@
     var api = {
         init: init,
         showBubble: showBubble,
+        toPetSpeech: toPetSpeech,
         setTaskMode: setTaskMode,
         setGen2Mode: setGen2Mode,
         setGen2RunMode: setGen2RunMode,

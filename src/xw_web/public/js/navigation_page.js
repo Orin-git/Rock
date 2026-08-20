@@ -47,6 +47,8 @@ let navActive = false;
 let waypoints = [];
 let selectedWp = null;
 let selectedWpIdx = null;
+/** Multi-select indices for batch delete (Set of numbers). */
+let checkedWpIdx = new Set();
 let poseTimer = null;
 let orientationControls = null;
 let flashTimer = null;
@@ -56,6 +58,54 @@ let rechargeActive = false;
 let rechargeBusy = false;
 let lastRechargePhase = 'idle';
 let lastFailHeld = '';
+/** Last active_map we synced into the map select (avoid reload thrash). */
+let syncedActiveMap = '';
+const NAV_MAP_STORAGE_KEY = 'xw_nav_selected_map';
+
+function rememberMapName(name) {
+  const n = String(name || '').trim();
+  if (!n) return;
+  try {
+    sessionStorage.setItem(NAV_MAP_STORAGE_KEY, n);
+  } catch (_) {
+    /* ignore */
+  }
+}
+
+function recalledMapName() {
+  try {
+    return (sessionStorage.getItem(NAV_MAP_STORAGE_KEY) || '').trim();
+  } catch (_) {
+    return '';
+  }
+}
+
+/** When supervisor reports NAVIGATING, keep live /map and match active_map. */
+function syncNavSessionFromState(s) {
+  if (!s) return;
+  const mode = Number(s.mode);
+  const active = mode === 2 || mode === 3;
+  if (active && window.XwMapCanvas) {
+    window.XwMapCanvas.enableLiveMap();
+  }
+  const am = String(s.active_map || '').trim();
+  if (!am || !mapSelect) return;
+  const hasOpt = Array.from(mapSelect.options).some((o) => o.value === am);
+  if (!hasOpt) return;
+  if (am === syncedActiveMap && mapSelect.value === am) {
+    return;
+  }
+  const firstSyncForMap = am !== syncedActiveMap;
+  syncedActiveMap = am;
+  rememberMapName(am);
+  if (mapSelect.value !== am) {
+    mapSelect.value = am;
+    void loadMapPreview({ allowLive: active });
+  } else if (active && firstSyncForMap && window.XwMapCanvas) {
+    // Refresh while already on the correct map: re-pull latched /map once.
+    window.XwMapCanvas.enableLiveMap({ forceResub: true });
+  }
+}
 
 const ORIENTATION_ROTATE_SPEED = Math.PI / 2;
 
@@ -215,13 +265,15 @@ onTask((l) => {
   void l;
 });
 onState((s) => {
-  const name = s.mode_name || String(s.mode);
-  modeHint.textContent = `模式：${name} (${s.mode}) · ${s.detail || ''}`;
   const mode = Number(s.mode);
+  const nameMap = { 0: '空闲', 1: '建图', 2: '导航', 3: '跟随', 4: '跌倒监测' };
+  const name = nameMap[mode] || s.mode_name || String(s.mode);
+  modeHint.textContent = `模式：${name}`;
   navActive = mode === 2 || mode === 3;
   sessionHint.textContent = navActive
     ? '导航中 · 拖设初位姿后点「确认初位姿」'
     : '选地图 → 进入导航 → 拖设初位姿并确认';
+  syncNavSessionFromState(s);
 });
 
 function currentMapName() {
@@ -252,7 +304,8 @@ async function refreshMaps() {
   const maps = j.map_list || [];
   const params = new URLSearchParams(window.location.search || '');
   const fromQuery = (params.get('map') || '').trim();
-  const prev = mapSelect.value || fromQuery;
+  const fromStore = recalledMapName();
+  const prev = mapSelect.value || fromQuery || fromStore;
   mapSelect.innerHTML = '';
   if (!maps.length) {
     const opt = document.createElement('option');
@@ -269,18 +322,21 @@ async function refreshMaps() {
   });
   if (prev && maps.includes(prev)) mapSelect.value = prev;
   if (currentMapName()) {
-    await loadMapPreview();
+    rememberMapName(currentMapName());
+    await loadMapPreview({ allowLive: navActive });
   } else {
     await loadWaypoints();
   }
 }
 
-async function loadMapPreview() {
+async function loadMapPreview(opts) {
+  opts = opts || {};
   const name = currentMapName();
   if (!name) {
     pushLog('!! 请先选择地图');
     return false;
   }
+  const allowLive = opts.allowLive === true || navActive;
   pushLog(`>> 加载地图 ${name}`);
   const j = await mapManage(5, name);
   if (!j.ok) {
@@ -294,8 +350,12 @@ async function loadMapPreview() {
     pushLog('!! 地图 JSON 无效');
     return false;
   }
-  if (window.XwMapCanvas && window.XwMapCanvas.loadStaticMap(payload)) {
+  if (window.XwMapCanvas && window.XwMapCanvas.loadStaticMap(payload, { allowLive })) {
+    rememberMapName(name);
     pushLog(`<< 地图就绪 ${name}`);
+    if (allowLive) {
+      window.XwMapCanvas.enableLiveMap({ forceResub: true });
+    }
     await loadWaypoints();
     return true;
   }
@@ -308,6 +368,7 @@ async function loadWaypoints() {
   waypoints = [];
   selectedWp = null;
   selectedWpIdx = null;
+  checkedWpIdx = new Set();
   $('gotoSelectedWp').disabled = true;
   $('deleteWp').disabled = true;
   if (wpMapTag) wpMapTag.textContent = name ? `· ${name}_pointList` : '';
@@ -469,25 +530,72 @@ function beginWaypointRename(idx) {
   input.addEventListener('pointerdown', (ev) => ev.stopPropagation());
 }
 
+function updateDeleteGotoButtons() {
+  const hasChecked = checkedWpIdx.size > 0;
+  const hasSingle = selectedWpIdx != null && waypoints[selectedWpIdx];
+  $('deleteWp').disabled = !(hasChecked || hasSingle);
+  if (hasSingle) {
+    $('gotoSelectedWp').disabled = !!waypoints[selectedWpIdx].bad;
+  } else {
+    $('gotoSelectedWp').disabled = true;
+  }
+}
+
 function renderWpList() {
   wpList.innerHTML = '';
   if (!waypoints.length) {
     wpList.innerHTML =
       '<p class="muted pad">该地图暂无航点 · 点「编辑航点」后在地图空白处点击打点，再点「保存航点」</p>';
+    updateDeleteGotoButtons();
     return;
   }
+  // Drop stale checked indices after list changes
+  checkedWpIdx = new Set(
+    Array.from(checkedWpIdx).filter((i) => i >= 0 && i < waypoints.length),
+  );
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'nav-wp-multi-bar';
+  const allChecked =
+    waypoints.length > 0 && checkedWpIdx.size === waypoints.length;
+  toolbar.innerHTML =
+    '<label class="nav-wp-check-all">' +
+    `<input type="checkbox" id="wpCheckAll"${allChecked ? ' checked' : ''} />` +
+    '<span>全选</span></label>' +
+    `<span class="nav-wp-checked-count muted">${
+      checkedWpIdx.size ? `已勾选 ${checkedWpIdx.size}` : '勾选后可批量删除'
+    }</span>`;
+  wpList.appendChild(toolbar);
+  const checkAll = toolbar.querySelector('#wpCheckAll');
+  if (checkAll) {
+    checkAll.onclick = (ev) => ev.stopPropagation();
+    checkAll.onchange = () => {
+      if (checkAll.checked) {
+        checkedWpIdx = new Set(waypoints.map((_, i) => i));
+      } else {
+        checkedWpIdx = new Set();
+      }
+      renderWpList();
+    };
+  }
+
   waypoints.forEach((wp, idx) => {
     const row = document.createElement('div');
     const bad = !!wp.bad;
     const selected = selectedWpIdx === idx || selectedWp === wp.name;
+    const checked = checkedWpIdx.has(idx);
     const charger = isChargerWaypoint(wp);
     row.className =
       'nav-wp-item' +
       (selected ? ' selected' : '') +
+      (checked ? ' checked' : '') +
       (bad ? ' wp-bad' : '') +
       (charger ? ' wp-charger' : '');
     row.dataset.wpIdx = String(idx);
     row.innerHTML = `
+      <label class="nav-wp-check" title="多选">
+        <input type="checkbox" class="nav-wp-check-input"${checked ? ' checked' : ''} />
+      </label>
       <div class="nav-wp-item-main">
         <span class="nav-wp-badge">${bad ? '!' : charger ? 'C' : idx + 1}</span>
         <div class="nav-wp-item-text">
@@ -504,6 +612,25 @@ function renderWpList() {
           ? ''
           : '<button type="button" class="nav-wp-rename-btn" title="重命名">重命名</button>'
       }`;
+    const checkInput = row.querySelector('.nav-wp-check-input');
+    if (checkInput) {
+      checkInput.onclick = (ev) => ev.stopPropagation();
+      checkInput.onchange = (ev) => {
+        ev.stopPropagation();
+        if (checkInput.checked) checkedWpIdx.add(idx);
+        else checkedWpIdx.delete(idx);
+        updateDeleteGotoButtons();
+        row.classList.toggle('checked', checkInput.checked);
+        const countEl = wpList.querySelector('.nav-wp-checked-count');
+        if (countEl) {
+          countEl.textContent = checkedWpIdx.size
+            ? `已勾选 ${checkedWpIdx.size}`
+            : '勾选后可批量删除';
+        }
+        const allEl = wpList.querySelector('#wpCheckAll');
+        if (allEl) allEl.checked = checkedWpIdx.size === waypoints.length;
+      };
+    }
     row.onclick = () => {
       selectWaypoint(idx, false);
       if (navActive && !bad) goToWaypoint(idx);
@@ -526,6 +653,7 @@ function renderWpList() {
     }
     wpList.appendChild(row);
   });
+  updateDeleteGotoButtons();
 }
 
 function escapeHtml(s) {
@@ -541,8 +669,6 @@ function selectWaypoint(idx, fromMap) {
   const wp = waypoints[idx];
   selectedWpIdx = idx;
   selectedWp = wp.name;
-  $('gotoSelectedWp').disabled = !!wp.bad;
-  $('deleteWp').disabled = false;
   if (window.XwMapCanvas) {
     window.XwMapCanvas.setSelectedWaypointIndex(idx);
     if (!fromMap) window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
@@ -609,8 +735,6 @@ function syncInputsFromCanvasMode(_mode, state) {
     if (state.selectedWpIdx != null && waypoints[state.selectedWpIdx]) {
       selectedWpIdx = state.selectedWpIdx;
       selectedWp = waypoints[state.selectedWpIdx].name;
-      $('deleteWp').disabled = false;
-      $('gotoSelectedWp').disabled = !!waypoints[state.selectedWpIdx].bad;
     }
     renderWpList();
   }
@@ -623,7 +747,8 @@ $('loadMapPreview').onclick = () => loadMapPreview();
 $('reloadWp').onclick = () => loadWaypoints();
 $('mapSelect').onchange = async () => {
   if (currentMapName()) {
-    await loadMapPreview();
+    rememberMapName(currentMapName());
+    await loadMapPreview({ allowLive: navActive });
   } else {
     await loadWaypoints();
   }
@@ -635,13 +760,15 @@ $('startNav').onclick = async () => {
     alert('请先选择地图');
     return;
   }
+  rememberMapName(name);
   // Load static map FIRST so the canvas isn't blank while Nav2 starts.
-  const ok = await loadMapPreview();
+  const ok = await loadMapPreview({ allowLive: true });
   if (!ok) {
     pushLog('!! 地图加载失败，仍尝试进入导航');
   }
   pushLog(`>> 进入导航 setMode(2) map=${name}`);
   await setMode(2, { map_name: name });
+  syncedActiveMap = name;
   if (window.XwMapCanvas) {
     window.XwMapCanvas.enableLiveMap();
     window.XwMapCanvas.setInteractMode('initial_pose');
@@ -760,6 +887,9 @@ $('startPatrol').onclick = async () => {
 
 $('cancelNav').onclick = async () => {
   const j = await cancelNav();
+  if (window.XwMapCanvas && typeof window.XwMapCanvas.clearPlan === 'function') {
+    window.XwMapCanvas.clearPlan();
+  }
   pushLog(j.ok ? '<< 导航已取消' : `!! ${j.message || 'failed'}`);
 };
 
@@ -767,16 +897,26 @@ $('gotoSelectedWp').onclick = () => goToWaypoint(selectedWpIdx);
 
 $('deleteWp').onclick = () => {
   if (!window.XwMapCanvas) return;
-  if (window.XwMapCanvas.deleteSelectedWaypoint()) {
-    waypoints = window.XwMapCanvas.getWaypoints();
-    selectedWp = null;
-    selectedWpIdx = null;
-    $('deleteWp').disabled = true;
-    $('gotoSelectedWp').disabled = true;
-    wpCount.textContent = String(waypoints.length);
-    renderWpList();
-    pushLog('<< 已删除选中航点（未写入文件，请点「保存航点」）');
+  let indices = Array.from(checkedWpIdx);
+  if (!indices.length && selectedWpIdx != null) indices = [selectedWpIdx];
+  if (!indices.length) {
+    flash('请先勾选或选中要删除的航点', 'err');
+    return;
   }
+  const n = window.XwMapCanvas.deleteWaypointsByIndices(indices);
+  if (!n) return;
+  waypoints = window.XwMapCanvas.getWaypoints();
+  checkedWpIdx = new Set();
+  selectedWpIdx = window.XwMapCanvas.getSelectedWaypointIndex();
+  selectedWp =
+    selectedWpIdx != null && waypoints[selectedWpIdx]
+      ? waypoints[selectedWpIdx].name
+      : null;
+  wpCount.textContent = String(waypoints.length);
+  renderWpList();
+  pushLog(
+    `<< 已删除 ${n} 个航点（未写入文件，请点「保存航点」）`,
+  );
 };
 
 $('saveWp').onclick = async () => {

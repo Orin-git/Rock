@@ -202,7 +202,7 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 - 参数：`xw_nav_session/config/nav2_params.yaml`（多边形 footprint 0.45×0.35，`transform_tolerance` ≈0.3）
 - BT：`behavior_trees/navigate_to_pose_gen2.xml`；跟随仍用 `follow_point.xml`
 - Launch：`nav2.launch.py`：localization + navigation + collision_monitor → `/xw/cmd/nav`
-- 点云：`xw_pc_nav_filter` 将双深度 raw → `.../points_nav`（Crop+Voxel ≤5 Hz）；local costmap 订 `*_points_nav`
+- 点云：`xw_pc_nav_filter` 将双深度 raw → `.../points_nav`（Crop+Voxel+SOR+Radius ≤5 Hz，参数见 `pc_nav_filter.yaml`）；local costmap 订 `*_points_nav`
 - 仲裁：`/xw/cmd/active_source`；安全门 teleop=一代扇区避障，nav=硬停+后方安全后退
 - 定位健康：`xw_localization_health` → `/xw/localization_status`（0 正常 / 1 未就绪 / 2 漂移自愈 / 3 需重定位）；写入 `RobotState.localization_status`
 - 会话：`set_mode(2,{map_name})` → `/xw/nav/map_name` + `/xw/nav/enable` → 起 Nav2
@@ -224,8 +224,14 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 ### 手推建图要点
 
 - `set_mode(1)` → slam_toolbox；保存仍写 charger 到 pointList  
-- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`POST /api/initialpose`、`POST /api/nav/patrol`、`POST /api/follow`、`POST /api/recharge`、`GET /api/sensors`  
+- HTTP：`POST /api/map`、`POST /api/waypoint`、`POST /api/goal`、`POST /api/initialpose`、`POST /api/nav/patrol`、`POST /api/follow`、`POST /api/recharge`、`POST /api/explore`、`GET /api/sensors`  
 
+### 自主建图要点
+
+- 正交于 **MAPPING**：`/xw/supervisor/set_explore` → `/xw/explore/enable`
+- `xw_explore`：启无 AMCL 的探索 Nav2（`static_layer` 跟 SLAM `/map`）+ frontier 节点；速度经 `/xw/cmd/nav`
+- 完成发 `/xw/explore/finished` → 会话自动保存地图名并清 latch
+- 建图页「开始自主建图」走 `/api/explore`；与手推同屏画布
 ## 8. 验收（容器内）
 
 1. `colcon build` 通过  
@@ -238,7 +244,7 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 
 ## 9. Supervisor 与 Session 协作
 
-- `SetMode` 改运动模式并在 `/xw/slam|nav/enable` 上发命令；**跟随**走 `/xw/supervisor/set_follow` / `/xw/follow/enable`；**回充**走 `/xw/supervisor/set_recharge` / `/xw/recharge/enable`；**跌倒**走 `/xw/supervisor/set_fall` / `/xw/fall/enable`。
+- `SetMode` 改运动模式并在 `/xw/slam|nav/enable` 上发命令；**跟随**走 `/xw/supervisor/set_follow` / `/xw/follow/enable`；**回充**走 `/xw/supervisor/set_recharge` / `/xw/recharge/enable`；**自主建图**走 `/xw/supervisor/set_explore` / `/xw/explore/enable`（需建图模式）；**跌倒**走 `/xw/supervisor/set_fall` / `/xw/fall/enable`。
 - Session 既可订阅 enable，也可暴露 `/xw/session/*/control` 供调试直连。
 - **禁止** Supervisor 在 service 回调里 `spin_until_future_complete` 再调 session service（会死锁）。
 - 进/出 NAVIGATING/FOLLOWING 时 supervisor 异步调 `/xw/camera/set_pointcloud_nav`（不写 persist）。

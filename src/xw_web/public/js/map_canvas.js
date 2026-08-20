@@ -39,11 +39,15 @@
   let ros = null;
   let mapTopic = null;
   let scanTopic = null;
+  let planTopic = null;
   let tfTopic = null;
   let tfStaticTopic = null;
 
   let latestMap = null;
   let latestScan = null;
+  let latestPlan = null; // nav_msgs/Path from /plan (keep last good)
+  let latestLocalPlan = null; // nav_msgs/Path from /local_plan
+  let localPlanTopic = null;
   let tfTree = {};
   const TF_MAX_AGE_NS = 10 * 1e9;
 
@@ -303,6 +307,7 @@
     return nice[nice.length - 1];
   }
 
+  /** @returns {boolean} true if canvas buffer size changed (needs full map redraw). */
   function resizeCanvases() {
     if (!containerEl || !mapCanvas || !overlayCanvas) return false;
     const width = containerEl.clientWidth;
@@ -313,8 +318,15 @@
       mapCanvas.height = height;
       overlayCanvas.width = width;
       overlayCanvas.height = height;
+      return true;
     }
-    return true;
+    return false;
+  }
+
+  function onContainerResize() {
+    if (resizeCanvases()) {
+      redraw();
+    }
   }
 
   function drawMap() {
@@ -615,6 +627,67 @@
     return p;
   }
 
+  /** Foxglove/CDR sometimes yields sequences as {0:…,1:…} instead of Array. */
+  function coercePoseArray(poses) {
+    if (Array.isArray(poses)) return poses;
+    if (!poses || typeof poses !== 'object') return null;
+    const keys = Object.keys(poses).filter((k) => /^\d+$/.test(k));
+    if (!keys.length) return null;
+    keys.sort((a, b) => Number(a) - Number(b));
+    return keys.map((k) => poses[k]);
+  }
+
+  function normalizePathMessage(msg) {
+    if (!msg || typeof msg !== 'object') return null;
+    const poses = coercePoseArray(msg.poses);
+    if (!poses) return null;
+    return { header: msg.header, poses: poses };
+  }
+
+  function strokePath(view, poses, strokeStyle, lineWidth, alpha) {
+    if (!poses || poses.length < 2) return;
+    const first = poses[0] && poses[0].pose && poses[0].pose.position;
+    if (!first || typeof first.x !== 'number') return;
+    overlayCtx.save();
+    overlayCtx.beginPath();
+    const p0 = worldToPixel(first.x, first.y, view);
+    overlayCtx.moveTo(p0.px, p0.py);
+    for (let i = 1; i < poses.length; i++) {
+      const pos = poses[i] && poses[i].pose && poses[i].pose.position;
+      if (!pos || typeof pos.x !== 'number') continue;
+      const pt = worldToPixel(pos.x, pos.y, view);
+      overlayCtx.lineTo(pt.px, pt.py);
+    }
+    overlayCtx.strokeStyle = strokeStyle;
+    overlayCtx.lineWidth = lineWidth;
+    overlayCtx.lineJoin = 'round';
+    overlayCtx.lineCap = 'round';
+    overlayCtx.globalAlpha = alpha;
+    overlayCtx.stroke();
+    overlayCtx.restore();
+  }
+
+  function drawPlan(view) {
+    if (latestPlan && latestPlan.poses && latestPlan.poses.length >= 2) {
+      strokePath(
+        view,
+        latestPlan.poses,
+        '#00bcd4',
+        Math.max(3, view.scale * 0.9),
+        0.78,
+      );
+    }
+    if (latestLocalPlan && latestLocalPlan.poses && latestLocalPlan.poses.length >= 2) {
+      strokePath(
+        view,
+        latestLocalPlan.poses,
+        '#f59e0b',
+        Math.max(2.2, view.scale * 0.7),
+        0.9,
+      );
+    }
+  }
+
   function drawOverlay() {
     if (!latestMap || !overlayCtx) return;
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -629,10 +702,17 @@
           ? initialPose
           : robotTf;
 
+    // Global plan under markers / scan so path stays visible.
+    drawPlan(view);
+
     if (latestScan) {
       let tf = null;
       let usedScanFrame = false;
-      if (latestScan.header && latestScan.header.frame_id) {
+      // While dragging initial pose, attach scan to the preview pose so lidar follows the ghost robot.
+      if (interactMode === 'initial_pose' && initialPose) {
+        tf = initialPose;
+        usedScanFrame = false;
+      } else if (latestScan.header && latestScan.header.frame_id) {
         const fid = String(latestScan.header.frame_id).replace(/^\//, '');
         tf = getTransform('map', fid);
         if (tf) usedScanFrame = true;
@@ -787,8 +867,13 @@
     return out;
   }
 
-  /** Load saved map from /api/map op=5 payload (pgm_b64). */
-  function loadStaticMap(payload) {
+  /**
+   * Load saved map from /api/map op=5 payload (pgm_b64).
+   * opts.allowLive — keep accepting /map (nav session / refresh). Default false
+   * so idle map preview is not overwritten by a stale live grid.
+   */
+  function loadStaticMap(payload, opts) {
+    opts = opts || {};
     if (!payload || !payload.pgm_b64 || !payload.width || !payload.height) {
       setStatus('静态地图数据无效');
       return false;
@@ -804,7 +889,22 @@
     for (let i = 0; i < bytes.length; i++) {
       data[i] = pgmByteToOccupancy(bytes[i]);
     }
-    preferLiveMap = false;
+    const allowLive = !!opts.allowLive;
+    // Already showing a live /map during nav: keep it; static is only a fallback.
+    if (
+      allowLive &&
+      preferLiveMap &&
+      latestMap &&
+      latestMap.header &&
+      latestMap.header.stamp &&
+      Number(latestMap.header.stamp.sec || 0) > 0
+    ) {
+      setStatus(`保留实时地图 · 静态 ${width}×${height} 作后备`);
+      return true;
+    }
+    preferLiveMap = allowLive;
+    const ox = Number(payload.origin_x);
+    const oy = Number(payload.origin_y);
     const msg = {
       header: { stamp: { sec: 0, nanosec: 0 }, frame_id: 'map' },
       info: {
@@ -813,8 +913,8 @@
         height: height,
         origin: {
           position: {
-            x: Number(payload.origin_x) || 0,
-            y: Number(payload.origin_y) || 0,
+            x: Number.isFinite(ox) ? ox : 0,
+            y: Number.isFinite(oy) ? oy : 0,
             z: 0,
           },
           orientation: { x: 0, y: 0, z: 0, w: 1 },
@@ -822,12 +922,56 @@
       },
       data: data,
     };
-    return applyMapMessage(msg, `静态地图已加载 · ${width}×${height}`);
+    return applyMapMessage(
+      msg,
+      allowLive
+        ? `静态底图已加载 · 等待 /map · ${width}×${height}`
+        : `静态地图已加载 · ${width}×${height}`,
+    );
   }
 
-  function enableLiveMap() {
+  /** Re-subscribe /map so foxglove re-delivers the latched OccupancyGrid. */
+  function resubscribeMapTopic() {
+    if (!ros || typeof ROSLIB === 'undefined') return;
+    try {
+      if (mapTopic && typeof mapTopic.unsubscribe === 'function') {
+        mapTopic.unsubscribe();
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    mapTopic = new ROSLIB.Topic({
+      ros: ros,
+      name: '/map',
+      messageType: 'nav_msgs/msg/OccupancyGrid',
+    });
+    mapTopic.subscribe(onMapMessage);
+  }
+
+  function hasLiveMap() {
+    return !!(
+      latestMap &&
+      latestMap.header &&
+      latestMap.header.stamp &&
+      Number(latestMap.header.stamp.sec || 0) > 0
+    );
+  }
+
+  /**
+   * Prefer /map over static preview.
+   * opts.forceResub — unsubscribe/resubscribe to re-pull latched OccupancyGrid
+   * (needed after refresh when the only sample was ignored while preferLiveMap=false).
+   */
+  function enableLiveMap(opts) {
+    opts = opts || {};
     preferLiveMap = true;
-    setStatus('等待 /map 实时话题…（已保留静态底图直至收到）');
+    const needResub = !!opts.forceResub || !hasLiveMap();
+    if (needResub) {
+      setStatus('等待 /map 实时话题…（已保留静态底图直至收到）');
+    }
+    if (started && ros && needResub) {
+      resubscribeMapTopic();
+    }
   }
 
   /** Keep showing static until first live /map; then switch. */
@@ -1128,12 +1272,38 @@
 
   function deleteSelectedWaypoint() {
     if (selectedWpIdx == null || !waypoints[selectedWpIdx]) return false;
-    waypoints.splice(selectedWpIdx, 1);
-    selectedWpIdx = null;
+    return deleteWaypointsByIndices([selectedWpIdx]);
+  }
+
+  /** Delete waypoints at the given indices (any order). Returns count removed. */
+  function deleteWaypointsByIndices(indices) {
+    const uniq = Array.from(
+      new Set(
+        (indices || [])
+          .map((i) => Number(i))
+          .filter((i) => Number.isInteger(i) && i >= 0 && i < waypoints.length),
+      ),
+    ).sort((a, b) => b - a);
+    if (!uniq.length) return 0;
+    uniq.forEach((i) => waypoints.splice(i, 1));
+    if (selectedWpIdx != null) {
+      if (uniq.includes(selectedWpIdx)) {
+        selectedWpIdx = null;
+      } else {
+        const removedBefore = uniq.filter((i) => i < selectedWpIdx).length;
+        selectedWpIdx -= removedBefore;
+      }
+    }
     waypoints = annotateWaypointBadness(waypoints);
     drawOverlay();
     notifyMode();
-    return true;
+    return uniq.length;
+  }
+
+  function clearPlan() {
+    latestPlan = null;
+    latestLocalPlan = null;
+    drawOverlay();
   }
 
   function setShowSensorFrames(on) {
@@ -1166,12 +1336,7 @@
   function subscribeAll() {
     if (!ros || typeof ROSLIB === 'undefined') return;
 
-    mapTopic = new ROSLIB.Topic({
-      ros: ros,
-      name: '/map',
-      messageType: 'nav_msgs/msg/OccupancyGrid',
-    });
-    mapTopic.subscribe(onMapMessage);
+    resubscribeMapTopic();
 
     scanTopic = new ROSLIB.Topic({
       ros: ros,
@@ -1182,6 +1347,33 @@
       if (!msg || !msg.header) return;
       latestScan = msg;
       lastScanTs = Date.now();
+    });
+
+    planTopic = new ROSLIB.Topic({
+      ros: ros,
+      name: '/plan',
+      messageType: 'nav_msgs/msg/Path',
+    });
+    planTopic.subscribe((msg) => {
+      const normalized = normalizePathMessage(msg);
+      if (!normalized) return;
+      // Keep last good global plan; empty Path is common during replan/abort.
+      if (normalized.poses.length >= 2) {
+        latestPlan = normalized;
+      }
+    });
+
+    localPlanTopic = new ROSLIB.Topic({
+      ros: ros,
+      name: '/local_plan',
+      messageType: 'nav_msgs/msg/Path',
+    });
+    localPlanTopic.subscribe((msg) => {
+      const normalized = normalizePathMessage(msg);
+      if (!normalized) return;
+      if (normalized.poses.length >= 2) {
+        latestLocalPlan = normalized;
+      }
     });
 
     tfTopic = new ROSLIB.Topic({
@@ -1233,10 +1425,10 @@
 
     if (typeof ResizeObserver !== 'undefined') {
       if (resizeObserver) resizeObserver.disconnect();
-      resizeObserver = new ResizeObserver(() => redraw());
+      resizeObserver = new ResizeObserver(() => onContainerResize());
       resizeObserver.observe(containerEl);
     }
-    window.addEventListener('resize', redraw);
+    window.addEventListener('resize', onContainerResize);
 
     if (started && ros) {
       redraw();
@@ -1259,8 +1451,13 @@
       url: url,
       name: connName,
       onConnection: () => {
-        setStatus('Foxglove 已连接 · 订阅 /map /scan /tf');
+        setStatus('Foxglove 已连接 · 订阅 /map /scan /plan /local_plan /tf');
         subscribeAll();
+        // If page restored into an active nav session, preferLiveMap may already be on
+        // but the first latched /map was ignored while static preview loaded.
+        if (preferLiveMap) {
+          resubscribeMapTopic();
+        }
       },
       onError: () => setStatus('Foxglove 连接错误'),
       onClose: () => setStatus('Foxglove 已断开，重连中…'),
@@ -1309,6 +1506,8 @@
     getSelectedWaypointIndex: getSelectedWaypointIndex,
     setSelectedWaypointIndex: setSelectedWaypointIndex,
     deleteSelectedWaypoint: deleteSelectedWaypoint,
+    deleteWaypointsByIndices: deleteWaypointsByIndices,
+    clearPlan: clearPlan,
     setActiveYaw: setActiveYaw,
     getActiveYaw: getActiveYaw,
     isClearanceOk: isClearanceOk,
@@ -1317,6 +1516,7 @@
     getScanStatus: getScanStatus,
     getRobotPose: getRobotPose,
     hasMap: hasMap,
+    hasLiveMap: hasLiveMap,
     canvasToWorld: canvasToWorld,
     DEFAULT_SENSOR_FRAMES: DEFAULT_SENSOR_FRAMES,
     LASER_DISPLAY_YAW_OFFSET: LASER_DISPLAY_YAW_OFFSET,
