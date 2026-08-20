@@ -1,0 +1,27 @@
+{
+  "version": "Sample 1.0.0",
+  "name": "hijiki",
+  "model": "moc/hijiki.moc",
+  "textures": [
+    "moc/hijiki.2048/texture_00.png"
+  ],
+  "pose": "hijiki.pose.json",
+  "motions": {
+    "idle": [
+      { "file": "mtn/00_idle.mtn" }
+    ],
+    "mtn01": [{ "file": "mtn/01.mtn" }],
+    "mtn02": [{ "file": "mtn/02.mtn" }],
+    "mtn03": [{ "file": "mtn/03.mtn" }],
+    "mtn04": [{ "file": "mtn/04.mtn" }],
+    "mtn05": [{ "file": "mtn/05.mtn" }],
+    "mtn06": [{ "file": "mtn/06.mtn" }],
+    "mtn07": [{ "file": "mtn/07.mtn" }],
+    "mtn08": [{ "file": "mtn/08.mtn" }],
+    "tap_body": [
+      { "file": "mtn/01.mtn" },
+      { "file": "mtn/02.mtn" },
+      { "file": "mtn/07.mtn" }
+    ]
+  }
+}

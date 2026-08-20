@@ -1,7 +1,7 @@
 /**
  * Gen2 desktop pet (xw_web).
- * Character: Live2D Luo Xiaohei (罗小黑) — local model under
- *   /assets/pet/live2d/luoxiaohei/ + L2Dwidget under /js/vendor/.
+ * Character: Live2D Hijiki (黑猫全身) — local model under
+ *   /assets/pet/live2d/hijiki/ + L2Dwidget under /js/vendor/.
  * Low-CPU eco by default. Driven by /js/api.js from Gen2:
  *   /xw/robot_state (mode + run_mode), /xw/task/* via HTTP bridge.
  * No Gen1 mapping_service topics.
@@ -16,27 +16,30 @@
         return;
     }
 
-    var PET_ASSET_VER = '20260820-pet18';
+    var PET_ASSET_VER = '20260820-pet21';
     var L2D_SCRIPT = '/js/vendor/L2Dwidget.min.js?v=' + PET_ASSET_VER;
-    var L2D_MODEL = '/assets/pet/live2d/luoxiaohei/luoxiaohei.model.json?v=' + PET_ASSET_VER;
     var TASK_LABELS = { 0: '空闲', 1: '导航', 2: '建图', 3: '跟随' };
     var STORAGE_X = 'desktop_pet_shift_x';
     var BUBBLE_MS = 4200;
     var DEDUPE_MS = 1200;
-    var WALK_RANGE = 40;
-    /* Eco defaults: rare idle motion to keep CPU low on Radxa / tablet */
-    var ACTION_MIN_MS = 22000;
-    var ACTION_MAX_MS = 42000;
+    /* Stroll only toward screen center; never past the right dock. */
+    var WALK_RANGE = 96;
+    var WALK_MS = 2600;
+    var EDGE_PAD = 12;
+    /* Eco: still allow stroll + cute motions; keep interval a bit longer */
+    var ACTION_MIN_MS = 9000;
+    var ACTION_MAX_MS = 16000;
     var RECEIPT_OBSERVER_DEBOUNCE_MS = 220;
     var EXPR_CLASSES = ['expr-idle', 'expr-happy', 'expr-wow', 'expr-sad', 'expr-smirk', 'expr-focus'];
     var ACTION_CLASSES = ['anim-jump', 'anim-head', 'anim-roll', 'anim-wave', 'anim-bounce', 'anim-look', 'anim-speak'];
+    var CUTE_MOTIONS = ['mtn01', 'mtn02', 'mtn03', 'mtn04', 'mtn05', 'mtn06', 'mtn07', 'mtn08'];
     var EXPR_TO_MOTION = {
-        idle: 'idle',
-        happy: 'happy',
-        wow: 'wow',
-        sad: 'sad',
-        smirk: 'smirk',
-        focus: 'focus'
+        idle: ['idle', 'idle', 'mtn08', 'mtn02'],
+        happy: ['mtn01', 'mtn02', 'mtn07'],
+        wow: ['mtn03', 'mtn04'],
+        sad: ['mtn05', 'mtn06'],
+        smirk: ['mtn07', 'mtn02', 'mtn01'],
+        focus: ['mtn08', 'mtn04', 'idle']
     };
     var PRIORITY_IDLE = 1;
     var PRIORITY_FORCE = 3;
@@ -62,7 +65,7 @@
     ];
 
     var GREETING_LINES = [
-        '罗小黑报到～有事我会告诉你哦！',
+        '小黑猫报到～有事我会告诉你哦！',
         '我来啦～点我可看当前状态～',
         '桌宠上线～省电模式，不费电～'
     ];
@@ -303,15 +306,29 @@
         state.l2dReady = true;
     }
 
-    function playPetMotion(expr) {
-        var group = EXPR_TO_MOTION[expr] || 'idle';
+    function playMotionGroup(group, force) {
         var mgr = global.__petL2DMgr;
         if (!mgr || typeof mgr.getModel !== 'function') return;
         var model = mgr.getModel(0);
-        if (!model || typeof model.startRandomMotion !== 'function') return;
+        if (!model) return;
+        var prio = force ? PRIORITY_FORCE : PRIORITY_IDLE;
         try {
-            model.startRandomMotion(group, group === 'idle' ? PRIORITY_IDLE : PRIORITY_FORCE);
+            if (typeof model.startMotion === 'function') {
+                model.startMotion(group, 0, prio);
+            } else if (typeof model.startRandomMotion === 'function') {
+                model.startRandomMotion(group, prio);
+            }
         } catch (_) { /* noop */ }
+    }
+
+    function playCuteMotion() {
+        playMotionGroup(pick(CUTE_MOTIONS), true);
+    }
+
+    function playPetMotion(expr) {
+        var groups = EXPR_TO_MOTION[expr];
+        var group = groups ? pick(groups) : 'idle';
+        playMotionGroup(group, group !== 'idle');
     }
 
     function initLive2D() {
@@ -327,13 +344,13 @@
             } catch (_) { /* noop */ }
             global.L2Dwidget.init({
                 model: {
-                    jsonPath: L2D_MODEL,
+                    jsonPath: '/assets/pet/live2d/hijiki/hijiki.model.json',
                     scale: 1
                 },
                 display: {
                     superSample: ecoMode ? 1 : 1.25,
-                    width: 168,
-                    height: 220,
+                    width: 148,
+                    height: 148,
                     position: 'right',
                     hOffset: 14,
                     vOffset: 12
@@ -375,7 +392,7 @@
         root.className = 'desktop-pet expr-idle task-mode-0';
         root.id = 'desktop-pet';
         root.setAttribute('aria-live', 'polite');
-        root.setAttribute('title', '罗小黑桌宠（点击查看状态）');
+        root.setAttribute('title', '黑猫桌宠（点击查看状态）');
 
         if (reducedMotion || ecoMode) {
             root.classList.add('no-motion');
@@ -412,19 +429,45 @@
 
         var saved = parseFloat(localStorage.getItem(STORAGE_X) || '0');
         if (!isNaN(saved)) {
-            setShift(Math.max(-WALK_RANGE, Math.min(WALK_RANGE, saved)), false);
+            setShift(saved, false);
         }
 
         try {
             sessionStorage.removeItem('desktop_pet_hidden');
         } catch (_) { /* noop */ }
 
+        if (!state.resizeBound) {
+            state.resizeBound = true;
+            global.addEventListener('resize', function () {
+                setShift(state.shiftX, false);
+            });
+        }
+
         initLive2D();
     }
+    function shiftBounds() {
+        var w = (state.root && state.root.offsetWidth) || 148;
+        var vw = global.innerWidth || 800;
+        var homeRight = 14;
+        var roomLeft = Math.max(0, vw - w - homeRight - EDGE_PAD);
+        return {
+            min: -Math.min(WALK_RANGE, roomLeft),
+            max: 0
+        };
+    }
+
+    function clampShift(px) {
+        var b = shiftBounds();
+        var n = Number(px);
+        if (isNaN(n)) n = 0;
+        return Math.max(b.min, Math.min(b.max, n));
+    }
+
     function setShift(px, animate) {
+        px = clampShift(px);
         state.shiftX = px;
         if (!state.root) return;
-        if (!animate || ecoMode) {
+        if (!animate || reducedMotion) {
             state.root.style.transition = 'none';
             state.root.style.setProperty('--pet-shift', px + 'px');
             void state.root.offsetWidth;
@@ -443,6 +486,7 @@
             state.root.classList.remove(EXPR_CLASSES[i]);
         }
         state.root.classList.add('expr-' + expr);
+        playPetMotion(expr);
 
         if (state.exprTimer) {
             clearTimeout(state.exprTimer);
@@ -647,7 +691,7 @@
                 state.root.classList.remove(ACTION_CLASSES[i]);
             }
         }
-        state.root.classList.remove('is-busy');
+        state.root.classList.remove('is-busy', 'is-walking');
         state.busy = false;
     }
 
@@ -677,45 +721,48 @@
     }
 
     function doWalk() {
-        if (ecoMode || reducedMotion || document.hidden || !state.root) return;
+        if (reducedMotion || document.hidden || !state.root) return;
         if (state.busy || state.speaking) return;
 
-        var target = (Math.random() * 2 - 1) * WALK_RANGE;
-        if (Math.abs(target - state.shiftX) < 16) {
-            target = state.shiftX >= 0 ? -WALK_RANGE * 0.7 : WALK_RANGE * 0.7;
+        var b = shiftBounds();
+        if (b.max - b.min < 20) return;
+
+        var mid = (b.min + b.max) / 2;
+        var target;
+        if (state.shiftX > mid - 8) {
+            target = b.min + Math.random() * (mid - b.min);
+        } else {
+            target = mid + Math.random() * (b.max - mid);
+        }
+        target = clampShift(target);
+        if (Math.abs(target - state.shiftX) < 18) {
+            target = state.shiftX > mid ? b.min : b.max;
+            target = clampShift(target);
         }
 
-        state.facingLeft = target > state.shiftX;
-        if (state.els.flip) {
-            state.els.flip.classList.toggle('is-flipped', state.facingLeft);
-        }
         state.busy = true;
-        state.root.classList.add('is-busy');
-        setExpression('smirk', 2600);
+        state.root.classList.add('is-busy', 'is-walking');
+        playCuteMotion();
         setShift(target, true);
-        localStorage.setItem(STORAGE_X, String(Math.round(target)));
+        localStorage.setItem(STORAGE_X, String(Math.round(state.shiftX)));
 
         setTimeout(function () {
             clearActionClasses();
-        }, 2300);
+            if (state.root) state.root.classList.remove('is-walking');
+            playPetMotion(taskDefaultExpr());
+        }, WALK_MS);
     }
 
     function pickIdleAction() {
         if (reducedMotion || document.hidden) return;
         if (state.busy || state.speaking) return;
 
-        if (ecoMode) {
-            /* rare micro-action only */
-            if (Math.random() < 0.55) runAction('head', 700);
-            else runAction('wave', 800);
-            return;
-        }
-
         if (state.task === 1) {
             doWalk();
             return;
         }
         if (state.task === 2) {
+            playCuteMotion();
             if (Math.random() < 0.45) runAction('look', 1100);
             else runAction('head', 900);
             return;
@@ -725,21 +772,19 @@
             return;
         }
 
+        /* Idle: mostly stroll left/right, otherwise sell a cute motion */
         var r = Math.random();
-        if (r < 0.28) {
+        if (r < 0.62) {
             doWalk();
-        } else if (r < 0.42) {
-            runAction('jump', 700);
-        } else if (r < 0.55) {
-            runAction('wave', 950);
-        } else if (r < 0.68) {
-            runAction('bounce', 750);
-        } else if (r < 0.80) {
-            runAction('head', 900);
-        } else if (r < 0.90) {
-            runAction('look', 1100);
+        } else if (r < 0.82) {
+            playCuteMotion();
+            runAction('head', 900, true);
+        } else if (r < 0.93) {
+            playCuteMotion();
+            runAction('wave', 950, true);
         } else {
-            runAction('roll', 1200);
+            playCuteMotion();
+            runAction('look', 1100, true);
         }
     }
 
@@ -749,20 +794,18 @@
 
         var minMs = ACTION_MIN_MS;
         var maxMs = ACTION_MAX_MS;
-        if (!ecoMode) {
-            if (state.task === 3) {
-                minMs = 8000;
-                maxMs = 16000;
-            } else if (state.task === 1) {
-                minMs = 10000;
-                maxMs = 18000;
-            } else if (state.task === 2) {
-                minMs = 14000;
-                maxMs = 24000;
-            } else {
-                minMs = 12000;
-                maxMs = 22000;
-            }
+        if (state.task === 0) {
+            minMs = ecoMode ? 7000 : 5500;
+            maxMs = ecoMode ? 13000 : 10000;
+        } else if (state.task === 3) {
+            minMs = 8000;
+            maxMs = 15000;
+        } else if (state.task === 1) {
+            minMs = 9000;
+            maxMs = 16000;
+        } else if (state.task === 2) {
+            minMs = 11000;
+            maxMs = 20000;
         }
 
         var delay = minMs + Math.random() * (maxMs - minMs);
@@ -803,7 +846,7 @@
         hit.addEventListener('pointermove', function (e) {
             if (!dragging) return;
             var next = originShift + (e.clientX - startX);
-            next = Math.max(-WALK_RANGE * 1.5, Math.min(WALK_RANGE * 1.5, next));
+            next = clampShift(next);
             if (Math.abs(e.clientX - startX) > 4) moved = true;
             setShift(next, false);
         });
@@ -817,6 +860,7 @@
             localStorage.setItem(STORAGE_X, String(Math.round(state.shiftX)));
 
             if (!moved) {
+                playCuteMotion();
                 setExpression('happy', 2000);
                 if (!reducedMotion) {
                     if (state.task === 1) runAction('bounce', 700, true);
