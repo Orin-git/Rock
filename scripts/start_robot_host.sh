@@ -89,7 +89,39 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   mkdir "$LOCK_DIR"
 fi
 echo $$ >"$LOCK_DIR/pid"
-trap 'rm -rf "$LOCK_DIR"' EXIT
+WATCHDOG_PID=""
+cleanup_host() {
+  if [[ -n "${WATCHDOG_PID}" ]] && kill -0 "$WATCHDOG_PID" 2>/dev/null; then
+    kill "$WATCHDOG_PID" 2>/dev/null || true
+    wait "$WATCHDOG_PID" 2>/dev/null || true
+  fi
+  rm -rf "$LOCK_DIR"
+}
+trap cleanup_host EXIT INT TERM
+
+# Gen1-style pin watchdog on host: poll status file only (no DDS). Default on.
+HOST_WS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export XW_LOG="${XW_LOG:-$HOST_WS/log}"
+WATCHDOG_STATE_DIR="${WATCHDOG_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/xw-watchdog}"
+mkdir -p "$WATCHDOG_STATE_DIR"
+if [[ "${XW_WATCHDOG:-1}" == "1" ]]; then
+  bash "$HOST_WS/scripts/stability_preflight.sh" || true
+  # Ensure pin file is readable by host user (container writes as root).
+  docker exec "$CONTAINER" bash -lc '
+    mkdir -p /ros2_ws/log
+    chmod 755 /ros2_ws/log 2>/dev/null || true
+    [[ -f /ros2_ws/log/topic_health_status ]] && chmod 644 /ros2_ws/log/topic_health_status || true
+  ' 2>/dev/null || true
+  export AUTO_RECOVER="${AUTO_RECOVER:-0}"
+  export RECOVER_CMD="${RECOVER_CMD:-systemctl restart xw-robot}"
+  export STATUS_FILE="${STATUS_FILE:-$XW_LOG/topic_health_status}"
+  export WATCHDOG_LOG="${WATCHDOG_LOG:-$WATCHDOG_STATE_DIR/stability_watchdog.log}"
+  nohup bash "$HOST_WS/scripts/stability_watchdog.sh" \
+    >>"$WATCHDOG_LOG" 2>&1 &
+  WATCHDOG_PID=$!
+  echo "$WATCHDOG_PID" >"$WATCHDOG_STATE_DIR/stability_watchdog.pid"
+  echo "[start_robot_host] pin watchdog pid=$WATCHDOG_PID file=$STATUS_FILE log=$WATCHDOG_LOG"
+fi
 
 # Ensure NPU runtime lib is present in the container (survives recreate if re-run)
 if [[ -e /usr/lib/librknnrt.so ]]; then
