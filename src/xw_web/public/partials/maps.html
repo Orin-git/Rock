@@ -1,0 +1,55 @@
+<section class="maps-head">
+      <div>
+        <span class="tag">Map Store</span>
+        <h1>地图管理</h1>
+      </div>
+      <p class="muted maps-head-lead">
+        左列地图文件 · 右列导航点列表（<code>{地图}_pointList</code>）· 航点内容请到
+        <a href="/pages/navigation.html">导航</a> 编辑
+      </p>
+      <p class="maps-status muted" id="mapsStatus" aria-live="polite"></p>
+    </section>
+
+    <section class="maps-split" aria-label="地图与导航点">
+      <div class="panel maps-col">
+        <div class="maps-col-head">
+          <div class="section-title maps-col-title">
+            地图列表
+            <span class="section-count" id="mapCount">0</span>
+          </div>
+          <div class="batch-bar maps-batch">
+            <label class="check-inline">
+              <input type="checkbox" id="selectAll" /> 全选
+            </label>
+            <button type="button" id="refresh">刷新</button>
+            <button type="button" class="secondary" id="batchDelete">批量删除</button>
+            <button type="button" class="secondary" id="batchKeep">批量保留</button>
+            <span class="muted maps-batch-hint" id="batchHint">未选中</span>
+          </div>
+        </div>
+        <div class="list-panel maps-scroll" id="mapList">
+          <p class="muted pad">加载中…</p>
+        </div>
+      </div>
+
+      <div class="panel maps-col">
+        <div class="maps-col-head">
+          <div class="section-title maps-col-title">
+            导航点列表
+            <span class="section-count" id="wpListCount">0</span>
+          </div>
+          <div class="batch-bar maps-batch">
+            <label class="check-inline">
+              <input type="checkbox" id="wpSelectAll" /> 全选
+            </label>
+            <button type="button" id="refreshWpLists">刷新</button>
+            <button type="button" class="secondary" id="wpBatchDelete">批量删除</button>
+            <button type="button" class="secondary" id="wpBatchKeep">批量保留</button>
+            <span class="muted maps-batch-hint" id="wpBatchHint">未选中</span>
+          </div>
+        </div>
+        <div class="list-panel maps-scroll" id="wpListCatalog">
+          <p class="muted pad">加载中…</p>
+        </div>
+      </div>
+    </section>

@@ -1,4 +1,5 @@
-// Ensure header status chips + active nav on every page
+// SPA shell — header status chips, desktop pet, nav highlight (runs once).
+
 (function loadHudFx() {
   if (document.getElementById('hud-fx-script')) return;
   if (!document.querySelector('script[src*="hud_fx.js"]')) {
@@ -27,8 +28,6 @@ function bootDesktopPet() {
   document.head.appendChild(script);
 }
 
-bootDesktopPet();
-
 function ensureStatusChips() {
   const top = document.querySelector('header.top');
   if (!top) return;
@@ -40,7 +39,6 @@ function ensureStatusChips() {
     top.appendChild(status);
   }
 
-  // Static LAN URL (no poll / no API) — visible when browsing via SSH tunnel
   if (!document.getElementById('lanUrlBadge')) {
     const u = document.createElement('a');
     u.id = 'lanUrlBadge';
@@ -66,6 +64,13 @@ function ensureStatusChips() {
     s.textContent = '服务…';
     status.appendChild(s);
   }
+  if (!document.getElementById('conn')) {
+    const c = document.createElement('div');
+    c.id = 'conn';
+    c.className = 'pill off';
+    c.textContent = '链路…';
+    status.appendChild(c);
+  }
 
   const lan = document.getElementById('lanUrlBadge');
   const conn = document.getElementById('conn');
@@ -77,17 +82,22 @@ function ensureStatusChips() {
   if (conn) status.appendChild(conn);
 }
 
-ensureStatusChips();
+export function setActiveNav(path) {
+  const p = path === '/index.html' ? '/' : path;
+  document.querySelectorAll('header.top nav a').forEach((a) => {
+    const href = a.getAttribute('href') || '';
+    const hrefPath = href.split('?')[0];
+    const active =
+      hrefPath === p ||
+      (p === '/' && hrefPath === '/') ||
+      (p.endsWith('index.html') && hrefPath === '/');
+    a.classList.toggle('active', !!active);
+  });
+}
 
-// Remove legacy camera nav if present (preview moved to Foxglove Desktop).
-document.querySelectorAll('header.top nav a[href*="camera.html"]').forEach((a) => a.remove());
-
-const path = location.pathname;
-document.querySelectorAll('nav a').forEach((a) => {
-  const href = a.getAttribute('href') || '';
-  const active =
-    href === path ||
-    (path === '/' && href === '/') ||
-    (path.endsWith('index.html') && href === '/');
-  a.classList.toggle('active', !!active);
-});
+export function initShell() {
+  bootDesktopPet();
+  ensureStatusChips();
+  document.querySelectorAll('header.top nav a[href*="camera.html"]').forEach((a) => a.remove());
+  setActiveNav(location.pathname);
+}

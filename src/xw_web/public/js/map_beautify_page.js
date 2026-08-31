@@ -3,8 +3,7 @@
  * Gen2 tradeoffs vs gen1: no keepout layer, no shape select/move, no Foxglove.
  */
 
-import { connect, mapManage } from '/js/api.js';
-import '/js/app.js';
+import { mapManage } from '/js/api.js';
 import {
   OCCUPIED,
   FREE,
@@ -12,22 +11,19 @@ import {
   stampBrush,
 } from '/js/map_beautify_algo.js';
 
-connect();
-
 const $ = (id) => document.getElementById(id);
 
-const mapSelect = $('mapSelect');
-const statusEl = $('editStatus');
-const hintEl = $('coordInfo');
-const canvas = $('map-canvas');
-const overlay = $('overlay-canvas');
-const container = $('map-container');
-const brushSizeEl = $('brushSize');
-const brushLabel = $('brushSizeLabel');
-const toastEl = $('toast');
-
-const ctx = canvas.getContext('2d', { alpha: false });
-const octx = overlay.getContext('2d');
+let mapSelect;
+let statusEl;
+let hintEl;
+let canvas;
+let overlay;
+let container;
+let brushSizeEl;
+let brushLabel;
+let toastEl;
+let ctx;
+let octx;
 
 let mapName = '';
 let width = 0;
@@ -386,59 +382,111 @@ async function saveMap(asNew) {
   toast(j.message || '已保存');
 }
 
-// Wire UI
-document.querySelectorAll('[data-mode]').forEach((btn) => {
-  btn.addEventListener('click', () => setMode(btn.getAttribute('data-mode')));
-});
-brushSizeEl.addEventListener('input', () => {
-  brush = Number(brushSizeEl.value) || 1;
-  brushLabel.textContent = String(brush);
-});
-$('btnRefreshList').onclick = () => refreshList();
-$('btnLoadMap').onclick = () => loadMap(mapSelect.value);
-$('btnFitView').onclick = () => fitView();
-$('btnUndo').onclick = () => undo();
-$('btnReset').onclick = () => resetEdits();
-$('btnSave').onclick = () => saveMap(false);
-$('btnSaveAs').onclick = () => saveMap(true);
+let resizeHandler = null;
+let keydownHandler = null;
+let keyupHandler = null;
+let dispose = null;
 
-overlay.addEventListener('pointerdown', onPointerDown);
-overlay.addEventListener('pointermove', onPointerMove);
-overlay.addEventListener('pointerup', onPointerUp);
-overlay.addEventListener('pointercancel', onPointerUp);
-overlay.addEventListener('wheel', onWheel, { passive: false });
-window.addEventListener('resize', () => {
-  draw();
-});
+function bindDom() {
+  mapSelect = $('mapSelect');
+  statusEl = $('editStatus');
+  hintEl = $('coordInfo');
+  canvas = $('map-canvas');
+  overlay = $('overlay-canvas');
+  container = $('map-container');
+  brushSizeEl = $('brushSize');
+  brushLabel = $('brushSizeLabel');
+  toastEl = $('toast');
+  ctx = canvas?.getContext('2d', { alpha: false });
+  octx = overlay?.getContext('2d');
+}
 
-window.addEventListener('keydown', (ev) => {
-  if (ev.code === 'Space' && !ev.repeat) {
-    spacePan = true;
-    if (!dragging) overlay.style.cursor = 'grab';
-    ev.preventDefault();
-  }
-  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
-    ev.preventDefault();
-    undo();
-  }
-});
-window.addEventListener('keyup', (ev) => {
-  if (ev.code === 'Space') {
-    spacePan = false;
-    setMode(mode);
-  }
-});
+function wireBeautify(ctx = {}) {
+  bindDom();
+  mapName = '';
+  width = 0;
+  height = 0;
+  mapData = null;
+  originalData = null;
+  dirty = false;
+  mode = 'pan';
+  undoStack = [];
+  scale = 1;
+  offsetX = 0;
+  offsetY = 0;
+  bitmap = null;
+  bitmapDirty = true;
 
-setMode('pan');
-brush = Number(brushSizeEl.value) || 1;
-brushLabel.textContent = String(brush);
-updateDirtyUi();
+  document.querySelectorAll('[data-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => setMode(btn.getAttribute('data-mode')));
+  });
+  brushSizeEl?.addEventListener('input', () => {
+    brush = Number(brushSizeEl.value) || 1;
+    if (brushLabel) brushLabel.textContent = String(brush);
+  });
+  $('btnRefreshList').onclick = () => refreshList();
+  $('btnLoadMap').onclick = () => loadMap(mapSelect.value);
+  $('btnFitView').onclick = () => fitView();
+  $('btnUndo').onclick = () => undo();
+  $('btnReset').onclick = () => resetEdits();
+  $('btnSave').onclick = () => saveMap(false);
+  $('btnSaveAs').onclick = () => saveMap(true);
 
-(async () => {
-  await refreshList();
-  const q = new URLSearchParams(location.search).get('map');
-  if (q) {
-    mapSelect.value = q;
-    await loadMap(q);
-  }
-})();
+  overlay?.addEventListener('pointerdown', onPointerDown);
+  overlay?.addEventListener('pointermove', onPointerMove);
+  overlay?.addEventListener('pointerup', onPointerUp);
+  overlay?.addEventListener('pointercancel', onPointerUp);
+  overlay?.addEventListener('wheel', onWheel, { passive: false });
+
+  resizeHandler = () => draw();
+  window.addEventListener('resize', resizeHandler);
+
+  keydownHandler = (ev) => {
+    if (ev.code === 'Space' && !ev.repeat) {
+      spacePan = true;
+      if (!dragging && overlay) overlay.style.cursor = 'grab';
+      ev.preventDefault();
+    }
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
+      ev.preventDefault();
+      undo();
+    }
+  };
+  keyupHandler = (ev) => {
+    if (ev.code === 'Space') {
+      spacePan = false;
+      setMode(mode);
+    }
+  };
+  window.addEventListener('keydown', keydownHandler);
+  window.addEventListener('keyup', keyupHandler);
+
+  setMode('pan');
+  brush = Number(brushSizeEl?.value) || 1;
+  if (brushLabel) brushLabel.textContent = String(brush);
+  updateDirtyUi();
+
+  const queryMap = ctx?.query?.get?.('map') || new URLSearchParams(location.search).get('map');
+  (async () => {
+    await refreshList();
+    if (queryMap && mapSelect) {
+      mapSelect.value = queryMap;
+      await loadMap(queryMap);
+    }
+  })();
+}
+
+export function mount(ctx = {}) {
+  if (dispose) dispose();
+  wireBeautify(ctx);
+  dispose = unmount;
+  return unmount;
+}
+
+export function unmount() {
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+  if (keydownHandler) window.removeEventListener('keydown', keydownHandler);
+  if (keyupHandler) window.removeEventListener('keyup', keyupHandler);
+  resizeHandler = keydownHandler = keyupHandler = null;
+  dispose = null;
+}

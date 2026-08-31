@@ -1,0 +1,62 @@
+<section class="mapping-page-head">
+      <div class="tag">SLAM</div>
+      <h1>建图</h1>
+      <p class="mapping-lead muted">mode=1 启停 · 画布叠 /map+/scan · 随时保存</p>
+      <p class="map-meta mapping-mode" id="modeHint">模式：—</p>
+    </section>
+
+    <div class="mapping-grid">
+      <section class="panel map-stage mapping-stage">
+        <div id="map-container">
+          <canvas id="map-canvas"></canvas>
+          <canvas id="overlay-canvas"></canvas>
+        </div>
+        <div class="map-stage-foot">
+          <p class="map-meta" id="mapStatus">画布未启动</p>
+        </div>
+      </section>
+
+      <aside class="mapping-side">
+        <section class="panel mapping-card mapping-save">
+          <h2>保存地图</h2>
+          <div class="map-name-row">
+            <input id="mapName" type="text" autocomplete="off" spellcheck="false" placeholder="地图名" />
+            <button type="button" id="save">保存</button>
+          </div>
+          <p class="muted hint-sm map-save-hint">默认 <code>YYYYMMDD_HHMMSS</code> · 同名覆盖</p>
+        </section>
+
+        <div class="mapping-actions">
+          <section class="panel mapping-card map-action-card">
+            <h2>手推建图</h2>
+            <p class="muted hint-sm map-action-desc">遥控推动扫描环境</p>
+            <div class="btn-stack">
+              <button type="button" id="startManual">开始手推建图</button>
+              <button type="button" class="secondary" id="stop">结束建图</button>
+            </div>
+          </section>
+
+          <section class="panel mapping-card map-action-card">
+            <h2>自主建图</h2>
+            <p class="muted hint-sm map-action-desc">Frontier 自主规划路径建图</p>
+            <div class="btn-stack">
+              <button type="button" id="startAuto">开始自主建图</button>
+              <button type="button" class="secondary" id="stopAuto" hidden>停止自主建图</button>
+              <p class="muted hint-sm text-center mt-0" id="autoHint">待命</p>
+            </div>
+          </section>
+
+          <section class="panel mapping-card map-action-card map-action-teleop">
+            <h2>手推遥控</h2>
+            <p class="muted hint-sm map-action-desc">建图过程中手动驱动</p>
+            <div class="map-action-body map-action-teleop">
+              <div class="joystick-wrap" id="stick"><div class="knob" id="knob"></div></div>
+              <p class="muted mono text-center mt-0" id="vel">vx=0.00 wz=0.00</p>
+              <div class="btn-stack">
+                <button type="button" class="secondary" id="teleopStop">急停归零</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>

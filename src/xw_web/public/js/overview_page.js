@@ -1,12 +1,10 @@
 /**
  * Overview (merged mission board) — fitted battery + safety cross + compact charts.
  */
-import { connect, onState, onObstacle, onMeta, onTask, fetchSensorHub } from '/js/api.js';
-import '/js/app.js';
+import { onState, onObstacle, onMeta, onTask, offState, offObstacle, offMeta, offTask, fetchSensorHub } from '/js/api.js';
 
 const MAX_PTS = 48;
 const powerHist = [];
-const logEl = document.getElementById('dashLog');
 const MAX_LOG = 40;
 
 const C_TEAL = '#0c7f96';
@@ -31,6 +29,7 @@ function escapeHtml(s) {
 }
 
 function pushLog(text, level) {
+  const logEl = document.getElementById('dashLog');
   if (!logEl || !text) return;
   const row = document.createElement('div');
   row.className = 'line ' + (level || '');
@@ -461,81 +460,99 @@ async function refreshSensors() {
   });
 }
 
-onMeta((m) => {
-  document.getElementById('dashIdentity').textContent =
-    `XIAOWEI · ${m.robot_id || 'GEN-2'} · DOMAIN ${m.ros_domain_id || '—'}`;
-  const up = m.services?.stack_up;
-  document.getElementById('dStack').textContent = up ? 'ONLINE' : 'DOWN';
-  document.getElementById('dStackSub').textContent =
-    `${m.services?.supervisor_up ? 'sup:ok' : 'sup:--'} / ${m.services?.map_manager_up ? 'map:ok' : 'map:--'}`;
-  tone(document.getElementById('kpiStack'), up ? 'is-ok' : 'is-bad');
-});
+let clockTimer = null;
+let chartTimer = null;
+let sensorTimer = null;
+let resizeHandler = null;
+let metaHandler = null;
+let stateHandler = null;
+let obstacleHandler = null;
+let taskHandler = null;
 
-onState((s) => {
-  lastState = s;
-  document.getElementById('dMode').textContent = s.mode_name || s.mode || '—';
-  document.getElementById('dModeSub').textContent = s.detail || '—';
-  tone(document.getElementById('kpiMode'), 'is-ok');
+export function mount() {
+  metaHandler = (m) => {
+    const el = document.getElementById('dashIdentity');
+    if (el) el.textContent = `XIAOWEI · ${m.robot_id || 'GEN-2'} · DOMAIN ${m.ros_domain_id || '—'}`;
+    const up = m.services?.stack_up;
+    const dStack = document.getElementById('dStack');
+    const dStackSub = document.getElementById('dStackSub');
+    if (dStack) dStack.textContent = up ? 'ONLINE' : 'DOWN';
+    if (dStackSub) {
+      dStackSub.textContent = `${m.services?.supervisor_up ? 'sup:ok' : 'sup:--'} / ${m.services?.map_manager_up ? 'map:ok' : 'map:--'}`;
+    }
+    tone(document.getElementById('kpiStack'), up ? 'is-ok' : 'is-bad');
+  };
+  stateHandler = (s) => {
+    lastState = s;
+    document.getElementById('dMode').textContent = s.mode_name || s.mode || '—';
+    document.getElementById('dModeSub').textContent = s.detail || '—';
+    tone(document.getElementById('kpiMode'), 'is-ok');
+    const isDev = (s.run_mode == null ? 1 : Number(s.run_mode)) !== 0;
+    document.getElementById('dRun').textContent = isDev ? '开发者' : '量产';
+    tone(document.getElementById('kpiRun'), isDev ? 'is-ok' : 'is-warn');
+    applyPowerUi(resolvePower(s.power), { pushHist: false });
+    const estop = !!s.emergency_stop;
+    document.getElementById('dEstop').textContent = estop ? 'DISABLED' : '使能';
+    document.getElementById('dProfile').textContent = `profile ${s.profile || '—'}`;
+    tone(document.getElementById('kpiEstop'), estop ? 'is-bad' : 'is-ok');
+    const locCode = Number(s.localization_status ?? (s.localization_ok ? 0 : 1));
+    const locLabels = { 0: '正常', 1: '未就绪', 2: '漂移自愈', 3: '需重定位' };
+    const locTones = { 0: 'is-ok', 1: 'is-warn', 2: 'is-warn', 3: 'is-bad' };
+    document.getElementById('dLoc').textContent = locLabels[locCode] ?? `LOC ${locCode}`;
+    document.getElementById('dMap').textContent = s.active_map ? `map ${s.active_map}` : 'map —';
+    tone(document.getElementById('kpiLoc'), locTones[locCode] || 'is-warn');
+  };
+  obstacleHandler = (o) => {
+    lastObstacle = o;
+    const ok = o.safety_ok !== false && !o.blocked;
+    document.getElementById('dSafety').textContent = ok ? 'CLEAR' : 'HOLD';
+    document.getElementById('dSafetySub').textContent = o.reason || '—';
+    tone(document.getElementById('kpiSafety'), ok ? 'is-ok' : 'is-bad');
+    const overall = document.getElementById('safetyOverall');
+    if (overall) {
+      overall.textContent = ok ? 'CLEAR' : 'HOLD';
+      overall.className = ok ? 'pill on' : 'pill off';
+    }
+    const reason = o.reason || '—';
+    const any = o.any_sector_blocked ? ' · 扇区告警' : '';
+    const reasonEl = document.getElementById('safetyReason');
+    if (reasonEl) reasonEl.textContent = `${reason}${any}`;
+    const sec = o.sectors || {};
+    const radar = document.getElementById('radarSafety');
+    if (radar) drawRadar(radar, sec);
+  };
+  taskHandler = (line) => {
+    const level = /(fail|error|失败|错误|异常)/i.test(line) ? 'err' : /(ok|success|成功|完成)/i.test(line) ? 'ok' : '';
+    pushLog(line, level);
+  };
 
-  const isDev = (s.run_mode == null ? 1 : Number(s.run_mode)) !== 0;
-  document.getElementById('dRun').textContent = isDev ? '开发者' : '量产';
-  tone(document.getElementById('kpiRun'), isDev ? 'is-ok' : 'is-warn');
+  onMeta(metaHandler);
+  onState(stateHandler);
+  onObstacle(obstacleHandler);
+  onTask(taskHandler);
 
-  applyPowerUi(resolvePower(s.power), { pushHist: false });
+  seedHistory();
+  updateClock();
+  clockTimer = setInterval(updateClock, 1000);
+  chartTimer = setInterval(renderCharts, 1000);
+  sensorTimer = setInterval(refreshSensors, 5000);
+  refreshSensors();
+  renderCharts();
+  resizeHandler = () => renderCharts();
+  window.addEventListener('resize', resizeHandler, { passive: true });
+  pushLog('总览就绪 · 电量未接时使用拟合曲线', 'ok');
+  return unmount;
+}
 
-  const estop = !!s.emergency_stop;
-  document.getElementById('dEstop').textContent = estop ? 'DISABLED' : '使能';
-  document.getElementById('dProfile').textContent = `profile ${s.profile || '—'}`;
-  tone(document.getElementById('kpiEstop'), estop ? 'is-bad' : 'is-ok');
-
-  const locCode = Number(s.localization_status ?? (s.localization_ok ? 0 : 1));
-  const locLabels = { 0: '正常', 1: '未就绪', 2: '漂移自愈', 3: '需重定位' };
-  const locTones = { 0: 'is-ok', 1: 'is-warn', 2: 'is-warn', 3: 'is-bad' };
-  document.getElementById('dLoc').textContent = locLabels[locCode] ?? `LOC ${locCode}`;
-  document.getElementById('dMap').textContent = s.active_map ? `map ${s.active_map}` : 'map —';
-  tone(document.getElementById('kpiLoc'), locTones[locCode] || 'is-warn');
-});
-
-onObstacle((o) => {
-  lastObstacle = o;
-  const ok = o.safety_ok !== false && !o.blocked;
-  document.getElementById('dSafety').textContent = ok ? 'CLEAR' : 'HOLD';
-  document.getElementById('dSafetySub').textContent = o.reason || '—';
-  tone(document.getElementById('kpiSafety'), ok ? 'is-ok' : 'is-bad');
-
-  const overall = document.getElementById('safetyOverall');
-  if (overall) {
-    overall.textContent = ok ? 'CLEAR' : 'HOLD';
-    overall.className = ok ? 'pill on' : 'pill off';
-  }
-  const reason = o.reason || '—';
-  const any = o.any_sector_blocked ? ' · 扇区告警' : '';
-  const reasonEl = document.getElementById('safetyReason');
-  if (reasonEl) reasonEl.textContent = `${reason}${any}`;
-
-  const sec = o.sectors || {};
-  const radar = document.getElementById('radarSafety');
-  if (radar) drawRadar(radar, sec);
-});
-
-onTask((line) => {
-  const level = /(fail|error|失败|错误|异常)/i.test(line)
-    ? 'err'
-    : /(ok|success|成功|完成)/i.test(line)
-      ? 'ok'
-      : '';
-  pushLog(line, level);
-});
-
-seedHistory();
-connect();
-
-updateClock();
-setInterval(updateClock, 1000);
-setInterval(renderCharts, 1000);
-setInterval(refreshSensors, 5000);
-refreshSensors();
-renderCharts();
-window.addEventListener('resize', () => renderCharts(), { passive: true });
-
-pushLog('总览就绪 · 电量未接时使用拟合曲线', 'ok');
+export function unmount() {
+  if (clockTimer) clearInterval(clockTimer);
+  if (chartTimer) clearInterval(chartTimer);
+  if (sensorTimer) clearInterval(sensorTimer);
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+  clockTimer = chartTimer = sensorTimer = resizeHandler = null;
+  if (metaHandler) offMeta(metaHandler);
+  if (stateHandler) offState(stateHandler);
+  if (obstacleHandler) offObstacle(obstacleHandler);
+  if (taskHandler) offTask(taskHandler);
+  metaHandler = stateHandler = obstacleHandler = taskHandler = null;
+}

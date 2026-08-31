@@ -1,0 +1,92 @@
+<section class="settings-page-head">
+      <div class="tag">System</div>
+      <h1>运行与能力</h1>
+      <p class="settings-lead muted" id="taskFlash">切换形态与外设能力 · 跟随在导航页</p>
+    </section>
+
+    <section class="settings-kpis" aria-label="运行环境">
+      <div class="settings-kpi">
+        <div class="k-label">工作区</div>
+        <p class="k-value">/ros2_ws</p>
+        <div class="k-sub">源码与地图</div>
+      </div>
+      <div class="settings-kpi">
+        <div class="k-label">Web</div>
+        <p class="k-value">:9000</p>
+        <div class="k-sub">本机控制台</div>
+      </div>
+      <div class="settings-kpi">
+        <div class="k-label">Domain</div>
+        <p class="k-value">99</p>
+        <div class="k-sub">ROS_DOMAIN_ID</div>
+      </div>
+      <div class="settings-kpi">
+        <div class="k-label">形态</div>
+        <p class="k-value" id="runKpi">—</p>
+        <div class="k-sub" id="runHint">等待状态…</div>
+      </div>
+    </section>
+
+    <div class="settings-body-grid">
+      <section class="panel settings-hero">
+        <div class="settings-hero-top">
+          <div>
+            <h2>运行形态</h2>
+            <p class="muted settings-hero-sub">
+              <code>run_mode</code> · 开发者可互切能力 · 量产禁运动模式直切 ·
+              <code>/xw/supervisor/set_run_mode</code>
+            </p>
+          </div>
+          <span class="pill off" id="runPill">形态…</span>
+        </div>
+        <div class="settings-seg" role="group" aria-label="运行形态">
+          <button id="runDev" type="button">开发者</button>
+          <button id="runProd" class="secondary" type="button">量产</button>
+          <button class="secondary" id="idle" type="button">回 IDLE</button>
+        </div>
+      </section>
+
+      <section class="panel settings-caps">
+        <h2>外设能力</h2>
+        <div class="settings-cap-row">
+          <div class="settings-cap-text">
+            <div class="settings-cap-title">
+              跌倒检测
+              <span class="pill off" id="fallPill">OFF</span>
+            </div>
+            <p class="muted settings-cap-desc">
+              可与 IDLE / 导航同开 · 前视 RGB 按需 · NPU ≈5–6 FPS · ≤2s 确认
+            </p>
+            <p class="settings-cap-meta mono" id="fallHint">—</p>
+          </div>
+          <button id="fallToggle" type="button" class="settings-cap-btn secondary">关闭</button>
+        </div>
+        <div class="settings-cap-row">
+          <div class="settings-cap-text">
+            <div class="settings-cap-title">
+              深度点云
+              <span class="pill off" id="pcPill">OFF</span>
+            </div>
+            <p class="muted settings-cap-desc">
+              进导航自动开 / 退出关 · 手动写入偏好 · Foxglove
+              <code>/camera/front_up/depth/points</code>
+            </p>
+            <p class="settings-cap-meta mono" id="pcHint">—</p>
+          </div>
+          <button id="pcToggle" type="button" class="settings-cap-btn secondary">关闭</button>
+        </div>
+      </section>
+
+      <section class="panel settings-docker">
+        <div class="settings-docker-top">
+          <h2>容器内常用命令</h2>
+          <span class="muted mono settings-docker-tag">bash</span>
+        </div>
+        <div class="settings-cmd-grid">
+          <code>source /ros2_ws/scripts/ros_env.sh</code>
+          <code>ros2 topic list</code>
+          <code>ros2 node list</code>
+          <code>htop</code>
+        </div>
+      </section>
+    </div>

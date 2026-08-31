@@ -400,18 +400,38 @@ export function onState(fn) {
   fn(state);
 }
 
+export function offState(fn) {
+  const i = stateListeners.indexOf(fn);
+  if (i >= 0) stateListeners.splice(i, 1);
+}
+
 export function onObstacle(fn) {
   obstacleListeners.push(fn);
   fn(obstacle);
+}
+
+export function offObstacle(fn) {
+  const i = obstacleListeners.indexOf(fn);
+  if (i >= 0) obstacleListeners.splice(i, 1);
 }
 
 export function onTask(fn) {
   taskListeners.push(fn);
 }
 
+export function offTask(fn) {
+  const i = taskListeners.indexOf(fn);
+  if (i >= 0) taskListeners.splice(i, 1);
+}
+
 export function onMeta(fn) {
   metaListeners.push(fn);
   fn(meta);
+}
+
+export function offMeta(fn) {
+  const i = metaListeners.indexOf(fn);
+  if (i >= 0) metaListeners.splice(i, 1);
 }
 
 export function isConnected() {

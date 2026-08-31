@@ -1484,8 +1484,39 @@
     return ros;
   }
 
+  function stop() {
+    if (overlayTimer) {
+      clearInterval(overlayTimer);
+      overlayTimer = null;
+    }
+    if (tfCleanTimer) {
+      clearInterval(tfCleanTimer);
+      tfCleanTimer = null;
+    }
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
+    window.removeEventListener('resize', onContainerResize);
+    if (ros && typeof ros.managedClose === 'function') {
+      try {
+        ros.managedClose();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    ros = null;
+    started = false;
+    mapCanvas = null;
+    overlayCanvas = null;
+    containerEl = null;
+    latestMap = null;
+    pointerBound = false;
+  }
+
   global.XwMapCanvas = {
     start: start,
+    stop: stop,
     redraw: redraw,
     resizeCanvases: resizeCanvases,
     loadStaticMap: loadStaticMap,

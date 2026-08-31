@@ -1,0 +1,48 @@
+<section class="beautify-page-head">
+      <div class="tag">Map Edit</div>
+      <h1>地图美化</h1>
+      <p class="beautify-lead muted">离线编辑 PGM · 画墙 / 擦除 · 保存自动备份</p>
+      <p class="map-meta beautify-status mono" id="editStatus">未加载地图</p>
+    </section>
+
+    <section class="panel beautify-toolbar">
+      <div class="beautify-toolbar-row">
+        <div class="beautify-load">
+          <label for="mapSelect">地图</label>
+          <select id="mapSelect">
+            <option value="">— 选择地图 —</option>
+          </select>
+          <button type="button" id="btnLoadMap">加载</button>
+          <button type="button" class="secondary" id="btnRefreshList">刷新</button>
+        </div>
+        <span class="beautify-divider"></span>
+        <div class="beautify-tool-row">
+          <button type="button" class="secondary active" data-mode="pan">平移</button>
+          <button type="button" class="secondary" data-mode="draw" data-need-map disabled>画墙</button>
+          <button type="button" class="secondary" data-mode="erase" data-need-map disabled>擦除</button>
+          <span class="beautify-divider"></span>
+          <label class="beautify-brush">
+            笔刷
+            <input id="brushSize" type="range" min="1" max="12" value="1" />
+            <span id="brushSizeLabel" class="mono">1</span>
+          </label>
+          <span class="beautify-divider"></span>
+          <button type="button" class="secondary" id="btnFitView" data-need-map disabled>居中</button>
+          <button type="button" class="secondary" id="btnUndo" data-need-map disabled>撤销</button>
+          <button type="button" class="secondary" id="btnReset" data-need-map disabled>放弃</button>
+          <span class="beautify-divider"></span>
+          <button type="button" id="btnSave" data-need-map disabled>保存</button>
+          <button type="button" class="secondary" id="btnSaveAs" data-need-map disabled>另存为</button>
+        </div>
+        <span class="mono beautify-coord" id="coordInfo" title="坐标">—</span>
+      </div>
+    </section>
+
+    <section class="panel map-stage beautify-stage">
+      <div id="map-container">
+        <canvas id="map-canvas"></canvas>
+        <canvas id="overlay-canvas"></canvas>
+      </div>
+    </section>
+
+<div id="toast" class="beautify-toast" aria-live="polite"></div>

@@ -1,0 +1,45 @@
+<section class="topics-page-head">
+      <div class="tag">ROS Graph</div>
+      <h1>话题与节点</h1>
+      <p class="topics-lead muted">点选话题 echo · 列表在栏内滚动 · 离开自动断开</p>
+      <div class="topics-head-actions">
+        <button type="button" class="secondary" id="btnRefresh">刷新图</button>
+        <button type="button" class="secondary" id="btnUnwatch" disabled>停止监听</button>
+      </div>
+    </section>
+
+    <div class="topics-grid">
+      <aside class="topics-side">
+        <section class="panel topics-card">
+          <div class="topics-card-head">
+            <h2>话题 <span class="section-count" id="topicCount">0</span></h2>
+            <div class="topics-tools">
+              <input id="topicFilter" type="search" placeholder="过滤话题 / 说明…" />
+              <label class="check-inline"><input type="checkbox" id="xwOnly" checked /> /xw</label>
+            </div>
+          </div>
+          <div class="topics-scroll" id="topicList">
+            <p class="muted pad">加载图…</p>
+          </div>
+        </section>
+
+        <section class="panel topics-card topics-nodes">
+          <div class="topics-card-head">
+            <h2>节点 <span class="section-count" id="nodeCount">0</span></h2>
+          </div>
+          <div class="topics-scroll" id="nodeList">
+            <p class="muted pad">加载节点…</p>
+          </div>
+        </section>
+      </aside>
+
+      <section class="panel topics-probe">
+        <div class="probe-head">
+          <div>
+            <h2>当前监听</h2>
+            <p class="probe-meta" id="probeMeta">未监听任何话题</p>
+          </div>
+        </div>
+        <pre class="log probe-log topics-probe-log" id="probeData">点击左侧话题开始 echo…</pre>
+      </section>
+    </div>

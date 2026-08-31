@@ -1,0 +1,91 @@
+<section class="teleop-head">
+      <div>
+        <span class="tag">Manual Drive</span>
+        <h1>遥控与点动</h1>
+      </div>
+      <p class="muted teleop-lead">
+        /xw/cmd/teleop → 仲裁 → 安全门 → /cmd_vel · 空挡手势走 HTTPS:9443
+      </p>
+    </section>
+
+    <section class="teleop-grid" aria-label="遥控面板">
+      <!-- 摇杆 -->
+      <div class="panel teleop-card">
+        <div class="teleop-card-head">
+          <h2>遥控摇杆</h2>
+          <span class="pill on">可用</span>
+        </div>
+        <div class="teleop-card-body teleop-stick-body">
+          <div class="joystick-wrap teleop-stick" id="stick">
+            <div class="knob" id="knob"></div>
+          </div>
+          <p class="teleop-vel" id="vel">vx=0.00 · wz=0.00</p>
+          <button class="secondary teleop-stop" id="stop" type="button">急停归零</button>
+        </div>
+      </div>
+
+      <!-- 点动 -->
+      <div class="panel teleop-card">
+        <div class="teleop-card-head">
+          <h2>定距点动</h2>
+          <span class="pill on">可用</span>
+        </div>
+        <div class="teleop-card-body">
+          <p class="muted teleop-hint">角度 +左转 / −右转 · 距离 +前进 / −后退</p>
+          <div class="teleop-fields">
+            <label>角度 (°)<input id="ang" type="number" value="0" step="5" /></label>
+            <label>距离 (m)<input id="dist" type="number" value="0.3" step="0.1" /></label>
+          </div>
+          <div class="teleop-jog-grid">
+            <button type="button" class="secondary" data-jog="90,0">左转 90°</button>
+            <button type="button" class="secondary" data-jog="-90,0">右转 90°</button>
+            <button type="button" class="secondary" data-jog="180,0">掉头 180°</button>
+            <button type="button" class="secondary" data-jog="0,1">前进 1m</button>
+            <button type="button" class="secondary" data-jog="0,-1">后退 1m</button>
+            <button type="button" class="secondary" data-jog="0,0.3">前进 0.3m</button>
+            <button type="button" class="secondary" data-jog="0,-0.3">后退 0.3m</button>
+          </div>
+          <div class="teleop-actions">
+            <button id="jog" type="button">执行</button>
+            <button type="button" class="secondary" id="jogStop">停止点动</button>
+          </div>
+          <p class="teleop-status" id="jogStatus">/api/motion → /xw/motion/command</p>
+        </div>
+      </div>
+
+      <!-- 空挡 · 手势（一代 HOLO PILOT） -->
+      <div class="panel teleop-card teleop-card-gesture">
+        <div class="teleop-card-head">
+          <h2>空挡 · 手势控制</h2>
+          <span class="pill off" id="gesturePill">待命</span>
+        </div>
+        <div class="teleop-card-body teleop-gesture">
+          <div class="gesture-stage" aria-hidden="true">
+            <div class="gesture-hand">
+              <span class="gh gh-palm"></span>
+              <span class="gh gh-f1"></span>
+              <span class="gh gh-f2"></span>
+              <span class="gh gh-f3"></span>
+              <span class="gh gh-f4"></span>
+              <span class="gh gh-f5"></span>
+            </div>
+            <div class="gesture-ring"></div>
+            <div class="gesture-ring delay"></div>
+          </div>
+          <div class="gesture-modes">
+            <span class="gesture-chip">指上 · 前进</span>
+            <span class="gesture-chip">指下 · 后退</span>
+            <span class="gesture-chip">指左 · 左转</span>
+            <span class="gesture-chip">指右 · 右转</span>
+            <span class="gesture-chip">张手 · 自旋</span>
+            <span class="gesture-chip">握拳 · 停止</span>
+          </div>
+          <a class="teleop-gesture-open" id="gestureOpen" href="#" target="_blank" rel="noopener">
+            打开 HOLO PILOT
+          </a>
+          <p class="muted teleop-hint" id="gestureHint">
+            按需启动 HTTPS:9443 · 关页约 10 秒后自动停 · 首次请信任自签证书
+          </p>
+        </div>
+      </div>
+    </section>

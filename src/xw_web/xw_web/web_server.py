@@ -1784,6 +1784,36 @@ class BridgeNode(Node):
 class ApiHandler(SimpleHTTPRequestHandler):
     bridge: Optional[BridgeNode] = None
 
+    SPA_SHELL_PATHS = frozenset({
+        '/',
+        '/index.html',
+        '/pages/topics.html',
+        '/pages/viz.html',
+        '/pages/teleop.html',
+        '/pages/mapping.html',
+        '/pages/navigation.html',
+        '/pages/maps.html',
+        '/pages/map_beautify.html',
+        '/pages/settings.html',
+        '/pages/dashboard.html',
+    })
+
+    def _serve_spa_shell(self) -> None:
+        index = Path(self.directory) / 'index.html'
+        if not index.is_file():
+            self.send_error(404, 'SPA shell missing')
+            return
+        try:
+            data = index.read_bytes()
+        except OSError:
+            self.send_error(500, 'read index.html failed')
+            return
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def end_headers(self) -> None:
         self.send_header('Cache-Control', 'no-store')
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -1879,6 +1909,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.sensor_hub_status())
+        if path in self.SPA_SHELL_PATHS:
+            return self._serve_spa_shell()
         return super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
@@ -2063,14 +2095,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
 def _resolve_web_root(param_root: str) -> Path:
     candidates = [
         Path(param_root) if param_root else None,
-        Path('/ros2_ws/install/xw_web/share/xw_web/public'),
         Path(os.environ.get('XW_WS', '/ros2_ws')) / 'src' / 'xw_web' / 'public',
         Path(__file__).resolve().parents[2] / 'public',
+        Path('/ros2_ws/install/xw_web/share/xw_web/public'),
     ]
     for c in candidates:
         if c and c.is_dir():
             return c.resolve()
-    return Path('/ros2_ws/src/xw_web/public')
+    return Path(__file__).resolve().parents[2] / 'public'
 
 
 def main(args=None) -> None:

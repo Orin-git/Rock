@@ -6,6 +6,10 @@
   <title>小维二代 · 总览</title>
   <link rel="stylesheet" href="/css/app.css" />
   <link rel="stylesheet" href="/css/hud.css" />
+  <style>
+    #spa-outlet.spa-loading { opacity: 0.55; pointer-events: none; transition: opacity 0.12s ease; }
+    .spa-boot { display: flex; align-items: center; justify-content: center; min-height: 40vh; color: var(--muted, #5b6c80); font-size: 0.95rem; }
+  </style>
 </head>
 <body class="dash-body">
   <header class="top">
@@ -28,90 +32,11 @@
     </div>
   </header>
 
-  <main class="dash-main">
-    <section class="dash-hero">
-      <div>
-        <span class="tag">Ops Console</span>
-        <h1>任务指挥中枢</h1>
-        <p class="dash-sub" id="dashIdentity">XIAOWEI GEN-2 · OVERVIEW</p>
-      </div>
-      <div class="dash-clock" id="dashClock">--:--:--<small>—</small></div>
-    </section>
-
-    <section class="dash-kpis dash-kpis-7" aria-label="关键指标">
-      <div class="dash-kpi" id="kpiMode"><div class="k-label">运行模式</div><p class="k-value" id="dMode">—</p><div class="k-sub" id="dModeSub">waiting</div></div>
-      <div class="dash-kpi" id="kpiRun"><div class="k-label">开发 / 量产</div><p class="k-value" id="dRun">—</p><div class="k-sub">设置中切换</div></div>
-      <div class="dash-kpi" id="kpiPower"><div class="k-label">电量</div><p class="k-value" id="dPower">—</p><div class="k-sub" id="dPowerSub">voltage —</div></div>
-      <div class="dash-kpi" id="kpiSafety"><div class="k-label">安全闸</div><p class="k-value" id="dSafety">—</p><div class="k-sub" id="dSafetySub">sectors</div></div>
-      <div class="dash-kpi" id="kpiEstop"><div class="k-label">底盘失能</div><p class="k-value" id="dEstop">—</p><div class="k-sub" id="dProfile">profile —</div></div>
-      <div class="dash-kpi" id="kpiLoc"><div class="k-label">定位</div><p class="k-value" id="dLoc">—</p><div class="k-sub" id="dMap">map —</div></div>
-      <div class="dash-kpi" id="kpiStack"><div class="k-label">服务栈</div><p class="k-value" id="dStack">—</p><div class="k-sub" id="dStackSub">supervisor / map</div></div>
-    </section>
-
-    <section class="dash-grid dash-grid-overview">
-      <div class="dash-col dash-col-charts">
-        <div class="panel dash-panel">
-          <h2>
-            电量 %
-            <span class="chart-now" id="chartNowPct">—</span>
-            <span class="live-dot" title="live"></span>
-          </h2>
-          <div class="dash-chart-wrap dash-chart-sm"><canvas id="chartPower"></canvas></div>
-        </div>
-        <div class="panel dash-panel dash-panel-grow">
-          <h2>
-            电压 V
-            <span class="chart-now" id="chartNowVolt">—</span>
-          </h2>
-          <div class="dash-chart-wrap dash-chart-sm dash-chart-grow"><canvas id="chartVolt"></canvas></div>
-        </div>
-      </div>
-
-      <div class="dash-col dash-col-mid">
-        <div class="panel dash-panel dash-radar-panel">
-          <div class="safety-head">
-            <h2 style="margin:0">四向安全雷达</h2>
-            <div class="safety-head-right">
-              <span class="muted" id="safetyReason" style="font-size:0.72rem">—</span>
-              <span class="pill off" id="safetyOverall">—</span>
-            </div>
-          </div>
-          <div class="dash-radar"><canvas id="radarSafety"></canvas></div>
-          <p class="chart-hint muted" style="margin:0.25rem 0 0;text-align:center">
-            距离旁标注来源：激光 / 深度 / 超声（前方可含深度相机）
-          </p>
-        </div>
-        <div class="panel dash-panel dash-panel-grow">
-          <h2>系统仪表</h2>
-          <div class="dash-gauge-row dash-gauge-grow">
-            <div class="dash-gauge">
-              <canvas id="gaugeBatt"></canvas>
-              <div class="g-label">BATTERY</div>
-            </div>
-            <div class="dash-gauge">
-              <canvas id="gaugeHealth"></canvas>
-              <div class="g-label">HEALTH</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="dash-col dash-col-right">
-        <div class="panel dash-panel">
-          <h2>传感器矩阵</h2>
-          <div class="dash-sensors" id="dashSensors"></div>
-        </div>
-        <div class="panel dash-panel dash-panel-grow">
-          <h2>事件流 <span class="live-dot"></span></h2>
-          <div class="dash-log dash-log-grow" id="dashLog"></div>
-        </div>
-      </div>
-    </section>
-
-    <p class="dash-footer-hint">电量未接实时采样时显示拟合值（SIM）· 开发/量产请到「设置」切换</p>
+  <main id="spa-outlet" class="dash-main">
+    <div class="spa-boot">加载中…</div>
   </main>
 
   <script src="/js/hud_fx.js"></script>
-  <script type="module" src="/js/overview_page.js"></script>
+  <script type="module" src="/js/spa.js"></script>
 </body>
 </html>
