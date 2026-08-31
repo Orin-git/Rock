@@ -17,16 +17,16 @@ def generate_launch_description():
     serial_baudrate = LaunchConfiguration('serial_baudrate', default='1000000')
     frame_id = LaunchConfiguration('frame_id', default='laser')
     inverted = LaunchConfiguration('inverted', default='false')
-    angle_compensate = LaunchConfiguration('angle_compensate', default='true')
+    angle_compensate = LaunchConfiguration('angle_compensate', default='false')
     scan_mode = LaunchConfiguration('scan_mode', default='DenseBoost')
     
     # 修改滤波参数
-    enable_filter = LaunchConfiguration('enable_filter', default='true')
-    filter_regions = LaunchConfiguration('filter_regions', default='[-173.4, -50.0, -42.0, -6.6,3.0,177.0]')
+    enable_filter = LaunchConfiguration('enable_filter', default='false')
+    filter_regions = LaunchConfiguration('filter_regions', default='[-92.0, -76.0, -50.0, -38.0, 80.0, 95.5]')
     '''filter_inclusive: 滤波模式
         false（默认）：过滤掉指定角度范围内的点，保留其他点
         true：只保留指定角度范围内的点，过滤掉其他点'''
-    filter_inclusive = LaunchConfiguration('filter_inclusive', default='true')
+    filter_inclusive = LaunchConfiguration('filter_inclusive', default='false')
 
     return LaunchDescription([
         DeclareLaunchArgument(
