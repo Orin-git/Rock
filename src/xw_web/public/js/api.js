@@ -461,12 +461,77 @@ export async function gestureHttpsStatus() {
   }
 }
 
-export function publishTeleop(linearX, angularZ) {
+/**
+ * Joystick teleop publish — match gesture_control.js cadence.
+ * Arbiter stale_timeout is 0.4s; identical non-zero twists must refresh sooner
+ * or the chassis stop/starts (jerky). Coalesce while a POST is in flight.
+ */
+const TELEOP_PUBLISH_INTERVAL_MS = 100;
+const TELEOP_MOVING_HEARTBEAT_MS = 250;
+const TELEOP_IDLE_HEARTBEAT_MS = 800;
+
+let teleopDesiredLin = 0;
+let teleopDesiredAng = 0;
+let teleopLastPostedLin = null;
+let teleopLastPostedAng = null;
+let teleopLastPostAt = 0;
+let teleopInFlight = false;
+let teleopFlushQueued = false;
+let teleopFlushForce = false;
+let teleopTimer = null;
+
+function flushTeleop(force = false) {
+  const lin = teleopDesiredLin;
+  const ang = teleopDesiredAng;
+  const now = performance.now();
+  const sameAsLast = teleopLastPostedLin === lin && teleopLastPostedAng === ang;
+  const moving = Math.abs(lin) > 1e-4 || Math.abs(ang) > 1e-4;
+  const heartbeat = moving ? TELEOP_MOVING_HEARTBEAT_MS : TELEOP_IDLE_HEARTBEAT_MS;
+  if (!force && sameAsLast && now - teleopLastPostAt < heartbeat) {
+    return;
+  }
+  if (teleopInFlight) {
+    teleopFlushQueued = true;
+    teleopFlushForce = teleopFlushForce || force;
+    return;
+  }
+
+  teleopLastPostedLin = lin;
+  teleopLastPostedAng = ang;
+  teleopLastPostAt = now;
+  teleopInFlight = true;
+
   fetch(`${apiBase()}/api/teleop`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ linear_x: linearX, angular_z: angularZ }),
-  }).catch(() => {});
+    body: JSON.stringify({ linear_x: lin, angular_z: ang }),
+    cache: 'no-store',
+  })
+    .catch(() => {})
+    .finally(() => {
+      teleopInFlight = false;
+      if (teleopFlushQueued) {
+        const nextForce = teleopFlushForce;
+        teleopFlushQueued = false;
+        teleopFlushForce = false;
+        flushTeleop(nextForce);
+      }
+    });
+}
+
+function ensureTeleopTimer() {
+  if (teleopTimer) return;
+  teleopTimer = setInterval(() => flushTeleop(false), TELEOP_PUBLISH_INTERVAL_MS);
+}
+
+export function publishTeleop(linearX, angularZ) {
+  teleopDesiredLin = Number(linearX) || 0;
+  teleopDesiredAng = Number(angularZ) || 0;
+  ensureTeleopTimer();
+  const isStop = Math.abs(teleopDesiredLin) < 1e-4 && Math.abs(teleopDesiredAng) < 1e-4;
+  if (isStop) {
+    flushTeleop(true);
+  }
 }
 
 /** Fixed-distance jog → /api/motion → /xw/motion/command */

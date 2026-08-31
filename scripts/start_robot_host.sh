@@ -102,6 +102,8 @@ trap cleanup_host EXIT INT TERM
 # Gen1-style pin watchdog on host: poll status file only (no DDS). Default on.
 HOST_WS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export XW_LOG="${XW_LOG:-$HOST_WS/log}"
+# Pin camera USB mapping to actual topology (bus numbers drift per boot)
+bash "$HOST_WS/scripts/camera_match.sh" || true
 WATCHDOG_STATE_DIR="${WATCHDOG_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/xw-watchdog}"
 mkdir -p "$WATCHDOG_STATE_DIR"
 if [[ "${XW_WATCHDOG:-1}" == "1" ]]; then

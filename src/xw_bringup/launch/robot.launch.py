@@ -209,6 +209,8 @@ def generate_launch_description() -> LaunchDescription:
             name='xw_supervisor',
             parameters=[{'profile': profile, 'run_mode': 1}],
             output='screen',
+            respawn=True,
+            respawn_delay=2.0,
         ),
         Node(package='xw_health', executable='topic_health_node', name='xw_topic_health', output='screen'),
         Node(

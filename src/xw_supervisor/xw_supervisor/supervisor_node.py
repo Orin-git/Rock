@@ -123,13 +123,16 @@ class SupervisorNode(Node):
         )
 
     def _on_motor_disabled(self, msg: Bool) -> None:
-        """MCU Flag_Stop → RobotState.emergency_stop (UI); cancel motion mode if engaged."""
+        """MCU Flag_Stop → RobotState.emergency_stop (UI only).
+
+        Nav/SLAM stack sessions stay up; motion arbitration blocks drive when disabled.
+        """
         was = self._estop
         self._estop = bool(msg.data)
-        if self._estop and not was:
-            self._emit_event(2, 'motor_disabled', 'mcu_flag_stop')
-            if self._mode != 0:
-                self._apply_mode(0, 'motor_disabled')
+        if self._estop != was:
+            if self._estop:
+                self._emit_event(2, 'motor_disabled', 'mcu_flag_stop')
+            self._publish_state()
 
     def _on_safety(self, msg: Bool) -> None:
         self._safety_ok = bool(msg.data)
@@ -451,12 +454,6 @@ class SupervisorNode(Node):
             res.message = f'unknown mode {target}'
             res.active_mode = self._mode
             return res
-        if self._estop and target != 0:
-            res.success = False
-            res.message = 'motor disabled (MCU Flag_Stop)'
-            res.active_mode = self._mode
-            return res
-
         production = int(self.get_parameter('run_mode').value) == 0
         if production and self._mode != 0 and target != 0 and target != self._mode:
             if target == 4 and self._mode in (1, 2, 3):
