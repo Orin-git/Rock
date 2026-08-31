@@ -382,14 +382,6 @@ class RPlidarNode : public rclcpp::Node
         // 应用角度滤波
         for (size_t i = 0; i < node_count; i++) {
             float read_value = (float)nodes[i].dist_mm_q2 / 4.0f / 1000;
-            float angle_deg = getAngle(nodes[i]);
-            
-            // 检查是否需要滤波
-            bool should_keep = true;
-            if (enable_filter) {
-                bool in_any_range = isAngleInAnyFilterRange(angle_deg);
-                should_keep = filter_inclusive ? in_any_range : !in_any_range;
-            }
             
             size_t apply_index = i;
             if (reverse_data) {
@@ -401,6 +393,20 @@ class RPlidarNode : public rclcpp::Node
                 else
                     apply_index = apply_index + scan_midpoint;
             }
+            // 滤波在发布后的角度系下判断（即 RViz / filter_regions 中的角度），
+            // 而非未翻转的原始驱动角度（两者相差 pi）。
+            float scan_angle_deg = scan_msg->angle_min +
+                                   apply_index * scan_msg->angle_increment;
+            if (scan_angle_deg > M_PI) scan_angle_deg -= 2.0f * M_PI;
+            if (scan_angle_deg < -M_PI) scan_angle_deg += 2.0f * M_PI;
+
+            // 检查是否需要滤波
+            bool should_keep = true;
+            if (enable_filter) {
+                bool in_any_range = isAngleInAnyFilterRange(scan_angle_deg * 180.0f / M_PI);
+                should_keep = filter_inclusive ? in_any_range : !in_any_range;
+            }
+
 
             if (!should_keep) {
                 // 过滤掉这个点，设置为无穷大

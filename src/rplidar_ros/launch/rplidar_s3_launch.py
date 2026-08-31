@@ -6,8 +6,9 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import LogInfo
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -18,6 +19,14 @@ def generate_launch_description():
     inverted = LaunchConfiguration('inverted', default='false')
     angle_compensate = LaunchConfiguration('angle_compensate', default='true')
     scan_mode = LaunchConfiguration('scan_mode', default='DenseBoost')
+    
+    # 修改滤波参数
+    enable_filter = LaunchConfiguration('enable_filter', default='true')
+    filter_regions = LaunchConfiguration('filter_regions', default='[-173.4, -50.0, -42.0, -6.6,3.0,177.0]')
+    '''filter_inclusive: 滤波模式
+        false（默认）：过滤掉指定角度范围内的点，保留其他点
+        true：只保留指定角度范围内的点，过滤掉其他点'''
+    filter_inclusive = LaunchConfiguration('filter_inclusive', default='true')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -65,7 +74,10 @@ def generate_launch_description():
                          'frame_id': frame_id,
                          'inverted': inverted,
                          'angle_compensate': angle_compensate,
-                         'scan_mode': scan_mode}],
+                         'scan_mode': scan_mode,
+                         'enable_filter': ParameterValue(enable_filter, value_type=bool),
+                         'filter_inclusive': ParameterValue(filter_inclusive, value_type=bool),
+                         'filter_regions': PythonExpression(expression=[filter_regions])}],
             output='screen'),
     ])
 
