@@ -1,5 +1,6 @@
 # Xiaowei Gen2 USB serial bindings (Rock 5T)
-# Layout: USB3×2 → depth cams; USB2 → lidar; USB2 → hub(chassis+IMU)
+# Layout (power/signal split OK): depth cams on separate EHCI hosts;
+# VIA hub → lidar CP210x + dock(chassis+IMU). Symlinks by VID:PID.
 
 # Chassis MCU: QinHeng CDC ACM 1a86:55d4 → /dev/chassis
 KERNEL=="ttyACM*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", MODE:="0666", GROUP:="dialout", SYMLINK+="chassis"

@@ -125,18 +125,23 @@ ros2 launch xw_bringup robot.launch.py
 Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常）。  
 两个蓝色口在 USB2 层共用 **同一条 VIA HS 总线（Bus1，480Mbps）**；两台深度相机都插蓝口会挤爆总线 → 掉线/libusb 崩溃。
 
-**推荐接线（双相机同时开的关键：相机分属不同 USB 主机控制器）：**
+**当前接线（供电/信号分线后，2026-08 实测）：**
 
-| 板载口 | 设备 | 实测 Bus/path |
-|--------|------|----------------|
-| 蓝色 USB3 | 深度 front_up | Bus **1** path `1.2` |
-| 蓝色 USB3 | 拓展坞 → 底盘+IMU | Bus1 path `1.1`（与 cam1 分端口） |
-| 黑色 USB2 | 深度 front_down | Bus **3** path `1.2` |
-| 黑色 USB2 | 激光雷达 | `/dev/radar`（CP210x） |
+| 板载口 / 拓扑 | 设备 | 实测 Bus/path |
+|---------------|------|----------------|
+| EHCI 根口（黑口一侧） | 深度 front_up | Bus **5** path `1` → `KERNEL 5-1` |
+| 另一 EHCI + hub | 深度 front_down | Bus **3** path `1.2` |
+| 蓝色 USB3 → VIA Hub | 拓展坞 → 底盘+IMU | Bus1 path `1.1.x`（`/dev/chassis` `/dev/imu`） |
+| 蓝色 USB3 → VIA Hub | 激光雷达 CP210x | Bus1 path `1.2` → `/dev/radar` |
+
+旧直插约定（仅作对照）：蓝口 cam1=`1/1.2`、黑口 cam2=`3/1.2`、黑口雷达、蓝口拓展坞。  
+分线后 **cam1 必须改配 `usb_bus_no/usb_path`**，否则会误绑到雷达所在的 `1/1.2`。
+
+**供电/信号分线注意：** CP210x 能枚举 ≠ 雷达有数据。雷达机身 5V、USB 地与 D+/D− 必须同时连通；否则 `rplidar` 会 `SL_RESULT_OPERATION_TIMEOUT`，网页显示激光无数据。
 
 默认 `USE_DEPTH_CAM_2=true`（两路已分主机控制器）。
 
-注意：HP60C SDK **不支持 fps=5**；深度用 **10**。已加 udev 解绑 `uvcvideo`，避免与 ascamera 抢接口。
+注意：HP60C SDK **不支持 fps=5**；深度用 **10**。已加 udev 解绑 `uvcvideo`（接口名 `*:1.0`/`*:1.1`），避免与 ascamera 抢接口。
 
 ### 传感器命名契约（Gen2）
 

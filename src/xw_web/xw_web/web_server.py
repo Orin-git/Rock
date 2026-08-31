@@ -1327,13 +1327,25 @@ class BridgeNode(Node):
         def has(*topics: str) -> bool:
             return any(t in names for t in topics)
 
+        def has_publisher(*topics: str) -> bool:
+            """True only if someone is publishing (topic name alone can be subscriber-only)."""
+            for t in topics:
+                try:
+                    if self.get_publishers_info_by_topic(t):
+                        return True
+                except Exception:  # noqa: BLE001
+                    continue
+            return False
+
+        lidar_live = has_publisher('/scan', 'scan')
         sensors = {
             'lidar': {
                 'id': 'lidar',
                 'label': '激光雷达',
-                'status': 'live' if has('/scan', 'scan') else 'missing',
+                'status': 'live' if lidar_live else 'missing',
                 'topics': ['/scan'],
-                'present': has('/scan', 'scan'),
+                'present': lidar_live,
+                'hint': '' if lidar_live else '无 /scan 发布（检查雷达供电+信号线 TX/RX/GND）',
             },
             'depth_camera': {
                 'id': 'depth_camera',

@@ -368,9 +368,11 @@ int raw_serial::waitfordata(size_t data_count, _u32 timeout, size_t * returned_s
                 return ANS_TIMEOUT;
             }
 
-            // data avaliable
-            assert (FD_ISSET(serial_fd, &input_set));
-
+            // data available — if FD unexpectedly unset, treat as device error (no abort)
+            if (!FD_ISSET(serial_fd, &input_set)) {
+                *returned_size = 0;
+                return ANS_DEV_ERR;
+            }
 
             if ( ioctl(serial_fd, FIONREAD, returned_size) == -1) return ANS_DEV_ERR;
             if (*returned_size >= data_count)

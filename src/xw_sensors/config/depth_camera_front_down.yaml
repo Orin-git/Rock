@@ -4,7 +4,7 @@
 # Vendor private:  /ascamera_hp60c_2/camera_publisher/...
 # Robot frame:     camera_front_down_link
 #
-# USB pin: black USB2 EHCI — bus 3 path 1.2 → KERNEL 3-1.2 (separate host from cam1)
+# USB pin: black USB2 EHCI + hub — bus 3 path 1.2 → KERNEL 3-1.2 (separate host from cam1 on bus 5)
 # Perception / safety gate stay on /camera/front_up; this cam is bring-up + future nav/face.
 
 camera_id: front_down

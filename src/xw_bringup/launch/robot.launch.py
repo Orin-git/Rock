@@ -2,7 +2,7 @@
 """Gen2 system bringup: mock-capable layered stack.
 
 Real lidar starts after XW_LIDAR_START_DELAY seconds so Web/Foxglove come up first.
-RPLidar motor inrush can brown-out the board — never respawn it in a tight loop.
+RPLidar motor inrush can brown-out the board — only slow-respawn (not a tight loop).
 """
 
 import os
@@ -318,7 +318,9 @@ def generate_launch_description() -> LaunchDescription:
                     'scan_frequency': ParameterValue(lidar_scan_frequency, value_type=float),
                 }],
                 output='screen',
-                respawn=False,
+                # Soft-fail UART (no assert). Slow respawn after power/signal-split recovers.
+                respawn=True,
+                respawn_delay=30.0,
             ),
         ],
     )
