@@ -260,8 +260,10 @@ class NavSessionNode(Node):
             self.get_logger().warn('goal rejected (recharge active)')
             self._emit_result(1, 'rejected: recharge active', 'goal')
             return
-        # Single goal preempts patrol
-        self._stop_patrol_loop()
+        # Single goal preempts patrol / prior point goal; must clear _patrol_stop
+        # or _navigate_blocking cancels the new goal immediately (~100ms).
+        self._cancel_navigation('goal-preempt')
+        self._patrol_stop.clear()
         self._command_id = self._command_id or 'goal'
         x = float(msg.pose.position.x)
         y = float(msg.pose.position.y)

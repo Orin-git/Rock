@@ -37,6 +37,12 @@ function bindDom() {
   navFollowBtn = $('navFollowBtn');
   navRechargeBtn = $('navRechargeBtn');
   navTaskHint = $('navTaskHint');
+  navLocChip = $('navLocChip');
+  navLocBadge = $('navLocBadge');
+  navLocText = $('navLocText');
+  navGoalChip = $('navGoalChip');
+  navGoalText = $('navGoalText');
+  navGoalSub = $('navGoalSub');
   navRechargeStrip = $('navRechargeStrip');
   navRechargePhase = $('navRechargePhase');
   navRechargeMsg = $('navRechargeMsg');
@@ -62,11 +68,19 @@ let patrolLoop;
 let navFollowBtn;
 let navRechargeBtn;
 let navTaskHint;
+let navLocChip;
+let navLocBadge;
+let navLocText;
+let navGoalChip;
+let navGoalText;
+let navGoalSub;
 let navRechargeStrip;
 let navRechargePhase;
 let navRechargeMsg;
 
 let navActive = false;
+let navGoalPhase = 'idle';
+let navGoalDetail = '';
 let waypoints = [];
 let selectedWp = null;
 let selectedWpIdx = null;
@@ -84,6 +98,16 @@ let lastFailHeld = '';
 /** Last active_map we synced into the map select (avoid reload thrash). */
 let syncedActiveMap = '';
 const NAV_MAP_STORAGE_KEY = 'xw_nav_selected_map';
+const LOC_LABELS = { 0: '正常', 1: '未就绪', 2: '漂移自愈', 3: '需重定位' };
+const NAV_GOAL_LABELS = {
+  idle: '待命',
+  navigating: '导航中',
+  patrol: '巡航中',
+  following: '跟随中',
+  arrived: '已到达',
+  failed: '未到达',
+  cancelled: '已取消',
+};
 
 function rememberMapName(name) {
   const n = String(name || '').trim();
@@ -290,12 +314,87 @@ class OrientationControls {
 }
 
 
+function applyLocSnapshot(s) {
+  if (!navLocChip) return;
+  const code = Number(s?.localization_status ?? (s?.localization_ok ? 0 : 1));
+  const c = Number.isFinite(code) ? Math.max(0, Math.min(3, code)) : 1;
+  navLocChip.dataset.loc = String(c);
+  if (navLocBadge) navLocBadge.textContent = String(c);
+  const label = LOC_LABELS[c] ?? `状态 ${c}`;
+  if (navLocText) navLocText.textContent = label;
+  navLocChip.title = `定位健康 ${c} · ${label}`;
+}
+
+function renderNavGoalChip() {
+  if (!navGoalChip) return;
+  navGoalChip.dataset.phase = navGoalPhase;
+  const main = NAV_GOAL_LABELS[navGoalPhase] || '待命';
+  if (navGoalText) navGoalText.textContent = main;
+  if (navGoalSub) {
+    navGoalSub.textContent = navGoalDetail && navGoalDetail !== main ? navGoalDetail : '';
+  }
+  navGoalChip.title = navGoalDetail || main;
+}
+
+function setNavGoalPhase(phase, detail = '') {
+  navGoalPhase = phase || 'idle';
+  navGoalDetail = detail ? String(detail) : '';
+  renderNavGoalChip();
+}
+
+function applyNavGoalFromTask(text) {
+  const t = String(text || '').trim();
+  if (!t) return;
+  if (/跟着你|找你中/.test(t)) {
+    setNavGoalPhase('following', t);
+    return;
+  }
+  if (/不跟了/.test(t) && navActive) {
+    setNavGoalPhase('idle');
+    return;
+  }
+  if (/导航：开始前往|开始前往|导航：进行中|正在前往|收到，开始动/.test(t)) {
+    setNavGoalPhase('navigating', t.replace(/^导航：/, ''));
+    return;
+  }
+  if (/开始巡航|巡航中|去下一个|patrol/i.test(t)) {
+    setNavGoalPhase('patrol', t.replace(/^导航：/, ''));
+    return;
+  }
+  if (/到啦|巡航走完了|导航好了/.test(t)) {
+    setNavGoalPhase('arrived', t);
+    return;
+  }
+  if (/没走到|巡航没走完|导航失败/.test(t)) {
+    setNavGoalPhase('failed', t);
+    return;
+  }
+  if (/导航取消|巡航停了|巡航取消了/.test(t)) {
+    setNavGoalPhase('cancelled', t);
+  }
+}
+
+function syncNavGoalFromState(s) {
+  const mode = Number(s?.mode);
+  if (mode === 3) {
+    setNavGoalPhase('following', '人体跟随');
+    return;
+  }
+  if (mode !== 2) {
+    setNavGoalPhase('idle');
+    return;
+  }
+  if (navGoalPhase === 'following') {
+    setNavGoalPhase('idle');
+  }
+}
+
 function wireNavigation(ctx) {
   bindDom();
+  renderNavGoalChip();
   const queryMap = (ctx?.query?.get && ctx.query.get('map')) || new URLSearchParams(location.search).get('map');
-  taskHandler = (l) => {
-    /* keep quiet on page; important actions use flash() */
-    void l;
+  taskHandler = (line) => {
+    applyNavGoalFromTask(line);
   };
   stateHandlerA = (s) => {
     const mode = Number(s.mode);
@@ -305,9 +404,11 @@ function wireNavigation(ctx) {
     navActive = mode === 2 || mode === 3;
     if (sessionHint) {
       sessionHint.textContent = navActive
-        ? '导航中 · 拖设初位姿后点「确认初位姿」'
-        : '选地图 → 进入导航 → 拖设初位姿并确认';
+        ? '导航中 · 拖设初位姿后点「确认」'
+        : '选地图 → 进导航 → 拖设初位姿并确认';
     }
+    applyLocSnapshot(s);
+    syncNavGoalFromState(s);
     syncNavSessionFromState(s);
   };
 
@@ -744,6 +845,9 @@ function wireNavigation(ctx) {
     }
     if (window.XwMapCanvas) window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
     const j = await publishGoal(wp.x, wp.y, wp.yaw || 0, 'map');
+    if (j.ok) {
+      setNavGoalPhase('navigating', wp.name ? `前往 ${wp.name}` : '前往航点');
+    }
     flash(
       j.ok
         ? `已前往 ${wp.name}（${wp.x.toFixed(2)}, ${wp.y.toFixed(2)}）`
@@ -917,11 +1021,15 @@ function wireNavigation(ctx) {
     }
     const loop = !!(patrolLoop && patrolLoop.checked);
     const j = await startPatrol({ map_name: name, loop });
+    if (j.ok) {
+      setNavGoalPhase('patrol', loop ? '多点巡航（循环）' : '多点巡航');
+    }
     pushLog(j.ok ? `<< 多点巡航已启动${loop ? '（循环）' : ''}` : `!! ${j.message || 'failed'}`);
   };
 
   $('cancelNav').onclick = async () => {
     const j = await cancelNav();
+    if (j.ok) setNavGoalPhase('cancelled', '已取消');
     if (window.XwMapCanvas && typeof window.XwMapCanvas.clearPlan === 'function') {
       window.XwMapCanvas.clearPlan();
     }
@@ -1211,6 +1319,8 @@ function wireNavigation(ctx) {
       followEnabled = true;
     }
     if (s.recharge) applyRechargeSnapshot(s.recharge);
+    applyLocSnapshot(s);
+    syncNavGoalFromState(s);
     renderFollowBtn();
     renderRechargeBtn();
   };

@@ -39,7 +39,7 @@
   <joint name="camera_front_down_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_front_down_link"/>
-    <origin xyz="0.251 0 0.16" rpy="-0.895 0 -1.5708"/>
+    <origin xyz="0.251 0 0.16" rpy="-1.09 0 -1.5708"/>
   </joint>
 
   <!-- WT901C485 at 49cm above ground (z=0.37 above base center) → /imu/data (frame_id=imu_link); fused by ekf_node (vyaw). -->

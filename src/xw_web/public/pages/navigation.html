@@ -26,57 +26,55 @@
   </header>
 
   <main class="nav-page">
-    <section class="nav-page-head">
-      <div class="tag">Nav Session</div>
-      <h1>导航</h1>
-      <p class="muted nav-page-lead" id="sessionHint">选地图 → 进入导航 → 拖设初位姿并确认</p>
-    </section>
-
-    <section class="panel nav-console">
-      <div class="nav-console-cols">
-        <div class="nav-console-left">
-          <div class="nav-console-head">
-            <span class="nav-console-block-title">会话</span>
-            <span class="nav-console-head-sep">·</span>
-            <label class="nav-console-map-label" for="mapSelect">地图</label>
-          </div>
-          <select id="mapSelect" class="nav-console-select"></select>
-          <div class="nav-console-btn-row nav-console-btn-row-5">
-            <button type="button" class="secondary" id="refreshMaps">刷新</button>
-            <button type="button" class="secondary" id="loadMapPreview">预览</button>
-            <button type="button" id="startNav">进入导航</button>
-            <button type="button" class="secondary" id="stopNav">结束导航</button>
+    <section class="panel nav-toolbar" aria-label="导航控制与状态">
+      <div class="nav-toolbar-row">
+        <div class="nav-toolbar-group nav-toolbar-session">
+          <label class="nav-toolbar-label" for="mapSelect">地图</label>
+          <select id="mapSelect" class="nav-toolbar-select"></select>
+          <div class="nav-toolbar-btns">
+            <button type="button" class="secondary" id="refreshMaps" title="刷新地图列表">刷新</button>
+            <button type="button" class="secondary" id="loadMapPreview" title="加载地图预览">预览</button>
+            <button type="button" id="startNav">进导航</button>
+            <button type="button" class="secondary" id="stopNav">结束</button>
             <button type="button" class="danger" id="estop">急停</button>
           </div>
         </div>
-        <div class="nav-console-right">
-          <div class="nav-console-head">
-            <span class="nav-console-block-title">位姿与航点</span>
+        <div class="nav-toolbar-sep" aria-hidden="true"></div>
+        <div class="nav-toolbar-group nav-toolbar-tools">
+          <button type="button" class="secondary tool-btn" id="toolInitialPose" title="拖设初位姿">初位姿</button>
+          <button type="button" id="applyInitialPose" title="确认初位姿">确认</button>
+          <button type="button" class="secondary tool-btn" id="toolEditWp" title="编辑航点">编辑</button>
+          <button type="button" class="secondary" id="startPatrol" title="多点巡航">巡航</button>
+          <label class="nav-loop-cell nav-toolbar-loop" for="patrolLoop" title="巡航循环">
+            <input type="checkbox" id="patrolLoop" />
+            <span>循环</span>
+          </label>
+          <button type="button" class="secondary" id="cancelNav" title="取消当前导航">取消</button>
+        </div>
+        <div class="nav-toolbar-sep" aria-hidden="true"></div>
+        <div class="nav-status-bar nav-toolbar-status" aria-label="会话状态">
+          <div class="nav-status-chip nav-loc-chip" id="navLocChip" data-loc="1" title="定位健康">
+            <span class="nav-loc-badge" id="navLocBadge" aria-label="定位 1">1</span>
+            <span class="nav-status-tag">定位</span>
+            <span class="nav-status-text" id="navLocText">未就绪</span>
           </div>
-          <div class="nav-console-btn-row nav-console-btn-row-3">
-            <button type="button" class="secondary tool-btn" id="toolInitialPose">拖设初位姿</button>
-            <button type="button" id="applyInitialPose">确认初位姿</button>
-            <button type="button" class="secondary tool-btn" id="toolEditWp">编辑航点</button>
+          <div class="nav-status-chip nav-goal-chip" id="navGoalChip" data-phase="idle" title="点位导航">
+            <span class="nav-status-dot" aria-hidden="true"></span>
+            <span class="nav-status-tag">导航</span>
+            <span class="nav-status-text" id="navGoalText">待命</span>
+            <span class="nav-status-sub" id="navGoalSub"></span>
           </div>
-          <div class="nav-console-btn-row nav-console-btn-row-3">
-            <button type="button" class="secondary" id="startPatrol">多点巡航</button>
-            <label class="nav-loop-cell" for="patrolLoop">
-              <input type="checkbox" id="patrolLoop" />
-              <span>循环</span>
-            </label>
-            <button type="button" class="secondary" id="cancelNav">取消导航</button>
+          <div class="nav-status-chip nav-recharge-chip nav-recharge-strip" id="navRechargeStrip" data-phase="idle" title="自动回充">
+            <span class="nav-recharge-dot nav-status-dot" aria-hidden="true"></span>
+            <span class="nav-recharge-tag nav-status-tag">回充</span>
+            <span class="nav-recharge-phase nav-status-text" id="navRechargePhase">待命</span>
+            <span class="nav-recharge-msg nav-status-sub" id="navRechargeMsg"></span>
           </div>
         </div>
       </div>
+      <p class="nav-toolbar-hint muted" id="sessionHint">选地图 → 进导航 → 拖设初位姿并确认</p>
       <div class="nav-flash" id="navFlash" hidden></div>
     </section>
-
-    <div class="nav-recharge-strip" id="navRechargeStrip" data-phase="idle" title="自动回充">
-      <span class="nav-recharge-dot" aria-hidden="true"></span>
-      <span class="nav-recharge-tag">回充</span>
-      <span class="nav-recharge-phase" id="navRechargePhase">待命</span>
-      <span class="nav-recharge-msg" id="navRechargeMsg"></span>
-    </div>
 
     <div class="nav-map-wp-grid">
       <div class="nav-map-col">
@@ -90,7 +88,7 @@
             <p class="map-meta" id="mapStatus">画布未启动</p>
             <p class="map-meta" id="modeHint">模式：—</p>
             <p class="map-meta" id="poseHint">位姿：—</p>
-            <p class="map-meta" id="toolHint">工具：浏览（点列表航点可前往）</p>
+            <p class="map-meta" id="toolHint">工具：浏览</p>
           </div>
         </section>
       </div>
@@ -103,16 +101,15 @@
               <span class="section-count" id="wpCount">0</span>
               <span class="section-sub" id="wpMapTag"></span>
             </h2>
-          </div>
-          <div class="btn-row nav-wp-bar">
-            <button type="button" class="secondary" id="reloadWp">刷新</button>
-            <button type="button" id="saveWp">保存航点</button>
-            <button type="button" class="secondary" id="deleteWp" disabled>删除选中</button>
-            <button type="button" class="secondary" id="gotoSelectedWp" disabled>前往选中</button>
+            <div class="nav-wp-bar">
+              <button type="button" class="secondary" id="reloadWp">刷新</button>
+              <button type="button" id="saveWp">保存</button>
+              <button type="button" class="secondary" id="deleteWp" disabled>删</button>
+              <button type="button" class="secondary" id="gotoSelectedWp" disabled>前往</button>
+            </div>
           </div>
           <p class="muted hint-sm nav-wp-hint" id="wpHint">
-            当前地图航点（<code id="wpListFileHint">{地图}_pointList</code>）·
-            勾选可多选删除 · 编辑后点「保存」·
+            <code id="wpListFileHint">{地图}_pointList</code> ·
             <a href="/pages/maps.html">地图管理</a>
           </p>
           <div class="list-panel nav-wp-list" id="wpList">
