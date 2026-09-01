@@ -11,9 +11,10 @@ import rclpy
 from geometry_msgs.msg import Quaternion, TransformStamped, Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from std_msgs.msg import Bool, Int8
+from std_msgs.msg import Bool, Int8, UInt8MultiArray
 from tf2_ros import TransformBroadcaster
 
+from bms_receiver.protocol import ChargeState, ProtocolError, parse_battery_frame
 from xw_chassis.serial_mcu import ChassisSerial, pack_speed, wait_for_port
 from xw_interfaces.msg import PowerState
 
@@ -45,6 +46,9 @@ class ChassisNode(Node):
         self.declare_parameter('serial_no_frame_reopen_sec', 2.0)
         self.declare_parameter('charge_current_dock_min', 0.05)
         self.declare_parameter('lock_motion_when_docked', True)
+        self.declare_parameter('bms_byte_order', 'big')
+        self.declare_parameter('bms_comm_ok_value', 1)
+        self.declare_parameter('bms_raw_frame_topic', '/bms/raw_frame')
 
         self._use_sim = bool(self.get_parameter('use_sim_hw').value)
         self._publish_tf = bool(self.get_parameter('publish_tf').value) and bool(
@@ -55,6 +59,10 @@ class ChassisNode(Node):
         self._odom_frame = str(self.get_parameter('odom_frame').value)
         self._cmd_timeout = float(self.get_parameter('cmd_timeout_sec').value)
         self._no_frame_reopen = float(self.get_parameter('serial_no_frame_reopen_sec').value)
+        self._bms_byte_order = str(self.get_parameter('bms_byte_order').value or 'big')
+        self._bms_comm_ok = int(self.get_parameter('bms_comm_ok_value').value)
+        if self._bms_byte_order not in ('little', 'big'):
+            raise ValueError("bms_byte_order must be 'little' or 'big'")
 
         self._x = 0.0
         self._y = 0.0
@@ -83,6 +91,13 @@ class ChassisNode(Node):
         self._charge_set_state = 0
         self._docked = False
         self._saw_charge_frame = False
+        self._battery_percent = 0.0
+        self._battery_voltage = 0.0
+        self._bms_current = 0.0
+        self._bms_charging = False
+        self._saw_bms_frame = False
+        self._bms_rx_count = 0
+        self._last_bms_invalid_log = 0.0
 
         self._cmd_sub = self.create_subscription(Twist, 'cmd_vel', self._on_cmd, 10)
         self.create_subscription(Int8, '/xw/chassis/charge_mode', self._on_charge_mode, 10)
@@ -90,6 +105,11 @@ class ChassisNode(Node):
         self._power_pub = self.create_publisher(PowerState, '/xw/power', 10)
         # true = cannot drive; false = enabled (ready). Maps MCU Flag_Stop inverted vs gen1 comments.
         self._motor_disabled_pub = self.create_publisher(Bool, '/xw/chassis/motor_disabled', 10)
+        self._bms_raw_pub = self.create_publisher(
+            UInt8MultiArray,
+            str(self.get_parameter('bms_raw_frame_topic').value),
+            10,
+        )
         self._tf_broadcaster = TransformBroadcaster(self)
 
         if self._use_sim:
@@ -107,7 +127,8 @@ class ChassisNode(Node):
             self._timer = self.create_timer(1.0 / 30.0, self._tick_serial)
             self._try_open_serial(initial=True)
             self.get_logger().info(
-                f'chassis started (use_sim_hw=False port={port} baud={baud})'
+                f'chassis started (use_sim_hw=False port={port} baud={baud} '
+                f'bms_byte_order={self._bms_byte_order})'
             )
 
         self._power_timer = self.create_timer(1.0, self._publish_power)
@@ -126,7 +147,8 @@ class ChassisNode(Node):
     def _effective_cmd(self) -> tuple[float, float, float]:
         vx, vy, wz = self._cmd_vx, self._cmd_vy, self._cmd_wz
         lock = bool(self.get_parameter('lock_motion_when_docked').value)
-        if lock and self._charging and self._charge_mode == 0:
+        charging = self._bms_charging if self._saw_bms_frame else self._charging
+        if lock and charging and self._charge_mode == 0:
             return 0.0, 0.0, 0.0
         return vx, vy, wz
 
@@ -219,6 +241,42 @@ class ChassisNode(Node):
             t.transform.rotation = yaw_to_quat(self._yaw)
             self._tf_broadcaster.sendTransform(t)
 
+    def _handle_bms_frames(self, bms_frames: list) -> None:
+        if not bms_frames:
+            return
+        for raw in bms_frames:
+            msg = UInt8MultiArray()
+            msg.data = list(raw)
+            self._bms_raw_pub.publish(msg)
+            try:
+                sample = parse_battery_frame(raw, self._bms_byte_order)
+            except ProtocolError as exc:
+                now = time.monotonic()
+                if now - self._last_bms_invalid_log >= 5.0:
+                    self.get_logger().warning(f'Dropped invalid BMS payload: {exc}')
+                    self._last_bms_invalid_log = now
+                continue
+            if sample.comm_status != self._bms_comm_ok:
+                now = time.monotonic()
+                if now - self._last_bms_invalid_log >= 5.0:
+                    self.get_logger().warning(
+                        f'BMS communication status={sample.comm_status} '
+                        f'(expected {self._bms_comm_ok})'
+                    )
+                    self._last_bms_invalid_log = now
+                continue
+            self._battery_percent = float(sample.soc_percent)
+            self._battery_voltage = float(sample.voltage)
+            self._bms_current = float(sample.current)
+            self._bms_charging = (
+                sample.state == ChargeState.CHARGING and sample.protection_bits == 0
+            )
+            self._saw_bms_frame = True
+            self._bms_rx_count += 1
+            if self._saw_charge_frame:
+                imin = float(self.get_parameter('charge_current_dock_min').value)
+                self._docked = self._bms_charging and self._charging_current >= imin
+
     def _tick_sim(self) -> None:
         dt = 0.05
         vx, vy, wz = self._effective_cmd()
@@ -247,11 +305,13 @@ class ChassisNode(Node):
         self._send_speed(evx, evy, ewz)
 
         try:
-            frames, charge_frames = self._serial.drain()
+            frames, charge_frames, bms_frames = self._serial.drain()
         except Exception as exc:  # noqa: BLE001
             self.get_logger().error(f'chassis serial read failed: {exc}')
             self._serial.close()
             return
+
+        self._handle_bms_frames(bms_frames)
 
         if charge_frames:
             ch = charge_frames[-1]
@@ -261,7 +321,9 @@ class ChassisNode(Node):
             self._charging = bool(ch.charging)
             self._charge_set_state = int(ch.charge_set_state)
             imin = float(self.get_parameter('charge_current_dock_min').value)
-            self._docked = self._charging and self._charging_current >= imin
+            # Prefer BMS charge flag for "on charge" when available (gen1 behavior)
+            charging_now = self._bms_charging if self._saw_bms_frame else self._charging
+            self._docked = charging_now and self._charging_current >= imin
 
         if frames:
             self._last_frame_wall = now
@@ -326,24 +388,32 @@ class ChassisNode(Node):
     def _publish_power(self) -> None:
         p = PowerState()
         p.stamp = self.get_clock().now().to_msg()
-        p.charging = bool(self._charging)
-        p.docked = bool(self._docked)
-        p.charging_current = float(self._charging_current)
         p.ir_red = int(self._ir_red) & 0xFF
+        p.charging_current = float(self._charging_current)
         if self._use_sim:
             p.battery_percent = 88.0
             p.voltage = 24.5
+            p.charging = bool(self._charging)
+            p.docked = bool(self._docked)
             p.detail = f'mock charge_mode={self._charge_mode}'
         else:
-            p.battery_percent = 0.0
-            p.voltage = 0.0
+            p.battery_percent = float(self._battery_percent)
+            p.voltage = float(self._battery_voltage)
+            # Prefer BMS charging flag when BMS frames are present
+            p.charging = (
+                bool(self._bms_charging) if self._saw_bms_frame else bool(self._charging)
+            )
+            p.docked = bool(self._docked)
             port = self._serial.active_port if self._serial else ''
-            seen = '0x7c' if self._saw_charge_frame else 'no-0x7c'
+            seen_7c = '0x7c' if self._saw_charge_frame else 'no-0x7c'
+            seen_bms = 'bms' if self._saw_bms_frame else 'no-bms'
             p.detail = (
                 f'serial:{port or "closed"} tx={self._tx_count} rx={self._rx_count} '
-                f'err={self._write_errors} flag_stop={self._flag_stop} '
-                f'{seen} mode={self._charge_mode} ir={self._ir_red} '
-                f'I={self._charging_current:.3f}A '
+                f'bms_rx={self._bms_rx_count} err={self._write_errors} '
+                f'flag_stop={self._flag_stop} {seen_7c} {seen_bms} '
+                f'mode={self._charge_mode} ir={self._ir_red} '
+                f'I={self._charging_current:.3f}A Ibms={self._bms_current:.3f}A '
+                f'SOC={self._battery_percent:.1f}% V={self._battery_voltage:.2f} '
                 f'last={self._last_tx_hex} '
                 f'cmd=({self._cmd_vx:.2f},{self._cmd_wz:.2f}) '
                 f'meas=({self._meas_vx:.2f},{self._meas_wz:.2f})'

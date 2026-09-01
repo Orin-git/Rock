@@ -8,6 +8,7 @@
   <license>Apache-2.0</license>
   <buildtool_depend>ament_python</buildtool_depend>
   <exec_depend>xw_chassis</exec_depend>
+  <exec_depend>bms_receiver</exec_depend>
   <exec_depend>xw_sensors</exec_depend>
   <exec_depend>rplidar_ros</exec_depend>
   <exec_depend>xw_cmd_arbiter</exec_depend>

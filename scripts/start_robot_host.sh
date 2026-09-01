@@ -76,6 +76,9 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
+# BT radio unused; stop it so the shared onboard USB2 hub serves the down camera cleanly
+rfkill block bluetooth 2>/dev/null || true
+
 # Single-instance lock: avoid systemd restart racing a manual start
 LOCK_DIR="${XDG_RUNTIME_DIR:-/tmp}/xw-robot.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then

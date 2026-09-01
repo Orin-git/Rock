@@ -1,5 +1,5 @@
 /**
- * Mission-control dashboard — compact layout + fitted battery when real power is absent.
+ * Mission-control dashboard — compact layout + real battery from /xw/power.
  */
 import { connect, onState, onObstacle, onMeta, onTask, fetchSensorHub } from '/js/api.js';
 import '/js/app.js';
@@ -17,7 +17,7 @@ const C_MUTED = 'rgba(91, 108, 128, 0.75)';
 
 let lastObstacle = null;
 let lastState = null;
-let lastPower = { pct: 78, volt: 24.6, simulated: true };
+let lastPower = { pct: 0, volt: 0, simulated: false, available: false };
 
 function tone(el, t) {
   if (!el) return;
@@ -43,49 +43,36 @@ function pushLog(text, level) {
 }
 
 /**
- * Real battery not wired yet → fitted demo curve.
- * Uses real values only when percent looks alive (> 1%).
+ * Real BMS → /xw/power. No fitted demo curve.
  */
 function resolvePower(power) {
   const rawPct = Number(power?.battery_percent ?? 0);
   const rawV = Number(power?.voltage ?? 0);
-  if (Number.isFinite(rawPct) && rawPct > 1) {
+  const available = Number.isFinite(rawPct) && rawPct > 0.05 && Number.isFinite(rawV) && rawV > 1;
+  if (available) {
     return {
       pct: Math.max(0, Math.min(100, rawPct)),
-      volt: Number.isFinite(rawV) && rawV > 1 ? rawV : 24 + rawPct * 0.04,
+      volt: rawV,
       simulated: false,
+      available: true,
       charging: !!power?.charging,
       docked: !!power?.docked,
       current: Number(power?.charging_current ?? 0) || 0,
     };
   }
-  // Slow breathing drain around ~78%
-  const t = Date.now() / 1000;
-  const pct = 78 + Math.sin(t / 38) * 2.4 + Math.sin(t / 11) * 0.6;
-  const volt = 24.55 + (pct - 78) * 0.035 + Math.sin(t / 17) * 0.04;
   return {
-    pct: Math.max(55, Math.min(92, pct)),
-    volt: Math.max(22.5, Math.min(26.5, volt)),
-    simulated: true,
-    charging: false,
-    docked: false,
-    current: 0,
+    pct: Number.isFinite(rawPct) ? Math.max(0, Math.min(100, rawPct)) : 0,
+    volt: Number.isFinite(rawV) ? Math.max(0, rawV) : 0,
+    simulated: false,
+    available: false,
+    charging: !!power?.charging,
+    docked: !!power?.docked,
+    current: Number(power?.charging_current ?? 0) || 0,
   };
 }
 
 function seedHistory() {
-  const now = Date.now();
-  for (let i = MAX_PTS - 1; i >= 0; i--) {
-    const t = now - i * 1000;
-    const sec = t / 1000;
-    const pct = 78 + Math.sin(sec / 38) * 2.4 + Math.sin(sec / 11) * 0.6;
-    const volt = 24.55 + (pct - 78) * 0.035;
-    powerHist.push({
-      t,
-      pct: Math.max(55, Math.min(92, pct)),
-      v10: Math.min(100, Math.max(0, volt * 4)),
-    });
-  }
+  powerHist.length = 0;
 }
 
 function resizeCanvas(canvas) {
@@ -155,9 +142,9 @@ function drawSparkline(canvas, series) {
   ctx.fillText('BAT %', pad, 14);
   ctx.fillStyle = C_VIOLET;
   ctx.fillText('V×4', pad + 52, 14);
-  if (lastPower.simulated) {
-    ctx.fillStyle = '#8b3fad';
-    ctx.fillText('SIM', w - pad - 28, 14);
+  if (!lastPower.available) {
+    ctx.fillStyle = C_MUTED;
+    ctx.fillText('NO BMS', w - pad - 48, 14);
   }
 }
 
@@ -300,8 +287,14 @@ function updateClock() {
 function applyPowerUi(pw, { pushHist = true } = {}) {
   lastPower = pw;
   const el = document.getElementById('dPower');
-  el.innerHTML = `${pw.pct.toFixed(0)}%${pw.simulated ? '<span class="sim-tag">SIM</span>' : ''}`;
-  const chg = pw.charging ? '充电中' : pw.docked ? '已对接' : pw.simulated ? '拟合放电' : '放电';
+  if (!pw.available) {
+    el.innerHTML = '—';
+    document.getElementById('dPowerSub').textContent = '等待 BMS 数据';
+    tone(document.getElementById('kpiPower'), 'is-neutral');
+    return;
+  }
+  el.innerHTML = `${pw.pct.toFixed(0)}%`;
+  const chg = pw.charging ? '充电中' : pw.docked ? '已对接' : '放电';
   const cur = pw.charging && pw.current > 0.01 ? ` · ${pw.current.toFixed(2)}A` : '';
   document.getElementById('dPowerSub').textContent = `${pw.volt.toFixed(1)}V · ${chg}${cur}`;
   tone(document.getElementById('kpiPower'), pw.pct >= 40 ? 'is-ok' : pw.pct >= 20 ? 'is-warn' : 'is-bad');
@@ -317,7 +310,6 @@ function applyPowerUi(pw, { pushHist = true } = {}) {
 }
 
 function renderCharts() {
-  // Refresh fitted power once per chart tick (1 Hz)
   applyPowerUi(resolvePower(lastState?.power), { pushHist: true });
 
   const powerCanvas = document.getElementById('chartPower');
@@ -326,7 +318,7 @@ function renderCharts() {
   const radar = document.getElementById('radarSafety');
   if (radar) drawRadar(radar, lastObstacle?.sectors);
 
-  const batt = lastPower.pct;
+  const batt = lastPower.available ? lastPower.pct : 0;
   const locCode = Number(lastState?.localization_status ?? (lastState?.localization_ok ? 0 : 1));
   const locPts = locCode === 0 ? 30 : locCode === 2 ? 15 : 5;
   const health =
@@ -337,13 +329,17 @@ function renderCharts() {
   const gBatt = document.getElementById('gaugeBatt');
   const gHealth = document.getElementById('gaugeHealth');
   if (gBatt) {
-    drawGauge(
-      gBatt,
-      batt,
-      100,
-      `${batt.toFixed(0)}%`,
-      batt >= 40 ? '#0f8a5a' : batt >= 20 ? '#a37818' : '#c23145',
-    );
+    if (lastPower.available) {
+      drawGauge(
+        gBatt,
+        batt,
+        100,
+        `${batt.toFixed(0)}%`,
+        batt >= 40 ? '#0f8a5a' : batt >= 20 ? '#a37818' : '#c23145',
+      );
+    } else {
+      drawGauge(gBatt, 0, 100, '—', C_MUTED);
+    }
   }
   if (gHealth) {
     drawGauge(
@@ -457,4 +453,4 @@ refreshSensors();
 renderCharts();
 window.addEventListener('resize', () => renderCharts(), { passive: true });
 
-pushLog('态势大屏就绪 · 电量未接时使用拟合曲线', 'ok');
+pushLog('态势大屏就绪 · 电量来自 BMS', 'ok');

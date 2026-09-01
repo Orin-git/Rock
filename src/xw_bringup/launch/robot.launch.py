@@ -74,6 +74,9 @@ def generate_launch_description() -> LaunchDescription:
         'serial_fallback': LaunchConfiguration('chassis_fallback'),
         'publish_odom_tf': ParameterValue(LaunchConfiguration('chassis_publish_odom_tf'), value_type=bool),
         'odom_topic': LaunchConfiguration('chassis_odom_topic'),
+        'bms_byte_order': 'big',
+        'bms_comm_ok_value': 1,
+        'bms_raw_frame_topic': '/bms/raw_frame',
     }
 
     nodes = [
@@ -101,6 +104,23 @@ def generate_launch_description() -> LaunchDescription:
             name='xw_chassis',
             parameters=[chassis_params],
             output='screen',
+        ),
+        Node(
+            package='bms_receiver',
+            executable='bms_receiver_node',
+            name='bms_receiver_node',
+            parameters=[{
+                'byte_order': 'big',
+                'comm_ok_value': 1,
+                'raw_frame_topic': '/bms/raw_frame',
+                'battery_state_topic': '/battery_state',
+                'power_voltage_topic': '/PowerVoltage',
+                'charging_flag_topic': '/robot_charging_flag',
+                'charging_current_topic': '/robot_charging_current',
+            }],
+            output='screen',
+            respawn=True,
+            respawn_delay=2.0,
         ),
         Node(
             package='xw_sensors',
@@ -318,7 +338,7 @@ def generate_launch_description() -> LaunchDescription:
                     'scan_mode': 'Standard',
                     'enable_filter': True,
                     'filter_inclusive': False,
-                    'filter_regions': [-92.0, -76.0, -50.0, -38.0, 80.0, 95.5],
+                    'filter_regions': [-92.0, -36.5, 80.0, 95.5, -139.0, -128.0, 133.0, 141.0],
                     'scan_frequency': ParameterValue(lidar_scan_frequency, value_type=float),
                 }],
                 output='screen',

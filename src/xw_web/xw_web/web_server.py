@@ -537,12 +537,21 @@ def _node_hint(name: str) -> str:
     return 'ROS 节点'
 
 
+def _json_safe_number(obj: Any) -> Any:
+    """Browser JSON.parse rejects NaN/Infinity; map non-finite floats to null."""
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    return obj
+
+
 def _jsonable(obj: Any, *, depth: int = 0, max_depth: int = 6, max_list: int = 24) -> Any:
     """Convert ROS msg / nested structures to JSON-safe data with hard caps."""
     if depth > max_depth:
         return '…'
-    if obj is None or isinstance(obj, (bool, int, float)):
+    if obj is None or isinstance(obj, (bool, int)):
         return obj
+    if isinstance(obj, float):
+        return _json_safe_number(obj)
     if isinstance(obj, str):
         return obj if len(obj) <= 400 else obj[:400] + f'…(+{len(obj) - 400})'
     if isinstance(obj, bytes):
@@ -1704,18 +1713,27 @@ class BridgeNode(Node):
         summary: Dict[str, Any] = {'_type': type_name, '_note': '大消息，仅摘要（避免 CPU 峰值）'}
         if type_name == 'sensor_msgs/msg/LaserScan':
             ranges = list(getattr(msg, 'ranges', []) or [])
-            finite = [r for r in ranges if r == r and 0.0 < r < 1e6]  # not NaN
+            finite = [float(r) for r in ranges if math.isfinite(float(r)) and 0.0 < float(r) < 1e6]
+            step = max(1, len(ranges) // 16)
+
+            def _sample(r: Any) -> Optional[float]:
+                try:
+                    v = float(r)
+                except (TypeError, ValueError):
+                    return None
+                return round(v, 3) if math.isfinite(v) else None
+
             summary.update(
                 {
                     'frame_id': getattr(getattr(msg, 'header', None), 'frame_id', ''),
-                    'angle_min': float(getattr(msg, 'angle_min', 0.0)),
-                    'angle_max': float(getattr(msg, 'angle_max', 0.0)),
-                    'range_min': float(getattr(msg, 'range_min', 0.0)),
-                    'range_max': float(getattr(msg, 'range_max', 0.0)),
+                    'angle_min': _json_safe_number(float(getattr(msg, 'angle_min', 0.0))),
+                    'angle_max': _json_safe_number(float(getattr(msg, 'angle_max', 0.0))),
+                    'range_min': _json_safe_number(float(getattr(msg, 'range_min', 0.0))),
+                    'range_max': _json_safe_number(float(getattr(msg, 'range_max', 0.0))),
                     'n_ranges': len(ranges),
                     'min_valid': min(finite) if finite else None,
                     'max_valid': max(finite) if finite else None,
-                    'sample_ranges': [round(float(r), 3) if r == r else None for r in ranges[:: max(1, len(ranges) // 16)][:16]],
+                    'sample_ranges': [_sample(r) for r in ranges[::step][:16]],
                 }
             )
             return summary
@@ -1841,7 +1859,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
         return
 
     def _json(self, code: int, obj: Dict[str, Any]) -> None:
-        body = json.dumps(obj, ensure_ascii=False, default=str).encode('utf-8')
+        # allow_nan=False: never emit Infinity/NaN (invalid JSON; breaks browser r.json()).
+        body = json.dumps(obj, ensure_ascii=False, default=str, allow_nan=False).encode('utf-8')
         self.send_response(code)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))

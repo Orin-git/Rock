@@ -5,6 +5,7 @@ Frames:
                mode = TX[1] AutoRecharge latch (0 idle / 1 dock assist)
   MCU → ROS  24 bytes: 0x7B | Flag_Stop | vx | vy | vz | imu... | bcc | 0x7D
   MCU → ROS   8 bytes: 0x7C | I_hi | I_lo | Red | Charging | set_state | bcc | 0x7F
+  MCU → ROS  30 bytes: 0xFB | 0x01 | 0x19 | battery... | bcc | 0xFD
 Speeds are int16 big-endian in mm/s (angular ×1000); BCC = XOR of preceding bytes.
 """
 
@@ -22,6 +23,11 @@ RECV_SIZE = 24
 AUTOCHARGE_HEADER = 0x7C
 AUTOCHARGE_TAIL = 0x7F
 AUTOCHARGE_SIZE = 8
+BMS_HEADER = 0xFB
+BMS_TAIL = 0xFD
+BMS_SIZE = 30
+BMS_TYPE = 0x01
+BMS_PAYLOAD_LEN = 0x19
 
 
 def xor_bcc(data: Sequence[int]) -> int:
@@ -105,8 +111,24 @@ def parse_motion_frame(buf: bytes) -> Optional[MotionFrame]:
     return MotionFrame(flag_stop=int(buf[1]), vx=vx, vy=vy, wz=wz)
 
 
+def parse_bms_raw_frame(buf: bytes) -> Optional[bytes]:
+    """Validate BMS envelope and return the 30-byte frame, or None."""
+    if len(buf) != BMS_SIZE:
+        return None
+    if (
+        buf[0] != BMS_HEADER
+        or buf[1] != BMS_TYPE
+        or buf[2] != BMS_PAYLOAD_LEN
+        or buf[29] != BMS_TAIL
+    ):
+        return None
+    if xor_bcc(buf[0:28]) != buf[28]:
+        return None
+    return bytes(buf)
+
+
 class FrameParser:
-    """Byte-stream reassembler for motion (0x7B/24) and charge (0x7C/8) frames."""
+    """Byte-stream reassembler for motion / charge / BMS frames."""
 
     def __init__(self) -> None:
         self._buf = bytearray()
@@ -116,19 +138,17 @@ class FrameParser:
 
     @staticmethod
     def _next_header(buf: bytearray) -> int:
-        i_m = buf.find(bytes((FRAME_HEADER,)))
-        i_c = buf.find(bytes((AUTOCHARGE_HEADER,)))
-        if i_m < 0 and i_c < 0:
-            return -1
-        if i_m < 0:
-            return i_c
-        if i_c < 0:
-            return i_m
-        return min(i_m, i_c)
+        headers = (FRAME_HEADER, AUTOCHARGE_HEADER, BMS_HEADER)
+        positions = [buf.find(bytes((h,))) for h in headers]
+        valid = [p for p in positions if p >= 0]
+        return min(valid) if valid else -1
 
-    def feed(self, data: bytes) -> Tuple[List[MotionFrame], List[ChargeFrame]]:
+    def feed(
+        self, data: bytes
+    ) -> Tuple[List[MotionFrame], List[ChargeFrame], List[bytes]]:
         motion: List[MotionFrame] = []
         charge: List[ChargeFrame] = []
+        bms: List[bytes] = []
         if data:
             self._buf.extend(data)
         while True:
@@ -151,6 +171,16 @@ class FrameParser:
                     continue
                 del self._buf[0]
                 continue
+            if kind == BMS_HEADER:
+                if len(self._buf) < BMS_SIZE:
+                    break
+                frame_b = parse_bms_raw_frame(bytes(self._buf[:BMS_SIZE]))
+                if frame_b is not None:
+                    del self._buf[:BMS_SIZE]
+                    bms.append(frame_b)
+                    continue
+                del self._buf[0]
+                continue
             if len(self._buf) < RECV_SIZE:
                 break
             frame_m = parse_motion_frame(bytes(self._buf[:RECV_SIZE]))
@@ -159,7 +189,7 @@ class FrameParser:
                 motion.append(frame_m)
                 continue
             del self._buf[0]
-        return motion, charge
+        return motion, charge, bms
 
 
 class ChassisSerial:
@@ -262,11 +292,11 @@ class ChassisSerial:
             return b''
         return bytes(self._ser.read(n))
 
-    def drain(self) -> Tuple[List[MotionFrame], List[ChargeFrame]]:
+    def drain(self) -> Tuple[List[MotionFrame], List[ChargeFrame], List[bytes]]:
         return self.parser.feed(self.read_available())
 
     def drain_frames(self) -> List[MotionFrame]:
-        motion, _charge = self.drain()
+        motion, _charge, _bms = self.drain()
         return motion
 
 

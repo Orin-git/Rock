@@ -22,7 +22,7 @@ def generate_launch_description():
     
     # 修改滤波参数
     enable_filter = LaunchConfiguration('enable_filter', default='false')
-    filter_regions = LaunchConfiguration('filter_regions', default='[-92.0, -76.0, -50.0, -38.0, 80.0, 95.5]')
+    filter_regions = LaunchConfiguration('filter_regions', default='[-92.0, -36.5, 80.0, 95.5, -139.0, -128.0, 133.0, 141.0]')
     '''filter_inclusive: 滤波模式
         false（默认）：过滤掉指定角度范围内的点，保留其他点
         true：只保留指定角度范围内的点，过滤掉其他点'''
