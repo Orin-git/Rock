@@ -1,10 +1,26 @@
 /**
  * Overview (merged mission board) — real battery + safety cross + compact charts.
  */
-import { onState, onObstacle, onMeta, onTask, offState, offObstacle, offMeta, offTask, fetchSensorHub } from '/js/api.js';
+import {
+  onState,
+  onObstacle,
+  onMeta,
+  onTask,
+  offState,
+  offObstacle,
+  offMeta,
+  offTask,
+  fetchSensorHub,
+  fetchPowerHistory,
+} from '/js/api.js';
 
-const MAX_PTS = 48;
+/** Calendar-day axis (00:00–24:00 local); points come from server history. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TICK_HOURS = 2; // 12 ticks across the day
 const powerHist = [];
+let dayStartMs = 0;
+let dayEndMs = 0;
+let dayLabel = '';
 const MAX_LOG = 40;
 
 const C_TEAL = '#0c7f96';
@@ -67,6 +83,11 @@ function resolvePower(power) {
 
 function seedHistory() {
   powerHist.length = 0;
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  dayStartMs = start.getTime();
+  dayEndMs = dayStartMs + DAY_MS;
+  dayLabel = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 function resizeCanvas(canvas) {
@@ -82,15 +103,39 @@ function resizeCanvas(canvas) {
   return { ctx, w, h };
 }
 
-/** Single-series chart with clear axis */
+async function loadPowerHistory() {
+  const j = await fetchPowerHistory();
+  if (!j?.ok) return;
+  if (Number.isFinite(j.day_start_ms) && Number.isFinite(j.day_end_ms)) {
+    dayStartMs = j.day_start_ms;
+    dayEndMs = j.day_end_ms;
+  }
+  if (j.date) {
+    const parts = String(j.date).split('-');
+    dayLabel = parts.length === 3 ? `${parts[1]}-${parts[2]}` : j.date;
+  }
+  const pts = Array.isArray(j.points) ? j.points : [];
+  powerHist.length = 0;
+  for (const p of pts) {
+    const t = Number(p.t);
+    if (!Number.isFinite(t)) continue;
+    powerHist.push({
+      t,
+      pct: Number(p.pct),
+      volt: Number(p.volt),
+    });
+  }
+}
+
+/** Today 00:00–24:00 axis; 2h ticks (12 marks); plot samples at their real time. */
 function drawSeriesChart(canvas, series, opts) {
   const sized = resizeCanvas(canvas);
   if (!sized) return;
   const { ctx, w, h } = sized;
   const padL = 32;
-  const padR = 10;
+  const padR = 8;
   const padT = 10;
-  const padB = 16;
+  const padB = 18;
   ctx.clearRect(0, 0, w, h);
 
   const plotW = w - padL - padR;
@@ -100,6 +145,8 @@ function drawSeriesChart(canvas, series, opts) {
   const color = opts.color;
   const key = opts.key;
   const unit = opts.unit || '';
+  const t0 = dayStartMs || Date.now() - DAY_MS;
+  const span = Math.max(1, (dayEndMs || t0 + DAY_MS) - t0);
 
   ctx.strokeStyle = C_GRID;
   ctx.lineWidth = 1;
@@ -116,41 +163,65 @@ function drawSeriesChart(canvas, series, opts) {
     ctx.fillStyle = color;
     ctx.fillText(opts.intAxis ? String(Math.round(val)) : val.toFixed(1), padL - 5, y);
   }
+
+  // 12 ticks: 00,02,...,22
   ctx.fillStyle = C_MUTED;
-  ctx.textAlign = 'center';
-  ctx.font = '10px Noto Sans SC, sans-serif';
-  ctx.fillText('时间 →', padL + plotW / 2, h - 4);
+  ctx.font = '8px IBM Plex Mono, monospace';
+  ctx.textBaseline = 'alphabetic';
+  for (let hour = 0; hour < 24; hour += TICK_HOURS) {
+    const x = padL + (plotW * hour) / 24;
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(12, 127, 150, 0.08)';
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.stroke();
+    ctx.fillStyle = C_MUTED;
+    ctx.textAlign = hour === 0 ? 'left' : 'center';
+    ctx.fillText(String(hour).padStart(2, '0'), x, h - 3);
+  }
 
   if (!series.length) {
     ctx.fillStyle = C_MUTED;
     ctx.font = '12px IBM Plex Mono, monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('等待…', padL + 4, padT + plotH / 2);
+    ctx.fillText(`今日暂无采样（${dayLabel || '今天'}）`, padL + 4, padT + plotH / 2);
     return;
   }
 
-  const xAt = (i) => padL + (plotW * i) / Math.max(1, series.length - 1);
+  const xAtT = (t) => padL + (plotW * Math.max(0, Math.min(1, (t - t0) / span)));
   const yAt = (v) => {
-    const t = (v - minY) / (maxY - minY || 1);
-    return padT + plotH * (1 - Math.max(0, Math.min(1, t)));
+    const u = (v - minY) / (maxY - minY || 1);
+    return padT + plotH * (1 - Math.max(0, Math.min(1, u)));
   };
 
   ctx.beginPath();
-  series.forEach((p, i) => {
-    const x = xAt(i);
+  let started = false;
+  series.forEach((p) => {
+    if (p.t < t0 || p.t > t0 + span) return;
+    const x = xAtT(p.t);
     const y = yAt(Number(p[key]));
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    if (!started) {
+      ctx.moveTo(x, y);
+      started = true;
+    } else {
+      ctx.lineTo(x, y);
+    }
   });
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.4;
-  ctx.stroke();
-  if (series.length > 1) {
-    ctx.lineTo(xAt(series.length - 1), padT + plotH);
-    ctx.lineTo(xAt(0), padT + plotH);
-    ctx.closePath();
-    ctx.fillStyle = opts.fill || 'rgba(12, 127, 150, 0.12)';
-    ctx.fill();
+  if (started) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    if (series.length > 1) {
+      const first = series.find((p) => p.t >= t0 && p.t <= t0 + span);
+      const last = [...series].reverse().find((p) => p.t >= t0 && p.t <= t0 + span);
+      if (first && last) {
+        ctx.lineTo(xAtT(last.t), padT + plotH);
+        ctx.lineTo(xAtT(first.t), padT + plotH);
+        ctx.closePath();
+        ctx.fillStyle = opts.fill || 'rgba(12, 127, 150, 0.12)';
+        ctx.fill();
+      }
+    }
   }
 
   if (!lastPower.available && opts.showSim) {
@@ -160,7 +231,6 @@ function drawSeriesChart(canvas, series, opts) {
     ctx.fillText('NO BMS', padL + plotW, padT + 8);
   }
 
-  // latest value badge
   const last = series[series.length - 1];
   if (last) {
     const v = Number(last[key]);
@@ -321,7 +391,7 @@ function updateClock() {
   el.innerHTML = `${t}<small>${d} · LOCAL</small>`;
 }
 
-function applyPowerUi(pw, { pushHist = true } = {}) {
+function applyPowerUi(pw) {
   lastPower = pw;
   const el = document.getElementById('dPower');
   if (!pw.available) {
@@ -344,21 +414,12 @@ function applyPowerUi(pw, { pushHist = true } = {}) {
   if (nowPct) nowPct.textContent = `当前 ${pw.pct.toFixed(0)}%`;
   const nowVolt = document.getElementById('chartNowVolt');
   if (nowVolt) nowVolt.textContent = `当前 ${pw.volt.toFixed(1)}V`;
-
-  if (pushHist) {
-    powerHist.push({
-      t: Date.now(),
-      pct: pw.pct,
-      volt: pw.volt,
-    });
-    if (powerHist.length > MAX_PTS) powerHist.shift();
-  }
 }
 
 let lastObstacle = null;
 
 function renderCharts() {
-  applyPowerUi(resolvePower(lastState?.power), { pushHist: true });
+  applyPowerUi(resolvePower(lastState?.power));
 
   const powerCanvas = document.getElementById('chartPower');
   if (powerCanvas) {
@@ -466,6 +527,7 @@ async function refreshSensors() {
 let clockTimer = null;
 let chartTimer = null;
 let sensorTimer = null;
+let histTimer = null;
 let resizeHandler = null;
 let metaHandler = null;
 let stateHandler = null;
@@ -493,7 +555,7 @@ export function mount() {
     const isDev = (s.run_mode == null ? 1 : Number(s.run_mode)) !== 0;
     document.getElementById('dRun').textContent = isDev ? '开发者' : '量产';
     tone(document.getElementById('kpiRun'), isDev ? 'is-ok' : 'is-warn');
-    applyPowerUi(resolvePower(s.power), { pushHist: false });
+    applyPowerUi(resolvePower(s.power));
     const estop = !!s.emergency_stop;
     document.getElementById('dEstop').textContent = estop ? 'DISABLED' : '使能';
     document.getElementById('dProfile').textContent = `profile ${s.profile || '—'}`;
@@ -535,24 +597,30 @@ export function mount() {
   onTask(taskHandler);
 
   seedHistory();
+  loadPowerHistory().then(() => renderCharts());
   updateClock();
   clockTimer = setInterval(updateClock, 1000);
+  // Gauges/radar stay 1s; history points only grow ~every 20s on server.
   chartTimer = setInterval(renderCharts, 1000);
+  histTimer = setInterval(() => {
+    loadPowerHistory().then(() => renderCharts());
+  }, 20000);
   sensorTimer = setInterval(refreshSensors, 5000);
   refreshSensors();
   renderCharts();
   resizeHandler = () => renderCharts();
   window.addEventListener('resize', resizeHandler, { passive: true });
-  pushLog('总览就绪 · 电量来自 BMS', 'ok');
+  pushLog('总览就绪 · 电量曲线为今日 24h（服务端落盘）', 'ok');
   return unmount;
 }
 
 export function unmount() {
   if (clockTimer) clearInterval(clockTimer);
   if (chartTimer) clearInterval(chartTimer);
+  if (histTimer) clearInterval(histTimer);
   if (sensorTimer) clearInterval(sensorTimer);
   if (resizeHandler) window.removeEventListener('resize', resizeHandler);
-  clockTimer = chartTimer = sensorTimer = resizeHandler = null;
+  clockTimer = chartTimer = histTimer = sensorTimer = resizeHandler = null;
   if (metaHandler) offMeta(metaHandler);
   if (stateHandler) offState(stateHandler);
   if (obstacleHandler) offObstacle(obstacleHandler);

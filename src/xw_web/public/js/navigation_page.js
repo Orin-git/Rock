@@ -81,6 +81,8 @@ let navRechargeMsg;
 let navActive = false;
 let navGoalPhase = 'idle';
 let navGoalDetail = '';
+/** idle | pending (local goal sent) | active (saw start task) — avoids stale「到啦」tip. */
+let navGoalCycle = 'idle';
 let waypoints = [];
 let selectedWp = null;
 let selectedWpIdx = null;
@@ -344,48 +346,83 @@ function setNavGoalPhase(phase, detail = '') {
 
 function applyNavGoalFromTask(text) {
   const t = String(text || '').trim();
-  if (!t) return;
+  if (!t) return false;
   if (/跟着你|找你中/.test(t)) {
+    navGoalCycle = 'idle';
     setNavGoalPhase('following', t);
-    return;
+    return true;
   }
   if (/不跟了/.test(t) && navActive) {
+    navGoalCycle = 'idle';
     setNavGoalPhase('idle');
-    return;
+    return true;
   }
-  if (/导航：开始前往|开始前往|导航：进行中|正在前往|收到，开始动/.test(t)) {
-    setNavGoalPhase('navigating', t.replace(/^导航：/, ''));
-    return;
-  }
-  if (/开始巡航|巡航中|去下一个|patrol/i.test(t)) {
-    setNavGoalPhase('patrol', t.replace(/^导航：/, ''));
-    return;
-  }
+  // Terminal outcomes first — never let「进行中」win over a later「到啦」replay.
   if (/到啦|巡航走完了|导航好了/.test(t)) {
+    navGoalCycle = 'idle';
     setNavGoalPhase('arrived', t);
-    return;
+    return true;
   }
   if (/没走到|巡航没走完|导航失败/.test(t)) {
+    navGoalCycle = 'idle';
     setNavGoalPhase('failed', t);
-    return;
+    return true;
   }
-  if (/导航取消|巡航停了|巡航取消了/.test(t)) {
+  if (/导航取消|巡航停了|巡航取消了|导航已取消/.test(t)) {
+    navGoalCycle = 'idle';
     setNavGoalPhase('cancelled', t);
+    return true;
   }
+  if (/导航：开始前往|开始前往|导航：进行中|正在前往|收到，开始动|去那边/.test(t)) {
+    navGoalCycle = 'active';
+    // Keep「前往 wp_x」subtitle when the immediate「去那边」ack arrives.
+    if (
+      navGoalPhase === 'navigating' &&
+      /前往\s+\S+/.test(navGoalDetail) &&
+      /^去那边$/.test(t)
+    ) {
+      return true;
+    }
+    setNavGoalPhase('navigating', t.replace(/^导航：/, ''));
+    return true;
+  }
+  if (/开始巡航|巡航中|去下一个|巡航已启动|patrol/i.test(t)) {
+    navGoalCycle = 'active';
+    setNavGoalPhase('patrol', t.replace(/^导航：/, ''));
+    return true;
+  }
+  return false;
 }
 
 function syncNavGoalFromState(s) {
   const mode = Number(s?.mode);
   if (mode === 3) {
+    navGoalCycle = 'idle';
     setNavGoalPhase('following', '人体跟随');
     return;
   }
   if (mode !== 2) {
+    navGoalCycle = 'idle';
     setNavGoalPhase('idle');
     return;
   }
   if (navGoalPhase === 'following') {
     setNavGoalPhase('idle');
+  }
+  // Mode still NAVIGATING after goal done: force chip from latest task tip.
+  // Skip while pending — tip may still be the previous「到啦」.
+  const tip = String(s?.latest_task || '').trim();
+  if (!tip) return;
+  const activeChip = navGoalPhase === 'navigating' || navGoalPhase === 'patrol';
+  if (!activeChip) return;
+  if (navGoalCycle === 'pending') {
+    if (/开始前往|进行中|正在前往|去那边|开始巡航|巡航中|巡航已启动/.test(tip)) {
+      applyNavGoalFromTask(tip);
+    }
+    return;
+  }
+  if (/到啦|巡航走完了|导航好了|没走到|巡航没走完|导航失败|导航取消|巡航停了|巡航取消了|导航已取消/.test(tip)) {
+    applyNavGoalFromTask(tip);
   }
 }
 
@@ -844,9 +881,12 @@ function wireNavigation(ctx) {
       pushLog('>> 前往航点前已停止回充');
     }
     if (window.XwMapCanvas) window.XwMapCanvas.setGoal({ x: wp.x, y: wp.y, yaw: wp.yaw });
+    navGoalCycle = 'pending';
+    setNavGoalPhase('navigating', wp.name ? `前往 ${wp.name}` : '前往航点');
     const j = await publishGoal(wp.x, wp.y, wp.yaw || 0, 'map');
-    if (j.ok) {
-      setNavGoalPhase('navigating', wp.name ? `前往 ${wp.name}` : '前往航点');
+    if (!j.ok) {
+      navGoalCycle = 'idle';
+      setNavGoalPhase('failed', j.message || '前往失败');
     }
     flash(
       j.ok
@@ -1020,16 +1060,22 @@ function wireNavigation(ctx) {
       renderRechargeBtn();
     }
     const loop = !!(patrolLoop && patrolLoop.checked);
+    navGoalCycle = 'pending';
+    setNavGoalPhase('patrol', loop ? '多点巡航（循环）' : '多点巡航');
     const j = await startPatrol({ map_name: name, loop });
-    if (j.ok) {
-      setNavGoalPhase('patrol', loop ? '多点巡航（循环）' : '多点巡航');
+    if (!j.ok) {
+      navGoalCycle = 'idle';
+      setNavGoalPhase('failed', j.message || '巡航失败');
     }
     pushLog(j.ok ? `<< 多点巡航已启动${loop ? '（循环）' : ''}` : `!! ${j.message || 'failed'}`);
   };
 
   $('cancelNav').onclick = async () => {
     const j = await cancelNav();
-    if (j.ok) setNavGoalPhase('cancelled', '已取消');
+    if (j.ok) {
+      navGoalCycle = 'idle';
+      setNavGoalPhase('cancelled', '已取消');
+    }
     if (window.XwMapCanvas && typeof window.XwMapCanvas.clearPlan === 'function') {
       window.XwMapCanvas.clearPlan();
     }

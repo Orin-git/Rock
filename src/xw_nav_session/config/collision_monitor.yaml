@@ -22,7 +22,7 @@ collision_monitor:
       source_timeout: 1.0
     FrontStop:
       type: "polygon"
-      points: [0.38, 0.18, 0.38, -0.18, 0.12, -0.18, 0.12, 0.18]
+      points: [0.58, 0.18, 0.58, -0.18, 0.12, -0.18, 0.12, 0.18]
       action_type: "stop"
       max_points: 2
       visualize: False

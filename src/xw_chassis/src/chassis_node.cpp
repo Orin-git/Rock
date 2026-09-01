@@ -5,6 +5,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <std_msgs/msg/byte_multi_array.hpp>
 #include <vector>
 
 #include "geometry_msgs/msg/quaternion.hpp"
@@ -112,7 +113,7 @@ public:
     odom_pub_ = create_publisher<nav_msgs::msg::Odometry>(odom_topic_, 10);
     power_pub_ = create_publisher<xw_interfaces::msg::PowerState>("/xw/power", 10);
     motor_disabled_pub_ = create_publisher<std_msgs::msg::Bool>("/xw/chassis/motor_disabled", 10);
-    bms_raw_pub_ = create_publisher<std_msgs::msg::UInt8MultiArray>(
+    bms_raw_pub_ = create_publisher<std_msgs::msg::ByteMultiArray>(
       get_parameter("bms_raw_frame_topic").as_string(), 10);
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
@@ -318,7 +319,7 @@ private:
       return;
     }
     for (const auto & raw : bms_frames) {
-      std_msgs::msg::UInt8MultiArray msg;
+      std_msgs::msg::ByteMultiArray msg;
       msg.data.assign(raw.begin(), raw.end());
       bms_raw_pub_->publish(msg);
 
@@ -439,7 +440,10 @@ private:
         }
         meas_vx_ = frame.vx;
         meas_vy_ = frame.vy;
-        meas_wz_ = frame.wz;
+        // MCU reports yaw rate with opposite sign to ROS convention (CCW+).
+        // Bench-verified 2026-09-01: wheel odom yaw read -30 deg while the
+        // robot physically turned left +90 (imu +93, ekf/motion command +90).
+        meas_wz_ = -frame.wz;
         const double meas_mag = std::abs(meas_vx_) + std::abs(meas_vy_) + std::abs(meas_wz_);
         double ivx, ivy, iwz;
         if (meas_mag > 1e-3) {
@@ -590,7 +594,7 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<xw_interfaces::msg::PowerState>::SharedPtr power_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr motor_disabled_pub_;
-  rclcpp::Publisher<std_msgs::msg::UInt8MultiArray>::SharedPtr bms_raw_pub_;
+  rclcpp::Publisher<std_msgs::msg::ByteMultiArray>::SharedPtr bms_raw_pub_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::TimerBase::SharedPtr power_timer_;

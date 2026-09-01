@@ -154,7 +154,7 @@ controller_server:
       max_angular_accel: 1.0
       closed_loop: false
       simulate_ahead_time: 1.0
-      rotate_to_goal_heading: false
+      rotate_to_goal_heading: true
       primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
 
       # --- RPP (same level as shim; Humble string primary_controller) ---
@@ -168,7 +168,7 @@ controller_server:
       use_velocity_scaled_lookahead_dist: true
       min_approach_linear_velocity: 0.05
       approach_velocity_scaling_dist: 0.60
-      max_allowed_time_to_collision_up_to_carrot: 1.2
+      max_allowed_time_to_collision_up_to_carrot: 1.8
       # Keep depth in local costmap for cost-regulated avoidance; hard trajectory
       # collision veto is too brittle with near-field depth noise (zeros all cmd_vel).
       use_collision_detection: false
@@ -189,7 +189,7 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0
+      update_frequency: 10.0
       publish_frequency: 1.0
       global_frame: odom
       robot_base_frame: base_link
@@ -342,8 +342,13 @@ behavior_server:
     behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
     spin:
       plugin: "nav2_behaviors/Spin"
+      spin_distance: 1.45
+      max_rotational_vel: 0.45
+      rotational_acc_lim: 1.5
     backup:
       plugin: "nav2_behaviors/BackUp"
+      back_up_speed: 0.18
+      back_up_distance: 1.2
     drive_on_heading:
       plugin: "nav2_behaviors/DriveOnHeading"
     wait:
@@ -415,7 +420,7 @@ collision_monitor:
       source_timeout: 1.0
     FrontStop:
       type: "polygon"
-      points: [0.38, 0.18, 0.38, -0.18, 0.12, -0.18, 0.12, 0.18]
+      points: [0.58, 0.18, 0.58, -0.18, 0.12, -0.18, 0.12, 0.18]
       action_type: "stop"
       max_points: 2
       visualize: False

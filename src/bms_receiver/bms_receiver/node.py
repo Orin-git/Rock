@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import BatteryState
-from std_msgs.msg import Bool, Float32, UInt8MultiArray
+from std_msgs.msg import Bool, ByteMultiArray, Float32
 
 from bms_receiver.protocol import (
     BatterySample,
@@ -199,7 +199,7 @@ class BmsReceiverNode(Node):
             Float32, self.get_parameter("charging_current_topic").value, 10
         )
         self.raw_subscription = self.create_subscription(
-            UInt8MultiArray,
+            ByteMultiArray,
             self.get_parameter("raw_frame_topic").value,
             self._on_raw_frame,
             10,
@@ -240,7 +240,7 @@ class BmsReceiverNode(Node):
                 f"{sample.comm_status}"
             )
 
-    def _on_raw_frame(self, msg: UInt8MultiArray):
+    def _on_raw_frame(self, msg: ByteMultiArray):
         self.byte_order = self.get_parameter("byte_order").value
         self.comm_ok_value = int(self.get_parameter("comm_ok_value").value)
         try:

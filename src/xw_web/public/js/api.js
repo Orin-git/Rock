@@ -8,6 +8,8 @@ const obstacleListeners = [];
 let connected = false;
 let pollTimer = null;
 let lastTasks = new Set();
+/** Previous /api/state tasks snapshot (newest-first) for prepend diff. */
+let prevTaskList = null;
 
 const MODE_ZH = {
   0: '空闲',
@@ -347,15 +349,56 @@ function emitObstacle(o) {
   obstacleListeners.forEach((fn) => fn(obstacle));
 }
 
-function emitTask(line) {
+function emitTask(line, { force = false, pet = true } = {}) {
   const text = humanizeTaskLine(line);
-  if (!text || lastTasks.has(text)) return;
+  if (!text) return;
+  if (!force && lastTasks.has(text)) return;
   lastTasks.add(text);
   if (lastTasks.size > 100) {
     lastTasks = new Set([...lastTasks].slice(-50));
   }
   taskListeners.forEach((fn) => fn(text));
-  notifyDesktopPetTask(text);
+  if (pet) notifyDesktopPetTask(text);
+}
+
+/**
+ * /api/state tasks are newest-first and capped. Forever-string dedupe drops a
+ * second「到啦」after the first success. Diff by prepend count instead.
+ */
+function emitFreshTasksFromPoll(tasks) {
+  if (!Array.isArray(tasks)) return;
+  const list = tasks.map((t) => String(t || ''));
+  if (!prevTaskList) {
+    list.slice().reverse().forEach((t) => emitTask(t));
+    prevTaskList = list.slice();
+    return;
+  }
+  if (
+    list.length === prevTaskList.length &&
+    list.every((t, i) => t === prevTaskList[i])
+  ) {
+    return;
+  }
+  // Smallest i where tasks[i:] aligns with previous snapshot prefix.
+  let nNew = list.length;
+  for (let i = 0; i <= list.length; i += 1) {
+    const rem = list.length - i;
+    if (rem > prevTaskList.length) continue;
+    let match = true;
+    for (let j = 0; j < rem; j += 1) {
+      if (list[i + j] !== prevTaskList[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) {
+      nNew = i;
+      break;
+    }
+  }
+  const fresh = list.slice(0, nNew);
+  fresh.reverse().forEach((t) => emitTask(t, { force: true }));
+  prevTaskList = list.slice();
 }
 
 async function fetchState() {
@@ -363,14 +406,18 @@ async function fetchState() {
     const r = await fetch(`${apiBase()}/api/state`, { cache: 'no-store' });
     if (!r.ok) throw new Error(String(r.status));
     const j = await r.json();
+    const latestTask = Array.isArray(j.tasks) && j.tasks.length
+      ? humanizeTaskLine(j.tasks[0])
+      : '';
     if (j.state) emitState({
       ...j.state,
       recharge: j.recharge || state.recharge || {},
       explore: j.explore || state.explore || {},
+      latest_task: latestTask,
     });
     if (j.obstacle) emitObstacle(j.obstacle);
     if (Array.isArray(j.tasks)) {
-      j.tasks.slice().reverse().forEach((t) => emitTask(t));
+      emitFreshTasksFromPoll(j.tasks);
     }
     meta = {
       ros_domain_id: j.ros_domain_id || '',
@@ -789,9 +836,9 @@ export async function publishGoal(x, y, yaw = 0, frame_id = 'map') {
     });
     const j = await r.json();
     if (j.ok) {
-      emitTask('去那边');
+      emitTask('去那边', { force: true });
     } else {
-      emitTask(`前往失败 · ${zhMessage(j.message) || '没发出去'}`.replace(/\s·\s$/, ''));
+      emitTask(`前往失败 · ${zhMessage(j.message) || '没发出去'}`.replace(/\s·\s$/, ''), { force: true });
     }
     return j;
   } catch (_) {
@@ -833,9 +880,9 @@ export async function startPatrol({ map_name = '', loop = false, waypoints = nul
     });
     const j = await r.json();
     if (j.ok) {
-      emitTask(action === 'stop' ? '巡航已停止' : `巡航已启动${loop ? '（循环）' : ''}`);
+      emitTask(action === 'stop' ? '巡航已停止' : `巡航已启动${loop ? '（循环）' : ''}`, { force: true });
     } else {
-      emitTask(`巡航失败 · ${zhMessage(j.message) || ''}`);
+      emitTask(`巡航失败 · ${zhMessage(j.message) || ''}`, { force: true });
     }
     return j;
   } catch (_) {
@@ -853,10 +900,10 @@ export async function cancelNav() {
       body: '{}',
     });
     const j = await r.json();
-    emitTask(j.ok ? '导航已取消' : `取消失败 · ${zhMessage(j.message) || ''}`);
+    emitTask(j.ok ? '导航已取消' : `取消失败 · ${zhMessage(j.message) || ''}`, { force: true });
     return j;
   } catch (_) {
-    emitTask('取消请求失败');
+    emitTask('取消请求失败', { force: true });
     return { ok: false };
   }
 }
@@ -869,5 +916,16 @@ export async function fetchSensorHub() {
     return await r.json();
   } catch (_) {
     return { ok: false, sensors: {}, layout: [] };
+  }
+}
+
+/** Today's calendar-day battery/voltage samples (server-persisted). */
+export async function fetchPowerHistory() {
+  try {
+    const r = await fetch(`${apiBase()}/api/power/history`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(String(r.status));
+    return await r.json();
+  } catch (_) {
+    return { ok: false, points: [] };
   }
 }

@@ -5,18 +5,18 @@ from __future__ import annotations
 
 import functools
 import json
+import math
 import os
 import re
 import socket
 import subprocess
 import threading
 import time
+from datetime import date, datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
-
-import math
 
 import rclpy
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
@@ -350,6 +350,138 @@ _SENSOR_LAYOUT = [
 
 GESTURE_PORT = 9443
 GESTURE_IDLE_EXIT_S = 10.0
+
+
+class PowerDayHistory:
+    """Persist today's battery samples to disk (calendar day, local time).
+
+    Survives page refresh / web_server restart. Sample sparsely so CPU stays flat:
+    ~20s interval → ≤ ~4320 pts/day; canvas stroke cost is still tiny.
+    """
+
+    SAMPLE_MS = 20_000
+    KEEP_DAYS = 3
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
+        self._date: Optional[str] = None
+        self._points: List[Dict[str, Any]] = []
+        self._last_t = 0
+        self._load_today()
+
+    @staticmethod
+    def _today_key() -> str:
+        return date.today().isoformat()
+
+    @staticmethod
+    def _day_start_ms(d: date) -> int:
+        return int(datetime(d.year, d.month, d.day).timestamp() * 1000)
+
+    def _path(self, key: str) -> Path:
+        return self.root / f'{key}.json'
+
+    def _load_today(self) -> None:
+        key = self._today_key()
+        self._date = key
+        self._points = []
+        self._last_t = 0
+        path = self._path(key)
+        if not path.is_file():
+            return
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+            pts = data.get('points') if isinstance(data, dict) else None
+            if isinstance(pts, list):
+                self._points = [p for p in pts if isinstance(p, dict) and 't' in p]
+                if self._points:
+                    self._last_t = int(self._points[-1].get('t') or 0)
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            self._points = []
+            self._last_t = 0
+
+    def _prune_old(self) -> None:
+        cutoff = date.today() - timedelta(days=self.KEEP_DAYS)
+        for p in self.root.glob('????-??-??.json'):
+            try:
+                d = date.fromisoformat(p.stem)
+            except ValueError:
+                continue
+            if d < cutoff:
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+
+    def _ensure_today(self) -> None:
+        key = self._today_key()
+        if key == self._date:
+            return
+        self._flush_unlocked()
+        self._date = key
+        self._points = []
+        self._last_t = 0
+        self._prune_old()
+
+    def _flush_unlocked(self) -> None:
+        if not self._date:
+            return
+        payload = {
+            'date': self._date,
+            'sample_ms': self.SAMPLE_MS,
+            'points': self._points,
+        }
+        path = self._path(self._date)
+        tmp = path.with_suffix('.tmp')
+        try:
+            tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
+            tmp.replace(path)
+        except OSError:
+            try:
+                if tmp.is_file():
+                    tmp.unlink()
+            except OSError:
+                pass
+
+    def maybe_record(self, power: Dict[str, Any]) -> None:
+        try:
+            pct = float(power.get('battery_percent') or 0.0)
+            volt = float(power.get('voltage') or 0.0)
+        except (TypeError, ValueError):
+            return
+        if not (pct > 0.05 and volt > 1.0):
+            return
+        now = int(time.time() * 1000)
+        with self._lock:
+            self._ensure_today()
+            if self._last_t and now - self._last_t < self.SAMPLE_MS:
+                return
+            self._points.append(
+                {
+                    't': now,
+                    'pct': round(pct, 2),
+                    'volt': round(volt, 3),
+                }
+            )
+            self._last_t = now
+            self._flush_unlocked()
+
+    def snapshot(self) -> Dict[str, Any]:
+        with self._lock:
+            self._ensure_today()
+            assert self._date is not None
+            d = date.fromisoformat(self._date)
+            start = self._day_start_ms(d)
+            return {
+                'ok': True,
+                'date': self._date,
+                'day_start_ms': start,
+                'day_end_ms': start + 86_400_000,
+                'sample_ms': self.SAMPLE_MS,
+                'count': len(self._points),
+                'points': list(self._points),
+            }
 
 
 def _gesture_paths() -> Tuple[str, str, str]:
@@ -740,8 +872,12 @@ class BridgeNode(Node):
         self.create_subscription(String, '/xw/recharge/status', self._on_recharge_status, _LATCHED_BOOL_QOS)
         self.create_subscription(String, '/xw/explore/status', self._on_explore_status, _LATCHED_BOOL_QOS)
         self.create_timer(5.0, self._watch_housekeep)
+        hist_root = Path(os.environ.get('XW_WS', '/ros2_ws')) / 'data' / 'power_hist'
+        self._power_hist = PowerDayHistory(hist_root)
         domain = os.environ.get('ROS_DOMAIN_ID', '?')
-        self.get_logger().info(f'web ROS bridge ready (DOMAIN={domain})')
+        self.get_logger().info(
+            f'web ROS bridge ready (DOMAIN={domain}) power_hist={hist_root}'
+        )
 
     def _on_pointcloud_enabled(self, msg: Bool) -> None:
         with self._lock:
@@ -1093,8 +1229,13 @@ class BridgeNode(Node):
             del self._tasks[80:]
 
     def _on_state(self, msg: RobotState) -> None:
+        d = _state_to_dict(msg)
         with self._lock:
-            self._state = _state_to_dict(msg)
+            self._state = d
+        self._power_hist.maybe_record(d.get('power') or {})
+
+    def power_history(self) -> Dict[str, Any]:
+        return self._power_hist.snapshot()
 
     def _on_obstacle(self, msg: String) -> None:
         raw = (msg.data or '').strip()
@@ -1929,6 +2070,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.snapshot())
+        if path == '/api/power/history':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.power_history())
         if path == '/api/foxglove':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})

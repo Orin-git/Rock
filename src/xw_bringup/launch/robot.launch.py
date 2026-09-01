@@ -106,12 +106,12 @@ def generate_launch_description() -> LaunchDescription:
             output='screen',
         ),
         Node(
-            package='bms_receiver',
+            package='bms_receiver_cpp',
             executable='bms_receiver_node',
             name='bms_receiver_node',
             parameters=[{
                 'byte_order': 'big',
-                'comm_ok_value': 1,
+                'comm_ok_value': 0,  # this unit: 0 = BMS comm OK
                 'raw_frame_topic': '/bms/raw_frame',
                 'battery_state_topic': '/battery_state',
                 'power_voltage_topic': '/PowerVoltage',
@@ -173,7 +173,7 @@ def generate_launch_description() -> LaunchDescription:
             name='xw_localization_health',
             output='screen',
         ),
-        Node(package='xw_motion', executable='motion_node', name='xw_motion', output='screen'),
+        Node(package='xw_motion_cpp', executable='motion_node', name='xw_motion', output='screen'),
         Node(
             package='xw_map_manager',
             executable='map_manager_node',
