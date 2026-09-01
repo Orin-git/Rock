@@ -17,6 +17,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
+from zoneinfo import ZoneInfo
 
 import rclpy
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
@@ -353,14 +354,15 @@ GESTURE_IDLE_EXIT_S = 10.0
 
 
 class PowerDayHistory:
-    """Persist today's battery samples to disk (calendar day, local time).
+    """Persist today's battery samples to disk (calendar day in XW_TZ).
 
-    Survives page refresh / web_server restart. Sample sparsely so CPU stays flat:
-    ~20s interval → ≤ ~4320 pts/day; canvas stroke cost is still tiny.
+    Board containers often run UTC; charts must use wall-clock local day
+    (default Asia/Shanghai) so 16:58 plots near the 16–18 tick, not 08–10.
     """
 
     SAMPLE_MS = 20_000
     KEEP_DAYS = 3
+    TZ = ZoneInfo(os.environ.get('XW_TZ', 'Asia/Shanghai'))
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -371,13 +373,13 @@ class PowerDayHistory:
         self._last_t = 0
         self._load_today()
 
-    @staticmethod
-    def _today_key() -> str:
-        return date.today().isoformat()
+    @classmethod
+    def _today_key(cls) -> str:
+        return datetime.now(cls.TZ).date().isoformat()
 
-    @staticmethod
-    def _day_start_ms(d: date) -> int:
-        return int(datetime(d.year, d.month, d.day).timestamp() * 1000)
+    @classmethod
+    def _day_start_ms(cls, d: date) -> int:
+        return int(datetime(d.year, d.month, d.day, tzinfo=cls.TZ).timestamp() * 1000)
 
     def _path(self, key: str) -> Path:
         return self.root / f'{key}.json'
@@ -402,7 +404,7 @@ class PowerDayHistory:
             self._last_t = 0
 
     def _prune_old(self) -> None:
-        cutoff = date.today() - timedelta(days=self.KEEP_DAYS)
+        cutoff = datetime.now(self.TZ).date() - timedelta(days=self.KEEP_DAYS)
         for p in self.root.glob('????-??-??.json'):
             try:
                 d = date.fromisoformat(p.stem)
@@ -429,6 +431,7 @@ class PowerDayHistory:
             return
         payload = {
             'date': self._date,
+            'tz': str(self.TZ),
             'sample_ms': self.SAMPLE_MS,
             'points': self._points,
         }
@@ -476,6 +479,7 @@ class PowerDayHistory:
             return {
                 'ok': True,
                 'date': self._date,
+                'tz': str(self.TZ),
                 'day_start_ms': start,
                 'day_end_ms': start + 86_400_000,
                 'sample_ms': self.SAMPLE_MS,

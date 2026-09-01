@@ -389,7 +389,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument('lidar_baudrate', default_value='1000000'),
         DeclareLaunchArgument(
             'lidar_scan_frequency',
-            default_value='20.0',
+            default_value='10.0',  # S3 native 600RPM; 20Hz(1200RPM) hangs setMotorSpeed
             description='RPLidar motor scan rate (Hz)',
         ),
         DeclareLaunchArgument('imu_port', default_value='/dev/imu'),
