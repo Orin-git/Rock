@@ -656,6 +656,11 @@ class BridgeNode(Node):
         self._last_graph_cache: Dict[str, Any] = {'topics': [], 'nodes': [], 'ts': 0.0}
         self._graph_min_interval = 2.0
 
+        # Teleop stop debounce: transient (0,0) blips inside a continuous drive
+        # (pointercancel / re-press glitches) must not zero the arbiter source.
+        self._teleop_stop_pending: Optional[threading.Timer] = None
+        self._teleop_stop_lock = threading.Lock()
+
         self.create_subscription(RobotState, '/xw/robot_state', self._on_state, 10)
         self.create_subscription(TaskProgress, '/xw/task/progress', self._on_progress, 10)
         self.create_subscription(TaskResult, '/xw/task/result', self._on_result, 10)
@@ -1195,11 +1200,36 @@ class BridgeNode(Node):
             }
 
     def publish_teleop(self, linear_x: float, angular_z: float) -> Dict[str, Any]:
+        is_stop = abs(float(linear_x)) < 1e-4 and abs(float(angular_z)) < 1e-4
+        if is_stop:
+            # Debounce: a stop that is followed within 150ms by a fresh
+            # velocity is spurious (pointer glitch), cancel it. A real
+            # release stops after the short debounce window.
+            with self._teleop_stop_lock:
+                if self._teleop_stop_pending is not None:
+                    self._teleop_stop_pending.cancel()
+                self._teleop_stop_pending = threading.Timer(
+                    0.15, self._publish_teleop_stop)
+                self._teleop_stop_pending.daemon = True
+                self._teleop_stop_pending.start()
+            return {'ok': True}
+        with self._teleop_stop_lock:
+            if self._teleop_stop_pending is not None:
+                self._teleop_stop_pending.cancel()
+                self._teleop_stop_pending = None
         t = Twist()
         t.linear.x = float(linear_x)
         t.angular.z = float(angular_z)
         self._teleop_pub.publish(t)
         return {'ok': True}
+
+    def _publish_teleop_stop(self) -> None:
+        with self._teleop_stop_lock:
+            self._teleop_stop_pending = None
+        t = Twist()
+        t.linear.x = 0.0
+        t.angular.z = 0.0
+        self._teleop_pub.publish(t)
 
     def call_motion(
         self,

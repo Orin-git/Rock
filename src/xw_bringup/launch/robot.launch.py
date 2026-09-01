@@ -123,7 +123,7 @@ def generate_launch_description() -> LaunchDescription:
             respawn_delay=2.0,
         ),
         Node(
-            package='xw_sensors',
+            package='xw_wt901_imu_cpp',
             executable='wt901_imu_node',
             name='xw_wt901_imu',
             condition=IfCondition(use_imu),
@@ -146,7 +146,7 @@ def generate_launch_description() -> LaunchDescription:
             condition=IfCondition(use_sim_lidar),
             output='screen',
         ),
-        Node(package='xw_cmd_arbiter', executable='cmd_arbiter_node', name='xw_cmd_arbiter', output='screen'),
+        Node(package='xw_cmd_arbiter_cpp', executable='cmd_arbiter_node', name='xw_cmd_arbiter', output='screen'),
         Node(
             package='xw_safety_gate',
             executable='safety_gate_node',

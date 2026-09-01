@@ -1,20 +1,17 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>xw_safety_gate</name>
-  <version>0.2.0</version>
-  <description>Laser/ultrasonic/depth safety gate to /cmd_vel (C++); Python legacy under python_legacy/</description>
-  <maintainer email="dev@xiaowei.local">xiaowei</maintainer>
-  <license>Apache-2.0</license>
+  <name>xw_wt901_imu_cpp</name>
+  <version>0.1.0</version>
+  <description>C++ port of xw_sensors wt901_imu_node (same logic/topics/node as Python version).</description>
+  <maintainer email="radxa@example.com">radxa</maintainer>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
-  <depend>std_msgs</depend>
-  <depend>xw_interfaces</depend>
-  <depend>nlohmann-json-dev</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

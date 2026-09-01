@@ -31,9 +31,10 @@ setup(
     description='Laser/ultrasonic safety gate to /cmd_vel',
     license='Apache-2.0',
     tests_require=['pytest'],
+    # DISABLED: package is now ament_cmake C++. This file is reference-only.
     entry_points={
         'console_scripts': [
-        'safety_gate_node = xw_safety_gate.safety_gate_node:main',
+            # 'safety_gate_node = xw_safety_gate.safety_gate_node:main',
         ],
     },
 )
