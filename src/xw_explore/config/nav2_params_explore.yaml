@@ -8,8 +8,9 @@ amcl:
     use_sim_time: false
     alpha1: 0.15
     alpha2: 0.15
-    alpha3: 0.50
-    alpha4: 0.55
+    # Match nav: lower motion noise so idle odom jitter does not explode PF
+    alpha3: 0.30
+    alpha4: 0.30
     alpha5: 0.2
     laser_model_type: "likelihood_field"
     laser_max_range: 10.0

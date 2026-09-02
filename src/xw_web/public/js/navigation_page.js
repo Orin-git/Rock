@@ -1253,7 +1253,7 @@ function wireNavigation(ctx) {
 
   async function toggleFollow() {
     if (followBusy) return;
-    if (!navActive) {
+    if (!navActive && !followEnabled) {
       flash('请先进入导航后再开人体跟随', 'err');
       return;
     }

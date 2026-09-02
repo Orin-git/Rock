@@ -134,6 +134,9 @@ def generate_launch_description() -> LaunchDescription:
                 'slave_id': 0x50,
                 'frame_id': 'imu_link',
                 'rate': 15.0,
+                # Idle probe 2026-09-02: bias=0.0096 made published wz≈-0.0094.
+                'gyro_z_bias_rad_s': 0.0,
+                'gyro_z_deadband_rad_s': 0.005,
             }],
             output='screen',
             respawn=True,
@@ -158,7 +161,7 @@ def generate_launch_description() -> LaunchDescription:
             output='screen',
         ),
         Node(
-            package='xw_sensors',
+            package='xw_pc_nav_filter_cpp',
             executable='pc_nav_filter_node',
             name='xw_pc_nav_filter',
             parameters=[os.path.join(
@@ -199,7 +202,21 @@ def generate_launch_description() -> LaunchDescription:
             parameters=[{'maps_dir': maps_dir, 'use_nav2': True}],
             output='screen',
         ),
-        Node(package='xw_follow_session', executable='follow_session_node', name='xw_follow_session', output='screen'),
+        Node(
+            package='xw_follow_session',
+            executable='follow_session_node',
+            name='xw_follow_session',
+            parameters=[{
+                # Gen1-style realtime visual servo (bottom cam → /xw/cmd/follow).
+                # Set use_nav2_follow:=true to restore Nav2 dynamic-goal “打点”.
+                'use_nav2_follow': False,
+                'camera_frame': 'camera_front_down_link',
+                'desired_follow_distance': 0.9,
+                'max_linear_x': 0.28,
+                'max_angular_z': 0.55,
+            }],
+            output='screen',
+        ),
         Node(
             package='xw_recharge',
             executable='recharge_node',
@@ -338,7 +355,9 @@ def generate_launch_description() -> LaunchDescription:
                     'scan_mode': 'Standard',
                     'enable_filter': True,
                     'filter_inclusive': False,
-                    'filter_regions': [-92.0, -36.5, 80.0, 95.5, -139.0, -128.0, 133.0, 141.0],
+                    # Body/mount blind zones (deg). filter_inclusive=false → drop inside ranges.
+                    # Explains ~68% scan "valid" in nav_diag (intentional, not mis-mount).
+                    'filter_regions': [-95.5, -36.5, 77.0, 96.0, -140.5, -127.5, 131.5, 142.0],
                     'scan_frequency': ParameterValue(lidar_scan_frequency, value_type=float),
                 }],
                 output='screen',

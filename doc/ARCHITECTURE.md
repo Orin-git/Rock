@@ -185,13 +185,13 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 
 ### 感知 / 跌倒 / 跟随
 
-- **感知**：相机1 `/camera/front_up/{color,depth}` → YOLOv8n-pose RKNN ~6Hz → `/xw/perception/tracks`
+- **感知**：底部相机 `/camera/front_down/{color,depth}` → YOLOv8n-pose RKNN ~6Hz → `/xw/perception/tracks`
   - `is_primary`：最近/候选；`is_target`：跟随锁定（上升沿锁定 + Kalman/IoU 关联 + 遮挡 coast）
-- **跟随（动态目标）**：`xw_follow_session` 将 `is_target` 投影到 `map`，发 `NavigateToPose`（BT=`follow_point.xml`）+ `/goal_update`（1Hz + 迟滞）
-  - 绕障：复用 Nav2 规划 + local costmap（激光+双深度）
-  - 速度出口：`/xw/cmd/nav`（默认不发 `/xw/cmd/follow`）
+- **跟随（实时视觉伺服，默认）**：`xw_follow_session` 对 `is_target` 做 bearing+distance → `/xw/cmd/follow`（一代式 P 控制，检测帧率）
+  - 摄像头：`camera_front_down_link`（底部 HP60C）
+  - 可选 `use_nav2_follow:=true`：投影到 `map` + `NavigateToPose`（`follow_point.xml`）+ `/goal_update`（旧“打点”路径）
   - 丢失：TRACKING → COAST → SEARCH（旋转）→ LOST；不跟路人
-  - 前置：已进入导航（有地图）；开关跟随 **不拆 Nav2**
+  - 前置：已进入导航（有地图）；开关跟随 **不拆 Nav2**（视觉伺服不依赖规划器）
 - **跌倒**：正交开关与 `/xw/perception/fall` 契约不变
 
 ### 导航要点（Gen2 重设计，非一代 MPPI 移植）
@@ -223,8 +223,8 @@ Nuwa-HP60C 官方为 **USB2.0 接口**（不会出现 `speed=5000`，属正常�
 
 1. teleop / motion（调试遥控仍最高）
 2. 跟随任务与点位/巡航互斥：开跟随 → 软取消点位；跟随时点位被拒绝
-3. 跟随运动 = Nav2 → `/xw/cmd/nav`
-4. `/xw/cmd/follow` 仅用于丢失搜索旋转或 `publish_legacy_cmd:=true` 调试
+3. 跟随运动（默认）= 视觉伺服 → `/xw/cmd/follow`（优先级高于残余 `/xw/cmd/nav`）
+4. 可选 Nav2 打点跟随：`use_nav2_follow:=true` → `/xw/cmd/nav`
 
 ### 手推建图要点
 

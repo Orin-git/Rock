@@ -1014,12 +1014,12 @@ class BridgeNode(Node):
             'service_ready': ready,
             'topic': '/xw/follow/enable',
             'mode': mode,
-            'hint': '正交任务：需已进导航；开跟随只取消点位/巡航，不拆 Nav2',
+            'hint': '正交任务：需已进导航；实时视觉伺服跟随（底部相机），不拆 Nav2',
         }
 
     def set_follow(self, enabled: bool) -> Dict[str, Any]:
         if not self._set_follow.wait_for_service(timeout_sec=2.0):
-            return {'ok': False, 'message': 'set_follow service unavailable (supervisor down?)'}
+            return {'ok': False, 'enabled': bool(self._follow_enabled), 'message': 'set_follow service unavailable (supervisor down?)'}
         req = SetBool.Request()
         req.data = bool(enabled)
         fut = self._set_follow.call_async(req)
@@ -1028,7 +1028,7 @@ class BridgeNode(Node):
                 break
             threading.Event().wait(0.05)
         if not fut.done() or fut.result() is None:
-            return {'ok': False, 'message': 'set_follow timeout'}
+            return {'ok': False, 'enabled': bool(self._follow_enabled), 'message': 'set_follow timeout'}
         res = fut.result()
         with self._lock:
             if res.success:

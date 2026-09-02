@@ -885,9 +885,16 @@
       setStatus(`静态地图像素不匹配 ${bytes.length}≠${width * height}`);
       return false;
     }
+    // PGM row 0 is image top; OccupancyGrid / map_server row 0 is world origin (bottom).
+    // Flip vertically so static preview matches live /map (else map looks upside-down and
+    // waypoint clearance marks free poses as 坏点).
     const data = new Int8Array(width * height);
-    for (let i = 0; i < bytes.length; i++) {
-      data[i] = pgmByteToOccupancy(bytes[i]);
+    for (let y = 0; y < height; y++) {
+      const srcRow = (height - 1 - y) * width;
+      const dstRow = y * width;
+      for (let x = 0; x < width; x++) {
+        data[dstRow + x] = pgmByteToOccupancy(bytes[srcRow + x]);
+      }
     }
     const allowLive = !!opts.allowLive;
     // Already showing a live /map during nav: keep it; static is only a fallback.

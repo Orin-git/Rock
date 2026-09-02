@@ -1,11 +1,12 @@
-<!-- Gen2 NavigateToPose: 1 Hz replan, bounded recoveries (clear / spin / backup / wait).
+<!-- Gen2 NavigateToPose: 2 Hz replan, recovery = backup → spin → retry (door / tight-space).
+     Side CM zones use slowdown (not stop) so BackUp/Spin can run when near walls.
      Note: do NOT wrap FollowPath in ReactiveSequence+IsPathValid — on this stack
      IsPathValid flaps FAILURE and preempts FollowPath, so cmd_vel_nav never flows. -->
 <root main_tree_to_execute="MainTree">
   <BehaviorTree ID="MainTree">
-    <RecoveryNode number_of_retries="6" name="NavigateRecovery">
+    <RecoveryNode number_of_retries="8" name="NavigateRecovery">
       <PipelineSequence name="NavigateWithReplanning">
-        <RateController hz="1.0">
+        <RateController hz="2.0">
           <RecoveryNode number_of_retries="1" name="ComputePathToPose">
             <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
             <ClearEntireCostmap name="ClearGlobalCostmap-Context" service_name="global_costmap/clear_entirely_global_costmap"/>
@@ -22,16 +23,23 @@
           <Sequence name="ClearLocal">
             <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
           </Sequence>
+          <!-- Door / tight wall: back out first, then re-orient (not spin-in-place against wall). -->
+          <Sequence name="ClearAndBackup">
+            <ClearEntireCostmap name="ClearLocal-Backup" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <ClearEntireCostmap name="ClearGlobal-Backup" service_name="global_costmap/clear_entirely_global_costmap"/>
+            <BackUp backup_dist="0.45" backup_speed="0.12"/>
+          </Sequence>
           <Sequence name="ClearBothAndSpin">
             <ClearEntireCostmap name="ClearLocal-Spin" service_name="local_costmap/clear_entirely_local_costmap"/>
             <ClearEntireCostmap name="ClearGlobal-Spin" service_name="global_costmap/clear_entirely_global_costmap"/>
+            <Spin spin_dist="0.85"/>
+          </Sequence>
+          <Sequence name="BackupThenSpin">
+            <ClearEntireCostmap name="ClearLocal-BkSpin" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <BackUp backup_dist="0.35" backup_speed="0.12"/>
             <Spin spin_dist="1.05"/>
           </Sequence>
-          <Sequence name="ClearAndBackup">
-            <ClearEntireCostmap name="ClearLocal-Backup" service_name="local_costmap/clear_entirely_local_costmap"/>
-            <BackUp backup_dist="0.30" backup_speed="0.12"/>
-          </Sequence>
-          <Wait wait_duration="3.0"/>
+          <Wait wait_duration="2.0"/>
         </RoundRobin>
       </ReactiveFallback>
     </RecoveryNode>

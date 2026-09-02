@@ -137,6 +137,12 @@ class PcNavFilterNode(Node):
         self.declare_parameter('radius_enable', True)
         self.declare_parameter('radius_search', 0.12)
         self.declare_parameter('radius_min_neighbors', 5)
+        # Optional per-stream overrides (same order as input_topics).
+        self.declare_parameter('stream_y_min', [-0.80, -1.20])
+        self.declare_parameter('stream_y_max', [0.40, 1.00])
+        self.declare_parameter('stream_stride', [4, 2])
+        self.declare_parameter('stream_sor_enable', [True, False])
+        self.declare_parameter('stream_radius_enable', [True, False])
 
         inputs = list(self.get_parameter('input_topics').value)
         outputs = list(self.get_parameter('output_topics').value)
@@ -164,6 +170,12 @@ class PcNavFilterNode(Node):
             f'{"+radius" if rad_on else ""})'
         )
 
+    def _stream_param(self, name: str, idx: int, default):
+        vals = list(self.get_parameter(name).value)
+        if idx < len(vals):
+            return vals[idx]
+        return default
+
     def _on_cloud(self, idx: int, msg: PointCloud2) -> None:
         rate = float(self.get_parameter('max_rate_hz').value)
         now = self.get_clock().now().nanoseconds * 1e-9
@@ -181,11 +193,18 @@ class PcNavFilterNode(Node):
         z_min = float(self.get_parameter('z_min').value)
         z_max = float(self.get_parameter('z_max').value)
         abs_x_max = float(self.get_parameter('abs_x_max').value)
-        y_min = float(self.get_parameter('y_min').value)
-        y_max = float(self.get_parameter('y_max').value)
+        y_min = float(self._stream_param(
+            'stream_y_min', idx, float(self.get_parameter('y_min').value)))
+        y_max = float(self._stream_param(
+            'stream_y_max', idx, float(self.get_parameter('y_max').value)))
         leaf = max(float(self.get_parameter('voxel_leaf').value), 0.02)
-        stride = max(int(self.get_parameter('stride').value), 1)
+        stride = max(int(self._stream_param(
+            'stream_stride', idx, int(self.get_parameter('stride').value))), 1)
         max_out = max(int(self.get_parameter('max_points_out').value), 100)
+        sor_on = bool(self._stream_param(
+            'stream_sor_enable', idx, bool(self.get_parameter('sor_enable').value)))
+        rad_on = bool(self._stream_param(
+            'stream_radius_enable', idx, bool(self.get_parameter('radius_enable').value)))
 
         data = msg.data
         n = msg.width * msg.height
@@ -226,14 +245,14 @@ class PcNavFilterNode(Node):
 
         pts = np.asarray(list(voxels.values()), dtype=np.float32)
 
-        if bool(self.get_parameter('sor_enable').value):
+        if sor_on:
             pts = statistical_outlier_removal(
                 pts,
                 int(self.get_parameter('sor_mean_k').value),
                 float(self.get_parameter('sor_stddev_mul').value),
             )
 
-        if bool(self.get_parameter('radius_enable').value) and pts.shape[0] > 0:
+        if rad_on and pts.shape[0] > 0:
             pts = radius_outlier_removal(
                 pts,
                 float(self.get_parameter('radius_search').value),

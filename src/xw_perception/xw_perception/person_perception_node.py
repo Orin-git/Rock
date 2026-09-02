@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Person perception: YOLOv8n-pose (RKNN) → tracks + fall (geometry debounce).
 
-Subscribes /camera/front_up/{color,depth}/image_raw when fall or follow is enabled.
+Subscribes /camera/front_down/{color,depth}/image_raw when fall or follow is enabled.
 Publishes /xw/perception/tracks and /xw/perception/fall.
 """
 
@@ -194,9 +194,9 @@ class PersonPerceptionNode(Node):
         self.declare_parameter('trigger_consecutive_frames', 6)
         self.declare_parameter('clear_consecutive_frames', 6)
         self.declare_parameter('clear_timeout_seconds', 8.0)
-        self.declare_parameter('frame_id', 'camera_front_up_link')
-        self.declare_parameter('color_topic', '/camera/front_up/color/image_raw')
-        self.declare_parameter('depth_topic', '/camera/front_up/depth/image_raw')
+        self.declare_parameter('frame_id', 'camera_front_down_link')
+        self.declare_parameter('color_topic', '/camera/front_down/color/image_raw')
+        self.declare_parameter('depth_topic', '/camera/front_down/depth/image_raw')
         self.declare_parameter('kp_conf_min', 0.35)
         self.declare_parameter('kp_min_visible', 4)
         self.declare_parameter('bbox_aspect_min', 0.55)

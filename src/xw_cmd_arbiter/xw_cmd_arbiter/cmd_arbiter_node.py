@@ -10,11 +10,12 @@ from std_msgs.msg import String
 
 
 # Higher number = higher priority
+# follow > nav so realtime visual-servo is not starved by residual Nav2 cmd
 SOURCE_PRIORITY = {
     'teleop': 50,
     'motion': 40,
+    'follow': 35,
     'nav': 30,
-    'follow': 20,
     'recharge': 10,
 }
 

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "geometry_msgs/msg/quaternion.hpp"
+#include "rcl_interfaces/msg/set_parameters_result.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
@@ -172,11 +173,18 @@ class Wt901ImuNode : public rclcpp::Node {
     this->declare_parameter<std::string>("frame_id", "imu_link");
     this->declare_parameter<double>("rate", 15.0);
     this->declare_parameter<double>("timeout_s", 0.12);
+    // Subtract from raw gz. Must be measured on THIS unit while idle (mean raw wz).
+    // Do NOT reuse an old value — wrong sign/magnitude causes EKF yaw crawl.
+    this->declare_parameter<double>("gyro_z_bias_rad_s", 0.0);
+    // After bias: clamp tiny residual to 0 so stationary EKF does not integrate.
+    this->declare_parameter<double>("gyro_z_deadband_rad_s", 0.005);
 
     frame_id_ = this->get_parameter("frame_id").as_string();
     slave_ = static_cast<uint8_t>(this->get_parameter("slave_id").as_int() & 0xFF);
     baud_ = this->get_parameter("baud").as_int();
     timeout_s_ = this->get_parameter("timeout_s").as_double();
+    gyro_z_bias_ = this->get_parameter("gyro_z_bias_rad_s").as_double();
+    gyro_z_deadband_ = this->get_parameter("gyro_z_deadband_rad_s").as_double();
     const double rate = std::max(1.0, this->get_parameter("rate").as_double());
 
     port_candidates_ = {this->get_parameter("port").as_string(),
@@ -187,8 +195,27 @@ class Wt901ImuNode : public rclcpp::Node {
     timer_ = this->create_wall_timer(
         std::chrono::duration<double>(1.0 / rate), [this]() { this->tick(); });
     RCLCPP_INFO(this->get_logger(),
-                "WT901C485 Modbus IMU port=%s baud=%d slave=0x%02x rate=%.1fHz -> /imu/data",
-                ser_.is_open() ? ser_.port().c_str() : "?", baud_, slave_, rate);
+                "WT901C485 Modbus IMU port=%s baud=%d slave=0x%02x rate=%.1fHz "
+                "bias_z=%.5f deadband=%.5f -> /imu/data",
+                ser_.is_open() ? ser_.port().c_str() : "?", baud_, slave_, rate,
+                gyro_z_bias_, gyro_z_deadband_);
+
+    param_cb_ = this->add_on_set_parameters_callback(
+        [this](const std::vector<rclcpp::Parameter> & params) {
+          rcl_interfaces::msg::SetParametersResult result;
+          result.successful = true;
+          for (const auto & p : params) {
+            if (p.get_name() == "gyro_z_bias_rad_s") {
+              gyro_z_bias_ = p.as_double();
+              RCLCPP_INFO(this->get_logger(), "gyro_z_bias_rad_s -> %.6f", gyro_z_bias_);
+            } else if (p.get_name() == "gyro_z_deadband_rad_s") {
+              gyro_z_deadband_ = std::max(0.0, p.as_double());
+              RCLCPP_INFO(this->get_logger(), "gyro_z_deadband_rad_s -> %.6f",
+                          gyro_z_deadband_);
+            }
+          }
+          return result;
+        });
   }
 
   ~Wt901ImuNode() override {}
@@ -300,7 +327,11 @@ class Wt901ImuNode : public rclcpp::Node {
     msg.orientation_covariance = {0.05, 0.0, 0.0, 0.0, 0.05, 0.0, 0.0, 0.0, 0.1};
     msg.angular_velocity.x = gx;
     msg.angular_velocity.y = gy;
-    msg.angular_velocity.z = gz;
+    double gz_corr = gz - gyro_z_bias_;
+    if (std::abs(gz_corr) < gyro_z_deadband_) {
+      gz_corr = 0.0;
+    }
+    msg.angular_velocity.z = gz_corr;
     msg.angular_velocity_covariance = {0.02, 0.0, 0.0, 0.0, 0.02, 0.0, 0.0, 0.0, 0.02};
     msg.linear_acceleration.x = ax;
     msg.linear_acceleration.y = ay;
@@ -318,12 +349,15 @@ class Wt901ImuNode : public rclcpp::Node {
   uint8_t slave_;
   int baud_;
   double timeout_s_;
+  double gyro_z_bias_;
+  double gyro_z_deadband_{0.005};
   std::vector<std::string> port_candidates_;
   SerialPort ser_;
   int fail_streak_ = 0;
   int ok_count_ = 0;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  OnSetParametersCallbackHandle::SharedPtr param_cb_;
 };
 
 int main(int argc, char ** argv) {

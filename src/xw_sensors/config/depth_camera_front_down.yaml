@@ -36,7 +36,7 @@ points_fps: 10.0
 # Mirror /xw/camera/pointcloud_enabled so NAV auto opens both depth clouds.
 manage_pointcloud_control: false
 follow_pointcloud_enabled_topic: true
-gate_rgb_on_sessions: false
+gate_rgb_on_sessions: true
 
 rgb_image_in: /ascamera_hp60c_2/camera_publisher/rgb0/image
 rgb_info_in: /ascamera_hp60c_2/camera_publisher/rgb0/camera_info

@@ -34,3 +34,10 @@
     radius_enable: true
     radius_search: 0.12
     radius_min_neighbors: 5
+
+    # Per-stream: [front_up, front_down]. Down cam sees floor → wider Y, no SOR/radius.
+    stream_y_min: [-0.80, -1.20]
+    stream_y_max: [0.40, 1.00]
+    stream_stride: [4, 2]
+    stream_sor_enable: [true, false]
+    stream_radius_enable: [true, false]

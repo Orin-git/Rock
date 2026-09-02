@@ -189,6 +189,8 @@ def generate_launch_description():
                 arguments=['--ros-args', '--log-level', log_level],
                 parameters=[{'use_sim_time': use_sim_time},
                             {'autostart': autostart},
+                            # Rock 5T: cold start is DDS/CPU heavy; default 4s bond is tight.
+                            {'bond_timeout': 10.0},
                             {'node_names': lifecycle_nodes}]),
         ]
     )

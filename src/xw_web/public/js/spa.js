@@ -9,7 +9,7 @@ const VENDOR_SCRIPTS = [
   '/js/vendor/foxglove_bundle.js',
   '/js/vendor/roslib_foxglove.js',
   '/js/vendor/ros_ws_helper.js',
-  '/js/map_canvas.js',
+  '/js/map_canvas.js?v=20260902-mapflip',
 ];
 
 const ROUTES = {

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Body-follow session: locked track → map PoseStamped → Nav2 follow_point BT.
+"""Body-follow session: locked track → realtime visual-servo /xw/cmd/follow.
 
-Does NOT tear down Nav2. Cancels point/patrol goals, then drives via /xw/cmd/nav.
-Default path does not publish /xw/cmd/follow (legacy P-control reserved for debug).
+Default path matches gen1 feel: bearing + distance → Twist every detection
+frame. Optional Nav2 dynamic-goal path remains behind use_nav2_follow:=true.
 """
 
 from __future__ import annotations
@@ -50,17 +50,25 @@ def _yaw_to_quat(yaw: float):
 class FollowSessionNode(Node):
     def __init__(self) -> None:
         super().__init__('xw_follow_session')
+        # Standoff / visual-servo (gen1-style)
         self.declare_parameter('desired_follow_distance', 0.9)
+        self.declare_parameter('max_linear_x', 0.28)
+        self.declare_parameter('max_angular_z', 0.55)
+        self.declare_parameter('k_linear', 0.45)
+        self.declare_parameter('k_angular', 0.85)
+        self.declare_parameter('align_bearing_thr', 0.45)
+        self.declare_parameter('stop_deadband_m', 0.12)
+        self.declare_parameter('min_follow_distance', 0.45)
+        # Optional Nav2 dynamic-goal path (laggy “打点”)
         self.declare_parameter('goal_update_hz', 1.0)
         self.declare_parameter('goal_hysteresis_m', 0.35)
         self.declare_parameter('hfov_deg', 70.0)
-        self.declare_parameter('camera_frame', 'camera_front_up_link')
+        self.declare_parameter('camera_frame', 'camera_front_down_link')
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('lost_timeout_s', 2.5)
         self.declare_parameter('search_timeout_s', 8.0)
         self.declare_parameter('search_yaw_rate', 0.35)
-        self.declare_parameter('use_nav2_follow', True)
-        self.declare_parameter('publish_legacy_cmd', False)
+        self.declare_parameter('use_nav2_follow', False)
         self.declare_parameter('follow_bt_xml', '')
 
         self._cb = ReentrantCallbackGroup()
@@ -78,9 +86,9 @@ class FollowSessionNode(Node):
         self._follow_thread: Optional[threading.Thread] = None
         self._follow_stop = threading.Event()
         self._suspend_nav = False  # True during SEARCH/LOST — don't auto-restart NavigateToPose
+        self._last_cmd = Twist()
 
         # Heavy runtime (TF / tracks / 10Hz tick) is armed only while follow is enabled.
-        # Idle follow used to hold ~15–20% CPU just from /tf fan-in.
         self._tf_buffer: Optional[Buffer] = None
         self._tf_listener: Optional[TransformListener] = None
         self._tracks_sub = None
@@ -95,9 +103,7 @@ class FollowSessionNode(Node):
         self._progress_pub = self.create_publisher(TaskProgress, '/xw/task/progress', 10)
         self._goal_update_pub = self.create_publisher(PoseStamped, '/goal_update', 10)
         self._nav_cancel_pub = self.create_publisher(Bool, '/xw/nav/cancel', 10)
-        self._legacy_cmd_pub = self.create_publisher(Twist, '/xw/cmd/follow', 10)
-        # Short-lived search spin (only when Nav2 follow action not covering recovery)
-        self._search_cmd_pub = self.create_publisher(Twist, '/xw/cmd/follow', 10)
+        self._cmd_pub = self.create_publisher(Twist, '/xw/cmd/follow', 10)
 
         self.create_subscription(Bool, '/xw/follow/enable', self._on_enable, latch, callback_group=self._cb)
         self.create_service(
@@ -108,7 +114,10 @@ class FollowSessionNode(Node):
             self, NavigateToPose, 'navigate_to_pose', callback_group=self._cb
         )
 
-        self.get_logger().info('follow session ready (idle until /xw/follow/enable)')
+        mode = 'nav2-goal' if bool(self.get_parameter('use_nav2_follow').value) else 'visual-servo'
+        self.get_logger().info(
+            f'follow session ready ({mode}; cam={self.get_parameter("camera_frame").value})'
+        )
 
     def _bt_path(self) -> str:
         configured = str(self.get_parameter('follow_bt_xml').value or '').strip()
@@ -134,17 +143,23 @@ class FollowSessionNode(Node):
         res.state = self._state.value
         return res
 
+    def _use_nav2(self) -> bool:
+        return bool(self.get_parameter('use_nav2_follow').value)
+
     def _arm_runtime(self) -> None:
-        """Subscribe to TF/tracks and start tick only while following."""
-        if self._tf_listener is not None:
+        """Subscribe to tracks (and TF if Nav2 follow) and start tick only while following."""
+        if self._tracks_sub is not None:
             return
-        self._tf_buffer = Buffer()
-        self._tf_listener = TransformListener(self._tf_buffer, self)
+        if self._use_nav2():
+            self._tf_buffer = Buffer()
+            self._tf_listener = TransformListener(self._tf_buffer, self)
         self._tracks_sub = self.create_subscription(
             PersonTracks, '/xw/perception/tracks', self._on_tracks, 10, callback_group=self._cb
         )
         self._tick_timer = self.create_timer(0.1, self._tick, callback_group=self._cb)
-        self.get_logger().info('follow runtime armed (tf+tracks+tick)')
+        self.get_logger().info(
+            f'follow runtime armed (tracks+tick{",+tf" if self._use_nav2() else ""})'
+        )
 
     def _disarm_runtime(self) -> None:
         """Drop TF/tracks/tick so idle follow does not burn CPU on /tf."""
@@ -173,6 +188,14 @@ class FollowSessionNode(Node):
             self._tf_buffer = None
         with self._lock:
             self._last_target_pose = None
+            self._last_cmd = Twist()
+
+    def _publish_cmd(self, cmd: Twist) -> None:
+        self._last_cmd = cmd
+        self._cmd_pub.publish(cmd)
+
+    def _stop_cmd(self) -> None:
+        self._publish_cmd(Twist())
 
     def _set_active(self, active: bool, source: str) -> None:
         if active == self._active:
@@ -185,11 +208,11 @@ class FollowSessionNode(Node):
             self._state = FollowState.TRACKING
             self._last_seen_t = time.monotonic()
             self._last_goal_sent = None
-            # Soft-cancel point/patrol only — do not stop Nav2
+            # Soft-cancel point/patrol — free /xw/cmd/nav so visual follow can drive
             self._nav_cancel_pub.publish(Bool(data=True))
             self._emit_progress('follow_start', source)
             self.get_logger().info(f'follow active ({source})')
-            if bool(self.get_parameter('use_nav2_follow').value):
+            if self._use_nav2():
                 self._follow_thread = threading.Thread(
                     target=self._follow_nav_loop, daemon=True
                 )
@@ -200,7 +223,7 @@ class FollowSessionNode(Node):
             self._suspend_nav = True
             self._cancel_follow_nav()
             self._state = FollowState.IDLE
-            self._legacy_cmd_pub.publish(Twist())
+            self._stop_cmd()
             self._disarm_runtime()
             self._emit_result(0, 'follow stopped', source)
             self.get_logger().info(f'follow stopped ({source})')
@@ -215,17 +238,51 @@ class FollowSessionNode(Node):
             except Exception as exc:  # noqa: BLE001
                 self.get_logger().warn(f'follow nav cancel failed: {exc}')
 
-    def _track_to_camera_point(self, bearing: float, distance: float):
-        """Optical-ish camera_front_up_link: Z forward, X right, Y down.
+    def _visual_servo_cmd(self, bearing: float, distance: float) -> Twist:
+        """Gen1-style P-control from normalized bearing (-1..1) and depth (m)."""
+        out = Twist()
+        desired = float(self.get_parameter('desired_follow_distance').value)
+        min_d = float(self.get_parameter('min_follow_distance').value)
+        deadband = float(self.get_parameter('stop_deadband_m').value)
+        max_lin = float(self.get_parameter('max_linear_x').value)
+        max_ang = float(self.get_parameter('max_angular_z').value)
+        k_lin = float(self.get_parameter('k_linear').value)
+        k_ang = float(self.get_parameter('k_angular').value)
+        align_thr = float(self.get_parameter('align_bearing_thr').value)
 
-        Places the Nav2 goal at a standoff short of the person so the path end
-        is not inside the person obstacle / TruncatePath empty-path zone.
-        """
+        b = max(-1.0, min(1.0, float(bearing)))
+        d = max(0.0, float(distance))
+
+        # +bearing = person on right → turn right → negative angular.z (ROS ENU)
+        ang = -k_ang * b
+        # Deadzone near center to avoid twitch
+        if abs(b) < 0.05:
+            ang = 0.0
+        out.angular.z = max(-max_ang, min(max_ang, ang))
+
+        # Only advance when roughly centered and beyond standoff
+        if d < min_d or d < (desired - deadband):
+            out.linear.x = 0.0
+        elif abs(b) > align_thr:
+            # Turn-first: small creep if far, else rotate in place
+            out.linear.x = 0.0 if d < desired + 0.6 else max_lin * 0.25
+        else:
+            err = d - desired
+            if err <= deadband:
+                out.linear.x = 0.0
+            else:
+                # Approach slowdown near standoff (gen1-like)
+                scale = min(1.0, err / max(0.4, desired))
+                out.linear.x = max(0.0, min(max_lin, k_lin * err * (0.35 + 0.65 * scale)))
+
+        return out
+
+    def _track_to_camera_point(self, bearing: float, distance: float):
+        """Optical-ish camera_front_down_link: Z forward, X right, Y down."""
         half_hfov = math.radians(float(self.get_parameter('hfov_deg').value) * 0.5)
-        angle = float(bearing) * half_hfov  # +bearing → +X (right)
+        angle = float(bearing) * half_hfov
         person_d = max(0.3, float(distance))
         standoff = float(self.get_parameter('desired_follow_distance').value)
-        # Approach point: keep ~standoff meters between robot goal and person.
         dist = max(0.25, person_d - standoff)
         x = dist * math.sin(angle)
         y = 0.0
@@ -252,7 +309,6 @@ class FollowSessionNode(Node):
         t = tf.transform.translation
         q = tf.transform.rotation
         px, py, pz = self._quat_rotate(q.x, q.y, q.z, q.w, x, y, z)
-        # Face toward the person (camera forward projected to map yaw).
         fx, fy, _ = self._quat_rotate(q.x, q.y, q.z, q.w, 0.0, 0.0, 1.0)
         yaw = math.atan2(fy, fx)
         ps = PoseStamped()
@@ -266,7 +322,6 @@ class FollowSessionNode(Node):
 
     @staticmethod
     def _quat_rotate(qx, qy, qz, qw, x, y, z):
-        # q * v * q_conj
         ix = qw * x + qy * z - qz * y
         iy = qw * y + qz * x - qx * z
         iz = qw * z + qx * y - qy * x
@@ -286,7 +341,6 @@ class FollowSessionNode(Node):
                 target = t
                 break
         if target is None:
-            # Fall back to primary only before lock establishes
             for t in msg.tracks:
                 if t.is_primary:
                     target = t
@@ -294,37 +348,34 @@ class FollowSessionNode(Node):
         if target is None:
             return
 
-        pose = self._pose_in_map(target.x, target.distance, msg.frame_id)
-        if pose is None:
-            return
-
         with self._lock:
-            self._last_target_pose = pose
             self._last_seen_t = time.monotonic()
             if self._state in (FollowState.SEARCH, FollowState.LOST, FollowState.COAST):
                 was = self._state
                 self._state = FollowState.TRACKING
                 self._suspend_nav = False
                 self._emit_progress('tracking', self._command_id)
-                if was in (FollowState.SEARCH, FollowState.LOST) and (
-                    self._follow_thread is None or not self._follow_thread.is_alive()
+                if (
+                    self._use_nav2()
+                    and was in (FollowState.SEARCH, FollowState.LOST)
+                    and (self._follow_thread is None or not self._follow_thread.is_alive())
                 ):
-                    if bool(self.get_parameter('use_nav2_follow').value):
-                        self._follow_thread = threading.Thread(
-                            target=self._follow_nav_loop, daemon=True
-                        )
-                        self._follow_thread.start()
+                    self._follow_thread = threading.Thread(
+                        target=self._follow_nav_loop, daemon=True
+                    )
+                    self._follow_thread.start()
 
-        self._maybe_publish_goal(pose)
-
-        if bool(self.get_parameter('publish_legacy_cmd').value):
-            # Debug-only direct cmd (normally off)
-            out = Twist()
-            stop_d = float(self.get_parameter('desired_follow_distance').value)
-            if target.distance > stop_d:
-                out.linear.x = 0.15
-            out.angular.z = max(-0.4, min(0.4, -0.5 * target.x))
-            self._legacy_cmd_pub.publish(out)
+        if self._use_nav2():
+            pose = self._pose_in_map(target.x, target.distance, msg.frame_id)
+            if pose is None:
+                return
+            with self._lock:
+                self._last_target_pose = pose
+            self._maybe_publish_goal(pose)
+        else:
+            # Realtime visual servo — no map / Nav2
+            if self._state in (FollowState.TRACKING, FollowState.COAST):
+                self._publish_cmd(self._visual_servo_cmd(target.x, target.distance))
 
     def _maybe_publish_goal(self, pose: PoseStamped) -> None:
         hz = max(0.2, float(self.get_parameter('goal_update_hz').value))
@@ -332,13 +383,12 @@ class FollowSessionNode(Node):
         hyst = float(self.get_parameter('goal_hysteresis_m').value)
         now = time.monotonic()
         if now - self._last_goal_pub_t < period:
-            # Still allow first publish immediately
             if self._last_goal_sent is not None:
                 return
         if self._last_goal_sent is not None:
             dx = pose.pose.position.x - self._last_goal_sent.pose.position.x
             dy = pose.pose.position.y - self._last_goal_sent.pose.position.y
-            if (dx * dx + dy * dy) < hyst * hyst and self._last_goal_sent is not None:
+            if (dx * dx + dy * dy) < hyst * hyst:
                 if now - self._last_goal_pub_t < period * 2:
                     return
         self._goal_update_pub.publish(pose)
@@ -346,8 +396,7 @@ class FollowSessionNode(Node):
         self._last_goal_pub_t = now
 
     def _follow_nav_loop(self) -> None:
-        """Send NavigateToPose with follow_point BT; block until follow stops."""
-        # Wait for an initial pose from tracks
+        """Optional NavigateToPose + follow_point BT path."""
         deadline = time.monotonic() + 8.0
         pose = None
         while time.monotonic() < deadline and not self._follow_stop.is_set() and self._active:
@@ -375,7 +424,6 @@ class FollowSessionNode(Node):
         else:
             self.get_logger().warn('follow_point.xml missing — using default BT')
 
-        # Seed GoalUpdater before/with the action so BT has a live dynamic goal
         self._goal_update_pub.publish(pose)
         self._last_goal_sent = pose
         self._last_goal_pub_t = time.monotonic()
@@ -416,14 +464,12 @@ class FollowSessionNode(Node):
         except Exception:  # noqa: BLE001
             status = None
 
-        # follow_point BT runs until failure/cancel; restart only while tracking
         if (
             self._active
             and not self._follow_stop.is_set()
             and not self._suspend_nav
             and self._state in (FollowState.TRACKING, FollowState.COAST)
         ):
-            # Back off on abort storms so arbiter/controller can publish cleanly.
             delay = 1.0 if status == 6 else 0.3
             self.get_logger().info(
                 f'follow NavigateToPose ended (status={status}) — restarting in {delay:.1f}s'
@@ -447,13 +493,15 @@ class FollowSessionNode(Node):
         if self._state == FollowState.TRACKING and since > 0.4:
             self._state = FollowState.COAST
             self._emit_progress('coast', self._command_id)
+            if not self._use_nav2():
+                self._stop_cmd()
 
         if self._state in (FollowState.TRACKING, FollowState.COAST) and since > lost_t:
             self._state = FollowState.SEARCH
             self._search_started_t = now
             self._search_dir = 1.0
             self._suspend_nav = True
-            self._cancel_follow_nav()  # free cmd channel for search spin
+            self._cancel_follow_nav()
             self._emit_progress('search', self._command_id)
             self.get_logger().warn('target lost → search rotate')
 
@@ -461,10 +509,9 @@ class FollowSessionNode(Node):
             if since <= lost_t * 0.5:
                 self._state = FollowState.TRACKING
                 self._suspend_nav = False
-                self._legacy_cmd_pub.publish(Twist())
-                # Restart Nav2 follow if still active
+                self._stop_cmd()
                 if (
-                    bool(self.get_parameter('use_nav2_follow').value)
+                    self._use_nav2()
                     and (self._follow_thread is None or not self._follow_thread.is_alive())
                 ):
                     self._follow_stop.clear()
@@ -476,20 +523,19 @@ class FollowSessionNode(Node):
             if now - self._search_started_t > search_t:
                 self._state = FollowState.LOST
                 self._suspend_nav = True
-                self._legacy_cmd_pub.publish(Twist())
+                self._stop_cmd()
                 self._cancel_follow_nav()
                 self._emit_result(1, 'target lost', self._command_id)
-                self.get_logger().error('follow LOST — stopping follow task (Nav2 stays up)')
+                self.get_logger().error('follow LOST — stopping follow task')
                 return
-            # Oscillate search direction every 2.5s
             phase = int((now - self._search_started_t) / 2.5)
             yaw = float(self.get_parameter('search_yaw_rate').value)
             cmd = Twist()
             cmd.angular.z = yaw if (phase % 2 == 0) else -yaw
-            self._search_cmd_pub.publish(cmd)
+            self._publish_cmd(cmd)
 
         if self._state == FollowState.LOST:
-            self._legacy_cmd_pub.publish(Twist())
+            self._stop_cmd()
 
     def _emit_progress(self, phase: str, command_id: str = '') -> None:
         p = TaskProgress()
@@ -512,7 +558,6 @@ class FollowSessionNode(Node):
 def main(args=None) -> None:
     rclpy.init(args=args)
     node = FollowSessionNode()
-    # 2 threads enough for enable + action callbacks; idle cost stays near fall_session.
     executor = MultiThreadedExecutor(num_threads=2)
     executor.add_node(node)
     try:
