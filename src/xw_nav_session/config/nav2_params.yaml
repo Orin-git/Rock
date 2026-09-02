@@ -7,7 +7,7 @@ amcl:
     use_sim_time: false
     alpha1: 0.15
     alpha2: 0.15
-    alpha3: 0.50
+    alpha3: 0.25
     alpha4: 0.55
     alpha5: 0.2
     laser_model_type: "likelihood_field"

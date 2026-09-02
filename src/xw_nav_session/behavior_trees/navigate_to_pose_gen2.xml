@@ -24,7 +24,7 @@
           </Sequence>
           <Sequence name="ClearAndBackup">
             <ClearEntireCostmap name="ClearLocal-Backup" service_name="local_costmap/clear_entirely_local_costmap"/>
-            <BackUp back_up_speed_placeholder="0.0" backup_dist="0.60" backup_speed="0.15"/>
+            <BackUp backup_dist="0.60" backup_speed="0.15"/>
           </Sequence>
           <Sequence name="ClearBothAndSpin">
             <ClearEntireCostmap name="ClearLocal-Spin" service_name="local_costmap/clear_entirely_local_costmap"/>
