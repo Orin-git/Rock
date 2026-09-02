@@ -424,24 +424,9 @@ class NavSessionNode(Node):
             self.get_logger().error('send_goal timed out')
             return False
         gh = send_fut.result()
-        # Cancel-then-send race: the server may still be finalizing the
-        # previous goal and reject the new one. Retry shortly before failing.
         if gh is None or not gh.accepted:
-            for _attempt in range(2):
-                self.get_logger().warn('goal rejected, retrying')
-                time.sleep(0.4)
-                send_fut = self._nav_client.send_goal_async(goal)
-                deadline = time.monotonic() + 10.0
-                while time.monotonic() < deadline and not send_fut.done():
-                    time.sleep(0.05)
-                if not send_fut.done():
-                    continue
-                gh = send_fut.result()
-                if gh is not None and gh.accepted:
-                    break
-            if gh is None or not gh.accepted:
-                self.get_logger().warn('goal rejected (after retries)')
-                return False
+            self.get_logger().warn('goal rejected')
+            return False
 
         with self._lock:
             self._nav_goal_handle = gh

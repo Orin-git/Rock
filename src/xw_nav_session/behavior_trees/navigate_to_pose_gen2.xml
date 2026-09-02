@@ -22,14 +22,14 @@
           <Sequence name="ClearLocal">
             <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
           </Sequence>
-          <Sequence name="ClearAndBackup">
-            <ClearEntireCostmap name="ClearLocal-Backup" service_name="local_costmap/clear_entirely_local_costmap"/>
-            <BackUp backup_dist="0.60" backup_speed="0.15"/>
-          </Sequence>
           <Sequence name="ClearBothAndSpin">
             <ClearEntireCostmap name="ClearLocal-Spin" service_name="local_costmap/clear_entirely_local_costmap"/>
             <ClearEntireCostmap name="ClearGlobal-Spin" service_name="global_costmap/clear_entirely_global_costmap"/>
             <Spin spin_dist="1.05"/>
+          </Sequence>
+          <Sequence name="ClearAndBackup">
+            <ClearEntireCostmap name="ClearLocal-Backup" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <BackUp backup_dist="0.30" backup_speed="0.12"/>
           </Sequence>
           <Wait wait_duration="3.0"/>
         </RoundRobin>

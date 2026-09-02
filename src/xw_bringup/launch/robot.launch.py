@@ -327,9 +327,20 @@ def generate_launch_description() -> LaunchDescription:
                 executable='rplidar_node',
                 name='rplidar_node',
                 condition=UnlessCondition(use_sim_lidar),
-                parameters=[os.path.join(
-                    get_package_share_directory('xw_bringup'), 'config', 'lidar_params.yaml'
-                )],
+                parameters=[{
+                    'channel_type': 'serial',
+                    'serial_port': lidar_port,
+                    'serial_baudrate': ParameterValue(lidar_baudrate, value_type=int),
+                    'frame_id': 'lidar_link',
+                    'topic_name': 'scan',
+                    'inverted': False,
+                    'angle_compensate': True,
+                    'scan_mode': 'Standard',
+                    'enable_filter': True,
+                    'filter_inclusive': False,
+                    'filter_regions': [-92.0, -36.5, 80.0, 95.5, -139.0, -128.0, 133.0, 141.0],
+                    'scan_frequency': ParameterValue(lidar_scan_frequency, value_type=float),
+                }],
                 output='screen',
                 # Soft-fail UART (no assert). Slow respawn after power/signal-split recovers.
                 respawn=True,
