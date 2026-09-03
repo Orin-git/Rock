@@ -30,8 +30,9 @@ from rclpy.qos import (
     QoSProfile,
     ReliabilityPolicy,
 )
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, Float32, String
 from std_srvs.srv import SetBool
+from sensor_msgs.msg import BatteryState
 from rosidl_runtime_py.utilities import get_message
 
 from xw_interfaces.msg import RobotState, TaskProgress, TaskResult
@@ -701,6 +702,204 @@ def _state_to_dict(msg: RobotState) -> Dict[str, Any]:
     }
 
 
+class BatteryEtaEstimator:
+    """学习式「预计充满剩余时间」估算器。
+
+    充电会话中按 V·I·dt 积分充入能量，除以 ΔSOC 反解电池有效容量并持久化；
+    学成后 ETA = (100% - SOC) × C_eff / P（插上即显示）；未学成时用最近
+    10 分钟 SOC 线性回归斜率兜底。数据来自 /battery_state（BMS 真实遥测），
+    按 header.stamp 去重（1Hz 常发）。
+    """
+
+    SAMPLE_MIN_GAP = 10.0       # SOC 历史采样最小间隔 (s)
+    HIST_POINTS = 220           # 覆盖约 25 分钟
+    REG_WINDOW_SEC = 600.0      # 回归窗口 (s)
+    REG_MIN_SPAN_SEC = 300.0    # 回归所需最小数据跨度 (s)
+    MIN_RATE_PCT_MIN = 0.03     # 斜率下限 %/min（低于视为不稳定）
+    LEARN_MIN_SEC = 900.0       # 学习所需最短连续充电时长 (s)
+    LEARN_MIN_D_SOC = 8.0       # 学习所需最小 SOC 涨幅 (%)
+    LEARN_MIN_GAP = 60.0        # 学习/持久化节流 (s)
+    LEARN_ALPHA = 0.15          # 容量 EMA 系数
+    CAP_MIN_WH, CAP_MAX_WH = 50.0, 2000.0
+    CUR_MIN_A = 0.2             # 电流低于此视为接近满充
+    ETA_MIN, ETA_MAX = 2.0, 720.0
+
+    def __init__(self, state_path: Path) -> None:
+        self._path = state_path
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
+        self._cap_wh: Optional[float] = None
+        self._soc_hist: List[Tuple[float, float]] = []  # (stamp_s, soc%) 充电中采样
+        self._charging_prev = False
+        self._sess_start: Optional[float] = None
+        self._soc_min: Optional[float] = None
+        self._energy_wh = 0.0
+        self._last_stamp: Optional[float] = None
+        self._last_learn: Optional[float] = None
+        self._last_eta: Optional[float] = None
+        self._last_status = -1
+        self._load()
+
+    @property
+    def eta(self) -> Optional[float]:
+        """最近一次估算结果（供 _on_state 挂到 /api/state）。"""
+        with self._lock:
+            return self._last_eta
+
+    @property
+    def status_value(self) -> float:
+        """/xw/battery/eta 话题契约值：
+
+        >=0 = 预计充满剩余分钟数；-1 = 未充电/无估算；-2 = 充电中估算未就绪；
+        -3 = 充电中接近充满（SOC>=99.5 或电流 <0.2A）。
+        """
+        with self._lock:
+            return self._last_eta if self._last_status == 0 else float(self._last_status)
+
+    def _load(self) -> None:
+        try:
+            if not self._path.is_file():
+                return
+            data = json.loads(self._path.read_text(encoding='utf-8'))
+            cap = float(data.get('capacity_wh') or 0.0)
+            if self.CAP_MIN_WH <= cap <= self.CAP_MAX_WH:
+                self._cap_wh = cap
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    def _persist(self) -> None:
+        if self._cap_wh is None:
+            return
+        payload = {'capacity_wh': round(self._cap_wh, 1), 'updated_ts': time.time()}
+        tmp = self._path.with_suffix('.tmp')
+        try:
+            tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
+            tmp.replace(self._path)
+        except OSError:
+            try:
+                if tmp.is_file():
+                    tmp.unlink()
+            except OSError:
+                pass
+
+    def _slope_rate(self, now: float, soc: float, soc_min: float) -> Optional[float]:
+        """最近 10 分钟 SOC 最小二乘斜率 (%/min)。"""
+        win = [(t, s) for t, s in self._soc_hist if now - t <= self.REG_WINDOW_SEC]
+        if len(win) < 5 or win[-1][0] - win[0][0] < self.REG_MIN_SPAN_SEC:
+            return None
+        if soc - soc_min < 3.0:
+            return None  # 插上初期 SOC 可能下探，暂不可靠
+        base = win[0][0]
+        xs = [t - base for t, _ in win]
+        ys = [s for _, s in win]
+        n = len(xs)
+        mx = sum(xs) / n
+        my = sum(ys) / n
+        denom = sum((x - mx) ** 2 for x in xs)
+        if denom <= 0.0:
+            return None
+        slope = sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / denom
+        rate = slope * 60.0
+        if rate < self.MIN_RATE_PCT_MIN:
+            return None
+        return rate
+
+    def update(self, power: Dict[str, Any], stamp_sec: float) -> Optional[float]:
+        """每次 /battery_state 到达时调用；返回 time_to_full_min（分钟）或 None。
+
+        状态机（status_value，供 /xw/battery/eta 话题契约使用）：
+        -1=未充电/无估算  -2=充电中估算未就绪  -3=接近充满  0=有效(见 _last_eta)。
+        """
+        with self._lock:
+            if stamp_sec == self._last_stamp:
+                return self._last_eta  # 同一帧 power，不重复积分
+            prev_stamp = self._last_stamp
+            self._last_stamp = stamp_sec
+            try:
+                soc = float(power.get('battery_percent') or 0.0)
+                volt = float(power.get('voltage') or 0.0)
+                current = float(power.get('charging_current') or 0.0)
+            except (TypeError, ValueError):
+                self._last_eta = None
+                self._last_status = -1
+                return None
+            charging = bool(power.get('charging'))
+            if not (0.0 <= soc <= 100.0 and 5.0 < volt < 100.0):
+                self._last_eta = None
+                self._last_status = -1
+                return None
+
+            if not charging:
+                self._soc_hist = []
+                self._energy_wh = 0.0
+                self._sess_start = None
+                self._soc_min = None
+                self._charging_prev = False
+                self._last_eta = None
+                self._last_status = -1
+                return None
+            if not self._charging_prev:
+                # 新充电会话
+                self._soc_hist = []
+                self._energy_wh = 0.0
+                self._sess_start = stamp_sec
+                self._soc_min = soc
+            self._charging_prev = True
+
+            if self._soc_min is None or soc < self._soc_min:
+                self._soc_min = soc
+            if prev_stamp is not None:
+                dt = stamp_sec - prev_stamp
+                if 0.0 < dt <= 30.0:
+                    self._energy_wh += volt * current * dt / 3600.0
+            if not self._soc_hist or stamp_sec - self._soc_hist[-1][0] >= self.SAMPLE_MIN_GAP:
+                self._soc_hist.append((stamp_sec, soc))
+                if len(self._soc_hist) > self.HIST_POINTS:
+                    self._soc_hist.pop(0)
+
+            # —— 学习有效容量（≥15min 且 ΔSOC≥8%，每 60s 节流）——
+            if (
+                self._soc_min is not None
+                and self._sess_start is not None
+                and stamp_sec - self._sess_start >= self.LEARN_MIN_SEC
+                and soc - self._soc_min >= self.LEARN_MIN_D_SOC
+                and self._energy_wh > 1.0
+                and (self._last_learn is None or stamp_sec - self._last_learn >= self.LEARN_MIN_GAP)
+            ):
+                self._last_learn = stamp_sec
+                sample = self._energy_wh / (soc - self._soc_min) * 100.0
+                sample = max(self.CAP_MIN_WH, min(self.CAP_MAX_WH, sample))
+                if self._cap_wh is None:
+                    self._cap_wh = sample
+                else:
+                    self._cap_wh = (1.0 - self.LEARN_ALPHA) * self._cap_wh + self.LEARN_ALPHA * sample
+                self._persist()
+
+            # —— 估算剩余充满时间 ——
+            if current < self.CUR_MIN_A or soc >= 99.5:
+                # 接近充满/浮充：不再估算具体分钟
+                self._last_eta = None
+                self._last_status = -3
+                return None
+            eta: Optional[float] = None
+            if self._cap_wh is not None and current > 0.0:
+                power_w = volt * current
+                if power_w > 1.0:
+                    eta = (100.0 - soc) / 100.0 * self._cap_wh / power_w * 60.0
+            elif self._soc_min is not None:
+                rate = self._slope_rate(stamp_sec, soc, self._soc_min)
+                if rate is not None:
+                    eta = (100.0 - soc) / rate
+            if eta is not None:
+                eta = max(self.ETA_MIN, min(self.ETA_MAX, eta))
+                eta = eta if self._last_eta is None else 0.7 * self._last_eta + 0.3 * eta
+                self._last_status = 0
+            else:
+                self._last_status = -2
+            self._last_eta = eta
+            return eta
+
+
 def _topic_hint(name: str) -> str:
     if name in _TOPIC_HINTS:
         return _TOPIC_HINTS[name]
@@ -814,6 +1013,7 @@ class BridgeNode(Node):
                 'charging_current': 0.0,
                 'ir_red': 0,
                 'detail': '',
+                'time_to_full_min': None,
             },
         }
         self._tasks: List[str] = []
@@ -852,6 +1052,13 @@ class BridgeNode(Node):
         self._teleop_stop_lock = threading.Lock()
 
         self.create_subscription(RobotState, '/xw/robot_state', self._on_state, 10)
+        self.create_subscription(BatteryState, '/battery_state', self._on_battery, 10)
+        # /xw/battery/eta (std_msgs/Float32, 1Hz) — 安卓/外部 UI 接口约定：
+        #   >=0 : 预计充满剩余分钟数（UI 自行格式化 "3h45m"）
+        #   -1  : 未充电 / 无估算（不显示）
+        #   -2  : 充电中，估算暂未就绪（显示「计算中…」）
+        #   -3  : 充电中，接近充满（显示「即将充满」）
+        self._eta_pub = self.create_publisher(Float32, '/xw/battery/eta', 10)
         self.create_subscription(TaskProgress, '/xw/task/progress', self._on_progress, 10)
         self.create_subscription(TaskResult, '/xw/task/result', self._on_result, 10)
         self.create_subscription(String, 'obstacle_status', self._on_obstacle, 10)
@@ -932,6 +1139,7 @@ class BridgeNode(Node):
         self.create_timer(5.0, self._watch_housekeep)
         hist_root = Path(os.environ.get('XW_WS', '/ros2_ws')) / 'data' / 'power_hist'
         self._power_hist = PowerDayHistory(hist_root)
+        self._battery_eta = BatteryEtaEstimator(hist_root.parent / 'battery_capacity.json')
         domain = os.environ.get('ROS_DOMAIN_ID', '?')
         self.get_logger().info(
             f'web ROS bridge ready (DOMAIN={domain}) power_hist={hist_root}'
@@ -1286,8 +1494,30 @@ class BridgeNode(Node):
             self._tasks.insert(0, text)
             del self._tasks[80:]
 
+    def _on_battery(self, msg: BatteryState) -> None:
+        """BMS 真实遥测（1Hz，bms_receiver_cpp）— 估算器的主数据源。
+
+        不用 /xw/power 的 charging_current：它来自 0x7C 充电帧，台架/部分场景
+        下该电流为 0 而 BMS 实际在充电；/battery_state 的 current 才是包级真实电流。
+        """
+        if not getattr(msg, 'present', True):
+            return
+        stamp = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1e-9
+        charging = msg.power_supply_status == BatteryState.POWER_SUPPLY_STATUS_CHARGING
+        self._battery_eta.update(
+            {
+                'battery_percent': float(msg.percentage) * 100.0,
+                'voltage': float(msg.voltage),
+                'charging_current': float(abs(msg.current)),
+                'charging': charging,
+            },
+            stamp,
+        )
+        self._eta_pub.publish(Float32(data=self._battery_eta.status_value))
+
     def _on_state(self, msg: RobotState) -> None:
         d = _state_to_dict(msg)
+        d['power']['time_to_full_min'] = self._battery_eta.eta
         with self._lock:
             self._state = d
         self._power_hist.maybe_record(d.get('power') or {})

@@ -72,6 +72,7 @@ function resolvePower(power) {
       charging: !!power?.charging,
       docked: !!power?.docked,
       current: Number(power?.charging_current ?? 0) || 0,
+      etaMin: Number(power?.time_to_full_min),
     };
   }
   return {
@@ -82,6 +83,7 @@ function resolvePower(power) {
     charging: !!power?.charging,
     docked: !!power?.docked,
     current: Number(power?.charging_current ?? 0) || 0,
+    etaMin: Number(power?.time_to_full_min),
   };
 }
 
@@ -458,6 +460,34 @@ function updateClock() {
   el.innerHTML = `${t}<small>${d} · LOCAL</small>`;
 }
 
+function formatEta(min) {
+  const m = Math.round(min);
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return h >= 1 ? `${h}h${mm}m` : `${mm}m`;
+}
+
+function applyEtaUi(pw) {
+  const el = document.getElementById('dPowerEta');
+  if (!el) return;
+  const value = el.querySelector('.eta-value');
+  if (!pw || !pw.available || !pw.charging) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  if (Number.isFinite(pw.etaMin) && pw.etaMin > 0) {
+    value.textContent = formatEta(pw.etaMin);
+    value.classList.remove('is-muted');
+  } else if (pw.pct >= 99.5) {
+    value.textContent = '即将充满';
+    value.classList.add('is-muted');
+  } else {
+    value.textContent = '计算中…';
+    value.classList.add('is-muted');
+  }
+}
+
 function applyPowerUi(pw) {
   lastPower = pw;
   const el = document.getElementById('dPower');
@@ -465,6 +495,7 @@ function applyPowerUi(pw) {
     el.innerHTML = '—';
     document.getElementById('dPowerSub').textContent = '等待 BMS 数据';
     tone(document.getElementById('kpiPower'), 'is-neutral');
+    applyEtaUi(pw);
     if (viewingToday) {
       const nowPct = document.getElementById('chartNowPct');
       if (nowPct) nowPct.textContent = '当前 —';
@@ -478,6 +509,7 @@ function applyPowerUi(pw) {
   const cur = pw.charging && pw.current > 0.01 ? ` · ${pw.current.toFixed(2)}A` : '';
   document.getElementById('dPowerSub').textContent = `${pw.volt.toFixed(1)}V · ${chg}${cur}`;
   tone(document.getElementById('kpiPower'), pw.pct >= 40 ? 'is-ok' : pw.pct >= 20 ? 'is-warn' : 'is-bad');
+  applyEtaUi(pw);
 
   if (viewingToday) {
     const nowPct = document.getElementById('chartNowPct');

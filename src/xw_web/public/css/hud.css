@@ -224,6 +224,32 @@ body.dash-body main.dash-main {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 电量模块右侧空白区：预计充满剩余时间（绝对定位，不改变卡片尺寸） */
+#kpiPower {
+  position: relative;
+}
+#kpiPower .k-eta {
+  position: absolute;
+  right: 0.55rem;
+  top: 0.55rem;
+  text-align: right;
+  font-family: var(--font-mono);
+  line-height: 1.35;
+}
+#kpiPower .k-eta .eta-label {
+  display: block;
+  font-size: 0.52rem;
+  color: var(--faint);
+}
+#kpiPower .k-eta .eta-value {
+  display: block;
+  font-size: 0.62rem;
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+#kpiPower .k-eta .eta-value.is-muted {
+  color: var(--faint);
+}
 .dash-kpi.is-ok .k-value { color: var(--ok); }
 .dash-kpi.is-bad .k-value { color: var(--bad); }
 .dash-kpi.is-warn .k-value { color: #a37818; }
