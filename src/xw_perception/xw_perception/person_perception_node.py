@@ -250,7 +250,7 @@ class PersonPerceptionNode(Node):
         self.declare_parameter('down_depth_topic', '/camera/front_down/depth/image_raw')
         self.declare_parameter('down_frame_id', 'camera_front_down_link')
         self.declare_parameter('down_rotate_180', True)
-        self.declare_parameter('follow_cam', 'auto')  # up | down | auto (prefer up, fallback down)
+        self.declare_parameter('follow_cam', 'up')  # up | down | auto
         # Budget: shared NPU — fall-only alternates; follow prioritizes follow cam.
         self.declare_parameter('follow_infer_fps', 8.0)
         self.declare_parameter('fall_infer_fps', 3.5)
@@ -263,15 +263,16 @@ class PersonPerceptionNode(Node):
         self.declare_parameter('torso_compression_max', 0.40)
         self.declare_parameter('torso_inversion_margin_ratio', 0.0)
         self.declare_parameter('flat_aspect_min', 1.15)
-        self.declare_parameter('lock_strategy', 'center')  # lock person standing in front
+        self.declare_parameter('lock_strategy', 'nearest')  # initial lock: nearest person
         self.declare_parameter('min_lock_conf', 0.28)
         self.declare_parameter('min_lock_area_frac', 0.02)
         self.declare_parameter('min_lock_width_ratio', 0.08)
         self.declare_parameter('hfov_deg', 70.0)  # for width→distance
-        self.declare_parameter('coast_frames', 12)
+        self.declare_parameter('coast_frames', 24)  # ~2–3 s coast before lost
+        self.declare_parameter('relock_after_lost_s', 3.0)  # stick to ID until lost this long
         self.declare_parameter('assoc_iou_thresh', 0.03)
         self.declare_parameter('assoc_maha_thresh', 100.0)
-        self.declare_parameter('assoc_center_frac', 0.45)
+        self.declare_parameter('assoc_center_frac', 0.50)
 
         self._follow_en = False
         self._follow_was_en = False
@@ -283,6 +284,7 @@ class PersonPerceptionNode(Node):
         self._need_lock = False
         self._follow_active_cam = 'up'
         self._last_follow_hit_t = 0.0  # last time follow cam saw ≥1 person
+        self._lost_since = 0.0  # monotonic time when target first went lost; 0 = not lost
 
         self._cams: Dict[str, CamSlot] = {
             'up': CamSlot(
@@ -401,15 +403,18 @@ class PersonPerceptionNode(Node):
         if en and not self._follow_was_en:
             self._need_lock = True
             self._tracker.reset()
+            self._lost_since = 0.0
             mode = self._follow_mode()
             self._follow_active_cam = 'down' if mode == 'down' else 'up'
             self._last_follow_hit_t = 0.0
             self.get_logger().info(
-                f'follow enable → arm target lock (mode={mode} cam={self._follow_active_cam})'
+                f'follow enable → arm target lock (mode={mode} cam={self._follow_active_cam} '
+                f'strategy={self.get_parameter("lock_strategy").value})'
             )
         if not en and self._follow_was_en:
             self._tracker.reset()
             self._need_lock = False
+            self._lost_since = 0.0
             self.get_logger().info('follow disable → clear target lock')
         self._follow_en = en
         self._follow_was_en = en
@@ -660,26 +665,64 @@ class PersonPerceptionNode(Node):
             if self._last_det_t > 0.0:
                 dt = max(0.05, min(0.5, now_t - self._last_det_t))
             self._last_det_t = now_t
+            relock_s = float(self.get_parameter('relock_after_lost_s').value)
+            holding_lost = False
 
-            if self._need_lock or not self._tracker.locked:
+            if self._need_lock:
                 if dets and self._tracker.lock_now(dets):
                     self._need_lock = False
+                    self._lost_since = 0.0
                     target_det = self._tracker.last_det
                     self.get_logger().info(
                         f'target locked id={self._tracker.target_id} cam={cam_id} '
-                        f'strategy={self._tracker.lock_strategy} dets={len(dets)}'
+                        f'strategy={self._tracker.lock_strategy} dets={len(dets)} '
+                        f'd={target_det.distance if target_det else -1:.2f}'
                     )
                 elif not dets:
                     lost = True
-            else:
+            elif self._tracker.locked:
                 target_det, coasting, lost = self._tracker.update(dets, dt=dt)
-                if lost and dets and self._tracker.lock_now(dets):
-                    lost = False
-                    coasting = False
+                if lost:
+                    if self._lost_since <= 0.0:
+                        self._lost_since = now_t
+                        self.get_logger().warn(
+                            f'target lost id={self._tracker.target_id} — hold {relock_s:.1f}s before re-lock'
+                        )
+                    held = now_t - self._lost_since
+                    if held < relock_s:
+                        target_det = self._tracker.last_det
+                        coasting = True
+                        lost = False
+                        holding_lost = True
+                    elif dets and self._tracker.lock_now(dets):
+                        self._lost_since = 0.0
+                        lost = False
+                        coasting = False
+                        target_det = self._tracker.last_det
+                        self.get_logger().info(
+                            f'target re-locked id={self._tracker.target_id} cam={cam_id} '
+                            f'after {held:.1f}s dets={len(dets)}'
+                        )
+                else:
+                    self._lost_since = 0.0
+            else:
+                if self._lost_since <= 0.0:
+                    self._lost_since = now_t
+                held = now_t - self._lost_since
+                if held >= relock_s and dets and self._tracker.lock_now(dets):
+                    self._lost_since = 0.0
                     target_det = self._tracker.last_det
                     self.get_logger().info(
-                        f'target re-locked id={self._tracker.target_id} cam={cam_id} dets={len(dets)}'
+                        f'target locked id={self._tracker.target_id} cam={cam_id} '
+                        f'(fresh after {held:.1f}s lost) dets={len(dets)}'
                     )
+                else:
+                    lost = True
+                    if self._tracker.last_det is not None and held < relock_s:
+                        target_det = self._tracker.last_det
+                        coasting = True
+                        lost = False
+                        holding_lost = True
 
             tracks = PersonTracks()
             tracks.stamp = stamp
@@ -718,8 +761,8 @@ class PersonPerceptionNode(Node):
                 pt.y = float(target_det.width_ratio)
                 pt.z = float(target_det.distance)
                 pt.distance = float(target_det.distance)
-                # Low conf → follow session ignores for cmd (no ghost yaw)
-                pt.confidence = 0.05
+                # Hold-lost: keep follow session on same target (≥3s). Brief coast: low conf.
+                pt.confidence = 0.36 if holding_lost else 0.05
                 pt.is_primary = False
                 pt.is_target = True
                 tracks.tracks.append(pt)

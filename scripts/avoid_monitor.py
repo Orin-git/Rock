@@ -29,9 +29,9 @@ class Mon(Node):
         self.cm = None
         self.create_subscription(LaserScan, '/scan', self.cb_scan, 10)
         self.create_subscription(
-            PointCloud2, '/camera/front_up/depth/points_nav', self.cb_d1, 10)
+            PointCloud2, '/camera/front_up/depth/points_nav', self.cb_d1, _BE)
         self.create_subscription(
-            PointCloud2, '/camera/front_down/depth/points_nav', self.cb_d2, 10)
+            PointCloud2, '/camera/front_down/depth/points_nav', self.cb_d2, _BE)
         self.create_subscription(Twist, '/xw/cmd/nav', self.cb_nav, 10)
         self.create_subscription(Twist, '/cmd_vel_nav', self.cb_cvel, 10)
         self.create_subscription(Odometry, '/odom', self.cb_odom, 10)

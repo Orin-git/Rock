@@ -66,40 +66,39 @@ class FollowSessionNode(Node):
     def __init__(self) -> None:
         super().__init__('xw_follow_session')
         # Standoff / visual-servo (gen1-like speed + slew smoothing)
-        self.declare_parameter('bearing_deadzone', 0.03)
-        self.declare_parameter('stop_deadband_m', 0.12)
-        self.declare_parameter('min_follow_distance', 0.55)
-        self.declare_parameter('ema_alpha', 0.55)  # faster meas lock (was washing out yaw)
-        self.declare_parameter('cmd_hz', 20.0)
-        self.declare_parameter('lin_accel', 0.60)
-        self.declare_parameter('lin_decel', 1.40)  # brake faster than accelerate (anti-overshoot)
-        self.declare_parameter('ang_accel', 2.80)
-        self.declare_parameter('cmd_ema', 0.65)
-        self.declare_parameter('coast_hold_s', 1.0)
-        self.declare_parameter('enable_search_spin', False)
-        # Gen1-style bbox width ratios (PersonTrack.y)
-        self.declare_parameter('stop_width_ratio', 0.52)
-        self.declare_parameter('start_width_ratio', 0.20)
-        self.declare_parameter('use_width_range', True)
-        # Keep last good meas while TRACKING; only brake after this gap.
-        # Must be > perception period (RGB/NPU often ~2–5 Hz under load).
-        self.declare_parameter('fresh_timeout_s', 2.0)
-        self.declare_parameter('coast_yaw', True)
-        self.declare_parameter('coast_yaw_scale', 0.55)
-        self.declare_parameter('desired_follow_distance', 1.15)
-        self.declare_parameter('max_linear_x', 0.35)
-        self.declare_parameter('max_angular_z', 0.90)
+        self.declare_parameter('desired_follow_distance', 1.0)
+        self.declare_parameter('max_linear_x', 0.38)
+        self.declare_parameter('max_angular_z', 0.70)
         self.declare_parameter('k_linear', 0.55)
-        self.declare_parameter('k_angular', 1.45)
-        # Gen1: turn-first — above this |bearing|, only yaw (no forward).
-        self.declare_parameter('turn_first_bearing', 0.18)
+        self.declare_parameter('k_angular', 1.05)
+        self.declare_parameter('turn_first_bearing', 0.45)
+        self.declare_parameter('bearing_deadzone', 0.08)
+        self.declare_parameter('stop_deadband_m', 0.12)
+        self.declare_parameter('min_follow_distance', 0.50)
+        self.declare_parameter('ema_alpha', 0.40)
+        self.declare_parameter('cmd_hz', 20.0)
+        self.declare_parameter('lin_accel', 0.45)
+        self.declare_parameter('lin_decel', 0.90)  # gentler brake → less zero-dip stutter
+        self.declare_parameter('ang_accel', 1.80)
+        self.declare_parameter('cmd_ema', 0.35)
+        self.declare_parameter('coast_hold_s', 1.5)
+        self.declare_parameter('enable_search_spin', False)
+        self.declare_parameter('stop_width_ratio', 0.58)
+        self.declare_parameter('start_width_ratio', 0.18)
+        self.declare_parameter('use_width_range', True)
+        self.declare_parameter('fresh_timeout_s', 2.5)
+        self.declare_parameter('coast_yaw', False)
+        self.declare_parameter('coast_yaw_scale', 0.35)
+        # Approach hysteresis: stop inside band, resume only after clear far again
+        self.declare_parameter('approach_resume_m', 0.18)  # resume when d > desired + this
+        self.declare_parameter('approach_hold_m', 0.06)  # stop when d < desired + this
+        self.declare_parameter('lost_timeout_s', 3.0)
         # Optional Nav2 dynamic-goal path (laggy “打点”)
         self.declare_parameter('goal_update_hz', 1.0)
         self.declare_parameter('goal_hysteresis_m', 0.35)
         self.declare_parameter('hfov_deg', 70.0)
         self.declare_parameter('camera_frame', 'camera_front_up_link')
         self.declare_parameter('map_frame', 'map')
-        self.declare_parameter('lost_timeout_s', 3.5)
         self.declare_parameter('search_timeout_s', 20.0)
         self.declare_parameter('search_yaw_rate', 0.25)
         self.declare_parameter('use_nav2_follow', False)
@@ -129,9 +128,17 @@ class FollowSessionNode(Node):
         self._filt_distance = 0.0
         self._filt_width = 0.0
         self._raw_bearing = 0.0  # last fresh bearing for yaw (avoid EMA washout)
+        self._raw_distance = 0.0  # last fresh range for forward (avoid EMA freeze)
+        self._raw_width = 0.0
         self._have_meas = False
         self._last_tick_t = 0.0
         self._last_fresh_det_t = 0.0  # last time we saw a real (non-coast) update
+        self._motor_disabled = False
+        self._resume_grace_until = 0.0  # after e-stop release, hold still briefly
+        self._last_servo_log = 0.0
+        self._approach_active = False  # hysteresis for forward motion
+        self._coast_lin = 0.0  # decay last forward during brief track gaps
+
 
         self._tf_buffer: Optional[Buffer] = None
         self._tf_listener: Optional[TransformListener] = None
@@ -150,6 +157,10 @@ class FollowSessionNode(Node):
         self._cmd_pub = self.create_publisher(Twist, '/xw/cmd/follow', 10)
 
         self.create_subscription(Bool, '/xw/follow/enable', self._on_enable, latch, callback_group=self._cb)
+        # MCU Flag_Stop: keep follow session armed, but freeze cmds so release doesn't spin.
+        self.create_subscription(
+            Bool, '/xw/chassis/motor_disabled', self._on_motor_disabled, 10, callback_group=self._cb
+        )
         self.create_service(
             SessionControl, '/xw/session/follow/control', self._on_control, callback_group=self._cb
         )
@@ -235,6 +246,24 @@ class FollowSessionNode(Node):
 
     def _on_enable(self, msg: Bool) -> None:
         self._set_active(bool(msg.data), 'enable-topic')
+
+    def _on_motor_disabled(self, msg: Bool) -> None:
+        """MCU e-stop / Flag_Stop: freeze follow cmds without tearing down the session."""
+        disabled = bool(msg.data)
+        was = self._motor_disabled
+        self._motor_disabled = disabled
+        if disabled and not was:
+            self._stop_cmd()
+            self._raw_bearing = 0.0
+            self._filt_bearing = 0.0
+            self.get_logger().warn('motor disabled (e-stop) → follow cmd held at zero')
+        elif (not disabled) and was:
+            # Soft resume: sit still briefly so release doesn't dump stale yaw into chassis.
+            self._stop_cmd()
+            self._resume_grace_until = time.monotonic() + 0.9
+            self._raw_bearing = 0.0
+            self._filt_bearing = 0.0
+            self.get_logger().info('motor enabled → follow grace 0.9s then resume')
 
     def _on_control(self, req: SessionControl.Request, res: SessionControl.Response):
         self._command_id = req.command_id or 'follow-svc'
@@ -362,28 +391,31 @@ class FollowSessionNode(Node):
         d = max(0.0, float(distance))
         w = max(0.0, float(width_ratio))
         alpha = _clamp(float(self.get_parameter('ema_alpha').value), 0.05, 1.0)
-        # Yaw uses mostly-raw bearing; range/width keep EMA.
         self._raw_bearing = b
+        self._raw_distance = d
+        self._raw_width = w
         if not self._have_meas:
             self._filt_bearing = b
             self._filt_distance = d if d > 0.05 else float(self.get_parameter('desired_follow_distance').value)
             self._filt_width = w
             self._have_meas = True
             return
-        # Fast track large bearing jumps (side-step) so yaw doesn't lag to ~0.
         if abs(b - self._filt_bearing) > 0.25:
             self._filt_bearing = b
         else:
             self._filt_bearing = (1.0 - alpha) * self._filt_bearing + alpha * b
         if d > 0.05:
-            self._filt_distance = (1.0 - alpha) * self._filt_distance + alpha * d
+            # Catch up quickly when person gets farther (was stuck "arrived").
+            a_d = alpha if d <= self._filt_distance + 0.05 else min(1.0, alpha + 0.40)
+            self._filt_distance = (1.0 - a_d) * self._filt_distance + a_d * d
         if w >= 0.05:
-            self._filt_width = (1.0 - alpha) * self._filt_width + alpha * w
+            a_w = alpha if w >= self._filt_width else min(1.0, alpha + 0.40)
+            self._filt_width = (1.0 - a_w) * self._filt_width + a_w * w
 
     def _desired_cmd(
         self, bearing: float, distance: float, width_ratio: float = 0.0
     ) -> Tuple[float, float]:
-        """Visual servo: yaw on bearing; range via bbox width (gen1) or meters."""
+        """Visual servo: yaw on bearing; approach on meters (width is soft only)."""
         desired = float(self.get_parameter('desired_follow_distance').value)
         min_d = float(self.get_parameter('min_follow_distance').value)
         deadband = float(self.get_parameter('stop_deadband_m').value)
@@ -394,7 +426,6 @@ class FollowSessionNode(Node):
         b_dz = float(self.get_parameter('bearing_deadzone').value)
         use_w = bool(self.get_parameter('use_width_range').value)
         stop_wr = float(self.get_parameter('stop_width_ratio').value)
-        start_wr = float(self.get_parameter('start_width_ratio').value)
         turn_first = float(self.get_parameter('turn_first_bearing').value)
 
         b = _clamp(bearing, -1.0, 1.0)
@@ -406,59 +437,57 @@ class FollowSessionNode(Node):
         else:
             b_eff = math.copysign(max(0.0, abs(b) - b_dz), b)
             mag = abs(b_eff)
-            # Stronger yaw when close / at image edge (partial body exits FOV fast).
-            prox = 1.0 + 1.6 * _clamp((wr - 0.18) / 0.35, 0.0, 1.0) if wr >= 0.05 else 1.0
-            edge = 1.0 + 0.9 * _clamp((mag - 0.25) / 0.55, 0.0, 1.0)
+            prox = 1.0 + 0.55 * _clamp((wr - 0.25) / 0.35, 0.0, 1.0) if wr >= 0.05 else 1.0
             ang = _clamp(
-                -k_ang * prox * edge * b_eff * (0.85 + 0.55 * mag),
+                -k_ang * prox * b_eff * (0.75 + 0.45 * mag),
                 -max_ang,
                 max_ang,
             )
-            # Hard floors so chassis actually rotates
-            if mag >= 0.45 and abs(ang) < 0.45:
-                ang = math.copysign(0.45, ang)
-            elif mag >= 0.22 and abs(ang) < 0.28:
-                ang = math.copysign(0.28, ang)
-            elif mag >= 0.08 and abs(ang) < 0.16:
-                ang = math.copysign(0.16, ang)
+            if mag >= 0.35 and abs(ang) < 0.22:
+                ang = math.copysign(0.22, ang)
+            elif mag >= 0.20 and abs(ang) < 0.12:
+                ang = math.copysign(0.12, ang)
 
+        # --- forward: meter P-control + hysteresis (no hard zero dips mid-approach) ---
         lin = 0.0
-        # Gen1 turn-first: do not creep forward while badly misaligned.
-        if abs(b) >= turn_first:
-            return 0.0, ang
+        resume_m = float(self.get_parameter('approach_resume_m').value)
+        hold_m = float(self.get_parameter('approach_hold_m').value)
+        # Optical far: small bbox → treat as needing approach (with hysteresis via flag).
+        optical_far = use_w and 0.0 < wr < 0.26
+        if optical_far:
+            d = max(d, desired + resume_m + 0.05)
 
-        if use_w and wr >= 0.05:
-            soft_wr = max(start_wr + 0.05, stop_wr - 0.10)
-            close_by_w = wr >= stop_wr
-            if close_by_w or d < min_d:
-                lin = 0.0
-            elif d > desired + 0.08:
-                err = d - desired
-                scale = _clamp(err / max(0.35, desired), 0.0, 1.0)
-                lin = _clamp(k_lin * err * (0.50 + 0.50 * scale), 0.06, max_lin)
-                if wr >= soft_wr:
-                    lin *= _clamp((stop_wr - wr) / max(0.05, stop_wr - soft_wr), 0.0, 1.0)
-            else:
-                err = max(0.0, stop_wr - wr)
-                span = max(0.08, stop_wr - start_wr)
-                scale = _clamp(err / span, 0.0, 1.0)
-                boost = 1.0 if wr <= start_wr else (0.35 + 0.65 * scale)
-                lin = _clamp(k_lin * err * 1.05 * boost, 0.06 if scale > 0.10 else 0.0, max_lin)
-                if wr >= soft_wr:
-                    lin *= _clamp((stop_wr - wr) / max(0.05, stop_wr - soft_wr), 0.0, 0.85)
+        if d < min_d:
+            self._approach_active = False
+            lin = 0.0
         else:
-            if d < min_d or d <= desired:
+            if self._approach_active:
+                if d <= desired + hold_m:
+                    self._approach_active = False
+            else:
+                if d >= desired + resume_m or optical_far:
+                    self._approach_active = True
+
+            if not self._approach_active:
                 lin = 0.0
             else:
-                err = d - desired
-                if err < max(0.05, deadband * 0.35):
-                    lin = 0.0
+                err = max(0.0, d - desired)
+                # Continuous curve — never hard-clip to 0 while approach_active
+                # except tiny residual near goal.
+                if err < 0.04:
+                    lin = 0.04  # creep instead of zero (smoother stop)
                 else:
-                    scale = _clamp(err / max(0.4, desired), 0.0, 1.0)
-                    lin = _clamp(k_lin * err * (0.45 + 0.55 * scale), 0.05, max_lin)
+                    scale = _clamp(err / max(0.45, desired), 0.0, 1.0)
+                    lin = _clamp(k_lin * err * (0.55 + 0.55 * scale), 0.08, max_lin)
+                if use_w and wr >= 0.52 and d < desired + 0.40:
+                    lin *= _clamp((0.75 - wr) / 0.23, 0.40, 1.0)
 
-        scale_b = 1.0 - 0.55 * min(1.0, abs(b) / 0.85)
-        lin *= max(0.35, scale_b)
+        if abs(b) >= turn_first:
+            lin *= 0.40
+        elif abs(b) > 0.22:
+            lin *= 0.70
+        else:
+            lin *= max(0.55, 1.0 - 0.30 * min(1.0, abs(b) / 0.85))
         return lin, ang
 
     def _track_to_camera_point(self, bearing: float, distance: float):
@@ -672,7 +701,14 @@ class FollowSessionNode(Node):
     def _tick(self) -> None:
         if not self._active:
             return
+        # Hardware e-stop pressed: keep publishing zeros (session stays armed).
+        if self._motor_disabled:
+            self._stop_cmd()
+            return
         now = time.monotonic()
+        if now < self._resume_grace_until:
+            self._stop_cmd()
+            return
         dt = now - self._last_tick_t if self._last_tick_t > 0 else 0.05
         self._last_tick_t = now
         dt = _clamp(dt, 0.01, 0.1)
@@ -755,10 +791,12 @@ class FollowSessionNode(Node):
         elif self._state == FollowState.COAST or (
             (now - self._last_fresh_det_t) > float(self.get_parameter('fresh_timeout_s').value)
         ):
-            # No fresh box: do not drive forward on a ghost range.
-            # Still yaw gently toward last bearing so a side-step doesn't exit FOV.
-            tgt_lin = 0.0
+            # Brief loss: decay last forward instead of slamming to 0 (felt like stutter).
             tgt_ang = 0.0
+            self._coast_lin *= 0.92
+            if self._coast_lin < 0.04:
+                self._coast_lin = 0.0
+            tgt_lin = self._coast_lin
             if bool(self.get_parameter('coast_yaw').value) and abs(self._raw_bearing) > 0.10:
                 max_ang = float(self.get_parameter('max_angular_z').value)
                 k_ang = float(self.get_parameter('k_angular').value)
@@ -769,21 +807,34 @@ class FollowSessionNode(Node):
                     0.70 * max_ang,
                 )
         else:
-            # Prefer raw bearing for yaw so side-step doesn't get EMA'd to ~0.
             yaw_b = self._raw_bearing if abs(self._raw_bearing) > 0.05 else self._filt_bearing
-            tgt_lin, tgt_ang = self._desired_cmd(
-                yaw_b, self._filt_distance, self._filt_width
-            )
+            range_d = self._raw_distance if self._raw_distance > 0.05 else self._filt_distance
+            range_w = self._raw_width if self._raw_width >= 0.05 else self._filt_width
+            tgt_lin, tgt_ang = self._desired_cmd(yaw_b, range_d, range_w)
+            self._coast_lin = tgt_lin
 
         # Asymmetric slew: decelerate faster than accelerate (capture showed lx lag).
         lin_rate = lin_dec if abs(tgt_lin) < abs(self._out_lin) - 1e-6 else lin_acc
         self._out_lin = _slew(self._out_lin, tgt_lin, lin_rate * dt)
         self._out_ang = _slew(self._out_ang, tgt_ang, ang_acc * dt)
 
-        # Hard snap to zero when target is stop — kill residual overshoot in EMA.
-        if tgt_lin <= 0.01 and self._filt_width >= float(self.get_parameter('stop_width_ratio').value) - 0.02:
-            self._out_lin = 0.0
-            self._smooth_lin = 0.0
+        # Soft settle near goal — do not wipe EMA state (that caused mid-path zero dips).
+        desired = float(self.get_parameter('desired_follow_distance').value)
+        if (
+            not self._approach_active
+            and self._raw_distance > 0.05
+            and self._raw_distance <= desired + float(self.get_parameter('approach_hold_m').value)
+        ):
+            self._out_lin = _slew(self._out_lin, 0.0, lin_dec * dt)
+
+        if now - self._last_servo_log > 2.0:
+            self._last_servo_log = now
+            self.get_logger().info(
+                f'servo raw_d={self._raw_distance:.2f} filt_d={self._filt_distance:.2f} '
+                f'wr={self._raw_width:.2f} b={self._raw_bearing:.2f} '
+                f'tgt_lin={tgt_lin:.2f} out_lin={self._out_lin:.2f} az={tgt_ang:.2f} '
+                f'approach={self._approach_active} state={self._state.value}'
+            )
 
         # Second low-pass on published cmd for silkier chassis feel
         self._smooth_lin = (1.0 - cmd_ema) * self._smooth_lin + cmd_ema * self._out_lin
@@ -791,10 +842,9 @@ class FollowSessionNode(Node):
 
         pub_lin = self._smooth_lin
         pub_ang = self._smooth_ang
-        if abs(pub_lin) < 0.015:
+        # Deadband publish only — keep internal state so speed can ramp back smoothly
+        if abs(pub_lin) < 0.02:
             pub_lin = 0.0
-            self._smooth_lin = 0.0
-            self._out_lin = 0.0
         if abs(pub_ang) < 0.02:
             pub_ang = 0.0
             self._smooth_ang = 0.0

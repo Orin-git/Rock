@@ -211,9 +211,14 @@ class PersonLockTracker:
         if strategy == 'largest':
             return max(dets, key=lambda d: d.area)
         if strategy == 'nearest':
+            # Nearest in meters; larger area breaks ties (closer usually bigger).
             return min(
                 dets,
-                key=lambda d: d.distance if d.distance > 0 else 1e6,
+                key=lambda d: (
+                    d.distance if d.distance > 0.05 else 1e6,
+                    -d.area,
+                    -float(d.confidence),
+                ),
             )
         # center: person standing in front — center + conf + body size
         cx = 0.5 * self.img_w
@@ -221,7 +226,6 @@ class PersonLockTracker:
 
         def score(d: Detection) -> Tuple[float, float, float]:
             center_n = abs(d.cx - cx) / max(1.0, 0.5 * self.img_w)
-            # Prefer confident, reasonably large bodies near image center.
             quality = -float(d.confidence) - 0.45 * min(1.0, d.area / (0.10 * img_area))
             dist = d.distance if d.distance > 0 else 1e6
             return (center_n + 0.20 * quality, dist, -d.area)
@@ -277,21 +281,26 @@ class PersonLockTracker:
                 best_score = score
                 best_i = i
 
-        # Bearing continuity: if prediction failed, pick det closest in image-x
-        # among confident ones (lateral walk).
+        # Bearing continuity: stay with same person laterally; do not jump to a
+        # different body across half the image (that felt like "换目标").
         if best_i < 0 and self._last_det is not None and dets:
             prev_cx = self._last_det.cx
+            prev_d = self._last_det.distance if self._last_det.distance > 0 else 1e6
             cand = [d for d in dets if d.confidence >= self.min_lock_conf]
             if cand:
                 d0 = min(cand, key=lambda d: abs(d.cx - prev_cx))
-                if abs(d0.cx - prev_cx) < 0.45 * self.img_w:
+                dx_ok = abs(d0.cx - prev_cx) < 0.35 * self.img_w
+                dist_ok = True
+                if d0.distance > 0.05 and prev_d < 1e5:
+                    dist_ok = abs(d0.distance - prev_d) < 1.2
+                if dx_ok and dist_ok:
                     best_i = dets.index(d0)
-        # Lone high-conf person → keep lock (side-step out of pred gate).
+        # Lone person: only stick if spatially near last lock (avoid steal).
         if best_i < 0 and len(dets) == 1 and dets[0].confidence >= self.min_lock_conf:
-            # Still require non-tiny body so we don't stick to chair slivers.
             d0 = dets[0]
             if d0.area >= 0.02 * self.img_w * self.img_h or d0.width_ratio >= 0.10:
-                best_i = 0
+                if self._last_det is None or abs(d0.cx - self._last_det.cx) < 0.40 * self.img_w:
+                    best_i = 0
 
         if best_i >= 0:
             det = dets[best_i]
