@@ -1,6 +1,8 @@
 # Nav2 Collision Monitor (Humble) — flat point lists, max_points (not min_points).
 # Side zones: slowdown (not stop) so nav recovery BackUp/Spin works near door frames.
-# FrontStop stays stop for head-on safety.
+# FrontStop is slowdown (not hard stop): a hard stop froze cmd_vel and gated
+# off nav recoveries (BackUp/Spin) — box ahead froze the robot for 10 s+ with
+# no backup. slowdown 0.35 still protects but lets nav steer/collision-detect.
 collision_monitor:
   ros__parameters:
     use_sim_time: False
@@ -25,7 +27,8 @@ collision_monitor:
     FrontStop:
       type: "polygon"
       points: [0.58, 0.18, 0.58, -0.18, 0.12, -0.18, 0.12, 0.18]
-      action_type: "stop"
+      action_type: "slowdown"
+      slowdown_ratio: 0.35
       max_points: 2
       visualize: False
       polygon_pub_topic: "front_cm_polygon"

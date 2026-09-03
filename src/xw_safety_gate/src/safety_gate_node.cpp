@@ -488,7 +488,9 @@ private:
   }
 
   std::pair<geometry_msgs::msg::Twist, bool> apply_nav(
-    const geometry_msgs::msg::Twist & cmd, const Sectors & sectors) const
+    const geometry_msgs::msg::Twist & cmd,
+    const Sectors & sectors,
+    bool follow_mode = false) const
   {
     geometry_msgs::msg::Twist out;
     out.linear.x = cmd.linear.x;
@@ -516,11 +518,15 @@ private:
       out.linear.x = 0.0;
       ok = false;
     }
-    if (left_b && out.angular.z > 0.0) {
-      out.angular.z = 0.0;
-    }
-    if (right_b && out.angular.z < 0.0) {
-      out.angular.z = 0.0;
+    // Body-follow: person standing beside the robot trips left/right sectors.
+    // Killing yaw toward them makes "see person on edge → never turn" — skip for follow.
+    if (!follow_mode) {
+      if (left_b && out.angular.z > 0.0) {
+        out.angular.z = 0.0;
+      }
+      if (right_b && out.angular.z < 0.0) {
+        out.angular.z = 0.0;
+      }
     }
     return {out, ok};
   }
@@ -598,11 +604,11 @@ private:
     if (kTeleopSources.count(src)) {
       std::tie(out, ok) = apply_teleop(cmd, sectors);
     } else if (kNavSources.count(src)) {
-      std::tie(out, ok) = apply_nav(cmd, sectors);
+      std::tie(out, ok) = apply_nav(cmd, sectors, src == "follow");
     } else if (kRechargeSources.count(src)) {
       std::tie(out, ok) = apply_recharge(cmd, sectors);
     } else {
-      std::tie(out, ok) = apply_nav(cmd, sectors);
+      std::tie(out, ok) = apply_nav(cmd, sectors, false);
     }
 
     safety_ok_ = ok;

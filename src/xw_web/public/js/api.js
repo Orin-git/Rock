@@ -919,10 +919,11 @@ export async function fetchSensorHub() {
   }
 }
 
-/** Today's calendar-day battery/voltage samples (server-persisted). */
-export async function fetchPowerHistory() {
+/** Calendar-day battery/voltage samples (server-persisted). Pass YYYY-MM-DD for a past day. */
+export async function fetchPowerHistory(date) {
   try {
-    const r = await fetch(`${apiBase()}/api/power/history`, { cache: 'no-store' });
+    const q = date ? `?date=${encodeURIComponent(date)}` : '';
+    const r = await fetch(`${apiBase()}/api/power/history${q}`, { cache: 'no-store' });
     if (!r.ok) throw new Error(String(r.status));
     return await r.json();
   } catch (_) {

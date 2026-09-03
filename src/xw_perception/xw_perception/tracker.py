@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
 
@@ -18,6 +19,7 @@ class Detection:
     distance: float
     confidence: float
     area: float = 0.0
+    width_ratio: float = 0.0  # bbox_w / image_w (gen1-style range cue)
 
     @property
     def cx(self) -> float:
@@ -108,15 +110,23 @@ class PersonLockTracker:
         coast_frames: int = 12,
         iou_thresh: float = 0.15,
         maha_thresh: float = 40.0,
+        center_frac: float = 0.35,
         img_w: float = 640.0,
         img_h: float = 480.0,
+        min_lock_conf: float = 0.42,
+        min_lock_area_frac: float = 0.035,
+        min_lock_width_ratio: float = 0.11,
     ) -> None:
         self.lock_strategy = lock_strategy
         self.coast_frames = max(1, int(coast_frames))
         self.iou_thresh = float(iou_thresh)
         self.maha_thresh = float(maha_thresh)
+        self.center_frac = float(center_frac)
         self.img_w = float(img_w)
         self.img_h = float(img_h)
+        self.min_lock_conf = float(min_lock_conf)
+        self.min_lock_area_frac = float(min_lock_area_frac)
+        self.min_lock_width_ratio = float(min_lock_width_ratio)
 
         self._locked = False
         self._target_id = 0
@@ -160,7 +170,41 @@ class PersonLockTracker:
         if h > 0:
             self.img_h = float(h)
 
+    def _eligible(self, dets: List[Detection]) -> List[Detection]:
+        """Drop weak / tiny / edge slivers so we lock a real person, not clutter."""
+        cx0 = 0.5 * self.img_w
+        img_area = max(1.0, self.img_w * self.img_h)
+        min_area = max(0.01, self.min_lock_area_frac) * img_area
+        min_wr = max(0.05, self.min_lock_width_ratio)
+        out: List[Detection] = []
+        for d in dets:
+            if d.confidence < self.min_lock_conf:
+                continue
+            if d.area < min_area and d.width_ratio < min_wr:
+                continue
+            if d.width_ratio < 0.07:
+                continue
+            # Reject flat chair-like blobs (wide & short) unless very confident.
+            aspect = d.h / max(1.0, d.w)
+            if aspect < 0.55 and d.confidence < 0.55:
+                continue
+            if d.w < 0.08 * self.img_w and abs(d.cx - cx0) > 0.32 * self.img_w:
+                continue
+            out.append(d)
+        # Soft fallback: still require conf, but allow slightly smaller area.
+        if out:
+            return out
+        soft = []
+        for d in dets:
+            if d.confidence < self.min_lock_conf:
+                continue
+            if d.area < 0.5 * min_area and d.width_ratio < 0.5 * min_wr:
+                continue
+            soft.append(d)
+        return soft
+
     def _select_lock(self, dets: List[Detection]) -> Optional[Detection]:
+        dets = self._eligible(dets)
         if not dets:
             return None
         strategy = (self.lock_strategy or 'center').lower()
@@ -171,11 +215,16 @@ class PersonLockTracker:
                 dets,
                 key=lambda d: d.distance if d.distance > 0 else 1e6,
             )
-        # center (default): prefer near image center, then nearer depth
+        # center: person standing in front — center + conf + body size
         cx = 0.5 * self.img_w
+        img_area = max(1.0, self.img_w * self.img_h)
 
-        def score(d: Detection) -> Tuple[float, float]:
-            return (abs(d.cx - cx), d.distance if d.distance > 0 else 1e6)
+        def score(d: Detection) -> Tuple[float, float, float]:
+            center_n = abs(d.cx - cx) / max(1.0, 0.5 * self.img_w)
+            # Prefer confident, reasonably large bodies near image center.
+            quality = -float(d.confidence) - 0.45 * min(1.0, d.area / (0.10 * img_area))
+            dist = d.distance if d.distance > 0 else 1e6
+            return (center_n + 0.20 * quality, dist, -d.area)
 
         return min(dets, key=score)
 
@@ -207,16 +256,42 @@ class PersonLockTracker:
         self._kf.predict(dt)
         best_i = -1
         best_score = -1.0
+        pred_bbox = self._kf.predicted_bbox()
+        pred_cx = 0.5 * (pred_bbox[0] + pred_bbox[2])
+        pred_cy = 0.5 * (pred_bbox[1] + pred_bbox[3])
+        center_lim = max(40.0, self.center_frac * self.img_w)
+        assoc_conf = max(0.28, 0.85 * self.min_lock_conf)
+
         for i, d in enumerate(dets):
-            iou = bbox_iou(self._kf.predicted_bbox(), d.as_bbox())
-            maha = self._kf.mahalanobis(d)
-            if iou < self.iou_thresh and maha > self.maha_thresh:
+            if d.confidence < assoc_conf:
                 continue
-            # Prefer high IoU; break ties with low Mahalanobis
-            score = iou * 10.0 - 0.01 * maha
+            iou = bbox_iou(pred_bbox, d.as_bbox())
+            maha = self._kf.mahalanobis(d)
+            cdist = math.hypot(d.cx - pred_cx, d.cy - pred_cy)
+            # Accept if IoU/Maha OK, OR center is still close (handles spin / blur)
+            if iou < self.iou_thresh and maha > self.maha_thresh and cdist > center_lim:
+                continue
+            # Prefer high IoU; then near center; break ties with low Mahalanobis
+            score = iou * 10.0 - 0.01 * maha - 0.002 * cdist + 0.5 * float(d.confidence)
             if score > best_score:
                 best_score = score
                 best_i = i
+
+        # Bearing continuity: if prediction failed, pick det closest in image-x
+        # among confident ones (lateral walk).
+        if best_i < 0 and self._last_det is not None and dets:
+            prev_cx = self._last_det.cx
+            cand = [d for d in dets if d.confidence >= self.min_lock_conf]
+            if cand:
+                d0 = min(cand, key=lambda d: abs(d.cx - prev_cx))
+                if abs(d0.cx - prev_cx) < 0.45 * self.img_w:
+                    best_i = dets.index(d0)
+        # Lone high-conf person → keep lock (side-step out of pred gate).
+        if best_i < 0 and len(dets) == 1 and dets[0].confidence >= self.min_lock_conf:
+            # Still require non-tiny body so we don't stick to chair slivers.
+            d0 = dets[0]
+            if d0.area >= 0.02 * self.img_w * self.img_h or d0.width_ratio >= 0.10:
+                best_i = 0
 
         if best_i >= 0:
             det = dets[best_i]
@@ -232,7 +307,7 @@ class PersonLockTracker:
             return None, False, True
 
         # Coast with predicted bbox / last measurement fields
-        pred = self._kf.predicted_bbox()
+        pred = pred_bbox
         last = self._last_det
         coast = Detection(
             xmin=pred[0],
@@ -243,8 +318,13 @@ class PersonLockTracker:
             distance=last.distance if last else 0.0,
             confidence=(last.confidence * 0.5) if last else 0.0,
             area=max(1.0, (pred[2] - pred[0]) * (pred[3] - pred[1])),
+            width_ratio=last.width_ratio if last else 0.0,
         )
-        # Recompute bearing from predicted center if we know image size
-        if self.img_w > 1:
+        # Keep last good bearing during coast — predicted cx drifts while spinning
+        if last is not None:
+            coast.bearing = last.bearing
+            coast.distance = last.distance
+            coast.width_ratio = last.width_ratio
+        elif self.img_w > 1:
             coast.bearing = (coast.cx - 0.5 * self.img_w) / (0.5 * self.img_w)
         return coast, True, False

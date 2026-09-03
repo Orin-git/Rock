@@ -114,7 +114,21 @@ class LocalizationHealthNode(Node):
         self._nav_en = bool(msg.data)
 
     def _on_follow_en(self, msg: Bool) -> None:
+        was = self._follow_en
         self._follow_en = bool(msg.data)
+        if self._follow_en and not was:
+            # Visual follow must not fight AMCL self-heal spin (/xw/cmd/motion
+            # priority > follow). Freeze heal and clear any in-progress spin.
+            self._heal_started = None
+            self._heal_phase = ''
+            self._raw_bad_since = None
+            self._stop_motion()
+            self.get_logger().info('follow on → pause loc self-heal (hold map pose)')
+        elif was and not self._follow_en:
+            self._raw_bad_since = None
+            self._heal_started = None
+            self._heal_phase = ''
+            self.get_logger().info('follow off → loc self-heal armed again')
 
     def _on_initialpose(self, _msg: PoseWithCovarianceStamped) -> None:
         self._latched_3 = False
@@ -254,6 +268,20 @@ class LocalizationHealthNode(Node):
             self._stop_motion()
 
     def _tick(self) -> None:
+        # Body-follow is visual-servo (no map). People in /scan + continuous
+        # motion inflate AMCL cov; self-heal spin would steal cmd from follow
+        # and make the map pose look like it "drifted". Hold last good status.
+        if self._follow_en:
+            if self._heal_started is not None or self._heal_phase:
+                self._heal_started = None
+                self._heal_phase = ''
+                self._stop_motion()
+            self._raw_bad_since = None
+            if not self._latched_3:
+                self._status = 0 if self._tf_ok() else 1
+            self._publish_status(self._status)
+            return
+
         raw = self._raw_code()
         now = self._now()
 

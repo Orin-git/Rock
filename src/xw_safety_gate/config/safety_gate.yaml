@@ -22,6 +22,6 @@
     avoid_turn_speed: 0.35
     avoid_back_speed: 0.18
     max_linear_speed: 0.45
-    max_angular_speed: 0.55
+    max_angular_speed: 0.85
     enable_recharge_pass_through: true
     recharge_pass_linear_max: 0.08

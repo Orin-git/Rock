@@ -25,21 +25,22 @@
     <origin xyz="0 0 0.10" rpy="0 0 3.141592653589793"/>
   </joint>
 
-  <!-- front_up → /camera/front_up/... ; follow + safety depth. Optical-ish RPY (Z forward).
+  <!-- front_up → /camera/front_up/... ; follow (+ fall). Optical-ish RPY (Z forward).
        Physically stacked: almost-level cam on TOP, slightly-up cam below. -->
   <link name="camera_front_up_link"/>
   <joint name="camera_front_up_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_front_up_link"/>
-    <origin xyz="0.251 0 0.49" rpy="-2.181 0 -1.5708"/>
+    <origin xyz="0.251 0 0.49" rpy="-1.64 0 -1.5708"/>
   </joint>
 
-  <!-- front_down → /camera/front_down/... ; second depth for nav / near ground. -->
+  <!-- front_down → /camera/front_down/... ; fall (+ nav near-ground).
+       May publish upside-down; xw_perception down_rotate_180 corrects for detect. -->
   <link name="camera_front_down_link"/>
   <joint name="camera_front_down_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_front_down_link"/>
-    <origin xyz="0.251 0 0.16" rpy="-1.09 0 -1.5708"/>
+    <origin xyz="0.251 0 0.16" rpy="-1.64 0 -1.5708"/>
   </joint>
 
   <!-- WT901C485 at 49cm above ground (z=0.37 above base center) → /imu/data (frame_id=imu_link); fused by ekf_node (vyaw). -->

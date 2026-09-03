@@ -10,11 +10,11 @@ from std_msgs.msg import String
 
 
 # Higher number = higher priority
-# follow > nav so realtime visual-servo is not starved by residual Nav2 cmd
+# follow > motion so loc self-heal spin cannot steal body-follow
 SOURCE_PRIORITY = {
     'teleop': 50,
+    'follow': 45,
     'motion': 40,
-    'follow': 35,
     'nav': 30,
     'recharge': 10,
 }

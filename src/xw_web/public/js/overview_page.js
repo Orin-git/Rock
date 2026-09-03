@@ -21,6 +21,10 @@ const powerHist = [];
 let dayStartMs = 0;
 let dayEndMs = 0;
 let dayLabel = '';
+/** Selected calendar day YYYY-MM-DD; null until first history load. */
+let selectedDate = null;
+let viewingToday = true;
+let weekDays = [];
 const MAX_LOG = 40;
 
 const C_TEAL = '#0c7f96';
@@ -90,6 +94,62 @@ function seedHistory() {
   dayLabel = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+function formatDayTitle(dateStr, isToday) {
+  if (isToday) return '今日';
+  if (!dateStr) return '—';
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) return `${parts[1]}-${parts[2]}`;
+  return dateStr;
+}
+
+function updateChartDayLabels() {
+  const title = formatDayTitle(selectedDate || dayLabel, viewingToday);
+  const pctEl = document.getElementById('chartDayPctLabel');
+  const voltEl = document.getElementById('chartDayVoltLabel');
+  if (pctEl) pctEl.textContent = title;
+  if (voltEl) voltEl.textContent = title;
+  const live = document.getElementById('chartLiveDot');
+  if (live) {
+    live.style.visibility = viewingToday ? 'visible' : 'hidden';
+    live.title = viewingToday ? '今日实时采样 · 服务端落盘' : `${title} 历史曲线`;
+  }
+}
+
+function renderWeekBar() {
+  const bar = document.getElementById('powerWeekBar');
+  if (!bar) return;
+  if (!weekDays.length) {
+    bar.innerHTML = '';
+    return;
+  }
+  const sel = selectedDate || weekDays.find((d) => d.is_today)?.date || '';
+  bar.innerHTML = weekDays
+    .map((d) => {
+      const cls = [
+        'power-day-chip',
+        d.date === sel ? 'is-active' : '',
+        d.is_today ? 'is-today' : '',
+        d.is_future ? 'is-future' : '',
+        d.has_data ? 'has-data' : 'no-data',
+      ]
+        .filter(Boolean)
+        .join(' ');
+      const disabled = d.is_future ? 'disabled aria-disabled="true"' : '';
+      const mark = d.has_data ? '<i class="dot"></i>' : '';
+      return `<button type="button" class="${cls}" data-date="${escapeHtml(d.date)}" role="tab" aria-selected="${d.date === sel}" ${disabled}><span class="wd">${escapeHtml(d.weekday)}</span><span class="dn">${d.day}</span>${mark}</button>`;
+    })
+    .join('');
+}
+
+function onWeekBarClick(ev) {
+  const btn = ev.target.closest('button.power-day-chip');
+  if (!btn || btn.disabled) return;
+  const date = btn.getAttribute('data-date');
+  if (!date || date === selectedDate) return;
+  selectedDate = date;
+  loadPowerHistory().then(() => renderCharts());
+}
+
 function resizeCanvas(canvas) {
   const parent = canvas.parentElement;
   if (!parent) return null;
@@ -104,17 +164,22 @@ function resizeCanvas(canvas) {
 }
 
 async function loadPowerHistory() {
-  const j = await fetchPowerHistory();
-  if (!j?.ok) return;
+  const j = await fetchPowerHistory(selectedDate || undefined);
+  if (!j?.ok && !Array.isArray(j?.days)) return;
+  if (Array.isArray(j.days) && j.days.length) weekDays = j.days;
+  if (j.date) {
+    selectedDate = j.date;
+    const parts = String(j.date).split('-');
+    dayLabel = parts.length === 3 ? `${parts[1]}-${parts[2]}` : j.date;
+  } else if (j.today && !selectedDate) {
+    selectedDate = j.today;
+  }
+  viewingToday = j.is_today === true || (!!j.today && selectedDate === j.today);
   if (Number.isFinite(j.day_start_ms) && Number.isFinite(j.day_end_ms)) {
     dayStartMs = j.day_start_ms;
     dayEndMs = j.day_end_ms;
   }
-  if (j.date) {
-    const parts = String(j.date).split('-');
-    dayLabel = parts.length === 3 ? `${parts[1]}-${parts[2]}` : j.date;
-  }
-  const pts = Array.isArray(j.points) ? j.points : [];
+  const pts = j.ok && Array.isArray(j.points) ? j.points : [];
   powerHist.length = 0;
   for (const p of pts) {
     const t = Number(p.t);
@@ -125,6 +190,8 @@ async function loadPowerHistory() {
       volt: Number(p.volt),
     });
   }
+  renderWeekBar();
+  updateChartDayLabels();
 }
 
 /** Today 00:00–24:00 axis; 2h ticks (12 marks); plot samples at their real time. */
@@ -184,7 +251,7 @@ function drawSeriesChart(canvas, series, opts) {
     ctx.fillStyle = C_MUTED;
     ctx.font = '12px IBM Plex Mono, monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(`今日暂无采样（${dayLabel || '今天'}）`, padL + 4, padT + plotH / 2);
+    ctx.fillText(`${viewingToday ? '今日' : dayLabel || '该日'}暂无采样`, padL + 4, padT + plotH / 2);
     return;
   }
 
@@ -398,10 +465,12 @@ function applyPowerUi(pw) {
     el.innerHTML = '—';
     document.getElementById('dPowerSub').textContent = '等待 BMS 数据';
     tone(document.getElementById('kpiPower'), 'is-neutral');
-    const nowPct = document.getElementById('chartNowPct');
-    if (nowPct) nowPct.textContent = '当前 —';
-    const nowVolt = document.getElementById('chartNowVolt');
-    if (nowVolt) nowVolt.textContent = '当前 —';
+    if (viewingToday) {
+      const nowPct = document.getElementById('chartNowPct');
+      if (nowPct) nowPct.textContent = '当前 —';
+      const nowVolt = document.getElementById('chartNowVolt');
+      if (nowVolt) nowVolt.textContent = '当前 —';
+    }
     return;
   }
   el.innerHTML = `${pw.pct.toFixed(0)}%`;
@@ -410,10 +479,18 @@ function applyPowerUi(pw) {
   document.getElementById('dPowerSub').textContent = `${pw.volt.toFixed(1)}V · ${chg}${cur}`;
   tone(document.getElementById('kpiPower'), pw.pct >= 40 ? 'is-ok' : pw.pct >= 20 ? 'is-warn' : 'is-bad');
 
-  const nowPct = document.getElementById('chartNowPct');
-  if (nowPct) nowPct.textContent = `当前 ${pw.pct.toFixed(0)}%`;
-  const nowVolt = document.getElementById('chartNowVolt');
-  if (nowVolt) nowVolt.textContent = `当前 ${pw.volt.toFixed(1)}V`;
+  if (viewingToday) {
+    const nowPct = document.getElementById('chartNowPct');
+    if (nowPct) nowPct.textContent = `当前 ${pw.pct.toFixed(0)}%`;
+    const nowVolt = document.getElementById('chartNowVolt');
+    if (nowVolt) nowVolt.textContent = `当前 ${pw.volt.toFixed(1)}V`;
+  } else {
+    const last = powerHist.length ? powerHist[powerHist.length - 1] : null;
+    const nowPct = document.getElementById('chartNowPct');
+    const nowVolt = document.getElementById('chartNowVolt');
+    if (nowPct) nowPct.textContent = last ? `当日 ${Number(last.pct).toFixed(0)}%` : '当日 —';
+    if (nowVolt) nowVolt.textContent = last ? `当日 ${Number(last.volt).toFixed(1)}V` : '当日 —';
+  }
 }
 
 let lastObstacle = null;
@@ -529,6 +606,7 @@ let chartTimer = null;
 let sensorTimer = null;
 let histTimer = null;
 let resizeHandler = null;
+let weekBarHandler = null;
 let metaHandler = null;
 let stateHandler = null;
 let obstacleHandler = null;
@@ -597,12 +675,18 @@ export function mount() {
   onTask(taskHandler);
 
   seedHistory();
+  const weekBar = document.getElementById('powerWeekBar');
+  if (weekBar) {
+    weekBarHandler = onWeekBarClick;
+    weekBar.addEventListener('click', weekBarHandler);
+  }
   loadPowerHistory().then(() => renderCharts());
   updateClock();
   clockTimer = setInterval(updateClock, 1000);
   // Gauges/radar stay 1s; history points only grow ~every 20s on server.
   chartTimer = setInterval(renderCharts, 1000);
   histTimer = setInterval(() => {
+    if (!viewingToday) return;
     loadPowerHistory().then(() => renderCharts());
   }, 20000);
   sensorTimer = setInterval(refreshSensors, 5000);
@@ -610,7 +694,7 @@ export function mount() {
   renderCharts();
   resizeHandler = () => renderCharts();
   window.addEventListener('resize', resizeHandler, { passive: true });
-  pushLog('总览就绪 · 电量曲线为今日 24h（服务端落盘）', 'ok');
+  pushLog('总览就绪 · 电量可按本周日期切换（服务端落盘）', 'ok');
   return unmount;
 }
 
@@ -620,7 +704,9 @@ export function unmount() {
   if (histTimer) clearInterval(histTimer);
   if (sensorTimer) clearInterval(sensorTimer);
   if (resizeHandler) window.removeEventListener('resize', resizeHandler);
-  clockTimer = chartTimer = histTimer = sensorTimer = resizeHandler = null;
+  const weekBar = document.getElementById('powerWeekBar');
+  if (weekBar && weekBarHandler) weekBar.removeEventListener('click', weekBarHandler);
+  clockTimer = chartTimer = histTimer = sensorTimer = resizeHandler = weekBarHandler = null;
   if (metaHandler) offMeta(metaHandler);
   if (stateHandler) offState(stateHandler);
   if (obstacleHandler) offObstacle(obstacleHandler);

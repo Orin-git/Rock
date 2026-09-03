@@ -55,6 +55,8 @@ class SupervisorNode(Node):
         super().__init__('xw_supervisor')
         self.declare_parameter('run_mode', 1)  # 0 production 1 developer
         self.declare_parameter('profile', 'normal')
+        # Fall is an orthogonal background latch; default ON so dual-cam RGB+NPU stay warm.
+        self.declare_parameter('fall_enable_default', True)
 
         self._cb = ReentrantCallbackGroup()
         self._mode = 0
@@ -64,7 +66,7 @@ class SupervisorNode(Node):
         self._power = PowerState()
         self._active_map = ''
         self._detail = 'boot'
-        self._fall_en = False
+        self._fall_en = bool(self.get_parameter('fall_enable_default').value)
         self._follow_en = False
         self._recharge_en = False
         self._explore_en = False
@@ -119,7 +121,8 @@ class SupervisorNode(Node):
         self._publish_recharge()
         self._publish_explore()
         self.get_logger().info(
-            'supervisor ready (follow/recharge on nav; explore on mapping; fall orthogonal)'
+            'supervisor ready (follow/recharge on nav; explore on mapping; '
+            f'fall orthogonal default={"on" if self._fall_en else "off"})'
         )
 
     def _on_motor_disabled(self, msg: Bool) -> None:

@@ -268,6 +268,11 @@ body.dash-body main.dash-main {
   flex-direction: column;
   min-height: 0;
 }
+/* Event log panel: fill leftover column height without expanding the grid/page */
+.dash-col-right > .dash-panel-grow {
+  flex: 1 1 0;
+  overflow: hidden;
+}
 .dash-chart-grow,
 .dash-log-grow,
 .dash-gauge-grow {
@@ -275,7 +280,10 @@ body.dash-body main.dash-main {
   min-height: 0;
 }
 .dash-log-grow {
-  max-height: none !important;
+  flex: 1 1 0;
+  min-height: 7.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .dash-gauge-grow {
   align-items: center;
@@ -444,6 +452,142 @@ html:not(.fx-off) .dash-panel h2 .live-dot {
   letter-spacing: 0;
   text-transform: none;
 }
+
+/* Unified power board: week + SOC + voltage in one panel */
+.dash-col-charts {
+  gap: 0;
+}
+.dash-power-board {
+  padding: 0.55rem 0.7rem 0.65rem;
+  gap: 0;
+}
+.dash-power-board > .power-board-head,
+.dash-power-board > .power-board-section,
+.dash-power-board > .power-board-rule {
+  position: relative;
+  z-index: 1;
+}
+.power-board-head {
+  flex: 0 0 auto;
+  margin: 0 0 0.4rem;
+  padding: 0.35rem 0.4rem 0.4rem;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(12, 127, 150, 0.07), rgba(12, 127, 150, 0.03));
+  border: 1px solid rgba(12, 127, 150, 0.12);
+}
+.power-board-kicker {
+  margin: 0 0 0.28rem 0.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.power-board-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.power-board-section > h2 {
+  margin: 0 0 0.3rem !important;
+}
+.power-board-pct {
+  flex: 0 0 auto;
+}
+.power-board-volt {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.power-board-rule {
+  flex: 0 0 auto;
+  height: 1px;
+  margin: 0.45rem 0.1rem 0.5rem;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(12, 127, 150, 0.22),
+    rgba(168, 85, 200, 0.18),
+    transparent
+  );
+}
+.dash-power-board .dash-chart-wrap.dash-chart-sm {
+  min-height: 110px;
+  height: clamp(110px, 14vh, 150px);
+}
+.dash-power-board .power-board-volt .dash-chart-wrap.dash-chart-sm {
+  height: auto;
+  min-height: 120px;
+  flex: 1 1 auto;
+}
+
+.power-week-bar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.18rem;
+  flex: 0 0 auto;
+}
+.power-day-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.02rem;
+  min-height: 1.95rem;
+  padding: 0.12rem 0.06rem 0.22rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.power-day-chip .wd {
+  font-size: 0.56rem;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.power-day-chip .dn {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #243044;
+  line-height: 1.1;
+}
+.power-day-chip .dot {
+  position: absolute;
+  bottom: 3px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.5;
+}
+.power-day-chip:hover:not(:disabled) {
+  border-color: rgba(12, 127, 150, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+}
+.power-day-chip.is-active {
+  border-color: rgba(12, 127, 150, 0.45);
+  background: #fff;
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgba(12, 127, 150, 0.08);
+}
+.power-day-chip.is-active .dn { color: var(--accent); }
+.power-day-chip.is-active .dot { opacity: 1; }
+.power-day-chip.is-today:not(.is-active) {
+  background: rgba(255, 255, 255, 0.45);
+}
+.power-day-chip.no-data .dn { color: #8494a7; }
+.power-day-chip.is-future,
+.power-day-chip:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+}
+
 .dash-panel h2 {
   display: flex;
   align-items: center;
@@ -500,10 +644,12 @@ html:not(.fx-off) .dash-panel h2 .live-dot {
 .dash-sensor.is-warn .st { color: #a37818; }
 
 .dash-log {
-  flex: 1;
-  min-height: 120px;
+  flex: 1 1 0;
+  min-height: 7.5rem;
   max-height: none;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   font-family: var(--font-mono);
   font-size: 0.7rem;
   line-height: 1.45;
@@ -535,6 +681,16 @@ html:not(.fx-off) .dash-panel h2 .live-dot {
   }
   .dash-col-charts { grid-column: 1 / -1; }
   .dash-chart-wrap { height: 160px; }
+  /* Stacked layout: cap log height so it scrolls instead of stretching the page */
+  .dash-col-right > .dash-panel-grow {
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  .dash-log,
+  .dash-log-grow {
+    flex: 1 1 auto;
+    max-height: 16rem;
+  }
 }
 @media (max-width: 720px) {
   .dash-grid,

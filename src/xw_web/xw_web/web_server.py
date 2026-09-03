@@ -354,15 +354,17 @@ GESTURE_IDLE_EXIT_S = 10.0
 
 
 class PowerDayHistory:
-    """Persist today's battery samples to disk (calendar day in XW_TZ).
+    """Persist battery samples to disk by calendar day (XW_TZ).
 
     Board containers often run UTC; charts must use wall-clock local day
     (default Asia/Shanghai) so 16:58 plots near the 16–18 tick, not 08–10.
+    Keeps the current ISO week (Mon–Sun) plus a small buffer for rollover.
     """
 
     SAMPLE_MS = 20_000
-    KEEP_DAYS = 3
+    KEEP_DAYS = 14
     TZ = ZoneInfo(os.environ.get('XW_TZ', 'Asia/Shanghai'))
+    WEEKDAY_ZH = ('一', '二', '三', '四', '五', '六', '日')
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -381,27 +383,31 @@ class PowerDayHistory:
     def _day_start_ms(cls, d: date) -> int:
         return int(datetime(d.year, d.month, d.day, tzinfo=cls.TZ).timestamp() * 1000)
 
+    @classmethod
+    def _week_monday(cls, d: date) -> date:
+        return d - timedelta(days=d.weekday())
+
     def _path(self, key: str) -> Path:
         return self.root / f'{key}.json'
+
+    def _read_points(self, key: str) -> List[Dict[str, Any]]:
+        path = self._path(key)
+        if not path.is_file():
+            return []
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+            pts = data.get('points') if isinstance(data, dict) else None
+            if not isinstance(pts, list):
+                return []
+            return [p for p in pts if isinstance(p, dict) and 't' in p]
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            return []
 
     def _load_today(self) -> None:
         key = self._today_key()
         self._date = key
-        self._points = []
-        self._last_t = 0
-        path = self._path(key)
-        if not path.is_file():
-            return
-        try:
-            data = json.loads(path.read_text(encoding='utf-8'))
-            pts = data.get('points') if isinstance(data, dict) else None
-            if isinstance(pts, list):
-                self._points = [p for p in pts if isinstance(p, dict) and 't' in p]
-                if self._points:
-                    self._last_t = int(self._points[-1].get('t') or 0)
-        except (OSError, json.JSONDecodeError, TypeError, ValueError):
-            self._points = []
-            self._last_t = 0
+        self._points = self._read_points(key)
+        self._last_t = int(self._points[-1].get('t') or 0) if self._points else 0
 
     def _prune_old(self) -> None:
         cutoff = datetime.now(self.TZ).date() - timedelta(days=self.KEEP_DAYS)
@@ -470,21 +476,69 @@ class PowerDayHistory:
             self._last_t = now
             self._flush_unlocked()
 
-    def snapshot(self) -> Dict[str, Any]:
+    def _week_meta(self, today: date) -> Dict[str, Any]:
+        monday = self._week_monday(today)
+        days: List[Dict[str, Any]] = []
+        for i in range(7):
+            d = monday + timedelta(days=i)
+            key = d.isoformat()
+            if key == self._date:
+                count = len(self._points)
+            else:
+                count = len(self._read_points(key))
+            days.append(
+                {
+                    'date': key,
+                    'weekday': self.WEEKDAY_ZH[i],
+                    'day': d.day,
+                    'is_today': d == today,
+                    'is_future': d > today,
+                    'has_data': count > 0,
+                    'count': count,
+                }
+            )
+        return {
+            'week_start': monday.isoformat(),
+            'week_end': (monday + timedelta(days=6)).isoformat(),
+            'days': days,
+        }
+
+    def snapshot(self, day_key: Optional[str] = None) -> Dict[str, Any]:
         with self._lock:
             self._ensure_today()
             assert self._date is not None
-            d = date.fromisoformat(self._date)
-            start = self._day_start_ms(d)
+            today = date.fromisoformat(self._date)
+            target_key = day_key or self._date
+            try:
+                target = date.fromisoformat(target_key)
+            except ValueError:
+                return {'ok': False, 'message': 'invalid date', 'points': []}
+            # Reject far-future / far-past outside retention window.
+            if target > today or target < today - timedelta(days=self.KEEP_DAYS):
+                return {
+                    'ok': False,
+                    'message': 'date out of range',
+                    'today': self._date,
+                    'points': [],
+                    **self._week_meta(today),
+                }
+            if target_key == self._date:
+                points = list(self._points)
+            else:
+                points = self._read_points(target_key)
+            start = self._day_start_ms(target)
             return {
                 'ok': True,
-                'date': self._date,
+                'date': target_key,
+                'today': self._date,
+                'is_today': target_key == self._date,
                 'tz': str(self.TZ),
                 'day_start_ms': start,
                 'day_end_ms': start + 86_400_000,
                 'sample_ms': self.SAMPLE_MS,
-                'count': len(self._points),
-                'points': list(self._points),
+                'count': len(points),
+                'points': points,
+                **self._week_meta(today),
             }
 
 
@@ -977,7 +1031,7 @@ class BridgeNode(Node):
             'enabled': enabled,
             'service_ready': ready,
             'topic': '/xw/fall/enable',
-            'hint': '正交开关：可与 IDLE/导航同时开；跟随复用同一感知管线',
+            'hint': '默认常开 · 上下双摄或判定跌倒 · 人体跟随用上摄按需开关',
         }
 
     def set_fall(self, enabled: bool) -> Dict[str, Any]:
@@ -1238,8 +1292,8 @@ class BridgeNode(Node):
             self._state = d
         self._power_hist.maybe_record(d.get('power') or {})
 
-    def power_history(self) -> Dict[str, Any]:
-        return self._power_hist.snapshot()
+    def power_history(self, day: Optional[str] = None) -> Dict[str, Any]:
+        return self._power_hist.snapshot(day_key=day)
 
     def _on_obstacle(self, msg: String) -> None:
         raw = (msg.data or '').strip()
@@ -2077,7 +2131,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
         if path == '/api/power/history':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
-            return self._json(200, self.bridge.power_history())
+            day = (qs.get('date') or [None])[0]
+            return self._json(200, self.bridge.power_history(day=day))
         if path == '/api/foxglove':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})

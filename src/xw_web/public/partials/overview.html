@@ -19,20 +19,27 @@
 
     <section class="dash-grid dash-grid-overview">
       <div class="dash-col dash-col-charts">
-        <div class="panel dash-panel">
-          <h2>
-            电量 % · 今日
-            <span class="chart-now" id="chartNowPct">—</span>
-            <span class="live-dot" title="今日 00:00–24:00（服务端落盘）"></span>
-          </h2>
-          <div class="dash-chart-wrap dash-chart-sm"><canvas id="chartPower"></canvas></div>
-        </div>
-        <div class="panel dash-panel dash-panel-grow">
-          <h2>
-            电压 V · 今日
-            <span class="chart-now" id="chartNowVolt">—</span>
-          </h2>
-          <div class="dash-chart-wrap dash-chart-sm dash-chart-grow"><canvas id="chartVolt"></canvas></div>
+        <div class="panel dash-panel dash-panel-grow dash-power-board">
+          <div class="power-board-head">
+            <div class="power-board-kicker">电源曲线 · 本周</div>
+            <div class="power-week-bar" id="powerWeekBar" role="tablist" aria-label="本周电量日期"></div>
+          </div>
+          <div class="power-board-section power-board-pct">
+            <h2>
+              电量 % · <span id="chartDayPctLabel">今日</span>
+              <span class="chart-now" id="chartNowPct">—</span>
+              <span class="live-dot" id="chartLiveDot" title="本周按日切换 · 服务端落盘"></span>
+            </h2>
+            <div class="dash-chart-wrap dash-chart-sm"><canvas id="chartPower"></canvas></div>
+          </div>
+          <div class="power-board-rule" aria-hidden="true"></div>
+          <div class="power-board-section power-board-volt">
+            <h2>
+              电压 V · <span id="chartDayVoltLabel">今日</span>
+              <span class="chart-now" id="chartNowVolt">—</span>
+            </h2>
+            <div class="dash-chart-wrap dash-chart-sm dash-chart-grow"><canvas id="chartVolt"></canvas></div>
+          </div>
         </div>
       </div>
 

@@ -19,7 +19,7 @@
     voxel_leaf: 0.06
     stride: 4
     max_points_out: 2500
-    max_rate_hz: 5.0
+    max_rate_hz: 8.0
 
     # --- 3) Statistical outlier removal (sparse speckles) ---
     # More aggressive: raise mean_k and/or lower stddev_mul (e.g. 0.5 like PCL demos).

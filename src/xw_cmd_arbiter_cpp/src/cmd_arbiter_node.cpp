@@ -15,11 +15,12 @@
 namespace {
 
 // Higher number = higher priority
+// follow > motion so loc self-heal spin cannot steal body-follow
 const std::map<std::string, int> SOURCE_PRIORITY = {
     {"teleop", 50},
+    {"follow", 45},
     {"motion", 40},
     {"nav", 30},
-    {"follow", 20},
     {"recharge", 10},
 };
 
