@@ -418,18 +418,18 @@ class NavSessionNode(Node):
                 self.get_logger().error('nav2 process died during bringup wait')
                 return False
             loc_ok = self._cli_is_active(self._loc_active_cli, timeout_sec=1.5)
-            if name and time.monotonic() - last_seed >= 2.0:
-                # Keep re-seeding until active: volatile /initialpose published
-                # before AMCL subscribed is dropped, and planner/costmap
-                # activation blocks on map→base (AMCL only publishes after
-                # consuming an initial pose).
+            nav_ok = self._cli_is_active(self._nav_active_cli, timeout_sec=1.5)
+            # Seed while nav2 is still coming up (AMCL may not have been
+            # subscribed when the early seeds were published, and planner
+            # activation needs map->base TF that only exists after AMCL
+            # consumes an initial pose). Once the stack is active we stop
+            # seeding for good so a manual /initialpose is never clobbered.
+            if not nav_ok and name and time.monotonic() - last_seed >= 2.0:
                 self._seed_initial_pose(name)
                 last_seed = time.monotonic()
                 seeded = True
-            if loc_ok and self._cli_is_active(self._nav_active_cli, timeout_sec=1.5):
+            if nav_ok:
                 if self._nav_client.wait_for_server(timeout_sec=5.0):
-                    if not seeded and name:
-                        self._seed_initial_pose(name)
                     self.get_logger().info('Nav2 lifecycle active + navigate_to_pose ready')
                     return True
                 self.get_logger().warn('lifecycle active but navigate_to_pose not ready yet')

@@ -27,6 +27,10 @@
           <Sequence name="ClearAndBackup">
             <ClearEntireCostmap name="ClearLocal-Backup" service_name="local_costmap/clear_entirely_local_costmap"/>
             <ClearEntireCostmap name="ClearGlobal-Backup" service_name="global_costmap/clear_entirely_global_costmap"/>
+            <!-- Backup only when ultrasound senses a wall/glass within 0.30 m
+                 (laser-invisible obstacles). Env-agnostic: threshold + sector
+                 are the only tunables. -->
+            <UltrasonicProximity threshold="0.30" sector_deg="60"/>
             <BackUp backup_dist="0.45" backup_speed="0.12"/>
           </Sequence>
           <Sequence name="ClearBothAndSpin">

@@ -71,6 +71,7 @@ bt_navigator:
     default_nav_to_pose_bt_xml: ""
     default_nav_through_poses_bt_xml: ""
     plugin_lib_names:
+      - xw_bt_plugins
       - nav2_compute_path_to_pose_action_bt_node
       - nav2_compute_path_through_poses_action_bt_node
       - nav2_smooth_path_action_bt_node
@@ -138,8 +139,8 @@ controller_server:
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.04
-      movement_time_allowance: 8.0
+      required_movement_radius: 0.02
+      movement_time_allowance: 5.0
 
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -208,7 +209,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 2.2
-        inflation_radius: 0.40
+        inflation_radius: 0.28
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -289,7 +290,7 @@ global_costmap:
         enabled: True
         # Global plan needs the depth volume too: laser sees thin 2D slices,
         # a stool/desk becomes leg-gaps the plan can thread -> robot brushes by.
-        observation_sources: scan depth1 depth2
+        observation_sources: scan depth1 depth2 ultrasonic
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -303,6 +304,19 @@ global_costmap:
           observation_persistence: 0.0
           expected_update_rate: 0.0
           inf_is_valid: true
+        ultrasonic:
+          topic: /ultrasonic_scan
+          max_obstacle_height: 2.0
+          min_obstacle_height: 0.0
+          clearing: False
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 1.2
+          raytrace_min_range: 0.15
+          obstacle_max_range: 1.5
+          obstacle_min_range: 0.15
+          observation_persistence: 0.0
+          expected_update_rate: 1.0
         depth1:
           topic: /camera/front_up/depth/points_nav
           max_obstacle_height: 1.4
@@ -336,7 +350,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 2.2
-        inflation_radius: 0.40
+        inflation_radius: 0.35
 
 map_server:
   ros__parameters:
@@ -390,6 +404,13 @@ behavior_server:
       spin_distance: 1.45
       max_rotational_vel: 0.45
       rotational_acc_lim: 1.5
+      simulate_ahead_time: 0.8
+      cost_threshold: 120
+    backup:
+      plugin: "nav2_behaviors/BackUp"
+      backup_velocity: 0.08
+      simulate_ahead_time: 0.5
+      cost_threshold: 120
     backup:
       plugin: "nav2_behaviors/BackUp"
       back_up_speed: 0.12
