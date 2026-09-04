@@ -408,7 +408,7 @@ def generate_launch_description() -> LaunchDescription:
                     'filter_inclusive': False,
                     # Body/mount blind zones (deg). filter_inclusive=false → drop inside ranges.
                     # Explains ~68% scan "valid" in nav_diag (intentional, not mis-mount).
-                    'filter_regions': [-95.5, -36.5, 77.0, 96.0, -140.5, -127.5, 131.5, 142.0],
+                    'filter_regions': [-95.0, -74.0, -65.0, -62.0, -52.0, -23.0, 77.0, 97.0],
                     'scan_frequency': ParameterValue(lidar_scan_frequency, value_type=float),
                 }],
                 output='screen',
