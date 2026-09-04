@@ -313,6 +313,22 @@ def generate_launch_description() -> LaunchDescription:
         ),
     ]
 
+    ultrasonic = [
+        Node(
+            package='xw_sensors',
+            executable='ultrasonic_node',
+            name='xw_ultrasonic',
+            parameters=[{'port': '/dev/ultrasonic'}],
+            output='screen',
+        ),
+        Node(
+            package='xw_sensors',
+            executable='ultrasonic_to_laserscan',
+            name='xw_ultrasonic_to_laserscan',
+            output='screen',
+        ),
+    ]
+
     depth_share = get_package_share_directory('xw_sensors')
     depth_launch = os.path.join(depth_share, 'launch', 'depth_camera.launch.py')
     ekf_launch = IncludeLaunchDescription(
@@ -420,6 +436,7 @@ def generate_launch_description() -> LaunchDescription:
     )
 
     return LaunchDescription([
+        *ultrasonic,
         DeclareLaunchArgument('use_sim_hw', default_value='true',
                               description='Simulate chassis odometry (independent of lidar)'),
         DeclareLaunchArgument('chassis_port', default_value='/dev/chassis',

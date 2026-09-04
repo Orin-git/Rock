@@ -29,6 +29,8 @@ setup(
             'depth_topic_bridge = xw_sensors.depth_topic_bridge:main',
             'wt901_imu_node = xw_sensors.wt901_imu_node:main',
             'pc_nav_filter_node = xw_sensors.pc_nav_filter_node:main',
+            'ultrasonic_node = xw_sensors.ultrasonic_node:main',
+            'ultrasonic_to_laserscan = xw_sensors.ultrasonic_to_laserscan:main',
         ],
     },
 )
