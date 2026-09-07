@@ -131,8 +131,8 @@ class RechargeNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             reliability=ReliabilityPolicy.RELIABLE,
         )
-        self._tf = Buffer()
-        self._tf_listener = TransformListener(self._tf, self)
+        self._tf: Optional[Buffer] = None
+        self._tf_listener: Optional[TransformListener] = None
 
         self._cmd_pub = self.create_publisher(Twist, str(self.get_parameter('cmd_topic').value), 10)
         self._mode_pub = self.create_publisher(Int8, '/xw/chassis/charge_mode', latch)
@@ -158,12 +158,56 @@ class RechargeNode(Node):
 
         hz = float(self.get_parameter('control_hz').value)
         self._control_hz = max(hz, 5.0)
-        self.create_timer(1.0 / self._control_hz, self._tick, callback_group=self._cb)
+        idle_hz = float(self.get_parameter('idle_tick_hz').value)
+        self._idle_tick_hz = max(0.2, min(idle_hz, self._control_hz))
+        # Start at idle rate; promote to control_hz while docking.
+        self._tick_timer = self.create_timer(
+            1.0 / self._idle_tick_hz, self._tick, callback_group=self._cb
+        )
+        self._tick_active = False
         if bool(self.get_parameter('diagnose_always').value):
             self._ensure_scan_sub()
+            self._ensure_tf()
         self._set_charge_mode(0)
         self._publish_status()
-        self.get_logger().info('xw_recharge ready (Laser-Lock Dock)')
+        self.get_logger().info(
+            f'xw_recharge ready (Laser-Lock Dock; idle_tick={self._idle_tick_hz:.1f}Hz)'
+        )
+
+    def _set_tick_rate(self, active: bool) -> None:
+        want = bool(active)
+        if want == self._tick_active and self._tick_timer is not None:
+            return
+        self._tick_active = want
+        period = 1.0 / (self._control_hz if want else self._idle_tick_hz)
+        if self._tick_timer is not None:
+            try:
+                self._tick_timer.cancel()
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                self.destroy_timer(self._tick_timer)
+            except Exception:  # noqa: BLE001
+                pass
+        self._tick_timer = self.create_timer(period, self._tick, callback_group=self._cb)
+
+    def _ensure_tf(self) -> None:
+        if self._tf_listener is not None:
+            return
+        self._tf = Buffer()
+        self._tf_listener = TransformListener(self._tf, self)
+        self.get_logger().info('recharge TF listener armed')
+
+    def _release_tf(self) -> None:
+        if self._tf_listener is None:
+            return
+        try:
+            self._tf_listener.unregister()
+        except Exception:  # noqa: BLE001
+            pass
+        self._tf_listener = None
+        self._tf = None
+        self.get_logger().info('recharge TF listener released')
 
     def _declare(self) -> None:
         defaults = {
@@ -195,6 +239,7 @@ class RechargeNode(Node):
             'loc2_wait_sec': 15.0,
             'charging_stable_sec': 1.5,
             'control_hz': 20.0,
+            'idle_tick_hz': 1.0,
             'laser_intensity_threshold': 200.0,
             'laser_code': [0.06, 0.025, 0.08, 0.025, 0.06],
             'laser_code_tol': 0.02,
@@ -302,6 +347,8 @@ class RechargeNode(Node):
         self._tracker.reset()
         self._dock_odom = None
         self._ensure_scan_sub()
+        self._ensure_tf()
+        self._set_tick_rate(True)
         self.get_logger().info(f'recharge start ({reason}) staging={self._staging}')
         self._enter(Phase.PREP, '检查定位与接近点')
 
@@ -313,6 +360,9 @@ class RechargeNode(Node):
         self._cancel_nav()
         self._tracker.reset()
         self._stop_scan_sub()
+        if not bool(self.get_parameter('diagnose_always').value):
+            self._release_tf()
+        self._set_tick_rate(False)
         if success:
             self._phase = Phase.SUCCESS
             self._message = message
@@ -625,6 +675,11 @@ class RechargeNode(Node):
             self._tracker.update(None)
             return None
         src = raw.frame_id or str(self._p('lidar_frame'))
+        if self._tf is None:
+            self._ensure_tf()
+        if self._tf is None:
+            self._tracker.update(None)
+            return None
         try:
             tf = self._tf.lookup_transform(
                 str(self._p('base_frame')), src, Time(), timeout=Duration(seconds=0.05)
