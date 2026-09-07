@@ -10,6 +10,7 @@ data_files = [
     (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     (os.path.join('share', package_name, 'behavior_trees'), glob('behavior_trees/*.xml')),
+    (os.path.join('share', package_name, 'scripts'), glob('scripts/*')),
 ]
 
 setup(

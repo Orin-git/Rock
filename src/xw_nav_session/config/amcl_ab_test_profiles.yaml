@@ -1,0 +1,32 @@
+# Phase1 Task B — AMCL laser-model AB profiles (NOT production defaults).
+#
+# Production remains nav2_params.yaml:
+#   laser_model_type: likelihood_field
+#   do_beamskip: false
+#
+# Test matrix (apply AFTER enabling follow continuous, never with Task A first land):
+#   Test A: continuous + likelihood_field (current)
+#   Test B: continuous + likelihood_field_prob + do_beamskip=true
+#
+# Apply at runtime (AMCL active):
+#   bash $(ros2 pkg prefix xw_nav_session)/share/xw_nav_session/scripts/apply_amcl_laser_profile.sh likelihood_field
+#   bash .../apply_amcl_laser_profile.sh likelihood_field_prob_beamskip
+#
+# Future (not implemented this phase):
+#   person bearing/range → LaserScan local mask → /scan_localization → AMCL scan_topic
+#   Keep AMCL scan_topic overridable; default stays "scan".
+
+amcl_profile_likelihood_field:
+  laser_model_type: "likelihood_field"
+  do_beamskip: false
+  # Reserved for Phase1+ person-masked scan (wire when mask node exists):
+  scan_topic: "scan"
+  # scan_topic: "scan_localization"
+
+amcl_profile_likelihood_field_prob_beamskip:
+  laser_model_type: "likelihood_field_prob"
+  do_beamskip: true
+  beam_skip_distance: 0.5
+  beam_skip_threshold: 0.3
+  beam_skip_error_threshold: 0.9
+  scan_topic: "scan"
