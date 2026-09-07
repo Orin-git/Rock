@@ -236,6 +236,8 @@ def generate_launch_description() -> LaunchDescription:
                 'coast_hold_s': 1.5,
                 'lost_timeout_s': 3.0,
                 'search_timeout_s': 15.0,
+                # Phase1 AB: legacy_freeze (default) | continuous
+                'follow_localization_mode': 'legacy_freeze',
             }],
             output='screen',
         ),

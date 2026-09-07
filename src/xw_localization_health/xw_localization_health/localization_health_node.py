@@ -2,6 +2,10 @@
 """Gen2 localization health 0–3 + optional self-heal (spin + reinitialize).
 
 0 good | 1 not ready | 2 drift (self-heal) | 3 needs intervention (latched until OK)
+
+Phase1: detection is always active (incl. FOLLOW). Execution of spin/reinit is
+gated by /xw/localization/recovery_enable so follow is never preempted by
+health motion — supervisor stops follow first, then arms recovery.
 """
 
 from __future__ import annotations
@@ -37,6 +41,7 @@ class LocalizationHealthNode(Node):
         self.declare_parameter('odom_frame', 'odom')
         self.declare_parameter('base_frame', 'base_link')
         self.declare_parameter('tf_stale_sec', 1.0)
+        self.declare_parameter('amcl_stale_sec', 2.0)
         self.declare_parameter('cov_xy_warn', 0.8)
         self.declare_parameter('cov_xy_bad', 2.5)
         self.declare_parameter('cov_yaw_warn', 0.35)
@@ -49,15 +54,19 @@ class LocalizationHealthNode(Node):
         self.declare_parameter('self_heal_spin_sec', 4.0)
         self.declare_parameter('publish_hz', 2.0)
         self.declare_parameter('enable_self_heal', True)
+        # If true, heal during follow without supervisor gate (NOT recommended).
+        self.declare_parameter('allow_self_heal_during_follow', False)
 
         self._cb = ReentrantCallbackGroup()
         self._tf = Buffer()
         self._tf_listener = TransformListener(self._tf, self)
 
         self._amcl: Optional[PoseWithCovarianceStamped] = None
+        self._amcl_mono: Optional[float] = None
         self._map: Optional[OccupancyGrid] = None
         self._nav_en = False
         self._follow_en = False
+        self._recovery_en = False
         self._status = 1
         self._latched_3 = False
         self._raw_bad_since: Optional[float] = None
@@ -77,6 +86,9 @@ class LocalizationHealthNode(Node):
         self.create_subscription(Bool, '/xw/nav/enable', self._on_nav_en, latch_in)
         self.create_subscription(Bool, '/xw/follow/enable', self._on_follow_en, latch_in)
         self.create_subscription(
+            Bool, '/xw/localization/recovery_enable', self._on_recovery_en, latch_in
+        )
+        self.create_subscription(
             PoseWithCovarianceStamped, 'initialpose', self._on_initialpose, 10
         )
 
@@ -95,17 +107,20 @@ class LocalizationHealthNode(Node):
 
         hz = float(self.get_parameter('publish_hz').value)
         self.create_timer(1.0 / max(hz, 0.5), self._tick, callback_group=self._cb)
-        self.get_logger().info('localization_health ready (0–3 + self-heal)')
+        self.get_logger().info(
+            'localization_health ready (detect always; heal gated by recovery_enable)'
+        )
 
     @property
     def _nav_mode(self) -> bool:
-        return self._nav_en or self._follow_en
+        return self._nav_en or self._follow_en or self._recovery_en
 
     def _now(self) -> float:
         return self.get_clock().now().nanoseconds * 1e-9
 
     def _on_amcl(self, msg: PoseWithCovarianceStamped) -> None:
         self._amcl = msg
+        self._amcl_mono = self._now()
 
     def _on_map(self, msg: OccupancyGrid) -> None:
         self._map = msg
@@ -117,18 +132,19 @@ class LocalizationHealthNode(Node):
         was = self._follow_en
         self._follow_en = bool(msg.data)
         if self._follow_en and not was:
-            # Visual follow must not fight AMCL self-heal spin (/xw/cmd/motion
-            # priority > follow). Freeze heal and clear any in-progress spin.
-            self._heal_started = None
-            self._heal_phase = ''
-            self._raw_bad_since = None
-            self._stop_motion()
-            self.get_logger().info('follow on → pause loc self-heal (hold map pose)')
+            # Cancel any in-progress heal motion; detection continues.
+            self._abort_heal_motion('follow on → pause heal execution')
         elif was and not self._follow_en:
             self._raw_bad_since = None
-            self._heal_started = None
-            self._heal_phase = ''
-            self.get_logger().info('follow off → loc self-heal armed again')
+            self.get_logger().info('follow off → heal may arm if recovery_enable/nav')
+
+    def _on_recovery_en(self, msg: Bool) -> None:
+        was = self._recovery_en
+        self._recovery_en = bool(msg.data)
+        if self._recovery_en and not was:
+            self.get_logger().info('localization recovery armed (heal execution allowed)')
+        elif was and not self._recovery_en:
+            self._abort_heal_motion('recovery disarmed')
 
     def _on_initialpose(self, _msg: PoseWithCovarianceStamped) -> None:
         self._latched_3 = False
@@ -136,6 +152,13 @@ class LocalizationHealthNode(Node):
         self._heal_phase = ''
         self._raw_bad_since = None
         self.get_logger().info('initialpose → clear status-3 latch')
+
+    def _abort_heal_motion(self, reason: str) -> None:
+        if self._heal_started is not None or self._heal_phase:
+            self._heal_started = None
+            self._heal_phase = ''
+            self._stop_motion()
+            self.get_logger().info(reason)
 
     def _tf_ok(self) -> bool:
         map_f = str(self.get_parameter('map_frame').value)
@@ -153,6 +176,12 @@ class LocalizationHealthNode(Node):
             return age < stale
         except TransformException:
             return False
+
+    def _amcl_fresh(self) -> bool:
+        if self._amcl is None or self._amcl_mono is None:
+            return False
+        stale = float(self.get_parameter('amcl_stale_sec').value)
+        return (self._now() - self._amcl_mono) <= stale
 
     def _cov_xy_yaw(self) -> tuple:
         if self._amcl is None:
@@ -190,8 +219,8 @@ class LocalizationHealthNode(Node):
         return math.hypot(dx, dy) > lim
 
     def _raw_code(self) -> int:
-        """Immediate health without latch/heal."""
-        if not self._tf_ok() or self._amcl is None:
+        """Immediate health without latch/heal. Always evaluated (incl. FOLLOW)."""
+        if not self._tf_ok() or self._amcl is None or not self._amcl_fresh():
             return 1
         xy, yaw = self._cov_xy_yaw()
         if self._outside_map():
@@ -225,8 +254,20 @@ class LocalizationHealthNode(Node):
     def _stop_motion(self) -> None:
         self._cmd_pub.publish(Twist())
 
-    def _self_heal_tick(self) -> None:
+    def _heal_execution_allowed(self) -> bool:
+        """Spin/reinit only when not fighting follow, unless explicitly allowed."""
         if not bool(self.get_parameter('enable_self_heal').value):
+            return False
+        if self._follow_en and not bool(self.get_parameter('allow_self_heal_during_follow').value):
+            # Supervisor must stop follow and set recovery_enable first.
+            return bool(self._recovery_en)
+        if self._recovery_en:
+            return True
+        return bool(self._nav_en and not self._follow_en)
+
+    def _self_heal_tick(self) -> None:
+        if not self._heal_execution_allowed():
+            self._abort_heal_motion('heal not allowed')
             return
         if not self._nav_mode:
             self._heal_started = None
@@ -268,19 +309,11 @@ class LocalizationHealthNode(Node):
             self._stop_motion()
 
     def _tick(self) -> None:
-        # Body-follow is visual-servo (no map). People in /scan + continuous
-        # motion inflate AMCL cov; self-heal spin would steal cmd from follow
-        # and make the map pose look like it "drifted". Hold last good status.
-        if self._follow_en:
+        # Detection always runs (FOLLOW included). Execution gated separately.
+        if self._follow_en and not self._heal_execution_allowed():
+            # Ensure we never leave a heal spin running under follow.
             if self._heal_started is not None or self._heal_phase:
-                self._heal_started = None
-                self._heal_phase = ''
-                self._stop_motion()
-            self._raw_bad_since = None
-            if not self._latched_3:
-                self._status = 0 if self._tf_ok() else 1
-            self._publish_status(self._status)
-            return
+                self._abort_heal_motion('follow active → stop heal motion')
 
         raw = self._raw_code()
         now = self._now()
@@ -312,16 +345,20 @@ class LocalizationHealthNode(Node):
             self._raw_bad_since = now
         hold = float(self.get_parameter('status2_hold_sec').value)
         if now - self._raw_bad_since < hold:
-            # still report 0 until hold expires (avoid flicker)
+            # Avoid flicker: hold soft-ok until sustained, then surface 2.
             self._status = 0 if not self._nav_mode else 2
+            # During follow before recovery: still publish 0 until hold expires
+            # so supervisor only reacts to sustained degradation.
+            if self._follow_en and not self._recovery_en:
+                self._status = 0
             self._publish_status(self._status)
             return
 
         self._status = 2
         self._publish_status(2)
-        if self._nav_mode:
+        if self._heal_execution_allowed():
             self._self_heal_tick()
-        else:
+        elif not self._nav_mode:
             # Non-nav sustained drift → latch 3 (needs attention)
             if now - self._raw_bad_since > hold + 10.0:
                 self._latched_3 = True

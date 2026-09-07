@@ -16,7 +16,7 @@ from typing import Optional, Tuple
 
 import rclpy
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Twist
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -26,6 +26,7 @@ from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rcl_interfaces.srv import SetParameters, GetParameters
 from std_msgs.msg import Bool
+from std_srvs.srv import Empty
 from tf2_ros import Buffer, TransformListener
 
 from xw_interfaces.msg import PersonTracks, TaskProgress, TaskResult
@@ -103,6 +104,12 @@ class FollowSessionNode(Node):
         self.declare_parameter('search_yaw_rate', 0.25)
         self.declare_parameter('use_nav2_follow', False)
         self.declare_parameter('follow_bt_xml', '')
+        # Phase1 AB: legacy_freeze (update_min 100) vs continuous (AMCL keeps updating).
+        # Default legacy_freeze for safe rollback until continuous is validated.
+        self.declare_parameter('follow_localization_mode', 'legacy_freeze')
+        self.declare_parameter('exit_nomotion_timeout_sec', 2.0)
+        self.declare_parameter('exit_cov_xy_ok', 0.8)
+        self.declare_parameter('exit_cov_yaw_ok', 0.35)
 
         self._cb = ReentrantCallbackGroup()
         self._lock = threading.Lock()
@@ -174,20 +181,44 @@ class FollowSessionNode(Node):
         self._amcl_get_params = self.create_client(
             GetParameters, '/amcl/get_parameters', callback_group=self._cb
         )
+        self._amcl_nomotion = self.create_client(
+            Empty, '/request_nomotion_update', callback_group=self._cb
+        )
         self._amcl_saved: Optional[dict] = None
+        self._last_amcl: Optional[PoseWithCovarianceStamped] = None
+        self._last_amcl_mono = 0.0
+        self.create_subscription(
+            PoseWithCovarianceStamped,
+            'amcl_pose',
+            self._on_amcl_pose,
+            10,
+            callback_group=self._cb,
+        )
+        # Latched exit handshake for supervisor / operators (true=ok, false=needs recovery).
+        self._exit_loc_pub = self.create_publisher(Bool, '/xw/follow/exit_loc_ok', latch)
 
         mode = 'nav2-goal' if bool(self.get_parameter('use_nav2_follow').value) else 'visual-servo'
+        loc_mode = str(self.get_parameter('follow_localization_mode').value)
         self.get_logger().info(
-            f'follow session ready ({mode}; cam={self.get_parameter("camera_frame").value}; '
-            f'smooth=ema+slew)'
+            f'follow session ready ({mode}; loc={loc_mode}; '
+            f'cam={self.get_parameter("camera_frame").value}; smooth=ema+slew)'
         )
 
-    def _freeze_amcl(self, freeze: bool) -> None:
-        """During visual follow, stop AMCL pose updates so map pose does not drift.
+    def _loc_mode(self) -> str:
+        raw = str(self.get_parameter('follow_localization_mode').value or 'legacy_freeze').strip()
+        return raw if raw in ('legacy_freeze', 'continuous') else 'legacy_freeze'
 
-        People in the laser + continuous servo motion inflate AMCL covariance and
-        pull the particle cloud. Freezing update_min_* keeps last map→odom.
+    def _on_amcl_pose(self, msg: PoseWithCovarianceStamped) -> None:
+        self._last_amcl = msg
+        self._last_amcl_mono = time.monotonic()
+
+    def _freeze_amcl(self, freeze: bool) -> None:
+        """legacy_freeze only: raise update_min_* so AMCL stops laser updates.
+
+        continuous mode must never call this with freeze=True (Phase1 AB flag).
         """
+        if self._loc_mode() != 'legacy_freeze':
+            return
         if not self._amcl_set_params.service_is_ready():
             return
         try:
@@ -213,7 +244,7 @@ class FollowSessionNode(Node):
                     Parameter('update_min_a', Parameter.Type.DOUBLE, 100.0).to_parameter_msg(),
                 ]
                 self._amcl_set_params.call_async(req)
-                self.get_logger().info('AMCL updates frozen for visual follow')
+                self.get_logger().info('AMCL updates frozen for visual follow (legacy_freeze)')
             else:
                 d = 0.25
                 a = 0.2
@@ -230,6 +261,52 @@ class FollowSessionNode(Node):
                 self.get_logger().info(f'AMCL updates restored (d={d:.2f} a={a:.2f})')
         except Exception as exc:  # noqa: BLE001
             self.get_logger().warn(f'AMCL freeze/restore failed: {exc}')
+
+    def _exit_localization_handshake(self) -> bool:
+        """Stop → request_nomotion_update → wait AMCL → check covariance.
+
+        Does NOT call reinitialize_global_localization. Returns True if healthy.
+        """
+        self._stop_cmd()
+        # Ensure freeze is cleared before nomotion (legacy path).
+        if self._loc_mode() == 'legacy_freeze' and self._amcl_saved is not None:
+            self._freeze_amcl(False)
+
+        t0 = time.monotonic()
+        stamp_before = self._last_amcl_mono
+        if self._amcl_nomotion.service_is_ready():
+            try:
+                fut = self._amcl_nomotion.call_async(Empty.Request())
+                deadline = time.monotonic() + 0.5
+                while time.monotonic() < deadline and not fut.done():
+                    time.sleep(0.02)
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warn(f'request_nomotion_update failed: {exc}')
+        else:
+            self.get_logger().warn('request_nomotion_update not ready')
+
+        timeout = max(0.5, float(self.get_parameter('exit_nomotion_timeout_sec').value))
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self._last_amcl is not None and self._last_amcl_mono > stamp_before:
+                break
+            time.sleep(0.05)
+
+        ok = False
+        xy = yaw = float('nan')
+        if self._last_amcl is not None:
+            c = self._last_amcl.pose.covariance
+            xy = max(float(c[0]), float(c[7]))
+            yaw = float(c[35])
+            xy_ok = float(self.get_parameter('exit_cov_xy_ok').value)
+            yaw_ok = float(self.get_parameter('exit_cov_yaw_ok').value)
+            ok = xy <= xy_ok and yaw <= yaw_ok
+        self._exit_loc_pub.publish(Bool(data=bool(ok)))
+        self.get_logger().info(
+            f'follow exit loc handshake ok={ok} xy={xy:.3f} yaw={yaw:.3f} '
+            f'mode={self._loc_mode()} dt={time.monotonic() - t0:.2f}s'
+        )
+        return bool(ok)
 
     def _bt_path(self) -> str:
         configured = str(self.get_parameter('follow_bt_xml').value or '').strip()
@@ -354,10 +431,13 @@ class FollowSessionNode(Node):
             self._smooth_lin = 0.0
             self._smooth_ang = 0.0
             self._nav_cancel_pub.publish(Bool(data=True))
-            if not self._use_nav2():
+            # legacy_freeze only; continuous keeps AMCL updating during follow.
+            if not self._use_nav2() and self._loc_mode() == 'legacy_freeze':
                 self._freeze_amcl(True)
             self._emit_progress('follow_start', source)
-            self.get_logger().info(f'follow active ({source})')
+            self.get_logger().info(
+                f'follow active ({source}; loc={self._loc_mode()})'
+            )
             if self._use_nav2():
                 self._follow_thread = threading.Thread(
                     target=self._follow_nav_loop, daemon=True
@@ -370,11 +450,16 @@ class FollowSessionNode(Node):
             self._cancel_follow_nav()
             self._state = FollowState.IDLE
             self._stop_cmd()
-            if not self._use_nav2():
-                self._freeze_amcl(False)
+            exit_ok = self._exit_localization_handshake()
             self._disarm_runtime()
-            self._emit_result(0, 'follow stopped', source)
-            self.get_logger().info(f'follow stopped ({source})')
+            self._emit_result(
+                0 if exit_ok else 2,
+                'follow stopped' if exit_ok else 'follow stopped (loc degraded)',
+                source,
+            )
+            self.get_logger().info(
+                f'follow stopped ({source}; exit_loc_ok={exit_ok})'
+            )
 
     def _cancel_follow_nav(self) -> None:
         with self._lock:

@@ -36,6 +36,10 @@ MODE_NAMES = {
     4: 'FALL_DETECT',
 }
 
+# Soft localization recovery overlay (not a SetMode id — keeps API stable).
+LOC_RECOVERY_DETAIL = 'LOCALIZATION_RECOVERY'
+NEED_INITIAL_POSE_DETAIL = 'NEED_INITIAL_POSE'
+
 LOC_STATUS_NAMES = {
     0: 'ok',
     1: 'not_ready',
@@ -71,6 +75,8 @@ class SupervisorNode(Node):
         self._recharge_en = False
         self._explore_en = False
         self._explore_map = ''
+        self._loc_recovery_en = False
+        self._prev_loc_status = 1
 
         # Keep robot_state VOLATILE (high rate) so CLI/Foxglove default QoS always sees updates.
         self._state_pub = self.create_publisher(RobotState, '/xw/robot_state', 10)
@@ -90,6 +96,9 @@ class SupervisorNode(Node):
         self._fall_pub = self.create_publisher(Bool, '/xw/fall/enable', latch)
         self._recharge_pub = self.create_publisher(Bool, '/xw/recharge/enable', latch)
         self._explore_pub = self.create_publisher(Bool, '/xw/explore/enable', latch)
+        self._loc_recovery_pub = self.create_publisher(
+            Bool, '/xw/localization/recovery_enable', latch
+        )
         self._explore_map_pub = self.create_publisher(String, '/xw/explore/map_name', latch)
         self._nav_map_pub = self.create_publisher(String, '/xw/nav/map_name', latch)
 
@@ -100,6 +109,9 @@ class SupervisorNode(Node):
         self.create_subscription(PowerState, '/xw/power', self._on_power, 10)
         self.create_subscription(
             Int8, '/xw/localization_status', self._on_loc_status, latch
+        )
+        self.create_subscription(
+            Bool, '/xw/follow/exit_loc_ok', self._on_follow_exit_loc, latch
         )
         self.create_subscription(
             Bool, '/xw/explore/request_disable', self._on_explore_request_disable, 10
@@ -120,9 +132,11 @@ class SupervisorNode(Node):
         self._publish_fall()
         self._publish_recharge()
         self._publish_explore()
+        self._publish_loc_recovery()
         self.get_logger().info(
             'supervisor ready (follow/recharge on nav; explore on mapping; '
-            f'fall orthogonal default={"on" if self._fall_en else "off"})'
+            f'fall orthogonal default={"on" if self._fall_en else "off"}; '
+            'loc recovery gated)'
         )
 
     def _on_motor_disabled(self, msg: Bool) -> None:
@@ -141,7 +155,68 @@ class SupervisorNode(Node):
         self._safety_ok = bool(msg.data)
 
     def _on_loc_status(self, msg: Int8) -> None:
+        prev = self._prev_loc_status
         self._loc_status = int(msg.data)
+        self._prev_loc_status = self._loc_status
+        # FOLLOW + sustained DEGRADED/LOST → stop follow, arm recovery (no heal steal).
+        if self._follow_en and self._loc_status in (2, 3) and prev != self._loc_status:
+            self._enter_localization_recovery(
+                f'follow interrupted by loc status={self._loc_status}'
+            )
+        elif self._loc_recovery_en and self._loc_status == 0:
+            self._exit_localization_recovery('loc converged → READY')
+        elif self._loc_recovery_en and self._loc_status == 3:
+            self._fail_localization_recovery('self-heal failed → NEED_INITIAL_POSE')
+
+    def _on_follow_exit_loc(self, msg: Bool) -> None:
+        """Follow session exit handshake: False → localization recovery."""
+        if msg.data:
+            return
+        if self._mode in (2, 3) or self._nav_active_capability():
+            self._enter_localization_recovery('follow exit loc handshake failed')
+
+    def _nav_active_capability(self) -> bool:
+        return self._mode in (2, 3) or bool(self._active_map)
+
+    def _publish_loc_recovery(self) -> None:
+        self._loc_recovery_pub.publish(Bool(data=bool(self._loc_recovery_en)))
+
+    def _enter_localization_recovery(self, reason: str) -> None:
+        if self._loc_recovery_en and not self._follow_en:
+            # Already recovering and follow already stopped.
+            self._detail = f'{LOC_RECOVERY_DETAIL}: {reason}'
+            self._publish_state()
+            return
+        if self._follow_en:
+            self._follow_en = False
+            self._publish_follow()
+        if self._mode == 3:
+            self._mode = 2
+            self._set_session(2, True)
+        self._loc_recovery_en = True
+        self._publish_loc_recovery()
+        self._detail = f'{LOC_RECOVERY_DETAIL}: {reason}'
+        self._emit_event(2, 'localization_recovery', reason)
+        self._publish_state()
+        self.get_logger().warn(f'LOCALIZATION_RECOVERY: {reason}')
+
+    def _exit_localization_recovery(self, reason: str) -> None:
+        if not self._loc_recovery_en:
+            return
+        self._loc_recovery_en = False
+        self._publish_loc_recovery()
+        self._detail = f'READY: {reason}'
+        self._emit_event(1, 'localization_ready', reason)
+        self._publish_state()
+        self.get_logger().info(f'localization recovery cleared: {reason}')
+
+    def _fail_localization_recovery(self, reason: str) -> None:
+        self._loc_recovery_en = False
+        self._publish_loc_recovery()
+        self._detail = f'{NEED_INITIAL_POSE_DETAIL}: {reason}'
+        self._emit_event(2, 'need_initial_pose', reason)
+        self._publish_state()
+        self.get_logger().error(f'NEED_INITIAL_POSE: {reason}')
 
     def _on_power(self, msg: PowerState) -> None:
         self._power = msg
@@ -445,6 +520,9 @@ class SupervisorNode(Node):
                 self._publish_follow()
             self._clear_recharge()
             self._clear_explore()
+            if self._loc_recovery_en:
+                self._loc_recovery_en = False
+                self._publish_loc_recovery()
             self._mode = 0
 
         self._detail = reason
