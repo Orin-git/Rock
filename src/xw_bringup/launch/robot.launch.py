@@ -32,6 +32,7 @@ def generate_launch_description() -> LaunchDescription:
     use_depth_cam = LaunchConfiguration('use_depth_cam')
     use_depth_cam_2 = LaunchConfiguration('use_depth_cam_2')
     enable_pointcloud = LaunchConfiguration('enable_pointcloud')
+    use_legacy_depth_bridge = LaunchConfiguration('use_legacy_depth_bridge')
     use_ekf = LaunchConfiguration('use_ekf')
     use_imu = LaunchConfiguration('use_imu')
     profile = LaunchConfiguration('profile')
@@ -344,6 +345,7 @@ def generate_launch_description() -> LaunchDescription:
         launch_arguments={
             'config': 'depth_camera.yaml',
             'enable_pointcloud': enable_pointcloud,
+            'use_legacy_depth_bridge': use_legacy_depth_bridge,
         }.items(),
         condition=IfCondition(use_depth_cam),
     )
@@ -360,6 +362,7 @@ def generate_launch_description() -> LaunchDescription:
                 launch_arguments={
                     'config': 'depth_camera_front_down.yaml',
                     'enable_pointcloud': 'false',
+                    'use_legacy_depth_bridge': use_legacy_depth_bridge,
                 }.items(),
                 condition=IfCondition(use_depth_cam_2),
             ),
@@ -454,6 +457,11 @@ def generate_launch_description() -> LaunchDescription:
                               description='Start front HP60C #2 → /camera/front_down/...'),
         DeclareLaunchArgument('enable_pointcloud', default_value='false',
                               description='Relay /camera/front_up/depth/points for Foxglove debug (CPU heavy)'),
+        DeclareLaunchArgument(
+            'use_legacy_depth_bridge',
+            default_value='true',
+            description='Phase1 rollback: true=Python depth relay; false=remap depth Image/CameraInfo',
+        ),
         DeclareLaunchArgument(
             'use_ekf',
             default_value='true',

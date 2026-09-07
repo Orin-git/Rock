@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Launch Angstrong HP60C driver + Gen2 topic bridge (front_up or front_down)."""
+"""Launch Angstrong HP60C driver + Gen2 topic bridge (front_up or front_down).
+
+Phase1 Task C/D:
+  use_legacy_depth_bridge:=true  (default) — full Python relay (rollback path)
+  use_legacy_depth_bridge:=false — remap vendor depth Image/CameraInfo to public
+                                   topics; bridge only gates RGB/MJPEG/points.
+
+Do NOT call the remapped path "zero-copy": it is still cross-process DDS unless
+intra-process/loaned messages are verified.
+"""
 
 import os
 
@@ -9,6 +18,10 @@ from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+
+def _truthy(val: str) -> bool:
+    return str(val or '').strip().lower() in ('1', 'true', 'yes', 'on')
 
 
 def _launch_setup(context, *args, **kwargs):
@@ -37,6 +50,7 @@ def _launch_setup(context, *args, **kwargs):
     enable_pc = LaunchConfiguration('enable_pointcloud').perform(context).lower() in (
         '1', 'true', 'yes', 'on',
     )
+    use_legacy = _truthy(LaunchConfiguration('use_legacy_depth_bridge').perform(context))
 
     vendor_ns = str(cfg.get('vendor_namespace', 'ascamera_hp60c'))
     bridge_name = str(cfg.get('bridge_node_name', 'xw_depth_topic_bridge'))
@@ -45,6 +59,17 @@ def _launch_setup(context, *args, **kwargs):
     vendor_frame = str(cfg.get('vendor_frame', f'{vendor_ns}_camera_link_0'))
     camera_id = str(cfg.get('camera_id', 'front'))
 
+    depth_out = str(cfg.get('depth_image_out'))
+    depth_info_out = str(cfg.get('depth_info_out'))
+
+    # Remap vendor depth → public API when not using legacy full bridge.
+    as_remaps = []
+    if not use_legacy:
+        as_remaps = [
+            ('depth0/image_raw', depth_out),
+            ('depth0/camera_info', depth_info_out),
+        ]
+
     ascamera = Node(
         package='ascamera',
         executable='ascamera_node',
@@ -52,6 +77,7 @@ def _launch_setup(context, *args, **kwargs):
         namespace=vendor_ns,
         output='screen',
         respawn=True,
+        remappings=as_remaps,
         parameters=[{
             'usb_bus_no': int(cfg.get('usb_bus_no', -1)),
             'usb_path': str(cfg.get('usb_path', 'null')),
@@ -95,6 +121,12 @@ def _launch_setup(context, *args, **kwargs):
                 cfg.get('follow_pointcloud_enabled_topic', False)
             ),
             'gate_rgb_on_sessions': bool(cfg.get('gate_rgb_on_sessions', True)),
+            # Task C: when remapping depth, bridge must not also subscribe vendor depth.
+            'relay_depth': bool(use_legacy),
+            # Task D defaults applied in follow-up commit; keep false here for C bisect.
+            'lazy_mjpeg': False,
+            'lazy_rgb_info': False,
+            'cache_depth_info': False,
         }],
     )
 
@@ -111,12 +143,14 @@ def _launch_setup(context, *args, **kwargs):
         condition=IfCondition(LaunchConfiguration('publish_static_tf')),
     )
 
+    path = 'legacy_python_bridge' if use_legacy else 'remap_depth+gated_bridge'
     return [
         LogInfo(msg=(
             f'[xw_sensors] depth cam id={camera_id} '
             f'usb={cfg.get("usb_bus_no")}/{cfg.get("usb_path")} '
             f'ns={vendor_ns} → {cfg.get("depth_image_out")} '
-            f'fps={fps} preview_fps={preview_fps} enable_pointcloud={enable_pc}'
+            f'fps={fps} preview_fps={preview_fps} enable_pointcloud={enable_pc} '
+            f'path={path} use_legacy_depth_bridge={use_legacy}'
         )),
         ascamera,
         bridge,
@@ -141,5 +175,10 @@ def generate_launch_description() -> LaunchDescription:
             description='Relay depth/points (CPU heavy; front cam only via set_pointcloud)',
         ),
         DeclareLaunchArgument('publish_static_tf', default_value='true'),
+        DeclareLaunchArgument(
+            'use_legacy_depth_bridge',
+            default_value='true',
+            description='true=full Python depth relay (rollback); false=remap depth Image/Info',
+        ),
         OpaqueFunction(function=_launch_setup),
     ])

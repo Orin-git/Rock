@@ -7,7 +7,14 @@ PointCloud (front cam only when manage_pointcloud_control:=true):
   /xw/camera/pointcloud_enabled  — latched effective state
 
 Raw RGB relay is gated by /xw/fall/enable OR /xw/follow/enable when
-gate_rgb_on_sessions:=true (front). Depth image always relays.
+gate_rgb_on_sessions:=true (front). Depth image relays when relay_depth:=true
+(legacy). When use_legacy_depth_bridge:=false, launch remaps depth and this
+node sets relay_depth:=false.
+
+Phase1 Task D lazy rules:
+  - MJPEG vendor sub only while compressed_out has subscribers
+  - RGB CameraInfo only while RGB relay is wanted (cached)
+  - Depth CameraInfo: optional one-shot cache then unsubscribe (legacy path)
 """
 
 from __future__ import annotations
@@ -101,6 +108,12 @@ class DepthTopicBridge(Node):
         self.declare_parameter('follow_pointcloud_enabled_topic', False)
         # When false, never subscribe fall/follow for raw RGB (front_down).
         self.declare_parameter('gate_rgb_on_sessions', True)
+        # Task C: false when launch remaps vendor depth → public topics.
+        self.declare_parameter('relay_depth', True)
+        # Task D lazy flags (safe defaults on).
+        self.declare_parameter('lazy_mjpeg', True)
+        self.declare_parameter('lazy_rgb_info', True)
+        self.declare_parameter('cache_depth_info', True)
 
         self._preview_period = 1.0 / max(0.5, float(self.get_parameter('preview_fps').value))
         self._points_period = 1.0 / max(0.5, float(self.get_parameter('points_fps').value))
@@ -117,10 +130,21 @@ class DepthTopicBridge(Node):
 
         self._points_sub = None
         self._rgb_sub = None
+        self._mjpeg_sub = None
+        self._rgb_info_sub = None
+        self._depth_info_sub = None
+        self._cached_rgb_info: Optional[CameraInfo] = None
+        self._cached_depth_info: Optional[CameraInfo] = None
+        self._depth_info_cached_done = False
+
         self._persist_path = str(self.get_parameter('persist_path').value)
         self._manage_pc = bool(self.get_parameter('manage_pointcloud_control').value)
         self._follow_pc_topic = bool(self.get_parameter('follow_pointcloud_enabled_topic').value)
         self._gate_rgb = bool(self.get_parameter('gate_rgb_on_sessions').value)
+        self._relay_depth = bool(self.get_parameter('relay_depth').value)
+        self._lazy_mjpeg = bool(self.get_parameter('lazy_mjpeg').value)
+        self._lazy_rgb_info = bool(self.get_parameter('lazy_rgb_info').value)
+        self._cache_depth_info = bool(self.get_parameter('cache_depth_info').value)
 
         # Manual preference (persisted) OR nav auto → effective pointcloud.
         launch_default = bool(self.get_parameter('enable_pointcloud').value)
@@ -136,12 +160,15 @@ class DepthTopicBridge(Node):
         self._rgb_info_pub = self.create_publisher(
             CameraInfo, str(self.get_parameter('rgb_info_out').value), _SENSOR_QOS
         )
-        self._depth_pub = self.create_publisher(
-            Image, str(self.get_parameter('depth_image_out').value), _SENSOR_QOS
-        )
-        self._depth_info_pub = self.create_publisher(
-            CameraInfo, str(self.get_parameter('depth_info_out').value), _SENSOR_QOS
-        )
+        self._depth_pub = None
+        self._depth_info_pub = None
+        if self._relay_depth:
+            self._depth_pub = self.create_publisher(
+                Image, str(self.get_parameter('depth_image_out').value), _SENSOR_QOS
+            )
+            self._depth_info_pub = self.create_publisher(
+                CameraInfo, str(self.get_parameter('depth_info_out').value), _SENSOR_QOS
+            )
         self._comp_pub = self.create_publisher(
             CompressedImage, str(self.get_parameter('compressed_out').value), _SENSOR_QOS
         )
@@ -149,18 +176,17 @@ class DepthTopicBridge(Node):
         if self._manage_pc:
             self._enabled_pub = self.create_publisher(Bool, '/xw/camera/pointcloud_enabled', _LATCHED_QOS)
 
-        self.create_subscription(
-            Image, str(self.get_parameter('depth_image_in').value), self._on_depth, _SENSOR_QOS
-        )
-        self.create_subscription(
-            CameraInfo, str(self.get_parameter('depth_info_in').value), self._on_depth_info, _SENSOR_QOS
-        )
-        self.create_subscription(
-            CameraInfo, str(self.get_parameter('rgb_info_in').value), self._on_rgb_info, _SENSOR_QOS
-        )
-        self.create_subscription(
-            CompressedImage, str(self.get_parameter('mjpeg_in').value), self._on_mjpeg, _SENSOR_QOS
-        )
+        if self._relay_depth:
+            self.create_subscription(
+                Image, str(self.get_parameter('depth_image_in').value), self._on_depth, _SENSOR_QOS
+            )
+            self._depth_info_sub = self.create_subscription(
+                CameraInfo,
+                str(self.get_parameter('depth_info_in').value),
+                self._on_depth_info,
+                _SENSOR_QOS,
+            )
+
         if self._gate_rgb:
             self.create_subscription(Bool, '/xw/fall/enable', self._on_fall_en, _LATCHED_QOS)
             self.create_subscription(Bool, '/xw/follow/enable', self._on_follow_en, _LATCHED_QOS)
@@ -177,13 +203,19 @@ class DepthTopicBridge(Node):
             self.create_service(SetBool, '/xw/camera/set_pointcloud', self._on_set_pointcloud)
             self.create_service(SetBool, '/xw/camera/set_pointcloud_nav', self._on_set_pointcloud_nav)
         self.create_timer(2.0, self._status)
+        # Poll outbound preview demand for true lazy MJPEG vendor subscription.
+        self.create_timer(0.5, self._sync_mjpeg_relay)
 
         self._sync_pointcloud()
         self._sync_rgb_relay()
+        if not self._lazy_mjpeg:
+            self._start_mjpeg()
         self._publish_enabled()
 
         self.get_logger().info(
             f'depth bridge ready out={self.get_parameter("depth_image_out").value} '
+            f'relay_depth={self._relay_depth} lazy_mjpeg={self._lazy_mjpeg} '
+            f'lazy_rgb_info={self._lazy_rgb_info} '
             f'preview_fps={self.get_parameter("preview_fps").value} '
             f'manual_pc={self._manual_pc} manage_pc={self._manage_pc} '
             f'follow_pc_topic={self._follow_pc_topic} '
@@ -242,6 +274,7 @@ class DepthTopicBridge(Node):
             )
             out = str(self.get_parameter('rgb_image_out').value)
             self.get_logger().info(f'raw RGB relay ON → {out}')
+        self._sync_rgb_info()
 
     def _stop_rgb(self) -> None:
         if self._rgb_sub is not None:
@@ -252,12 +285,76 @@ class DepthTopicBridge(Node):
             self._rgb_sub = None
             self._have_rgb = False
             self.get_logger().info('raw RGB relay OFF')
+        self._sync_rgb_info()
 
     def _sync_rgb_relay(self) -> None:
         if self._rgb_wanted:
             self._start_rgb()
         else:
             self._stop_rgb()
+
+    def _start_rgb_info(self) -> None:
+        if self._rgb_info_sub is not None:
+            return
+        self._rgb_info_sub = self.create_subscription(
+            CameraInfo,
+            str(self.get_parameter('rgb_info_in').value),
+            self._on_rgb_info,
+            _SENSOR_QOS,
+        )
+
+    def _stop_rgb_info(self) -> None:
+        if self._rgb_info_sub is None:
+            return
+        try:
+            self.destroy_subscription(self._rgb_info_sub)
+        except Exception:  # noqa: BLE001
+            pass
+        self._rgb_info_sub = None
+
+    def _sync_rgb_info(self) -> None:
+        """Avoid permanent rgb CameraInfo sub lighting vendor RGB stream."""
+        if not self._lazy_rgb_info:
+            if self._rgb_info_sub is None:
+                self._start_rgb_info()
+            return
+        if self._rgb_wanted:
+            if self._cached_rgb_info is not None:
+                # Republish cache; optional refresh sub briefly not required.
+                self._rgb_info_pub.publish(self._cached_rgb_info)
+            self._start_rgb_info()
+        else:
+            self._stop_rgb_info()
+
+    def _start_mjpeg(self) -> None:
+        if self._mjpeg_sub is not None:
+            return
+        self._mjpeg_sub = self.create_subscription(
+            CompressedImage,
+            str(self.get_parameter('mjpeg_in').value),
+            self._on_mjpeg,
+            _SENSOR_QOS,
+        )
+        self.get_logger().info('mjpeg vendor sub ON (preview demand)')
+
+    def _stop_mjpeg(self) -> None:
+        if self._mjpeg_sub is None:
+            return
+        try:
+            self.destroy_subscription(self._mjpeg_sub)
+        except Exception:  # noqa: BLE001
+            pass
+        self._mjpeg_sub = None
+        self.get_logger().info('mjpeg vendor sub OFF (no preview consumers)')
+
+    def _sync_mjpeg_relay(self) -> None:
+        if not self._lazy_mjpeg:
+            return
+        want = self._comp_pub.get_subscription_count() >= 1
+        if want:
+            self._start_mjpeg()
+        else:
+            self._stop_mjpeg()
 
     def _on_fall_en(self, msg: Bool) -> None:
         self._fall_en = bool(msg.data)
@@ -303,17 +400,41 @@ class DepthTopicBridge(Node):
         self._have_rgb = True
         self._rgb_frames += 1
         self._rgb_pub.publish(msg)
+        if self._cached_rgb_info is not None:
+            info = self._cached_rgb_info
+            info.header = msg.header
+            self._rgb_info_pub.publish(info)
 
     def _on_rgb_info(self, msg: CameraInfo) -> None:
+        self._cached_rgb_info = msg
         if self._rgb_wanted:
             self._rgb_info_pub.publish(msg)
 
     def _on_depth(self, msg: Image) -> None:
+        if self._depth_pub is None:
+            return
         self._have_depth = True
         self._depth_pub.publish(msg)
+        if self._cached_depth_info is not None and self._depth_info_pub is not None:
+            info = self._cached_depth_info
+            info.header = msg.header
+            self._depth_info_pub.publish(info)
 
     def _on_depth_info(self, msg: CameraInfo) -> None:
+        if self._depth_info_pub is None:
+            return
+        self._cached_depth_info = msg
         self._depth_info_pub.publish(msg)
+        # After first sample, drop vendor CameraInfo sub so it cannot alone
+        # keep lighting streams if image sub is later removed.
+        if self._cache_depth_info and not self._depth_info_cached_done and self._depth_info_sub is not None:
+            self._depth_info_cached_done = True
+            try:
+                self.destroy_subscription(self._depth_info_sub)
+            except Exception:  # noqa: BLE001
+                pass
+            self._depth_info_sub = None
+            self.get_logger().info('depth CameraInfo cached; vendor info sub released')
 
     def _on_mjpeg(self, msg: CompressedImage) -> None:
         now = time.monotonic()
@@ -353,11 +474,13 @@ class DepthTopicBridge(Node):
                 f'subs={self._points_pub.get_subscription_count()} '
                 f'manual={self._manual_pc} nav={self._nav_auto_pc}'
             )
+        depth_s = 'remap' if not self._relay_depth else ('ok' if self._have_depth else 'wait')
         self.get_logger().info(
-            f'bridge depth={"ok" if self._have_depth else "wait"} '
+            f'bridge depth={depth_s} '
             f'rgb={"ok" if self._have_rgb else ("gated" if not self._rgb_wanted else "wait")} '
             f'rgb_frames={self._rgb_frames} '
             f'preview={"ok" if self._have_preview else "idle"} '
+            f'mjpeg_sub={"on" if self._mjpeg_sub else "off"} '
             f'preview_frames={self._preview_frames} '
             f'pointcloud={pc}'
         )
