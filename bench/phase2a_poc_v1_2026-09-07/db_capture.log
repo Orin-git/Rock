@@ -1,0 +1,28 @@
+saved kf_000001 geo=False cov=0.000 dt_ms=465.8
+saved kf_000002 geo=False cov=0.000 dt_ms=0.0
+saved kf_000003 geo=False cov=0.000 dt_ms=215.4
+saved kf_000004 geo=False cov=0.000 dt_ms=561.7
+saved kf_000005 geo=False cov=0.000 dt_ms=258.1
+saved kf_000006 geo=False cov=0.000 dt_ms=336.9
+saved kf_000007 geo=False cov=0.000 dt_ms=514.1
+saved kf_000008 geo=False cov=0.000 dt_ms=0.0
+saved kf_000009 geo=False cov=0.000 dt_ms=1323.2
+saved kf_000010 geo=False cov=0.000 dt_ms=590.5
+saved kf_000011 geo=False cov=0.006 dt_ms=120.2
+saved kf_000012 geo=False cov=0.000 dt_ms=343.6
+{
+  "keyframe_count": 12,
+  "retrieval_ready": 12,
+  "geometry_ready": 0,
+  "disk_bytes": 1621367,
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "orb_depth_coverage_mean": 0.0005,
+  "map_coverage": {
+    "note": "single region charger_local \u2014 operator multi-region pending"
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f"
+}

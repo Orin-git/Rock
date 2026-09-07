@@ -152,6 +152,8 @@ class DepthTopicBridge(Node):
         self._profile = 'IDLE'
         self._profile_rgb_up = False
         self._profile_rgb_down = False
+        # Phase2A PoC: ephemeral front_up RGB request (Relocalizer ACTIVE only).
+        self._reloc_rgb_request = False
         self._camera_id = 'front_up'
         out_rgb = str(self.get_parameter('rgb_image_out').value)
         if 'front_down' in out_rgb:
@@ -205,6 +207,10 @@ class DepthTopicBridge(Node):
             self.create_subscription(
                 String, '/xw/perception/profile_config', self._on_profile_cfg, _LATCHED_QOS
             )
+        # OR with profile for front_up only; Relocalizer must release when done.
+        self.create_subscription(
+            Bool, '/xw/reloc/rgb_request', self._on_reloc_rgb_request, _LATCHED_QOS
+        )
         if self._follow_pc_topic and not self._manage_pc:
             self.create_subscription(
                 Bool, '/xw/camera/pointcloud_enabled', self._on_pc_enabled_mirror, _LATCHED_QOS
@@ -247,6 +253,8 @@ class DepthTopicBridge(Node):
     def _rgb_wanted(self) -> bool:
         if self._force_rgb:
             return True
+        if self._camera_id == 'front_up' and self._reloc_rgb_request:
+            return True
         if self._follow_en:
             # Follow uses front_up primarily; down bridge stays off unless profile says so.
             if self._camera_id == 'front_down':
@@ -257,6 +265,17 @@ class DepthTopicBridge(Node):
                 return bool(self._profile_rgb_down)
             return bool(self._profile_rgb_up)
         return bool(self._fall_en)
+
+    def _on_reloc_rgb_request(self, msg: Bool) -> None:
+        # front_down bridge ignores; never turn on down cam for reloc.
+        if self._camera_id != 'front_up':
+            return
+        wanted = bool(msg.data)
+        if wanted == self._reloc_rgb_request:
+            return
+        self._reloc_rgb_request = wanted
+        self.get_logger().info(f'reloc rgb_request → {wanted}')
+        self._sync_rgb_relay()
 
     def _on_profile_cfg(self, msg: String) -> None:
         try:

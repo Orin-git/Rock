@@ -1,0 +1,2 @@
+[INFO] [1788766841.639359420] [xw_sensor_contract]: published /xw/reloc/rgb_request=true
+[INFO] [1788766858.962790568] [xw_sensor_contract]: Stage0 written /ros2_ws/bench/phase2a_poc_v1_2026-09-07/stage0_sensor_contract.json pass=True reg=VENDOR_ALIGNED_ASSUMED_WEAK_EVIDENCE

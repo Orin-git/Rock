@@ -1,0 +1,134 @@
+[
+  {
+    "id": "kf_000001",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000002",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000003",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000004",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000005",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000006",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000007",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000008",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000009",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000010",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000011",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  },
+  {
+    "id": "kf_000012",
+    "pose": {
+      "x": 1.7868235185421555,
+      "y": -0.27796481716692756,
+      "yaw": -3.0345434895718673
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 1000
+  }
+]

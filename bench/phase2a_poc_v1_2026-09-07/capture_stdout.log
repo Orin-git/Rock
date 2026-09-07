@@ -1,0 +1,4 @@
+backed up previous visual DB (12 kf) → /ros2_ws/maps/vp/visual_backup_charger_local_20260907_085841
+battery=None loc=1 pose=None
+WARN: localization_status != 0; continuing with AMCL pose (DB-build allowed)
+[INFO] [1788771526.403081697] [phase2a_v1_capture]: nav → doorway_wp9 (0.01,-0.58)

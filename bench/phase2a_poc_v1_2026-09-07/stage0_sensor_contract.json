@@ -1,0 +1,74 @@
+{
+  "stage": 0,
+  "pairs": 30,
+  "rgb_encoding": "bgr8",
+  "depth_encoding": "16UC1",
+  "frame_ids": {
+    "rgb": "ascamera_hp60c_color_0",
+    "depth": "ascamera_hp60c_color_0",
+    "identical": true
+  },
+  "rgb_depth_dt_sec": {
+    "p50": 0.10889756679534912,
+    "p95": 0.3066336870193482,
+    "p99": 0.35828242540359495,
+    "max": 0.3641021251678467,
+    "mean": 0.11205939451853435
+  },
+  "depth_valid_ratio": {
+    "mean": 0.09499598524305555,
+    "p50": 0.09503743489583333,
+    "min": 0.09201497395833333
+  },
+  "depth_scale": {
+    "median_raw": 2012.0,
+    "unit": "millimeters_assumed",
+    "scale_m_per_unit": 0.001,
+    "confidence": "HIGH_HEURISTIC"
+  },
+  "camera_info": {
+    "rgb_k": [
+      595.9639892578125,
+      0.0,
+      348.6986999511719,
+      0.0,
+      596.2553100585938,
+      234.91893005371094,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "depth_k": [
+      595.9639892578125,
+      0.0,
+      348.6986999511719,
+      0.0,
+      596.2553100585938,
+      234.91893005371094,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "wh": [
+      640,
+      480
+    ],
+    "K_match": true,
+    "matches_640x480": true
+  },
+  "registration_test": {
+    "same_resolution": true,
+    "edge_cooccurrence_ratio": 1.0,
+    "heuristic": "PASS_WEAK"
+  },
+  "extrinsic": {
+    "source": "URDF",
+    "status": "EXTRINSIC_UNCALIBRATED",
+    "urdf_origin": "xyz=0.251 0 0.49 rpy=-1.33 0 -1.5708"
+  },
+  "used_vendor_rgb_fallback": true,
+  "note": "Do not treat frame_id equality alone as geometric registration proof.",
+  "registration_conclusion": "VENDOR_ALIGNED_ASSUMED_WEAK_EVIDENCE",
+  "stage0_pass": true,
+  "pnp_allowed": true
+}

@@ -1,0 +1,52 @@
+# Phase2A PoC V1 defaults — dry_run / no AMCL apply.
+xw_global_reloc:
+  ros__parameters:
+    maps_dir: "/ros2_ws/maps"
+    map_name: "vp"
+    visual_db_root: ""
+    force_visual: true
+    apply_initial_pose_default: false
+    allow_motion_default: false
+    max_candidates: 10
+    # Keyframe spacing
+    kf_translation_m: 0.6
+    kf_yaw_rad: 0.35
+    kf_visual_diff: 0.35
+    # Localization health gates for DB builder
+    max_cov_xy: 0.5
+    max_cov_yaw: 0.25
+    max_tf_age_sec: 1.0
+    max_speed_mps: 0.15
+    max_yaw_rate: 0.25
+    min_depth_valid_ratio: 0.35
+    min_orb_features: 80
+    # Geometry
+    min_matches: 20
+    min_pnp_inliers: 12
+    min_inlier_ratio: 0.35
+    max_reprojection_error: 4.0
+    min_depth_consistency: 0.55
+    rgb_depth_max_dt_sec: 0.08
+    depth_scale_m: 0.001
+    pipeline_mode: "visual_laser"
+    # Laser
+    laser_beam_stride: 6
+    laser_match_dist_m: 0.25
+    min_laser_score: 0.45
+    min_valid_beams: 20
+    laser_coarse_xy_m: 1.0
+    laser_coarse_yaw_deg: 30.0
+    laser_coarse_xy_step: 0.10
+    laser_coarse_yaw_step_deg: 3.0
+    laser_fine_xy_m: 0.20
+    laser_fine_yaw_deg: 5.0
+    laser_fine_xy_step: 0.05
+    laser_fine_yaw_step_deg: 1.0
+    laser_min_margin: 0.03
+    laser_max_refine_trans_m: 1.2
+    laser_max_refine_yaw_deg: 35.0
+    # Acceptance
+    min_top_margin: 0.05
+    # Extrinsic
+    extrinsic_source: "URDF"
+    extrinsic_status: "EXTRINSIC_UNCALIBRATED"

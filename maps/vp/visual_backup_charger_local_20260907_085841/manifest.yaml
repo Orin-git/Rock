@@ -1,0 +1,7 @@
+schema_version: 2
+map_name: vp
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+tiers:
+- retrieval_ready
+- geometry_ready

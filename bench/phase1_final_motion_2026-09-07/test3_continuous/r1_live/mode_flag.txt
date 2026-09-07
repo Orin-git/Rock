@@ -1,0 +1,3 @@
+String value is: legacy_freeze
+Set parameter successful
+String value is: continuous

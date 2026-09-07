@@ -1,0 +1,80 @@
+{
+  "label": "current_static",
+  "expected_m": 0.0,
+  "n_frames": 5,
+  "frames": [
+    {
+      "full_frame_valid_ratio": 0.095224609375,
+      "center_roi_valid_ratio": 0.0,
+      "depth_median_m": 2.012,
+      "depth_p10_m": 1.877,
+      "depth_p50_m": 2.012,
+      "depth_p90_m": 2.273,
+      "invalid_ratio": 0.904775390625,
+      "orb_total": 1000,
+      "orb_with_valid_depth": 0,
+      "orb_depth_coverage_ratio": 0.0,
+      "pair_dt_ms": 30.006885528564453
+    },
+    {
+      "full_frame_valid_ratio": 0.09530924479166666,
+      "center_roi_valid_ratio": 0.0,
+      "depth_median_m": 2.02,
+      "depth_p10_m": 1.877,
+      "depth_p50_m": 2.02,
+      "depth_p90_m": 2.314,
+      "invalid_ratio": 0.9046907552083333,
+      "orb_total": 1000,
+      "orb_with_valid_depth": 0,
+      "orb_depth_coverage_ratio": 0.0,
+      "pair_dt_ms": 0.0
+    },
+    {
+      "full_frame_valid_ratio": 0.09592122395833333,
+      "center_roi_valid_ratio": 0.0,
+      "depth_median_m": 2.012,
+      "depth_p10_m": 1.874,
+      "depth_p50_m": 2.012,
+      "depth_p90_m": 2.282,
+      "invalid_ratio": 0.9040787760416666,
+      "orb_total": 1000,
+      "orb_with_valid_depth": 0,
+      "orb_depth_coverage_ratio": 0.0,
+      "pair_dt_ms": 0.0
+    },
+    {
+      "full_frame_valid_ratio": 0.09595703125,
+      "center_roi_valid_ratio": 0.0,
+      "depth_median_m": 2.02,
+      "depth_p10_m": 1.877,
+      "depth_p50_m": 2.02,
+      "depth_p90_m": 2.333,
+      "invalid_ratio": 0.90404296875,
+      "orb_total": 1000,
+      "orb_with_valid_depth": 0,
+      "orb_depth_coverage_ratio": 0.0,
+      "pair_dt_ms": 0.0
+    },
+    {
+      "full_frame_valid_ratio": 0.09397135416666667,
+      "center_roi_valid_ratio": 0.0,
+      "depth_median_m": 2.012,
+      "depth_p10_m": 1.877,
+      "depth_p50_m": 2.012,
+      "depth_p90_m": 2.27,
+      "invalid_ratio": 0.9060286458333333,
+      "orb_total": 1000,
+      "orb_with_valid_depth": 0,
+      "orb_depth_coverage_ratio": 0.0,
+      "pair_dt_ms": 0.0
+    }
+  ],
+  "agg": {
+    "full_frame_valid_ratio_mean": 0.09527669270833335,
+    "center_roi_valid_ratio_mean": 0.0,
+    "orb_depth_coverage_ratio_mean": 0.0,
+    "orb_total_mean": 1000.0,
+    "depth_median_m_mean": 2.0152,
+    "pair_dt_ms_mean": 6.001377105712891
+  }
+}

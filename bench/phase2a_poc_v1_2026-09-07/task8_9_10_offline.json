@@ -1,0 +1,570 @@
+{
+  "n_trials": 10,
+  "accepts": 0,
+  "false_accepts": 0,
+  "unknown_or_rejected": 10,
+  "reproj_ok_depth_bad_count": 0,
+  "trials": [
+    {
+      "query_id": "kf_000001",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000008",
+      "details": [
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000006",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000002",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000009",
+      "details": [
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000006",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000003",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000006",
+      "details": [
+        {
+          "id": "kf_000006",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000004",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000003",
+      "details": [
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000006",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000005",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000003",
+      "details": [
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000006",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000006",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000003",
+      "details": [
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000007",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000012",
+      "details": [
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000010",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000008",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000001",
+      "details": [
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000006",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000009",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000007",
+      "details": [
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000006",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    },
+    {
+      "query_id": "kf_000010",
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "decision": "UNKNOWN",
+      "reason": "no_survivor",
+      "position_error_m": null,
+      "yaw_error_rad": null,
+      "retrieval_top1": "kf_000012",
+      "details": [
+        {
+          "id": "kf_000012",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000011",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000002",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000009",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000001",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000007",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000008",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000004",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000003",
+          "skipped": "not_geometry_ready"
+        },
+        {
+          "id": "kf_000005",
+          "skipped": "not_geometry_ready"
+        }
+      ],
+      "false_accept": false
+    }
+  ],
+  "note": "Offline dry-run; laser uses synthetic scan from GT+map (not live /scan). apply_initial_pose forbidden."
+}

@@ -3,6 +3,9 @@
 
 0 good | 1 not ready | 2 drift (self-heal) | 3 needs intervention (latched until OK)
 
+AMCL only republishes after motion (update_min_*). While odom is nearly static
+since the last amcl_pose, that pose is still treated as usable (avoids idle→1).
+
 Phase1: detection is always active (incl. FOLLOW). Execution of spin/reinit is
 gated by /xw/localization/recovery_enable so follow is never preempted by
 health motion — supervisor stops follow first, then arms recovery.
@@ -42,6 +45,10 @@ class LocalizationHealthNode(Node):
         self.declare_parameter('base_frame', 'base_link')
         self.declare_parameter('tf_stale_sec', 1.0)
         self.declare_parameter('amcl_stale_sec', 2.0)
+        # AMCL only publishes after update_min_*; while odom motion since the last
+        # amcl_pose stays below these, reuse that pose (do not force status 1).
+        self.declare_parameter('amcl_static_trans_m', 0.12)
+        self.declare_parameter('amcl_static_yaw_rad', 0.12)
         self.declare_parameter('cov_xy_warn', 0.8)
         self.declare_parameter('cov_xy_bad', 2.5)
         self.declare_parameter('cov_yaw_warn', 0.35)
@@ -63,6 +70,7 @@ class LocalizationHealthNode(Node):
 
         self._amcl: Optional[PoseWithCovarianceStamped] = None
         self._amcl_mono: Optional[float] = None
+        self._odom_at_amcl: Optional[tuple] = None  # (x, y, yaw) in odom at last amcl
         self._map: Optional[OccupancyGrid] = None
         self._nav_en = False
         self._follow_en = False
@@ -79,8 +87,15 @@ class LocalizationHealthNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             reliability=ReliabilityPolicy.RELIABLE,
         )
+        # Match Nav2 AMCL (transient_local) so a restart while idle still gets last pose.
+        amcl_qos = QoSProfile(
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+        )
         self.create_subscription(
-            PoseWithCovarianceStamped, 'amcl_pose', self._on_amcl, 10
+            PoseWithCovarianceStamped, 'amcl_pose', self._on_amcl, amcl_qos
         )
         self.create_subscription(OccupancyGrid, 'map', self._on_map, _MAP_QOS)
         self.create_subscription(Bool, '/xw/nav/enable', self._on_nav_en, latch_in)
@@ -121,6 +136,8 @@ class LocalizationHealthNode(Node):
     def _on_amcl(self, msg: PoseWithCovarianceStamped) -> None:
         self._amcl = msg
         self._amcl_mono = self._now()
+        # Snapshot odom so silence while static is not treated as stale.
+        self._odom_at_amcl = self._lookup_odom_pose()
 
     def _on_map(self, msg: OccupancyGrid) -> None:
         self._map = msg
@@ -177,11 +194,54 @@ class LocalizationHealthNode(Node):
         except TransformException:
             return False
 
+    @staticmethod
+    def _yaw_from_quat(q) -> float:
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        return math.atan2(siny_cosp, cosy_cosp)
+
+    def _lookup_odom_pose(self) -> Optional[tuple]:
+        """Current base pose in odom: (x, y, yaw) or None if TF missing."""
+        odom_f = str(self.get_parameter('odom_frame').value)
+        base_f = str(self.get_parameter('base_frame').value)
+        try:
+            tf = self._tf.lookup_transform(
+                odom_f, base_f, rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=0.05),
+            )
+        except TransformException:
+            return None
+        t = tf.transform.translation
+        return (float(t.x), float(t.y), self._yaw_from_quat(tf.transform.rotation))
+
+    def _odom_nearly_static_since_amcl(self) -> bool:
+        """True if odom has not moved past AMCL update-scale thresholds since last pose."""
+        if self._odom_at_amcl is None:
+            self._odom_at_amcl = self._lookup_odom_pose()
+        ref = self._odom_at_amcl
+        cur = self._lookup_odom_pose()
+        if ref is None or cur is None:
+            return False
+        dx = cur[0] - ref[0]
+        dy = cur[1] - ref[1]
+        dyaw = abs(math.atan2(math.sin(cur[2] - ref[2]), math.cos(cur[2] - ref[2])))
+        lim_t = float(self.get_parameter('amcl_static_trans_m').value)
+        lim_y = float(self.get_parameter('amcl_static_yaw_rad').value)
+        return math.hypot(dx, dy) <= lim_t and dyaw <= lim_y
+
     def _amcl_fresh(self) -> bool:
+        """True if amcl_pose is recent, or robot is still nearly static since last pose.
+
+        AMCL does not republish while stopped (update_min_d/a). Treating that silence
+        as stale forced status=1 on idle; exempt when odom has barely moved and TF ok
+        is already required by the caller.
+        """
         if self._amcl is None or self._amcl_mono is None:
             return False
         stale = float(self.get_parameter('amcl_stale_sec').value)
-        return (self._now() - self._amcl_mono) <= stale
+        if (self._now() - self._amcl_mono) <= stale:
+            return True
+        return self._odom_nearly_static_since_amcl()
 
     def _cov_xy_yaw(self) -> tuple:
         if self._amcl is None:

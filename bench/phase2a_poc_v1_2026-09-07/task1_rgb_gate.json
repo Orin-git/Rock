@@ -1,0 +1,24 @@
+{
+  "nav_like_off": {
+    "up_pub": 0,
+    "down_pub": 0,
+    "vendor_up": 17
+  },
+  "reloc_active_on": {
+    "up_pub": 16,
+    "down_pub": 0,
+    "vendor_up": 22
+  },
+  "reloc_end_off": {
+    "up_pub": 0,
+    "down_pub": 0,
+    "vendor_up": 22
+  },
+  "pass_criteria": {
+    "off_public_up_near_zero": true,
+    "on_public_up_positive": true,
+    "off2_public_up_near_zero": true,
+    "down_never_on": true
+  },
+  "gate_pass": true
+}

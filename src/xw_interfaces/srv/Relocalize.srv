@@ -1,0 +1,21 @@
+# Phase2A PoC — dry-run by default (apply_initial_pose=false on client).
+string map_name
+bool force_visual
+uint8 max_candidates
+bool apply_initial_pose
+bool allow_motion
+---
+bool success
+# 0 READY 1 UNKNOWN 2 REJECTED 3 AMCL_TIMEOUT 4 NO_DATA 5 MAP_HASH_MISMATCH 6 DRY_RUN_OK
+uint8 result_code
+geometry_msgs/PoseWithCovarianceStamped pose
+float32 visual_score
+float32 geometry_score
+float32 laser_score
+float32 composite_score
+float32 confidence
+uint32 candidate_count
+float32 time_to_candidate_sec
+float32 amcl_convergence_sec
+string diagnostics_json
+string stage_timings_json

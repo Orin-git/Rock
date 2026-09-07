@@ -1,0 +1,29 @@
+{
+  "n_pairs": 50,
+  "nearest_pair_dt_ms": {
+    "p50": 0.0,
+    "p95": 470.16736268997187,
+    "p99": 1016.8872833251951,
+    "max": 1060.9934329986572,
+    "mean": 129.64345932006836
+  },
+  "naive_latest_dt_ms": {
+    "p50": 0.0,
+    "p95": 470.16736268997187,
+    "p99": 1016.8872833251951,
+    "max": 1060.9934329986572,
+    "mean": 129.64345932006836
+  },
+  "stage0_reference_dt_ms": {
+    "p50": 109,
+    "p95": 307,
+    "p99": 358,
+    "max": 364
+  },
+  "note": "Nearest pairing vs naive latest; stamps are ROS now() not hardware capture.",
+  "interpretation": {
+    "p50_zero_means": "Majority of nearest pairs share identical ROS stamp (same onCameraNewFrame now())",
+    "high_p95_means": "When RGB sparse vs depth, nearest other-frame stamp can be large \u2014 pairing/publish skew, not proven hardware skew",
+    "stamp_class": "ROS get_clock()->now() at callback \u2014 NOT hardware capture ts (AS_Frame_s.ts unused)"
+  }
+}

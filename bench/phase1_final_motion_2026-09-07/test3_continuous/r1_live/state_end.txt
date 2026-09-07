@@ -1,0 +1,25 @@
+stamp:
+  sec: 1788764969
+  nanosec: 732988318
+mode: 2
+mode_name: NAVIGATING
+run_mode: 1
+emergency_stop: false
+safety_ok: true
+localization_ok: false
+localization_status: 1
+active_map: vp
+profile: normal
+power:
+  stamp:
+    sec: 1788764969
+    nanosec: 474481888
+  battery_percent: 47.0
+  voltage: 26.1299991607666
+  charging: false
+  docked: false
+  charging_current: 0.0
+  ir_red: 0
+  detail: serial:/dev/chassis tx=20624 rx=8281 bms_rx=414 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=-0.86A SOC=47% V=26.13 last=7b0...
+detail: 'READY: loc converged → READY | follow=off recharge=off explore=off fall=on loc=not_ready'
+---

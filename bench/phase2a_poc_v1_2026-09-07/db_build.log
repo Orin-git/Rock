@@ -1,0 +1,35 @@
+[INFO] [1788767930.747208324] [xw_keyframe_db_builder]: keyframe builder root=/ros2_ws/maps/vp/visual map_hash=4b9e99b8b819… (retrieval/geometry tiers)
+[INFO] [1788767938.436664276] [xw_keyframe_db_builder]: stats {'keyframe_count': 0, 'retrieval_ready': 0, 'geometry_ready': 0, 'disk_bytes': 311, 'orb_features': {'mean': None, 'p10': None, 'p90': None}, 'orb_depth_coverage_mean': None, 'map_coverage': None, 'map_hash': '4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f', 'root': '/ros2_ws/maps/vp/visual'}
+[INFO] [1788767946.441043140] [xw_keyframe_db_builder]: stats {'keyframe_count': 0, 'retrieval_ready': 0, 'geometry_ready': 0, 'disk_bytes': 658, 'orb_features': {'mean': None, 'p10': None, 'p90': None}, 'orb_depth_coverage_mean': None, 'map_coverage': None, 'map_hash': '4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f', 'root': '/ros2_ws/maps/vp/visual'}
+[INFO] [1788767954.433749819] [xw_keyframe_db_builder]: stats {'keyframe_count': 0, 'retrieval_ready': 0, 'geometry_ready': 0, 'disk_bytes': 658, 'orb_features': {'mean': None, 'p10': None, 'p90': None}, 'orb_depth_coverage_mean': None, 'map_coverage': None, 'map_hash': '4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f', 'root': '/ros2_ws/maps/vp/visual'}
+[INFO] [1788767962.433922753] [xw_keyframe_db_builder]: stats {'keyframe_count': 0, 'retrieval_ready': 0, 'geometry_ready': 0, 'disk_bytes': 658, 'orb_features': {'mean': None, 'p10': None, 'p90': None}, 'orb_depth_coverage_mean': None, 'map_coverage': None, 'map_hash': '4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f', 'root': '/ros2_ws/maps/vp/visual'}
+[INFO] [1788767970.440761298] [xw_keyframe_db_builder]: stats {'keyframe_count': 0, 'retrieval_ready': 0, 'geometry_ready': 0, 'disk_bytes': 658, 'orb_features': {'mean': None, 'p10': None, 'p90': None}, 'orb_depth_coverage_mean': None, 'map_coverage': None, 'map_hash': '4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f', 'root': '/ros2_ws/maps/vp/visual'}
+Traceback (most recent call last):
+  File "/ros2_ws/build/xw_global_reloc/xw_global_reloc/keyframe_db_builder_node.py", line 395, in main
+    rclpy.spin(node)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+    executor.spin_once()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+    handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+    return next(self._cb_iter)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
+    raise ExternalShutdownException()
+rclpy.executors.ExternalShutdownException
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/keyframe_db_builder", line 33, in <module>
+    sys.exit(load_entry_point('xw-global-reloc', 'console_scripts', 'keyframe_db_builder')())
+  File "/ros2_ws/build/xw_global_reloc/xw_global_reloc/keyframe_db_builder_node.py", line 398, in main
+    rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241

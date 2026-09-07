@@ -1,0 +1,614 @@
+{
+  "n_queries": 12,
+  "Hit@1": 1.0,
+  "Hit@5": 1.0,
+  "Hit@10": 1.0,
+  "counts": {
+    "hit1": 12,
+    "hit5": 12,
+    "hit10": 12
+  },
+  "trials": [
+    {
+      "query_id": "kf_000001",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000008",
+        "score": 0.907,
+        "matches": 907
+      },
+      "top5": [
+        {
+          "id": "kf_000008",
+          "score": 0.907,
+          "matches": 907
+        },
+        {
+          "id": "kf_000002",
+          "score": 0.901,
+          "matches": 901
+        },
+        {
+          "id": "kf_000012",
+          "score": 0.901,
+          "matches": 901
+        },
+        {
+          "id": "kf_000009",
+          "score": 0.9,
+          "matches": 900
+        },
+        {
+          "id": "kf_000007",
+          "score": 0.899,
+          "matches": 899
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.006000000000000005,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000002",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000009",
+        "score": 0.901,
+        "matches": 901
+      },
+      "top5": [
+        {
+          "id": "kf_000009",
+          "score": 0.901,
+          "matches": 901
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.898,
+          "matches": 898
+        },
+        {
+          "id": "kf_000004",
+          "score": 0.898,
+          "matches": 898
+        },
+        {
+          "id": "kf_000008",
+          "score": 0.897,
+          "matches": 897
+        },
+        {
+          "id": "kf_000007",
+          "score": 0.895,
+          "matches": 895
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0030000000000000027,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000003",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000006",
+        "score": 0.922,
+        "matches": 922
+      },
+      "top5": [
+        {
+          "id": "kf_000006",
+          "score": 0.922,
+          "matches": 922
+        },
+        {
+          "id": "kf_000004",
+          "score": 0.918,
+          "matches": 918
+        },
+        {
+          "id": "kf_000005",
+          "score": 0.916,
+          "matches": 916
+        },
+        {
+          "id": "kf_000007",
+          "score": 0.903,
+          "matches": 903
+        },
+        {
+          "id": "kf_000012",
+          "score": 0.903,
+          "matches": 903
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0040000000000000036,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000004",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000003",
+        "score": 0.922,
+        "matches": 922
+      },
+      "top5": [
+        {
+          "id": "kf_000003",
+          "score": 0.922,
+          "matches": 922
+        },
+        {
+          "id": "kf_000005",
+          "score": 0.912,
+          "matches": 912
+        },
+        {
+          "id": "kf_000006",
+          "score": 0.909,
+          "matches": 909
+        },
+        {
+          "id": "kf_000009",
+          "score": 0.892,
+          "matches": 892
+        },
+        {
+          "id": "kf_000011",
+          "score": 0.887,
+          "matches": 887
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.010000000000000009,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000005",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000003",
+        "score": 0.925,
+        "matches": 925
+      },
+      "top5": [
+        {
+          "id": "kf_000003",
+          "score": 0.925,
+          "matches": 925
+        },
+        {
+          "id": "kf_000006",
+          "score": 0.921,
+          "matches": 921
+        },
+        {
+          "id": "kf_000004",
+          "score": 0.918,
+          "matches": 918
+        },
+        {
+          "id": "kf_000011",
+          "score": 0.902,
+          "matches": 902
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.901,
+          "matches": 901
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0040000000000000036,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000006",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000003",
+        "score": 0.912,
+        "matches": 912
+      },
+      "top5": [
+        {
+          "id": "kf_000003",
+          "score": 0.912,
+          "matches": 912
+        },
+        {
+          "id": "kf_000004",
+          "score": 0.912,
+          "matches": 912
+        },
+        {
+          "id": "kf_000005",
+          "score": 0.911,
+          "matches": 911
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.892,
+          "matches": 892
+        },
+        {
+          "id": "kf_000009",
+          "score": 0.89,
+          "matches": 890
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000007",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000012",
+        "score": 0.906,
+        "matches": 906
+      },
+      "top5": [
+        {
+          "id": "kf_000012",
+          "score": 0.906,
+          "matches": 906
+        },
+        {
+          "id": "kf_000009",
+          "score": 0.905,
+          "matches": 905
+        },
+        {
+          "id": "kf_000011",
+          "score": 0.902,
+          "matches": 902
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.895,
+          "matches": 895
+        },
+        {
+          "id": "kf_000002",
+          "score": 0.895,
+          "matches": 895
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0010000000000000009,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000008",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000001",
+        "score": 0.918,
+        "matches": 918
+      },
+      "top5": [
+        {
+          "id": "kf_000001",
+          "score": 0.918,
+          "matches": 918
+        },
+        {
+          "id": "kf_000002",
+          "score": 0.915,
+          "matches": 915
+        },
+        {
+          "id": "kf_000009",
+          "score": 0.911,
+          "matches": 911
+        },
+        {
+          "id": "kf_000011",
+          "score": 0.909,
+          "matches": 909
+        },
+        {
+          "id": "kf_000012",
+          "score": 0.909,
+          "matches": 909
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0030000000000000027,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000009",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000007",
+        "score": 0.909,
+        "matches": 909
+      },
+      "top5": [
+        {
+          "id": "kf_000007",
+          "score": 0.909,
+          "matches": 909
+        },
+        {
+          "id": "kf_000008",
+          "score": 0.908,
+          "matches": 908
+        },
+        {
+          "id": "kf_000011",
+          "score": 0.907,
+          "matches": 907
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.905,
+          "matches": 905
+        },
+        {
+          "id": "kf_000012",
+          "score": 0.905,
+          "matches": 905
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0010000000000000009,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000010",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000012",
+        "score": 0.901,
+        "matches": 901
+      },
+      "top5": [
+        {
+          "id": "kf_000012",
+          "score": 0.901,
+          "matches": 901
+        },
+        {
+          "id": "kf_000011",
+          "score": 0.894,
+          "matches": 894
+        },
+        {
+          "id": "kf_000002",
+          "score": 0.893,
+          "matches": 893
+        },
+        {
+          "id": "kf_000009",
+          "score": 0.891,
+          "matches": 891
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.889,
+          "matches": 889
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.007000000000000006,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000011",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000012",
+        "score": 0.93,
+        "matches": 930
+      },
+      "top5": [
+        {
+          "id": "kf_000012",
+          "score": 0.93,
+          "matches": 930
+        },
+        {
+          "id": "kf_000009",
+          "score": 0.916,
+          "matches": 916
+        },
+        {
+          "id": "kf_000008",
+          "score": 0.913,
+          "matches": 913
+        },
+        {
+          "id": "kf_000007",
+          "score": 0.909,
+          "matches": 909
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.907,
+          "matches": 907
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.014000000000000012,
+      "query_features": 1000
+    },
+    {
+      "query_id": "kf_000012",
+      "gt_region": [
+        1,
+        0
+      ],
+      "gt_pose": {
+        "x": 1.7868235185421555,
+        "y": -0.27796481716692756,
+        "yaw": -3.0345434895718673
+      },
+      "top1": {
+        "id": "kf_000009",
+        "score": 0.919,
+        "matches": 919
+      },
+      "top5": [
+        {
+          "id": "kf_000009",
+          "score": 0.919,
+          "matches": 919
+        },
+        {
+          "id": "kf_000011",
+          "score": 0.914,
+          "matches": 914
+        },
+        {
+          "id": "kf_000008",
+          "score": 0.908,
+          "matches": 908
+        },
+        {
+          "id": "kf_000007",
+          "score": 0.905,
+          "matches": 905
+        },
+        {
+          "id": "kf_000001",
+          "score": 0.902,
+          "matches": 902
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@5": true,
+      "hit@10": true,
+      "score_margin": 0.0050000000000000044,
+      "query_features": 1000
+    }
+  ],
+  "note": "Leave-one-out; GT=same spatial cell (~1.5m). Depth unused."
+}

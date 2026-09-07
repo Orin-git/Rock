@@ -30,6 +30,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/MotionCommand.srv"
   "srv/SessionControl.srv"
   "srv/SlamSessionInfo.srv"
+  "srv/Relocalize.srv"
   DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
 )
 

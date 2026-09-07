@@ -1,0 +1,48 @@
+keyframe_id: kf_000012
+timestamp: 1788768255.4192152
+stamp_rgb: 1788768253.551406
+stamp_depth: 1788768253.8949933
+pair_dt_sec: 0.34358739852905273
+map_pose:
+  x: 1.7868235185421555
+  y: -0.27796481716692756
+  yaw: -3.0345434895718673
+camera_pose:
+  x: 1.537260315872602
+  y: -0.3047828684256479
+  yaw: 1.6778418176077192
+  extrinsic_status: EXTRINSIC_UNCALIBRATED
+camera_info:
+  width: 640
+  height: 480
+  k:
+  - 595.9639892578125
+  - 0.0
+  - 348.6986999511719
+  - 0.0
+  - 596.2553100585938
+  - 234.91893005371094
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  frame_id: ascamera_hp60c_color_0
+retrieval_ready: true
+geometry_ready: false
+quality:
+  orb_features: 1000
+  orb_with_valid_depth: 0
+  orb_depth_coverage_ratio: 0.0
+  depth_valid_ratio: 0.09472981770833333
+  pair_dt_sec: 0.34358739852905273
+  reasons:
+  - pair_dt
+  - orb_depth_coverage
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+region_tag: charger_local
+extrinsic_status: EXTRINSIC_UNCALIBRATED

@@ -1,0 +1,16 @@
+{
+  "keyframe_count": 12,
+  "retrieval_ready": 12,
+  "geometry_ready": 0,
+  "disk_bytes": 1621367,
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "orb_depth_coverage_mean": 0.0005,
+  "map_coverage": {
+    "note": "single region charger_local \u2014 operator multi-region pending"
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f"
+}

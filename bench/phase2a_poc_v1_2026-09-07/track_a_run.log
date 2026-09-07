@@ -1,0 +1,152 @@
+{
+  "frames_ok": true,
+  "vendor": {
+    "label": "vendor",
+    "encoding": "16UC1",
+    "frame_id": "ascamera_hp60c_color_0",
+    "width": 640,
+    "height": 480,
+    "step": 1280,
+    "data_size": 614400,
+    "data_size_eq_step_height": true,
+    "theory_row_bytes_16uc1": 1280,
+    "step_matches_16uc1_row": true,
+    "valid_ratio": 0.12912760416666666,
+    "valid_bbox": {
+      "xmin": 1,
+      "xmax": 638,
+      "ymin": 1,
+      "ymax": 478
+    },
+    "region_valid_ratio": {
+      "left": 0.337372848200313,
+      "center": 0.012421752738654148,
+      "right": 0.03801596573208723
+    },
+    "systematic_spatial_truncation": true,
+    "mask_png": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/track_a_sensor/vendor_depth_valid_mask.png",
+    "sha1_16": "bf0bc2a1820db820",
+    "np_shape": [
+      480,
+      640
+    ],
+    "dtype": "uint16",
+    "tile32_nonzero_count": 74,
+    "tile32_total": 300
+  },
+  "public": {
+    "label": "public",
+    "encoding": "16UC1",
+    "frame_id": "ascamera_hp60c_color_0",
+    "width": 640,
+    "height": 480,
+    "step": 1280,
+    "data_size": 614400,
+    "data_size_eq_step_height": true,
+    "theory_row_bytes_16uc1": 1280,
+    "step_matches_16uc1_row": true,
+    "valid_ratio": 0.12912760416666666,
+    "valid_bbox": {
+      "xmin": 1,
+      "xmax": 638,
+      "ymin": 1,
+      "ymax": 478
+    },
+    "region_valid_ratio": {
+      "left": 0.337372848200313,
+      "center": 0.012421752738654148,
+      "right": 0.03801596573208723
+    },
+    "systematic_spatial_truncation": true,
+    "mask_png": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/track_a_sensor/public_depth_valid_mask.png",
+    "sha1_16": "bf0bc2a1820db820",
+    "np_shape": [
+      480,
+      640
+    ],
+    "dtype": "uint16",
+    "tile32_nonzero_count": 74,
+    "tile32_total": 300
+  },
+  "vendor_vs_public": {
+    "same_wh": true,
+    "same_step": true,
+    "same_sha1": true,
+    "valid_ratio_delta": 0.0,
+    "bbox_equal": true,
+    "conclusion": "VENDOR_ALREADY_LEFT_TRUNCATED \u2192 Camera/SDK/ascamera"
+  },
+  "camera_info": {
+    "vendor_depth": {
+      "wh": [
+        640,
+        480
+      ],
+      "k": [
+        595.9639892578125,
+        0.0,
+        348.6986999511719,
+        0.0,
+        596.2553100585938,
+        234.91893005371094,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "frame_id": "ascamera_hp60c_color_0"
+    },
+    "public_depth": {
+      "wh": [
+        640,
+        480
+      ],
+      "k": [
+        595.9639892578125,
+        0.0,
+        348.6986999511719,
+        0.0,
+        596.2553100585938,
+        234.91893005371094,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "frame_id": "ascamera_hp60c_color_0"
+    },
+    "rgb": {
+      "wh": [
+        640,
+        480
+      ],
+      "k": [
+        595.9639892578125,
+        0.0,
+        348.6986999511719,
+        0.0,
+        596.2553100585938,
+        234.91893005371094,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "frame_id": "ascamera_hp60c_color_0"
+    }
+  },
+  "rgb_image": {
+    "wh": [
+      640,
+      480
+    ],
+    "step": 1920,
+    "encoding": "bgr8",
+    "frame_id": "ascamera_hp60c_color_0"
+  },
+  "notes": {
+    "no_648x488_observed_in_ros": true,
+    "requested_launch_depth_wh": [
+      640,
+      480
+    ],
+    "publisher_copies_sdk_frame_wh": true
+  }
+}
