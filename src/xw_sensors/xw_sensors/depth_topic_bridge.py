@@ -111,9 +111,9 @@ class DepthTopicBridge(Node):
         # Task C: false when launch remaps vendor depth → public topics.
         self.declare_parameter('relay_depth', True)
         # Task D lazy flags (safe defaults on).
-        self.declare_parameter('lazy_mjpeg', True)
-        self.declare_parameter('lazy_rgb_info', True)
-        self.declare_parameter('cache_depth_info', True)
+        self.declare_parameter('lazy_mjpeg', False)
+        self.declare_parameter('lazy_rgb_info', False)
+        self.declare_parameter('cache_depth_info', False)
 
         self._preview_period = 1.0 / max(0.5, float(self.get_parameter('preview_fps').value))
         self._points_period = 1.0 / max(0.5, float(self.get_parameter('points_fps').value))

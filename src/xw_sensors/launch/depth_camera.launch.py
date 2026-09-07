@@ -121,12 +121,10 @@ def _launch_setup(context, *args, **kwargs):
                 cfg.get('follow_pointcloud_enabled_topic', False)
             ),
             'gate_rgb_on_sessions': bool(cfg.get('gate_rgb_on_sessions', True)),
-            # Task C: when remapping depth, bridge must not also subscribe vendor depth.
-            'relay_depth': bool(use_legacy),
-            # Task D defaults applied in follow-up commit; keep false here for C bisect.
-            'lazy_mjpeg': False,
-            'lazy_rgb_info': False,
-            'cache_depth_info': False,
+            # Task D: true lazy vendor streams (also applies with legacy depth relay).
+            'lazy_mjpeg': True,
+            'lazy_rgb_info': True,
+            'cache_depth_info': True,
         }],
     )
 
