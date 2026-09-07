@@ -274,6 +274,9 @@ class PersonPerceptionNode(Node):
         self.declare_parameter('assoc_iou_thresh', 0.03)
         self.declare_parameter('assoc_maha_thresh', 100.0)
         self.declare_parameter('assoc_center_frac', 0.50)
+        # Phase1 hotfix: optional RKNN call counters (devfreq≠inference).
+        self.declare_parameter('diag_inference_stats', True)
+        self.declare_parameter('diag_report_sec', 5.0)
 
         self._follow_en = False
         self._follow_was_en = False
@@ -286,6 +289,13 @@ class PersonPerceptionNode(Node):
         self._follow_active_cam = 'up'
         self._last_follow_hit_t = 0.0  # last time follow cam saw ≥1 person
         self._lost_since = 0.0  # monotonic time when target first went lost; 0 = not lost
+        self._diag_on = True
+        self._diag_infer_calls = 0
+        self._diag_preprocess = 0
+        self._diag_postprocess = 0
+        self._diag_window_t0 = time.monotonic()
+        self._diag_report_sec = 5.0
+        self._diag_last_profile = 'IDLE'
 
         self._cams: Dict[str, CamSlot] = {
             'up': CamSlot(
@@ -368,6 +378,10 @@ class PersonPerceptionNode(Node):
 
         self.create_timer(1.0, self._tick_clear)
         self.create_timer(0.05, self._maybe_infer)
+        self._diag_on = bool(self.get_parameter('diag_inference_stats').value)
+        self._diag_report_sec = max(1.0, float(self.get_parameter('diag_report_sec').value))
+        if self._diag_on:
+            self.create_timer(self._diag_report_sec, self._report_infer_diag)
 
         status = 'RKNN ok' if self._backend.ok else 'RKNN UNAVAILABLE'
         follow_cam = str(self.get_parameter('follow_cam').value)
@@ -379,6 +393,25 @@ class PersonPerceptionNode(Node):
             f'follow_fps={float(self.get_parameter("follow_infer_fps").value):.1f} '
             f'fall_fps/cam={float(self.get_parameter("fall_infer_fps").value):.1f}'
         )
+
+    def _report_infer_diag(self) -> None:
+        if not self._diag_on:
+            return
+        now = time.monotonic()
+        win = max(now - self._diag_window_t0, 1e-6)
+        infer_hz = self._diag_infer_calls / win
+        pre_hz = self._diag_preprocess / win
+        post_hz = self._diag_postprocess / win
+        self.get_logger().info(
+            f'RKNN_DIAG profile={self._profile} follow={self._follow_en} fall={self._fall_en} '
+            f'active={self._active()} '
+            f'inference_hz={infer_hz:.2f} preprocess_hz={pre_hz:.2f} postprocess_hz={post_hz:.2f} '
+            f'infer_calls={self._diag_infer_calls} window_s={win:.1f}'
+        )
+        self._diag_infer_calls = 0
+        self._diag_preprocess = 0
+        self._diag_postprocess = 0
+        self._diag_window_t0 = now
 
     def _follow_mode(self) -> str:
         raw = str(self.get_parameter('follow_cam').value).strip().lower()
@@ -576,10 +609,15 @@ class PersonPerceptionNode(Node):
         if slot.rotate_180:
             rgb = np.ascontiguousarray(rgb[::-1, ::-1])
 
+        if self._diag_on:
+            self._diag_preprocess += 1
+
         thresh = float(self.get_parameter('object_thresh').value)
         t0 = time.monotonic()
         try:
             boxes = self._backend.infer(rgb, thresh)
+            if self._diag_on:
+                self._diag_infer_calls += 1
         except Exception as exc:  # noqa: BLE001
             if now - self._last_infer_err > 2.0:
                 self._last_infer_err = now
@@ -592,6 +630,8 @@ class PersonPerceptionNode(Node):
         slot.last_infer_t = now
         slot.last_used_seq = slot.color_seq
 
+        if self._diag_on:
+            self._diag_postprocess += 1
         self._handle_detections(cam_id, boxes)
 
     def _boxes_to_dets(self, cam_id: str, boxes) -> Tuple[List, List[Detection]]:

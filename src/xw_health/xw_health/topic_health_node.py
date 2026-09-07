@@ -4,6 +4,8 @@
 Shell watchdog polls the file only — never spawns DDS each cycle.
 Critical pins (always expected): scan + safety_status.
 Other keys are diagnostics and may be dead when idle / not navigating.
+
+Phase1 hotfix: optional profile_callbacks timing (no structural rewrite).
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import rclpy
 from geometry_msgs.msg import Twist
@@ -39,6 +41,21 @@ _CAM_QOS = QoSProfile(
 _CRITICAL = ('scan', 'safety_status')
 
 
+class _PathStats:
+    __slots__ = ('calls', 'total_s', 'max_s')
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.total_s = 0.0
+        self.max_s = 0.0
+
+    def add(self, dt: float) -> None:
+        self.calls += 1
+        self.total_s += dt
+        if dt > self.max_s:
+            self.max_s = dt
+
+
 class TopicHealthNode(Node):
     def __init__(self) -> None:
         super().__init__('xw_topic_health')
@@ -57,8 +74,15 @@ class TopicHealthNode(Node):
         self.declare_parameter('tf_probe_period', 2.0)
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('odom_frame', 'odom')
+        # Hotfix profiler: function-level timers (default off).
+        self.declare_parameter('profile_callbacks', False)
+        self.declare_parameter('profile_report_sec', 5.0)
 
         self._stale_sec = float(self.get_parameter('stale_sec').value)
+        self._profile = bool(self.get_parameter('profile_callbacks').value)
+        self._profile_report_sec = max(1.0, float(self.get_parameter('profile_report_sec').value))
+        self._prof: dict[str, _PathStats] = {}
+        self._prof_window_t0 = time.monotonic()
         self._last: dict[str, Optional[float]] = {
             'scan': None,
             'safety_status': None,
@@ -86,7 +110,7 @@ class TopicHealthNode(Node):
             self.create_subscription(
                 Bool,
                 str(self.get_parameter('scan_alive_topic').value),
-                self._on_scan_alive,
+                self._wrap('cb_scan_alive', self._on_scan_alive),
                 QoSProfile(
                     depth=1,
                     durability=DurabilityPolicy.TRANSIENT_LOCAL,
@@ -95,41 +119,85 @@ class TopicHealthNode(Node):
             )
         if bool(self.get_parameter('legacy_laserscan_watch').value):
             self.create_subscription(
-                LaserScan, 'scan', lambda _m: self._touch('scan'), qos_profile_sensor_data
+                LaserScan,
+                'scan',
+                self._wrap('cb_laserscan', lambda _m: self._touch('scan')),
+                qos_profile_sensor_data,
             )
         self.create_subscription(
-            Bool, 'safety_status', lambda _m: self._touch('safety_status'), qos_profile_sensor_data
+            Bool,
+            'safety_status',
+            self._wrap('cb_safety', lambda _m: self._touch('safety_status')),
+            qos_profile_sensor_data,
         )
-        self.create_subscription(Twist, 'cmd_vel', self._on_cmd, 10)
-        self.create_subscription(Int8, '/xw/localization_status', self._on_loc, 10)
+        self.create_subscription(Twist, 'cmd_vel', self._wrap('cb_cmd_vel', self._on_cmd), 10)
+        self.create_subscription(
+            Int8, '/xw/localization_status', self._wrap('cb_loc_status', self._on_loc), 10
+        )
         if bool(self.get_parameter('watch_depth').value):
             self.create_subscription(
                 Image,
                 '/camera/front_up/depth/image_raw',
-                lambda _m: self._touch('camera_depth'),
+                self._wrap('cb_depth', lambda _m: self._touch('camera_depth')),
                 _CAM_QOS,
             )
         if bool(self.get_parameter('watch_points_nav').value):
             self.create_subscription(
                 PointCloud2,
                 '/camera/front_up/depth/points_nav',
-                lambda _m: self._touch('points_nav_up'),
+                self._wrap('cb_points_up', lambda _m: self._touch('points_nav_up')),
                 _CAM_QOS,
             )
             self.create_subscription(
                 PointCloud2,
                 '/camera/front_down/depth/points_nav',
-                lambda _m: self._touch('points_nav_down'),
+                self._wrap('cb_points_down', lambda _m: self._touch('points_nav_down')),
                 _CAM_QOS,
             )
 
         period = max(0.2, float(self.get_parameter('write_period').value))
-        self.create_timer(period, self._write)
+        self.create_timer(period, self._wrap('timer_write', self._write))
         self._write()
         self.get_logger().info(
             f'pin probe -> {self._path} stale_sec={self._stale_sec} '
-            f'critical={",".join(_CRITICAL)}'
+            f'critical={",".join(_CRITICAL)} profile={self._profile}'
         )
+
+    def _wrap(self, name: str, fn: Callable) -> Callable:
+        if not self._profile:
+            return fn
+
+        def _inner(*args, **kwargs):
+            t0 = time.perf_counter()
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                dt = time.perf_counter() - t0
+                st = self._prof.get(name)
+                if st is None:
+                    st = _PathStats()
+                    self._prof[name] = st
+                st.add(dt)
+                self._maybe_report_profile()
+
+        return _inner
+
+    def _maybe_report_profile(self) -> None:
+        now = time.monotonic()
+        if (now - self._prof_window_t0) < self._profile_report_sec:
+            return
+        win = max(now - self._prof_window_t0, 1e-6)
+        parts = []
+        for name, st in sorted(self._prof.items(), key=lambda kv: -kv[1].total_s):
+            cps = st.calls / win
+            avg_ms = (st.total_s / max(st.calls, 1)) * 1e3
+            parts.append(
+                f'{name}: calls={st.calls} cps={cps:.1f} '
+                f'total_ms={st.total_s * 1e3:.1f} avg_ms={avg_ms:.3f} max_ms={st.max_s * 1e3:.3f}'
+            )
+        self.get_logger().info('topic_health PROFILE window=%.1fs | %s' % (win, ' || '.join(parts)))
+        self._prof = {}
+        self._prof_window_t0 = now
 
     def _touch(self, key: str) -> None:
         self._last[key] = time.monotonic()
@@ -158,6 +226,7 @@ class TopicHealthNode(Node):
         self._last_tf_probe = now
         map_f = str(self.get_parameter('map_frame').value)
         odom_f = str(self.get_parameter('odom_frame').value)
+        t0 = time.perf_counter()
         try:
             self._tf.lookup_transform(
                 map_f,
@@ -170,6 +239,14 @@ class TopicHealthNode(Node):
         except TransformException:
             self._tf_fail += 1
             self._tf_st = 'fail'
+        finally:
+            if self._profile:
+                dt = time.perf_counter() - t0
+                st = self._prof.get('tf_lookup')
+                if st is None:
+                    st = _PathStats()
+                    self._prof['tf_lookup'] = st
+                st.add(dt)
 
     def _alive(self, key: str, now: float) -> bool:
         last = self._last.get(key)

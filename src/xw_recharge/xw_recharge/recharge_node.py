@@ -734,6 +734,10 @@ class RechargeNode(Node):
         return True
 
     def _pose_xyyaw(self, frame: str) -> Optional[Tuple[float, float, float]]:
+        if self._tf is None:
+            self._ensure_tf()
+        if self._tf is None:
+            return None
         try:
             tf = self._tf.lookup_transform(
                 frame, str(self._p('base_frame')), Time(), timeout=Duration(seconds=0.05)

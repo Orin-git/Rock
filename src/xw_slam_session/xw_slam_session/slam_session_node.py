@@ -326,12 +326,14 @@ class SlamSessionNode(Node):
 def main(args=None) -> None:
     rclpy.init(args=args)
     node = SlamSessionNode()
-    executor = MultiThreadedExecutor(num_threads=4)
+    # Idle slam session is common in NAV; avoid 4-thread executor tax.
+    executor = MultiThreadedExecutor(num_threads=2)
     executor.add_node(node)
     try:
         executor.spin()
     finally:
         node._stop_child(graceful=False)  # noqa: SLF001
+        node._release_tf()  # noqa: SLF001
         executor.shutdown()
         node.destroy_node()
         rclpy.shutdown()

@@ -63,11 +63,12 @@ def _launch_setup(context, *args, **kwargs):
     depth_info_out = str(cfg.get('depth_info_out'))
 
     # Remap vendor depth → public API when not using legacy full bridge.
+    # Use ~/ so remaps bind the node's private depth0 topics (not relative-only names).
     as_remaps = []
     if not use_legacy:
         as_remaps = [
-            ('depth0/image_raw', depth_out),
-            ('depth0/camera_info', depth_info_out),
+            ('~/depth0/image_raw', depth_out),
+            ('~/depth0/camera_info', depth_info_out),
         ]
 
     ascamera = Node(
@@ -121,6 +122,8 @@ def _launch_setup(context, *args, **kwargs):
                 cfg.get('follow_pointcloud_enabled_topic', False)
             ),
             'gate_rgb_on_sessions': bool(cfg.get('gate_rgb_on_sessions', True)),
+            # Task C: must track use_legacy_depth_bridge (true=relay; false=ascamera remap only).
+            'relay_depth': bool(use_legacy),
             # Task D: true lazy vendor streams (also applies with legacy depth relay).
             'lazy_mjpeg': True,
             'lazy_rgb_info': True,

@@ -311,7 +311,17 @@ def generate_launch_description() -> LaunchDescription:
             respawn=True,
             respawn_delay=2.0,
         ),
-        Node(package='xw_health', executable='topic_health_node', name='xw_topic_health', output='screen'),
+        Node(
+            package='xw_health',
+            executable='topic_health_node',
+            name='xw_topic_health',
+            parameters=[{
+                # Phase1 hotfix: locate ~20% CPU; disable after profiler window if desired.
+                'profile_callbacks': True,
+                'profile_report_sec': 5.0,
+            }],
+            output='screen',
+        ),
         Node(
             package='xw_topic_health_cpp',
             executable='scan_presence_node',
