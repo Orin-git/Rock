@@ -17,7 +17,13 @@ from typing import Optional
 import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
-from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
+from rclpy.qos import (
+    DurabilityPolicy,
+    HistoryPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
 from sensor_msgs.msg import Image, LaserScan, PointCloud2
 from std_msgs.msg import Bool, Int8
 from tf2_ros import Buffer, TransformException, TransformListener
@@ -43,6 +49,10 @@ class TopicHealthNode(Node):
         # Off by default: Python Image/PointCloud2 deserialization is very expensive.
         self.declare_parameter('watch_depth', False)
         self.declare_parameter('watch_points_nav', False)
+        # Prefer lightweight Bool from xw_scan_presence (C++); avoid Python LaserScan.
+        self.declare_parameter('use_scan_presence', True)
+        self.declare_parameter('scan_alive_topic', '/xw/health/scan_alive')
+        self.declare_parameter('legacy_laserscan_watch', False)
         self.declare_parameter('cmd_period_warn_sec', 0.15)
         self.declare_parameter('tf_probe_period', 2.0)
         self.declare_parameter('map_frame', 'map')
@@ -72,9 +82,21 @@ class TopicHealthNode(Node):
         self._tf = Buffer()
         self._tf_listener = TransformListener(self._tf, self)
 
-        self.create_subscription(
-            LaserScan, 'scan', lambda _m: self._touch('scan'), qos_profile_sensor_data
-        )
+        if bool(self.get_parameter('use_scan_presence').value):
+            self.create_subscription(
+                Bool,
+                str(self.get_parameter('scan_alive_topic').value),
+                self._on_scan_alive,
+                QoSProfile(
+                    depth=1,
+                    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                    reliability=ReliabilityPolicy.RELIABLE,
+                ),
+            )
+        if bool(self.get_parameter('legacy_laserscan_watch').value):
+            self.create_subscription(
+                LaserScan, 'scan', lambda _m: self._touch('scan'), qos_profile_sensor_data
+            )
         self.create_subscription(
             Bool, 'safety_status', lambda _m: self._touch('safety_status'), qos_profile_sensor_data
         )
@@ -111,6 +133,10 @@ class TopicHealthNode(Node):
 
     def _touch(self, key: str) -> None:
         self._last[key] = time.monotonic()
+
+    def _on_scan_alive(self, msg: Bool) -> None:
+        if bool(msg.data):
+            self._touch('scan')
 
     def _on_cmd(self, _msg: Twist) -> None:
         now = time.monotonic()

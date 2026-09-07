@@ -313,6 +313,20 @@ def generate_launch_description() -> LaunchDescription:
         ),
         Node(package='xw_health', executable='topic_health_node', name='xw_topic_health', output='screen'),
         Node(
+            package='xw_topic_health_cpp',
+            executable='scan_presence_node',
+            name='xw_scan_presence',
+            parameters=[{
+                'scan_topic': 'scan',
+                'out_topic': '/xw/health/scan_alive',
+                'publish_hz': 2.0,
+                'stale_sec': 1.5,
+            }],
+            output='screen',
+            respawn=True,
+            respawn_delay=2.0,
+        ),
+        Node(
             package='xw_web',
             executable='web_server',
             name='xw_web',
