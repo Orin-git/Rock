@@ -291,12 +291,20 @@ def generate_launch_description() -> LaunchDescription:
             output='screen',
         ),
         Node(
+            package='xw_perception',
+            executable='perception_mode_manager',
+            name='xw_perception_mode_manager',
+            parameters=[{'allow_fall_rgb_during_nav': False}],
+            output='screen',
+        ),
+        Node(
             package='xw_supervisor',
             executable='supervisor_node',
             name='xw_supervisor',
             parameters=[{
                 'profile': profile,
                 'run_mode': 1,
+                # Keep product capability available; mode manager defers RGB in NAVIGATION.
                 'fall_enable_default': True,
             }],
             output='screen',
