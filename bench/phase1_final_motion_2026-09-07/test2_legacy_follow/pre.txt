@@ -1,0 +1,50 @@
+Set parameter successful
+String value is: legacy_freeze
+String value is: likelihood_field
+mode_name: NAVIGATING
+localization_ok: false
+localization_status: 1
+active_map: vp
+  detail: serial:/dev/chassis tx=56207 rx=22502 bms_rx=1125 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=-0.78A SOC=49% V=26.15 last=7...
+detail: entered NAVIGATING | follow=off recharge=off explore=off fall=on loc=not_ready
+header:
+  stamp:
+    sec: 1788763045
+    nanosec: 675985926
+  frame_id: map
+pose:
+  pose:
+    position:
+      x: 0.14448739964218754
+      y: -0.47785709225308126
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.7743427352067721
+      w: 0.6327664090582676
+  covariance:
+  - 0.013370256439279663
+  - -0.0015448562044588026
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - -0.0015448562044588026
+  - 0.0069334173405250915
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+A message was lost!!!
+	total count change:1
+	total count: 1---
+data: 1
+---
+Boolean value is: False

@@ -1,0 +1,6 @@
+===== odom (EKF out) =====
+average rate: 19.627
+average rate: 19.652
+average rate: 19.675
+average rate: 19.691
+average rate: 19.714

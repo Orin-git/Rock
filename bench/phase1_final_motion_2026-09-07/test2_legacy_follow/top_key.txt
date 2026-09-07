@@ -1,0 +1,17 @@
+    475 21.0 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c_2 --params-file /tmp/launch_params_6rg4vfvk
+    209 19.8 topic_health_no /usr/bin/python3 /ros2_ws/install/xw_health/lib/xw_health/topic_health_node --ros-args -r __node:=xw_topic_health --params-file /tmp/launch_params_lp8tktqm
+    215 18.1 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c --params-file /tmp/launch_params_icrh0kgc
+    121 17.4 localization_he /usr/bin/python3 /ros2_ws/install/xw_localization_health/lib/xw_localization_health/localization_health_node --ros-args -r __node:=xw_localization_health
+    658 15.7 controller_serv /opt/ros/humble/lib/nav2_controller/controller_server --ros-args --log-level info --ros-args --params-file /tmp/launch_params_u1g8lxgw -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav
+    666 15.1 bt_navigator    /opt/ros/humble/lib/nav2_bt_navigator/bt_navigator --ros-args --log-level info --ros-args -r __node:=bt_navigator --params-file /tmp/launch_params_u1g8lxgw -r /tf:=tf -r /tf_static:=tf_static
+    213 14.3 web_server      /usr/bin/python3 /ros2_ws/install/xw_web/lib/xw_web/web_server --ros-args -r __node:=xw_web --params-file /tmp/launch_params_4z2jpf7s
+    172 13.3 person_percepti /usr/bin/python3 /ros2_ws/install/xw_perception/lib/xw_perception/person_perception_node --ros-args -r __node:=xw_perception --params-file /tmp/launch_params_w5j477rt
+    653 13.3 amcl            /opt/ros/humble/lib/nav2_amcl/amcl --ros-args --log-level info --ros-args -r __node:=amcl --params-file /tmp/launch_params_f833utbh -r /tf:=tf -r /tf_static:=tf_static
+    477  9.1 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge_front_down --params-file /tmp/launch_params_d2_u5cf2
+    219  8.5 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge --params-file /tmp/launch_params_1w9oz23u
+    229  7.2 ekf_node        /opt/ros/humble/lib/robot_localization/ekf_node --ros-args -r __node:=ekf_filter_node --params-file /ros2_ws/install/xw_sensors/share/xw_sensors/config/ekf.yaml -r odometry/filtered:=odom
+    133  5.8 recharge_node   /usr/bin/python3 /ros2_ws/install/xw_recharge/lib/xw_recharge/recharge_node --ros-args -r __node:=xw_recharge --params-file /ros2_ws/install/xw_recharge/share/xw_recharge/config/recharge.yaml
+    211  2.0 scan_presence_n /ros2_ws/install/xw_topic_health_cpp/lib/xw_topic_health_cpp/scan_presence_node --ros-args -r __node:=xw_scan_presence --params-file /tmp/launch_params_hrije0ad
+    127  1.7 slam_session_no /usr/bin/python3 /ros2_ws/install/xw_slam_session/lib/xw_slam_session/slam_session_node --ros-args -r __node:=xw_slam_session --params-file /tmp/launch_params_ug6cnxdu
+    227  1.5 static_transfor /opt/ros/humble/lib/tf2_ros/static_transform_publisher --x 0 --y 0 --z 0 --qx 0 --qy 0 --qz 0 --qw 1 --frame-id camera_front_up_link --child-frame-id ascamera_hp60c_camera_link_0 --ros-args -r __node:=camera_front_up_optical_static
+    479  1.5 static_transfor /opt/ros/humble/lib/tf2_ros/static_transform_publisher --x 0 --y 0 --z 0 --qx 0 --qy 0 --qz 0 --qw 1 --frame-id camera_front_down_link --child-frame-id ascamera_hp60c_2_camera_link_0 --ros-args -r __node:=camera_front_down_optical_static

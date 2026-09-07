@@ -1,0 +1,4 @@
+===== /scan =====
+average rate: 9.998
+average rate: 9.996
+average rate: 9.998

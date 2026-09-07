@@ -1,0 +1,1 @@
+samples=4778 elapsed_s=240.0 hz≈19.91 gaps_gt_150ms=3 miss_per_min≈0.75 max_gap_s=0.270

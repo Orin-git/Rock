@@ -1,0 +1,140 @@
+=== loc/state ===
+WARNING: topic [/xw/localization_status] does not appear to be published yet
+Could not determine the type for the passed topic
+=== amcl once ===
+header:
+  stamp:
+    sec: 1788762262
+    nanosec: 341401192
+  frame_id: map
+pose:
+  pose:
+    position:
+      x: 1.8205822372451266
+      y: -0.2227236858167751
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.9922840969236046
+      w: 0.12398496276769393
+  covariance:
+  - 0.013865319472242628
+  - -0.0027937885738249352
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - -0.0027937885738249907
+  - 0.0035649678239429304
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+=== services ===
+grep: invalid option -- 'k'
+Usage: grep [OPTION]... PATTERNS [FILE]...
+Try 'grep --help' for more information.
+=== actions ===
+/assisted_teleop
+/backup
+/compute_path_through_poses
+/compute_path_to_pose
+/drive_on_heading
+/follow_path
+/follow_waypoints
+/navigate_through_poses
+/navigate_to_pose
+/smooth_path
+/spin
+/wait
+backups
+vp.pgm
+vp.yaml
+waypoints
+/ros2_ws/maps/vp.pgm
+/ros2_ws/maps/vp.yaml
+total 12
+drwxr-xr-x 2 1000 1000 4096 Sep  2 02:59 .
+drwxr-xr-x 4 1000 1000 4096 Sep  2 02:59 ..
+-rw-r--r-- 1 1000 1000  818 Sep  7 06:20 vp_pointList.yaml
+/ros2_ws/maps/waypoints/vp_pointList.yaml
+/ros2_ws/maps/waypoints/vp_pointList.yaml
+/ros2_ws/maps/vp.pgm
+/ros2_ws/maps/vp.yaml
+/bt_navigator/change_state
+/bt_navigator/describe_parameters
+/bt_navigator/get_available_states
+/bt_navigator/get_available_transitions
+/bt_navigator/get_parameter_types
+/bt_navigator/get_parameters
+/bt_navigator/get_state
+/bt_navigator/get_transition_graph
+/bt_navigator/list_parameters
+/bt_navigator/set_parameters
+/bt_navigator/set_parameters_atomically
+/bt_navigator_navigate_through_poses_rclcpp_node/describe_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/get_parameter_types
+/bt_navigator_navigate_through_poses_rclcpp_node/get_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/list_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/set_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/set_parameters_atomically
+/bt_navigator_navigate_to_pose_rclcpp_node/describe_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/get_parameter_types
+/bt_navigator_navigate_to_pose_rclcpp_node/get_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/list_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/set_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/set_parameters_atomically
+/global_costmap/clear_around_global_costmap
+/global_costmap/clear_entirely_global_costmap
+/global_costmap/clear_except_global_costmap
+/global_costmap/get_costmap
+/global_costmap/global_costmap/change_state
+/global_costmap/global_costmap/describe_parameters
+/global_costmap/global_costmap/get_available_states
+/global_costmap/global_costmap/get_available_transitions
+/global_costmap/global_costmap/get_parameter_types
+/global_costmap/global_costmap/get_parameters
+/global_costmap/global_costmap/get_state
+/global_costmap/global_costmap/get_transition_graph
+/global_costmap/global_costmap/list_parameters
+/global_costmap/global_costmap/set_parameters
+/global_costmap/global_costmap/set_parameters_atomically
+/lifecycle_manager_navigation/describe_parameters
+/lifecycle_manager_navigation/get_parameter_types
+stamp:
+  sec: 1788762307
+  nanosec: 668514236
+mode: 2
+mode_name: NAVIGATING
+run_mode: 1
+emergency_stop: false
+safety_ok: true
+localization_ok: false
+localization_status: 1
+active_map: vp
+profile: normal
+power:
+  stamp:
+    sec: 1788762307
+    nanosec: 404474213
+  battery_percent: 50.0
+  voltage: 26.149999618530273
+  charging: false
+  docked: false
+  charging_current: 0.0
+  ir_red: 0
+  detail: serial:/dev/chassis tx=9245 rx=3701 bms_rx=185 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=-0.73A SOC=50% V=26.15 last=7b00...
+detail: entered NAVIGATING | follow=off recharge=off explore=off fall=on loc=not_ready
+---

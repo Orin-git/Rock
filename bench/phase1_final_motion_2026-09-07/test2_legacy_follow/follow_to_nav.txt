@@ -1,0 +1,1 @@
+goal=charger nav_motion_seen=False nav_success=False final_xy=(1.3533881967145385, 0.4949605744755086)

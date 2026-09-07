@@ -9,6 +9,7 @@ import time
 import rclpy
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import Int8
 
 
@@ -31,9 +32,10 @@ def ang_diff(a: float, b: float) -> float:
 class Cap(Node):
     def __init__(self) -> None:
         super().__init__("exit_jump_cap")
-        self.pose: PoseWithCovarianceStamped | None = None
+        self.pose = None  # type: PoseWithCovarianceStamped | None
         self.loc = -1
-        self.create_subscription(PoseWithCovarianceStamped, "/amcl_pose", self._p, 10)
+        qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.RELIABLE)
+        self.create_subscription(PoseWithCovarianceStamped, "/amcl_pose", self._p, qos)
         self.create_subscription(Int8, "/xw/localization_status", self._l, 10)
 
     def _p(self, msg: PoseWithCovarianceStamped) -> None:

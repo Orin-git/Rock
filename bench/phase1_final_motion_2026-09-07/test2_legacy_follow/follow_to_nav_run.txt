@@ -1,0 +1,3 @@
+goal_published charger 1.8663955491712294 -0.05958837147746455 -3.1286646850836126
+nav_motion_seen False cmd_samples 409
+goal=charger nav_motion_seen=False nav_success=False final_xy=(1.3533881967145385, 0.4949605744755086)
