@@ -43,6 +43,8 @@ USE_GESTURE="${USE_GESTURE:-false}"
 PROFILE="${PROFILE:-normal}"
 # PointCloud2 debug relay (default off). Set USE_POINTCLOUD=true to enable for Foxglove.
 USE_POINTCLOUD="${USE_POINTCLOUD:-false}"
+# Phase1 depth path: true=Python relay (production default); false=ascamera remap.
+USE_LEGACY_DEPTH_BRIDGE="${USE_LEGACY_DEPTH_BRIDGE:-true}"
 # Delay real lidar motor start after Web is up (inrush can brown-out SBC / drop SSH)
 XW_LIDAR_START_DELAY="${XW_LIDAR_START_DELAY:-30}"
 
@@ -197,5 +199,6 @@ exec docker exec -i "$CONTAINER" bash -lc "
     use_gesture:=${USE_GESTURE} \
     use_foxglove:=${USE_FOXGLOVE} \
     enable_pointcloud:=${USE_POINTCLOUD} \
+    use_legacy_depth_bridge:=${USE_LEGACY_DEPTH_BRIDGE} \
     profile:=${PROFILE}
 "
