@@ -64,11 +64,30 @@ class SlamSessionNode(Node):
         self.create_service(SlamSessionInfo, '/xw/session/slam/info', self._on_info)
 
         self._map_cli = self.create_client(MapManage, '/xw/map/manage')
-        self._tf_buffer = Buffer()
-        self._tf_listener = TransformListener(self._tf_buffer, self)
+        # Lazy TF: only while mapping / capturing start pose (idle slam session is common).
+        self._tf_buffer: Optional[Buffer] = None
+        self._tf_listener: Optional[TransformListener] = None
 
         self._publish_start_pose(None)
-        self.get_logger().info('slam session ready')
+        self.get_logger().info('slam session ready (lazy TF)')
+
+    def _ensure_tf(self) -> None:
+        if self._tf_listener is not None:
+            return
+        self._tf_buffer = Buffer()
+        self._tf_listener = TransformListener(self._tf_buffer, self)
+        self.get_logger().info('slam TF listener armed')
+
+    def _release_tf(self) -> None:
+        if self._tf_listener is None:
+            return
+        try:
+            self._tf_listener.unregister()
+        except Exception:  # noqa: BLE001
+            pass
+        self._tf_listener = None
+        self._tf_buffer = None
+        self.get_logger().info('slam TF listener released')
 
     def _params_file(self) -> str:
         configured = str(self.get_parameter('mapper_params').value or '').strip()
@@ -210,6 +229,7 @@ class SlamSessionNode(Node):
     def _begin_pose_capture(self) -> None:
         if self._capture_thread and self._capture_thread.is_alive():
             return
+        self._ensure_tf()
 
         def worker() -> None:
             map_frame = str(self.get_parameter('map_frame').value)
@@ -235,6 +255,8 @@ class SlamSessionNode(Node):
         self._capture_thread.start()
 
     def _lookup_pose(self, map_frame: str, base_frame: str) -> Optional[Tuple[float, float, float]]:
+        if self._tf_buffer is None:
+            return None
         for child in (base_frame, 'base_link', 'base_footprint'):
             try:
                 tf = self._tf_buffer.lookup_transform(
@@ -262,6 +284,7 @@ class SlamSessionNode(Node):
             self._call_map_save(name, pose)
 
         self._stop_child(graceful=True)
+        self._release_tf()
         with self._lock:
             self._start_pose = None
             self._saved_once = False
