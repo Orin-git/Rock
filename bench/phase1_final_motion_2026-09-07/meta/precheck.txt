@@ -1,0 +1,6 @@
+HEAD=cd725fd
+runtime=use_legacy_depth_bridge:=true
+localization_status=1 (NOT READY — need initialpose)
+mode=NAVIGATING map=vp
+follow_localization_mode=legacy_freeze
+amcl+controller nodes present

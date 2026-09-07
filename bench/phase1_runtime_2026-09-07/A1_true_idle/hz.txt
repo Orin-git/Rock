@@ -1,0 +1,24 @@
+===== /scan =====
+average rate: 9.996
+average rate: 10.005
+average rate: 9.998
+===== /odom =====
+average rate: 20.011
+average rate: 19.999
+average rate: 20.008
+===== /amcl_pose =====
+WARNING: topic [/amcl_pose] does not appear to be published yet
+===== /camera/front_up/depth/image_raw =====
+average rate: 6.106
+average rate: 5.933
+average rate: 6.101
+===== /camera/front_up/color/image_raw =====
+===== /camera/front_down/depth/image_raw =====
+average rate: 6.839
+average rate: 6.670
+average rate: 6.542
+===== /camera/front_down/color/image_raw =====
+WARNING: topic [/camera/front_down/color/image_raw] does not appear to be published yet
+===== /xw/localization_status =====
+average rate: 2.005
+average rate: 2.003

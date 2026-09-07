@@ -1,0 +1,11 @@
+branch=phase1-hotfix-20260907
+HEAD=a778417a229ff24cdbba4b321b46a32663a60f8a
+tag_old=c38bacb9660a65c73d0541a7f4cdedb5414371e4
+wip=4cfb61e0dc45c5df2ad0ac02e929cfee1c746ee4
+date=2026-09-07T05:43:35+00:00
+a778417 fix(phase1): reproducible hotfix — depth relay_depth, profiler, NPU diag
+c38bacb feat(phase1-F3): slam_session lazy TF and smaller idle executor
+aacc4aa feat(phase1-F2): recharge idle 1Hz tick and lazy TF listener
+## phase1-hotfix-20260907
+ M data/power_hist/2026-09-07.json
+?? bench/

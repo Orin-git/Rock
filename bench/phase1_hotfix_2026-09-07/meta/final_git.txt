@@ -1,0 +1,8 @@
+HEAD=cd725fd4dd9a5e250073d5845241498b90f22d92
+branch=phase1-hotfix-20260907
+old_tag=c38bacb9660a65c73d0541a7f4cdedb5414371e4
+cd725fd chore(phase1): pass use_legacy_depth_bridge from host env
+a778417 fix(phase1): reproducible hotfix — depth relay_depth, profiler, NPU diag
+## phase1-hotfix-20260907
+ M data/power_hist/2026-09-07.json
+?? bench/

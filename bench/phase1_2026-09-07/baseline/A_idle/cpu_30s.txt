@@ -1,0 +1,11 @@
+all: avg=48.0 p95=54.2 max=56.2
+cpu0: avg=55.3 p95=62.2 max=65.3
+cpu1: avg=50.5 p95=56.0 max=56.8
+cpu2: avg=50.1 p95=56.7 max=61.0
+cpu3: avg=49.0 p95=57.7 max=61.4
+cpu4: avg=44.7 p95=51.5 max=54.5
+cpu5: avg=45.0 p95=51.0 max=53.6
+cpu6: avg=45.2 p95=52.0 max=52.2
+cpu7: avg=43.9 p95=51.0 max=53.1
+loadavg_1m: start=5.17 end=6.34 avg=6.45
+npu=100@1000000000Hz

@@ -1,0 +1,5 @@
+loadavg=16.53 10.40 9.49 4/1127 25771
+npu=100@1000000000Hz
+               total        used        free      shared  buff/cache   available
+Mem:           7.7Gi       2.7Gi       2.8Gi        59Mi       2.2Gi       4.9Gi
+Swap:          3.9Gi          0B       3.9Gi

@@ -1,0 +1,39 @@
+=== loc ===
+data: 1
+---
+=== state ===
+mode: 2
+mode_name: NAVIGATING
+run_mode: 1
+localization_ok: false
+localization_status: 1
+active_map: vp
+  detail: serial:/dev/chassis tx=79186 rx=31681 bms_rx=1584 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=-0.82A SOC=51% V=26.15 last=7...
+detail: entered NAVIGATING | follow=off recharge=off explore=off fall=on loc=not_ready
+=== amcl_pose (brief) ===
+=== amcl params ===
+=== nav actions/services ===
+/follow_path
+/follow_waypoints
+/navigate_through_poses
+/navigate_to_pose
+/bt_navigator_navigate_through_poses_rclcpp_node/describe_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/get_parameter_types
+/bt_navigator_navigate_through_poses_rclcpp_node/get_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/list_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/set_parameters
+/bt_navigator_navigate_through_poses_rclcpp_node/set_parameters_atomically
+/bt_navigator_navigate_to_pose_rclcpp_node/describe_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/get_parameter_types
+/bt_navigator_navigate_to_pose_rclcpp_node/get_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/list_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/set_parameters
+/bt_navigator_navigate_to_pose_rclcpp_node/set_parameters_atomically
+/waypoint_follower/change_state
+/waypoint_follower/describe_parameters
+/waypoint_follower/get_available_states
+/waypoint_follower/get_available_transitions
+/waypoint_follower/get_parameter_types
+/waypoint_follower/get_parameters
+/waypoint_follower/get_state
+/waypoint_follower/get_transition_graph

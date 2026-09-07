@@ -1,0 +1,17 @@
+=== hz depth public ===
+=== hz vendor depth ===
+WARNING: topic [/ascamera_hp60c/camera_publisher/depth0/image_raw] does not appear to be published yet
+/ascamera_hp60c/camera_publisher/depth0/points
+/ascamera_hp60c_2/camera_publisher/depth0/points
+/camera/front_down/depth/image_raw
+/camera/front_up/depth/image_raw
+=== echo with sensor qos ===
+=== remaps on ascamera ===
+root       34921   34783 10 05:48 ?        00:00:17 /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c --params-file /tmp/launch_params_feylfos2 -r ~/depth0/image_raw:=/camera/front_up/depth/image_raw -r ~/depth0/camera_info:=/camera/front_up/depth/camera_info
+root       35150   34783  9 05:49 ?        00:00:14 /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c_2 --params-file /tmp/launch_params_fr76yp29 -r ~/depth0/image_raw:=/camera/front_down/depth/image_raw -r ~/depth0/camera_info:=/camera/front_down/depth/camera_info
+=== bridge params ===
+Boolean value is: False
+Boolean value is: False
+Parameter name: depth_image_out
+  Type: string
+  Constraints:

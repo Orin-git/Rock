@@ -1,0 +1,65 @@
+=== amcl lifecycle ===
+=== loc health ===
+data: 1
+---
+WARNING: topic [/amcl_pose] does not appear to be published yet
+=== initialpose info ===
+Type: geometry_msgs/msg/PoseWithCovarianceStamped
+
+Publisher count: 3
+
+Node name: xw_nav_session
+Node namespace: /
+Topic type: geometry_msgs/msg/PoseWithCovarianceStamped
+Endpoint type: PUBLISHER
+GID: 01.0f.cb.b4.72.8d.b6.83.00.00.00.00.00.00.13.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: xw_recharge
+Node namespace: /
+Topic type: geometry_msgs/msg/PoseWithCovarianceStamped
+Endpoint type: PUBLISHER
+GID: 01.0f.cb.b4.7c.8d.0c.46.00.00.00.00.00.00.18.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: xw_web
+Node namespace: /
+Topic type: geometry_msgs/msg/PoseWithCovarianceStamped
+Endpoint type: PUBLISHER
+GID: 01.0f.cb.b4.8c.8d.00.7c.00.00.00.00.00.00.19.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+=== scan ===
+average rate: 10.003
+average rate: 9.990
+=== map ===
+header:
+  stamp:
+    sec: 1788761031
+    nanosec: 930145628
+  frame_id: map
+info:
+  map_load_time:
+    sec: 1788761031
+    nanosec: 930139795
+  resolution: 0.05000000074505806
+  width: 651
+  height: 484
+  origin:
+    position:
+      x: -24.2

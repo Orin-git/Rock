@@ -1,0 +1,25 @@
+stamp:
+  sec: 1788758551
+  nanosec: 31623096
+mode: 2
+mode_name: NAVIGATING
+run_mode: 1
+emergency_stop: false
+safety_ok: true
+localization_ok: false
+localization_status: 1
+active_map: vp
+profile: normal
+power:
+  stamp:
+    sec: 1788758550
+    nanosec: 201087263
+  battery_percent: 54.0
+  voltage: 26.149999618530273
+  charging: false
+  docked: false
+  charging_current: 0.0
+  ir_red: 0
+  detail: serial:/dev/chassis tx=48248 rx=19341 bms_rx=967 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=-0.76A SOC=54% V=26.15 last=7b...
+detail: entered NAVIGATING | follow=off recharge=off explore=off fall=on loc=not_ready
+---

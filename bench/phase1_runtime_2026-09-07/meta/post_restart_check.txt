@@ -1,0 +1,15 @@
+=== nodes present? ===
+34
+=== key nodes ===
+/xw_depth_topic_bridge
+/xw_depth_topic_bridge_front_down
+/xw_follow_session
+/xw_localization_health
+/xw_perception
+/xw_perception_mode_manager
+/xw_recharge
+/xw_scan_presence
+/xw_slam_session
+/xw_supervisor
+/xw_topic_health
+=== params flags ===

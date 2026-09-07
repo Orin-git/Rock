@@ -1,0 +1,8 @@
+tag=c38bacb9660a65c73d0541a7f4cdedb5414371e4
+HEAD=c38bacb9660a65c73d0541a7f4cdedb5414371e4
+wip=4cfb61e0dc45c5df2ad0ac02e929cfee1c746ee4
+ActiveEnterTimestamp=
+ M data/power_hist/2026-09-07.json
+ M src/xw_recharge/xw_recharge/recharge_node.py
+ M src/xw_slam_session/xw_slam_session/slam_session_node.py
+?? bench/

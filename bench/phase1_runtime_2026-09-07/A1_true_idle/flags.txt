@@ -1,0 +1,3 @@
+String value is: legacy_freeze
+Boolean value is: True
+Boolean value is: True

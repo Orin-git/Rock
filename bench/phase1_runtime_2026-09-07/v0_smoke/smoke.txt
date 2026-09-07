@@ -1,0 +1,62 @@
+=== node list (timeout) ===
+57
+=== critical nodes grep ===
+/amcl
+/bt_navigator
+/bt_navigator_navigate_through_poses_rclcpp_node
+/bt_navigator_navigate_to_pose_rclcpp_node
+/controller_server
+/xw_depth_topic_bridge
+/xw_depth_topic_bridge_front_down
+/xw_follow_session
+/xw_localization_health
+/xw_perception
+/xw_perception_mode_manager
+/xw_recharge
+/xw_scan_presence
+/xw_slam_session
+/xw_supervisor
+/xw_topic_health
+/xw_web
+=== TF frames ===
+[INFO] [1788757825.883426520] [view_frames]: Listening to tf data for 5.0 seconds...
+[INFO] [1788757830.887326902] [view_frames]: Generating graph in frames.pdf file...
+[INFO] [1788757830.898687291] [view_frames]: Result:tf2_msgs.srv.FrameGraph_Response(frame_yaml="ascamera_hp60c_color_0: \n  parent: 'ascamera_hp60c_camera_link_0'\n  broadcaster: 'default_authority'\n  rate: 15.779\n  most_recent_transform: 1788757830.832012\n  oldest_transform: 1788757825.381619\n  buffer_length: 5.450\nascamera_hp60c_camera_link_0: \n  parent: 'camera_front_up_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\nascamera_hp60c_2_color_0: \n  parent: 'ascamera_hp60c_2_camera_link_0'\n  broadcaster: 'default_authority'\n  rate: 16.046\n  most_recent_transform: 1788757830.814640\n  oldest_transform: 1788757825.828948\n  buffer_length: 4.986\nascamera_hp60c_2_camera_link_0: \n  parent: 'camera_front_down_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\ncamera_front_up_link: \n  parent: 'base_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\nodom: \n  parent: 'map'\n  broadcaster: 'default_authority'\n  rate: 10.278\n  most_recent_transform: 1788757831.043005\n  oldest_transform: 1788757827.443149\n  buffer_length: 3.600\ncamera_front_down_link: \n  parent: 'base_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\nbase_link: \n  parent: 'odom'\n  broadcaster: 'default_authority'\n  rate: 19.499\n  most_recent_transform: 1788757830.877711\n  oldest_transform: 1788757825.236361\n  buffer_length: 5.641\ncamera_rear_link: \n  parent: 'base_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\nimu_link: \n  parent: 'base_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\nlidar_link: \n  parent: 'base_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\nultrasonic_front_link: \n  parent: 'base_link'\n  broadcaster: 'default_authority'\n  rate: 10000.000\n  most_recent_transform: 0.000000\n  oldest_transform: 0.000000\n  buffer_length: 0.000\n")
+=== lifecycle amcl ===
+active [3]
+active [3]
+=== topics key hz ===
+-- /scan
+average rate: 10.115
+-- /odom
+average rate: 19.576
+-- /amcl_pose
+-- /camera/front_up/depth/image_raw
+average rate: 2.952
+-- /xw/robot_state
+average rate: 1.956
+-- /xw/health/scan_alive
+=== flags ===
+String value is: legacy_freeze
+Boolean value is: True
+Boolean value is: True
+String value is: likelihood_field
+Boolean value is: False
+=== cmd_vel 3s ===
+linear:
+  x: 0.0
+  y: 0.0
+  z: 0.0
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.0
+---
+=== web port ===
+web9000=OK
+=== services recharge/follow ===
+/xw/camera/set_pointcloud
+/xw/camera/set_pointcloud_nav
+/xw/supervisor/set_follow
+/xw/supervisor/set_mode
+/xw/supervisor/set_recharge

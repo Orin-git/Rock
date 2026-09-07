@@ -1,0 +1,11 @@
+===== /scan =====
+average rate: 10.067
+average rate: 10.057
+===== /odom =====
+average rate: 19.806
+average rate: 19.852
+===== depth up =====
+average rate: 5.508
+average rate: 5.182
+===== color up =====
+WARNING: topic [/camera/front_up/color/image_raw] does not appear to be published yet

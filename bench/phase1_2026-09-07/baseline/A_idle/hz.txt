@@ -1,0 +1,74 @@
+===== /scan =====
+average rate: 10.007
+	min: 0.088s max: 0.112s std dev: 0.00357s window: 95
+average rate: 9.916
+	min: 0.088s max: 0.201s std dev: 0.01039s window: 105
+average rate: 9.925
+	min: 0.088s max: 0.201s std dev: 0.00991s window: 116
+average rate: 9.930
+	min: 0.088s max: 0.201s std dev: 0.00953s window: 126
+===== /odom =====
+average rate: 19.998
+	min: 0.042s max: 0.057s std dev: 0.00165s window: 166
+average rate: 19.999
+	min: 0.020s max: 0.087s std dev: 0.00396s window: 187
+average rate: 19.999
+	min: 0.020s max: 0.087s std dev: 0.00378s window: 207
+average rate: 20.000
+	min: 0.020s max: 0.087s std dev: 0.00362s window: 228
+===== /imu/data =====
+	min: 0.043s max: 0.085s std dev: 0.00306s window: 125
+average rate: 15.002
+	min: 0.043s max: 0.085s std dev: 0.00290s window: 141
+average rate: 15.000
+	min: 0.043s max: 0.085s std dev: 0.00277s window: 156
+average rate: 15.002
+	min: 0.043s max: 0.085s std dev: 0.00264s window: 172
+failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+===== /amcl_pose =====
+WARNING: topic [/amcl_pose] does not appear to be published yet
+===== /camera/front_up/depth/image_raw =====
+average rate: 4.603
+	min: 0.055s max: 1.025s std dev: 0.17888s window: 50
+average rate: 4.269
+	min: 0.055s max: 1.084s std dev: 0.21400s window: 51
+average rate: 4.524
+	min: 0.055s max: 1.084s std dev: 0.20258s window: 59
+average rate: 4.705
+	min: 0.055s max: 1.084s std dev: 0.19321s window: 67
+===== /camera/front_up/color/image_raw =====
+average rate: 5.383
+	min: 0.028s max: 0.879s std dev: 0.14217s window: 46
+average rate: 5.051
+	min: 0.028s max: 0.879s std dev: 0.14690s window: 49
+average rate: 5.028
+	min: 0.028s max: 0.879s std dev: 0.14447s window: 55
+average rate: 4.985
+	min: 0.028s max: 0.879s std dev: 0.14122s window: 60
+===== /camera/front_down/depth/image_raw =====
+average rate: 3.842
+	min: 0.094s max: 1.178s std dev: 0.26409s window: 31
+average rate: 4.378
+	min: 0.093s max: 1.178s std dev: 0.24006s window: 40
+average rate: 4.697
+	min: 0.093s max: 1.178s std dev: 0.22256s window: 48
+average rate: 4.619
+	min: 0.093s max: 1.178s std dev: 0.21659s window: 54
+===== /camera/front_down/color/image_raw =====
+average rate: 2.136
+	min: 0.095s max: 1.811s std dev: 0.44398s window: 22
+average rate: 2.377
+	min: 0.093s max: 1.811s std dev: 0.42201s window: 27
+average rate: 2.361
+	min: 0.092s max: 1.811s std dev: 0.41881s window: 30
+average rate: 2.372
+	min: 0.092s max: 1.811s std dev: 0.40400s window: 33
+===== /xw/localization_status =====
+average rate: 1.999
+	min: 0.496s max: 0.508s std dev: 0.00306s window: 13
+average rate: 2.002
+	min: 0.492s max: 0.508s std dev: 0.00344s window: 16
+average rate: 2.001
+	min: 0.492s max: 0.508s std dev: 0.00325s window: 18
+average rate: 2.001
+	min: 0.492s max: 0.508s std dev: 0.00309s window: 20

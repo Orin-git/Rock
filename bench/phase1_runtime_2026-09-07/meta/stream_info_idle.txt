@@ -1,0 +1,42 @@
+Boolean value is: True
+Boolean value is: False
+Type: sensor_msgs/msg/CompressedImage
+
+Publisher count: 1
+
+Node name: camera_publisher
+Node namespace: /ascamera_hp60c
+Topic type: sensor_msgs/msg/CompressedImage
+Endpoint type: PUBLISHER
+GID: 01.0f.cb.b4.02.5a.f1.3e.00.00.00.00.00.00.17.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: RELIABLE
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 0
+
+Type: sensor_msgs/msg/CompressedImage
+
+Publisher count: 1
+
+Node name: xw_depth_topic_bridge
+Node namespace: /
+Topic type: sensor_msgs/msg/CompressedImage
+Endpoint type: PUBLISHER
+GID: 01.0f.cb.b4.04.5a.44.4a.00.00.00.00.00.00.15.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 0
+

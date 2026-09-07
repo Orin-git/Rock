@@ -1,0 +1,19 @@
+=== nodes sample ===
+/ascamera_hp60c/camera_publisher
+/ascamera_hp60c_2/camera_publisher
+/foxglove_bridge
+/xw_depth_topic_bridge
+/xw_depth_topic_bridge_front_down
+/xw_follow_session
+/xw_perception
+/xw_perception_mode_manager
+/xw_scan_presence
+/xw_topic_health
+=== params ===
+Boolean value is: True
+Boolean value is: True
+/foxglove_bridge
+/xw_depth_topic_bridge
+/xw_depth_topic_bridge_front_down
+  relay_depth
+String value is: legacy_freeze

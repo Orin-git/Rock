@@ -1,0 +1,5 @@
+top - 05:21:03 up  4:01,  0 users,  load average: 9.40, 9.60, 9.28
+Tasks:  68 total,   2 running,  66 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 28.3 us,  9.4 sy,  0.0 ni, 59.8 id,  0.0 wa,  0.0 hi,  2.4 si,  0.0 st
+MiB Mem :   7935.4 total,   2891.5 free,   2773.3 used,   2270.6 buff/cache
+MiB Swap:   3967.7 total,   3967.7 free,      0.0 used.   4970.4 avail Mem 

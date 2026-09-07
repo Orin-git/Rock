@@ -1,0 +1,112 @@
+=== REMAP bridge B ===
+Boolean value is: True
+A message was lost!!!
+	total count change:1
+	total count: 1---
+A message was lost!!!
+	total count change:1
+	total count: 2---
+header:
+  stamp:
+    sec: 1788759194
+    nanosec: 27422081
+  frame_id: ascamera_hp60c_color_0
+height: 480
+width: 640
+encoding: 16UC1
+is_bigendian: 0
+step: 1280
+data:
+- 0
+- 0
+- 0
+header:
+  stamp:
+    sec: 1788759197
+    nanosec: 486154932
+  frame_id: ascamera_hp60c_color_0
+height: 480
+width: 640
+distortion_model: plumb_bob
+d:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+k:
+- 595.9639892578125
+- 0.0
+- 348.6986999511719
+- 0.0
+- 596.2553100585938
+- 234.91893005371094
+- 0.0
+- 0.0
+- 1.0
+r:
+- 1.0
+- 0.0
+- 0.0
+- 0.0
+- 1.0
+- 0.0
+- 0.0
+- 0.0
+- 1.0
+p:
+- 595.9639892578125
+- 0.0
+- 348.6986999511719
+- 0.0
+- 0.0
+average rate: 6.161
+average rate: 4.854
+Type: sensor_msgs/msg/Image
+
+Publisher count: 1
+
+Node name: xw_depth_topic_bridge
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Endpoint type: PUBLISHER
+GID: 01.0f.cb.b4.2d.72.89.b7.00.00.00.00.00.00.13.03.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Subscription count: 2
+
+Node name: xw_perception
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.cb.b4.1f.72.ec.13.00.00.00.00.00.00.17.04.00.00.00.00.00.00.00.00
+QoS profile:
+  Reliability: BEST_EFFORT
+  History (Depth): UNKNOWN
+  Durability: VOLATILE
+  Lifespan: Infinite
+  Deadline: Infinite
+  Liveliness: AUTOMATIC
+  Liveliness lease duration: Infinite
+
+Node name: xw_safety_gate
+Node namespace: /
+Topic type: sensor_msgs/msg/Image
+Endpoint type: SUBSCRIPTION
+GID: 01.0f.cb.b4.c9.71.3b.05.00.00.00.00.00.00.16.04.00.00.00.00.00.00.00.00
+QoS profile:
+ 3.1 ros2            /usr/bin/python3 /opt/ros/humble/bin/ros2 param get /xw_depth_topic_bridge lazy_rgb_info
+18.7 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c --params-file /tmp/launch_params_brfrhv65 -r depth0/image_raw:=/camera/front_up/depth/image_raw -r depth0/camera_info:=/camera/front_up/depth/camera_info
+13.1 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge --params-file /tmp/launch_params_xvgr610w
+18.6 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c_2 --params-file /tmp/launch_params_j8ufdt2z -r depth0/image_raw:=/camera/front_down/depth/image_raw -r depth0/camera_info:=/camera/front_down/depth/camera_info
+12.6 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge_front_down --params-file /tmp/launch_params_33ynp7vz
+Type: sensor_msgs/msg/Image
+Publisher count: 1
+Subscription count: 2

@@ -1,0 +1,6 @@
+String value is: legacy_freeze
+Boolean value is: True
+Boolean value is: True
+Boolean value is: True
+String value is: likelihood_field
+Boolean value is: False

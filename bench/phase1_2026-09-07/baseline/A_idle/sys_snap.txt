@@ -1,0 +1,9 @@
+ts=2026-09-07T04:39:48+00:00
+host=rock-5t
+git=
+loadavg=5.44 6.12 6.17 9/1103 19685
+npu=100@1000000000Hz
+gpu=0@300000000Hz
+               total        used        free      shared  buff/cache   available
+Mem:           7.7Gi       2.8Gi       2.8Gi        61Mi       2.2Gi       4.8Gi
+Swap:          3.9Gi          0B       3.9Gi

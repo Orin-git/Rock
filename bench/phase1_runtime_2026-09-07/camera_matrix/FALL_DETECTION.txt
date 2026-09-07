@@ -1,0 +1,17 @@
+mode=FALL_DETECTION ts=2026-09-07T05:26:03+00:00
+mode_name: FALL_DETECT
+  detail: serial:/dev/chassis tx=58983 rx=23642 bms_rx=1182 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=-0.62A SOC=54% V=26.16 last=7...
+detail: entered FALL_DETECT | follow=off recharge=off explore=off fall=on loc=not_ready
+npu=100@1000000000Hz
+PUB /camera/front_up/color/image_raw hz=5.246 subs=1
+PUB /camera/front_up/depth/image_raw hz=4.101 subs=2
+PUB /camera/front_up/color/image_raw/compressed hz= subs=0
+PUB /camera/front_up/depth/points hz= subs=1
+PUB /camera/front_down/color/image_raw hz=6.566 subs=1
+PUB /camera/front_down/depth/image_raw hz=4.540 subs=1
+PUB /camera/front_down/color/image_raw/compressed hz= subs=0
+PUB /camera/front_down/depth/points hz= subs=1
+VENDOR /ascamera_hp60c/camera_publisher/mjpeg0/compressed subs=0
+VENDOR /ascamera_hp60c/camera_publisher/rgb0/image subs=1
+VENDOR /ascamera_hp60c_2/camera_publisher/mjpeg0/compressed subs=0
+VENDOR /ascamera_hp60c_2/camera_publisher/rgb0/image subs=1

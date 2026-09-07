@@ -1,0 +1,1 @@
+NOT_RUN: Cursor forbidden unsupervised motion; waiting operator e-stop + initialpose confirmation

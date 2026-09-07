@@ -1,0 +1,19 @@
+mode=WEB_PREVIEW_AFTER ts=2026-09-07T05:29:33+00:00
+mode_name: IDLE
+  detail: serial:/dev/chassis tx=69460 rx=27842 bms_rx=1392 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=-0.66A SOC=54% V=26.15 last=7...
+detail: idle | follow=off recharge=off explore=off fall=on loc=not_ready
+data: FALL_DETECTION
+---
+npu=100@1000000000Hz
+PUB /camera/front_up/color/image_raw hz=3.600 subs=1
+PUB /camera/front_up/depth/image_raw hz= subs=2
+PUB /camera/front_up/color/image_raw/compressed hz= subs=0
+PUB /camera/front_up/depth/points hz= subs=1
+PUB /camera/front_down/color/image_raw hz=3.201 subs=1
+PUB /camera/front_down/depth/image_raw hz=8.039 subs=1
+PUB /camera/front_down/color/image_raw/compressed hz= subs=0
+PUB /camera/front_down/depth/points hz= subs=1
+VENDOR /ascamera_hp60c/camera_publisher/mjpeg0/compressed subs=0
+VENDOR /ascamera_hp60c/camera_publisher/rgb0/image subs=1
+VENDOR /ascamera_hp60c_2/camera_publisher/mjpeg0/compressed subs=0
+VENDOR /ascamera_hp60c_2/camera_publisher/rgb0/image subs=1

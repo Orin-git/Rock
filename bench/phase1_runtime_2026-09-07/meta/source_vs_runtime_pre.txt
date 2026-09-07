@@ -1,0 +1,24 @@
+ts=2026-09-07T05:04:57+00:00
+source_HEAD=c38bacb9660a65c73d0541a7f4cdedb5414371e4
+tag=phase1-candidate-20260907
+tag_commit=c38bacb9660a65c73d0541a7f4cdedb5414371e4
+wip_protect_branch=phase1-wip-protect-20260907
+wip_protect_commit=4cfb61e0dc45c5df2ad0ac02e929cfee1c746ee4
+working_tree_dirty=yes
+dirty_files:
+ M data/power_hist/2026-09-07.json
+ M src/xw_recharge/xw_recharge/recharge_node.py
+ M src/xw_slam_session/xw_slam_session/slam_session_node.py
+?? bench/
+--- install mtimes (sample) ---
+-rwxr-xr-x 1 nobody nogroup 991 Sep  3 05:25 /home/radxa/ros2_ws/install/xw_follow_session/lib/xw_follow_session/follow_session_node
+lrwxrwxrwx 1 nobody nogroup 53 Sep  7 04:57 /home/radxa/ros2_ws/install/xw_topic_health_cpp/lib/xw_topic_health_cpp/scan_presence_node -> /ros2_ws/build/xw_topic_health_cpp/scan_presence_node
+--- symlink? ---
+--- systemd ---
+--- running node sample (host PIDs from container namespace often visible) ---
+nobody     38226  0.8  0.8 559492 67060 ?        Sl   02:58   1:03 /usr/bin/python3 /ros2_ws/install/xw_follow_session/lib/xw_follow_session/follow_session_node --ros-args -r __node:=xw_follow_session --params-file /tmp/launch_params_c3gwddfm
+nobody     38236  7.3  0.7 476304 60048 ?        Rl   02:58   9:21 /usr/bin/python3 /ros2_ws/install/xw_supervisor/lib/xw_supervisor/supervisor_node --ros-args -r __node:=xw_supervisor --params-file /tmp/launch_params_h9this8p
+nobody     43323  9.1  0.9 491924 75740 ?        Sl   03:11  10:24 /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge --params-file /tmp/launch_params_hxnz_l_o
+nobody     43325 10.0  1.0 497660 81852 ?        Sl   03:11  11:24 /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge_front_down --params-file /tmp/launch_params_cbxu2484
+nobody     43452  0.0  0.2  35428 22464 ?        Ss   03:11   0:00 /usr/bin/python3 /opt/ros/humble/bin/ros2 run xw_health topic_health_node --ros-args -r __node:=xw_topic_health
+nobody     43490 19.3  0.7 695232 63836 ?        Rl   03:11  21:57 /usr/bin/python3 /ros2_ws/install/xw_health/lib/xw_health/topic_health_node --ros-args -r __node:=xw_topic_health
