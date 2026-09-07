@@ -1,11 +1,13 @@
-# Phase2A PoC V1 defaults — dry_run / no AMCL apply.
-xw_global_reloc:
+# Phase2A/B PoC defaults — AMCL handoff OFF unless launch sets allow_amcl_handoff.
+# Production robot.launch.py does not start this node.
+xw_global_reloc_poc:
   ros__parameters:
     maps_dir: "/ros2_ws/maps"
     map_name: "vp"
     visual_db_root: ""
     force_visual: true
     apply_initial_pose_default: false
+    allow_amcl_handoff: false
     allow_motion_default: false
     max_candidates: 10
     # Keyframe spacing
@@ -32,7 +34,8 @@ xw_global_reloc:
     # Laser
     laser_beam_stride: 6
     laser_match_dist_m: 0.25
-    min_laser_score: 0.45
+    # Data-backed Phase2A score/runtime validation: FA=0 first; thr=0.38 ≥8/10 offline.
+    min_laser_score: 0.38
     min_valid_beams: 20
     laser_coarse_xy_m: 1.0
     laser_coarse_yaw_deg: 30.0
@@ -43,10 +46,27 @@ xw_global_reloc:
     laser_fine_xy_step: 0.05
     laser_fine_yaw_step_deg: 1.0
     laser_min_margin: 0.03
+    laser_reject_local_grid_margin: false
     laser_max_refine_trans_m: 1.2
     laser_max_refine_yaw_deg: 35.0
+    # Pose-cluster acceptance (ambiguity only across distinct SE(2) places)
+    cluster_xy_m: 0.25
+    cluster_yaw_deg: 6.0
+    cluster_min_score_margin: 0.03
     # Acceptance
     min_top_margin: 0.05
+    # Phase2B AMCL handoff READY gates (parameterized)
+    amcl_timeout_sec: 12.0
+    amcl_ready_cov_xy: 0.80
+    amcl_ready_cov_yaw: 0.35
+    amcl_ready_stable_sec: 2.5
+    amcl_pose_fresh_sec: 2.0
+    amcl_tf_fresh_sec: 1.5
+    amcl_stable_xy_m: 0.12
+    amcl_stable_yaw_rad: 0.12
+    # /initialpose covariance from Visual+Laser PoC accuracy (Formal XY P95~0.27m)
+    handoff_cov_xy: 0.12
+    handoff_cov_yaw: 0.08
     # Extrinsic
     extrinsic_source: "URDF"
     extrinsic_status: "EXTRINSIC_UNCALIBRATED"

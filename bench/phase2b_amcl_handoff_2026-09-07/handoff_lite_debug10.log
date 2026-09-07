@@ -1,0 +1,49 @@
+[INFO] [1788779986.005971952] [phase2b_handoff_lite]: LITE handoff debug regions=5 x2
+[INFO] [1788779989.249407580] [phase2b_handoff_lite]: nav doorway_wp9 → (0.01,-0.58)
+{
+  "out": "/ros2_ws/bench/phase2b_amcl_handoff_2026-09-07/handoff_lite_debug10.json",
+  "stats": {
+    "n": 0,
+    "aborted": 0,
+    "ACCEPT": 0,
+    "UNKNOWN": 0,
+    "amcl_ready": 0,
+    "amcl_timeout": 0,
+    "false_handoff": 0,
+    "amcl_success_rate": null,
+    "nav_success_rate": null,
+    "reloc_wall_p50": null,
+    "reloc_wall_p95": null,
+    "amcl_conv_p50": null,
+    "amcl_conv_p95": null
+  },
+  "gate": {
+    "pass": false,
+    "false_handoff": 0,
+    "amcl_success_rate": null,
+    "nav_success_rate": null
+  }
+}
+Traceback (most recent call last):
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 404, in main
+    if not node.goto(region['x'], region['y'], region['yaw'], region['id']):
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 187, in goto
+    self._cancel.publish(Bool(data=True))
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/publisher.py", line 70, in publish
+    self.__publisher.publish(msg)
+rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:389
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 480, in <module>
+    main()
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 476, in main
+    rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241

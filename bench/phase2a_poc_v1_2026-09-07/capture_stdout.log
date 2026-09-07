@@ -1,4 +1,1397 @@
-backed up previous visual DB (12 kf) → /ros2_ws/maps/vp/visual_backup_charger_local_20260907_085841
-battery=None loc=1 pose=None
-WARN: localization_status != 0; continuing with AMCL pose (DB-build allowed)
-[INFO] [1788771526.403081697] [phase2a_v1_capture]: nav → doorway_wp9 (0.01,-0.58)
+battery=39.0 loc=0 pose=Pose2D(x=1.7107139731927279, y=-0.21467595094928235, yaw=1.8175400386443816)
+rgb_buf=1 scan=True
+[INFO] [1788771889.441031354] [phase2a_v1_capture]: charger_room: already near, skip nav
+[INFO] [1788771893.496603023] [phase2a_v1_capture]: saved kf_000001 region=charger_room loc=charger_room_A geo=True orb=1000 pose=(1.67,-0.21,1.25)
+{
+  "keyframe_count": 1,
+  "retrieval_ready": 1,
+  "geometry_ready": 1,
+  "disk_bytes": 181434,
+  "regions": {
+    "charger_room": 1
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 1,
+    "region_ids": [
+      "charger_room"
+    ]
+  }
+}
+[INFO] [1788771896.814085680] [phase2a_v1_capture]: saved kf_000002 region=charger_room loc=charger_room_A geo=True orb=1000 pose=(1.67,-0.21,1.98)
+{
+  "keyframe_count": 2,
+  "retrieval_ready": 2,
+  "geometry_ready": 2,
+  "disk_bytes": 330787,
+  "regions": {
+    "charger_room": 2
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 1,
+    "region_ids": [
+      "charger_room"
+    ]
+  }
+}
+[INFO] [1788771899.477706059] [phase2a_v1_capture]: saved kf_000003 region=charger_room loc=charger_room_A geo=True orb=1000 pose=(1.71,-0.21,2.32)
+{
+  "keyframe_count": 3,
+  "retrieval_ready": 3,
+  "geometry_ready": 3,
+  "disk_bytes": 489563,
+  "regions": {
+    "charger_room": 3
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 1,
+    "region_ids": [
+      "charger_room"
+    ]
+  }
+}
+[INFO] [1788771905.287381725] [phase2a_v1_capture]: saved kf_000004 region=charger_room loc=charger_room_B geo=True orb=1000 pose=(1.46,0.10,1.89)
+{
+  "keyframe_count": 4,
+  "retrieval_ready": 4,
+  "geometry_ready": 4,
+  "disk_bytes": 642010,
+  "regions": {
+    "charger_room": 4
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 1,
+    "region_ids": [
+      "charger_room"
+    ]
+  }
+}
+[INFO] [1788771908.319927171] [phase2a_v1_capture]: saved kf_000005 region=charger_room loc=charger_room_B geo=False orb=1000 pose=(1.46,0.10,2.46)
+{
+  "keyframe_count": 5,
+  "retrieval_ready": 5,
+  "geometry_ready": 4,
+  "disk_bytes": 809112,
+  "regions": {
+    "charger_room": 5
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 1,
+    "region_ids": [
+      "charger_room"
+    ]
+  }
+}
+[INFO] [1788771910.748294813] [phase2a_v1_capture]: saved kf_000006 region=charger_room loc=charger_room_B geo=False orb=1000 pose=(1.45,0.10,2.66)
+{
+  "keyframe_count": 6,
+  "retrieval_ready": 6,
+  "geometry_ready": 4,
+  "disk_bytes": 965500,
+  "regions": {
+    "charger_room": 6
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 1,
+    "region_ids": [
+      "charger_room"
+    ]
+  }
+}
+{
+  "keyframe_count": 6,
+  "retrieval_ready": 6,
+  "geometry_ready": 4,
+  "disk_bytes": 965500,
+  "regions": {
+    "charger_room": 6
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 1,
+    "region_ids": [
+      "charger_room"
+    ]
+  }
+}
+[INFO] [1788771910.763306353] [phase2a_v1_capture]: nav → doorway_wp9 (0.01,-0.58)
+[INFO] [1788771918.876782492] [phase2a_v1_capture]: doorway_wp9: arrived d=0.18
+[INFO] [1788771922.926078522] [phase2a_v1_capture]: saved kf_000007 region=doorway_wp9 loc=doorway_wp9_A geo=False orb=1000 pose=(0.14,-0.54,2.91)
+{
+  "keyframe_count": 7,
+  "retrieval_ready": 7,
+  "geometry_ready": 4,
+  "disk_bytes": 1073179,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 1
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 2,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9"
+    ]
+  }
+}
+[INFO] [1788771926.360416218] [phase2a_v1_capture]: saved kf_000008 region=doorway_wp9 loc=doorway_wp9_A geo=False orb=1000 pose=(0.18,-0.55,-2.59)
+{
+  "keyframe_count": 8,
+  "retrieval_ready": 8,
+  "geometry_ready": 4,
+  "disk_bytes": 1221361,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 2
+  },
+  "orb_features": {
+    "mean": 1000.0,
+    "p10": 1000.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 2,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9"
+    ]
+  }
+}
+[INFO] [1788771928.968270741] [phase2a_v1_capture]: saved kf_000009 region=doorway_wp9 loc=doorway_wp9_A geo=False orb=693 pose=(0.18,-0.57,-2.26)
+{
+  "keyframe_count": 9,
+  "retrieval_ready": 9,
+  "geometry_ready": 4,
+  "disk_bytes": 1379927,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 3
+  },
+  "orb_features": {
+    "mean": 965.8888888888889,
+    "p10": 938.6,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 2,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9"
+    ]
+  }
+}
+[INFO] [1788771934.848453131] [phase2a_v1_capture]: saved kf_000010 region=doorway_wp9 loc=doorway_wp9_B geo=False orb=995 pose=(-0.16,-0.94,-2.72)
+{
+  "keyframe_count": 10,
+  "retrieval_ready": 10,
+  "geometry_ready": 4,
+  "disk_bytes": 1542372,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 4
+  },
+  "orb_features": {
+    "mean": 968.8,
+    "p10": 964.8,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 2,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9"
+    ]
+  }
+}
+[INFO] [1788771937.924137905] [phase2a_v1_capture]: saved kf_000011 region=doorway_wp9 loc=doorway_wp9_B geo=False orb=631 pose=(-0.23,-0.96,-2.13)
+{
+  "keyframe_count": 11,
+  "retrieval_ready": 11,
+  "geometry_ready": 4,
+  "disk_bytes": 1723381,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 5
+  },
+  "orb_features": {
+    "mean": 938.0909090909091,
+    "p10": 693.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 2,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9"
+    ]
+  }
+}
+[INFO] [1788771940.237147665] [phase2a_v1_capture]: saved kf_000012 region=doorway_wp9 loc=doorway_wp9_B geo=True orb=326 pose=(-0.25,-0.96,-1.99)
+{
+  "keyframe_count": 12,
+  "retrieval_ready": 12,
+  "geometry_ready": 5,
+  "disk_bytes": 1890169,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6
+  },
+  "orb_features": {
+    "mean": 887.0833333333334,
+    "p10": 637.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 2,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9"
+    ]
+  }
+}
+{
+  "keyframe_count": 12,
+  "retrieval_ready": 12,
+  "geometry_ready": 5,
+  "disk_bytes": 1890169,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6
+  },
+  "orb_features": {
+    "mean": 887.0833333333334,
+    "p10": 637.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 2,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9"
+    ]
+  }
+}
+[INFO] [1788771940.251843031] [phase2a_v1_capture]: nav → corridor_wp2 (-4.08,-0.94)
+[INFO] [1788771958.224596540] [phase2a_v1_capture]: corridor_wp2: arrived d=0.18
+[INFO] [1788771962.488472394] [phase2a_v1_capture]: saved kf_000013 region=corridor_wp2 loc=corridor_wp2_A geo=False orb=1000 pose=(-3.82,-1.06,2.44)
+{
+  "keyframe_count": 13,
+  "retrieval_ready": 13,
+  "geometry_ready": 5,
+  "disk_bytes": 2065737,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 1
+  },
+  "orb_features": {
+    "mean": 895.7692307692307,
+    "p10": 643.4,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 3,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2"
+    ]
+  }
+}
+[INFO] [1788771965.942169893] [phase2a_v1_capture]: saved kf_000014 region=corridor_wp2 loc=corridor_wp2_A geo=False orb=1000 pose=(-3.81,-1.10,-3.07)
+{
+  "keyframe_count": 14,
+  "retrieval_ready": 14,
+  "geometry_ready": 5,
+  "disk_bytes": 2190095,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 2
+  },
+  "orb_features": {
+    "mean": 903.2142857142857,
+    "p10": 649.6,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 3,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2"
+    ]
+  }
+}
+[INFO] [1788771968.625070448] [phase2a_v1_capture]: saved kf_000015 region=corridor_wp2 loc=corridor_wp2_A geo=False orb=1000 pose=(-3.80,-1.10,-2.73)
+{
+  "keyframe_count": 15,
+  "retrieval_ready": 15,
+  "geometry_ready": 5,
+  "disk_bytes": 2306164,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 3
+  },
+  "orb_features": {
+    "mean": 909.6666666666666,
+    "p10": 655.8,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 3,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2"
+    ]
+  }
+}
+[INFO] [1788771974.384515338] [phase2a_v1_capture]: saved kf_000016 region=corridor_wp2 loc=corridor_wp2_B geo=False orb=1000 pose=(-4.25,-1.28,-3.09)
+{
+  "keyframe_count": 16,
+  "retrieval_ready": 16,
+  "geometry_ready": 5,
+  "disk_bytes": 2421955,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 4
+  },
+  "orb_features": {
+    "mean": 915.3125,
+    "p10": 662.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 3,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2"
+    ]
+  }
+}
+[INFO] [1788771977.220757489] [phase2a_v1_capture]: saved kf_000017 region=corridor_wp2 loc=corridor_wp2_B geo=False orb=974 pose=(-4.26,-1.29,-2.59)
+{
+  "keyframe_count": 17,
+  "retrieval_ready": 17,
+  "geometry_ready": 5,
+  "disk_bytes": 2557083,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 5
+  },
+  "orb_features": {
+    "mean": 918.7647058823529,
+    "p10": 668.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 3,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2"
+    ]
+  }
+}
+[INFO] [1788771979.499981294] [phase2a_v1_capture]: saved kf_000018 region=corridor_wp2 loc=corridor_wp2_B geo=False orb=924 pose=(-4.27,-1.30,-2.46)
+{
+  "keyframe_count": 18,
+  "retrieval_ready": 18,
+  "geometry_ready": 5,
+  "disk_bytes": 2714771,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6
+  },
+  "orb_features": {
+    "mean": 919.0555555555555,
+    "p10": 674.4,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 3,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2"
+    ]
+  }
+}
+{
+  "keyframe_count": 18,
+  "retrieval_ready": 18,
+  "geometry_ready": 5,
+  "disk_bytes": 2714771,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6
+  },
+  "orb_features": {
+    "mean": 919.0555555555555,
+    "p10": 674.4,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 3,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2"
+    ]
+  }
+}
+[INFO] [1788771979.522063866] [phase2a_v1_capture]: nav → similar_corridor_wp3 (-9.21,1.19)
+[INFO] [1788772004.042345798] [phase2a_v1_capture]: similar_corridor_wp3: arrived d=0.17
+[INFO] [1788772011.696682962] [phase2a_v1_capture]: saved kf_000019 region=similar_corridor_wp3 loc=similar_corridor_wp3_A geo=False orb=1000 pose=(-9.29,0.79,1.64)
+{
+  "keyframe_count": 19,
+  "retrieval_ready": 19,
+  "geometry_ready": 5,
+  "disk_bytes": 2876608,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 1
+  },
+  "orb_features": {
+    "mean": 923.3157894736842,
+    "p10": 680.6,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772016.298113563] [phase2a_v1_capture]: saved kf_000020 region=similar_corridor_wp3 loc=similar_corridor_wp3_A geo=True orb=957 pose=(-3.25,1.62,1.87)
+{
+  "keyframe_count": 20,
+  "retrieval_ready": 20,
+  "geometry_ready": 6,
+  "disk_bytes": 3116606,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 2
+  },
+  "orb_features": {
+    "mean": 925.0,
+    "p10": 686.8,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772021.348240951] [phase2a_v1_capture]: saved kf_000021 region=similar_corridor_wp3 loc=similar_corridor_wp3_A geo=True orb=988 pose=(-3.91,-0.69,2.52)
+{
+  "keyframe_count": 21,
+  "retrieval_ready": 21,
+  "geometry_ready": 7,
+  "disk_bytes": 3377612,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 3
+  },
+  "orb_features": {
+    "mean": 928.0,
+    "p10": 693.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772027.146508991] [phase2a_v1_capture]: saved kf_000022 region=similar_corridor_wp3 loc=similar_corridor_wp3_B geo=True orb=940 pose=(-4.20,-0.52,2.14)
+{
+  "keyframe_count": 22,
+  "retrieval_ready": 22,
+  "geometry_ready": 8,
+  "disk_bytes": 3645221,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 4
+  },
+  "orb_features": {
+    "mean": 928.5454545454545,
+    "p10": 716.1,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772030.140207370] [phase2a_v1_capture]: saved kf_000023 region=similar_corridor_wp3 loc=similar_corridor_wp3_B geo=True orb=955 pose=(-4.17,-0.56,2.68)
+{
+  "keyframe_count": 23,
+  "retrieval_ready": 23,
+  "geometry_ready": 9,
+  "disk_bytes": 3886696,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 5
+  },
+  "orb_features": {
+    "mean": 929.695652173913,
+    "p10": 739.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772032.463900241] [phase2a_v1_capture]: saved kf_000024 region=similar_corridor_wp3 loc=similar_corridor_wp3_B geo=True orb=993 pose=(-4.16,-0.57,2.84)
+{
+  "keyframe_count": 24,
+  "retrieval_ready": 24,
+  "geometry_ready": 10,
+  "disk_bytes": 4096437,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 6
+  },
+  "orb_features": {
+    "mean": 932.3333333333334,
+    "p10": 762.3000000000001,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+{
+  "keyframe_count": 24,
+  "retrieval_ready": 24,
+  "geometry_ready": 10,
+  "disk_bytes": 4096451,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 6
+  },
+  "orb_features": {
+    "mean": 932.3333333333334,
+    "p10": 762.3000000000001,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772032.483012413] [phase2a_v1_capture]: nav → room_wp5 (-7.87,3.25)
+[WARN] [1788772074.559410178] [phase2a_v1_capture]: room_wp5: nav timeout
+Failed to publish log message to rosout: publisher's context is invalid, at ./src/rcl/publisher.c:389
+Traceback (most recent call last):
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2a_v1_multiregion_capture.py", line 642, in main
+    ok = node.goto(region['x'], region['y'], region['yaw'], region['id'])
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2a_v1_multiregion_capture.py", line 312, in goto
+    self.nav_cancel.publish(Bool(data=True))
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/publisher.py", line 70, in publish
+    self.__publisher.publish(msg)
+rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:389
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2a_v1_multiregion_capture.py", line 667, in <module>
+    main()
+  File "/ros2_ws/src/xw_global_reloc/scripts/phase2a_v1_multiregion_capture.py", line 659, in main
+    node.rgb_req.publish(Bool(data=False))
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/publisher.py", line 70, in publish
+    self.__publisher.publish(msg)
+rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:389
+resume existing multi-region DB (19 kf)
+[INFO] [1788772543.435031550] [phase2a_v1_capture]: resume db count=19 n=19
+battery=39.0 loc=0 pose=Pose2D(x=-9.153790152314496, y=0.9531686284022305, yaw=-3.0602870576908323)
+rgb_buf=6 scan=True
+skip charger_room: already 6 kf
+skip doorway_wp9: already 6 kf
+skip corridor_wp2: already 6 kf
+[INFO] [1788772545.670509472] [phase2a_v1_capture]: similar_corridor_wp3: already near, skip nav
+[INFO] [1788772549.702482624] [phase2a_v1_capture]: saved kf_000020 region=similar_corridor_wp3 loc=similar_corridor_wp3_A geo=False orb=992 pose=(-9.15,0.94,2.67)
+{
+  "keyframe_count": 20,
+  "retrieval_ready": 20,
+  "geometry_ready": 5,
+  "disk_bytes": 3149945,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 2
+  },
+  "orb_features": {
+    "mean": 926.75,
+    "p10": 686.8,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772553.150078003] [phase2a_v1_capture]: saved kf_000021 region=similar_corridor_wp3 loc=similar_corridor_wp3_A geo=False orb=988 pose=(-9.15,0.90,-2.98)
+{
+  "keyframe_count": 21,
+  "retrieval_ready": 21,
+  "geometry_ready": 5,
+  "disk_bytes": 3412052,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 3
+  },
+  "orb_features": {
+    "mean": 929.6666666666666,
+    "p10": 693.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772556.057870297] [phase2a_v1_capture]: saved kf_000022 region=similar_corridor_wp3 loc=similar_corridor_wp3_A geo=False orb=998 pose=(-9.17,0.88,-2.52)
+{
+  "keyframe_count": 22,
+  "retrieval_ready": 22,
+  "geometry_ready": 5,
+  "disk_bytes": 3602525,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 4
+  },
+  "orb_features": {
+    "mean": 932.7727272727273,
+    "p10": 716.1,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772562.059489400] [phase2a_v1_capture]: saved kf_000023 region=similar_corridor_wp3 loc=similar_corridor_wp3_B geo=True orb=903 pose=(-9.52,0.63,-2.95)
+{
+  "keyframe_count": 23,
+  "retrieval_ready": 23,
+  "geometry_ready": 6,
+  "disk_bytes": 3835097,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 5
+  },
+  "orb_features": {
+    "mean": 931.4782608695652,
+    "p10": 735.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772565.134634239] [phase2a_v1_capture]: saved kf_000024 region=similar_corridor_wp3 loc=similar_corridor_wp3_B geo=True orb=1000 pose=(-9.53,0.62,-2.46)
+{
+  "keyframe_count": 24,
+  "retrieval_ready": 24,
+  "geometry_ready": 7,
+  "disk_bytes": 4031423,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 6
+  },
+  "orb_features": {
+    "mean": 934.3333333333334,
+    "p10": 756.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772567.640150935] [phase2a_v1_capture]: saved kf_000025 region=similar_corridor_wp3 loc=similar_corridor_wp3_B geo=False orb=996 pose=(-9.54,0.60,-2.22)
+{
+  "keyframe_count": 25,
+  "retrieval_ready": 25,
+  "geometry_ready": 7,
+  "disk_bytes": 4206105,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7
+  },
+  "orb_features": {
+    "mean": 936.8,
+    "p10": 777.0000000000001,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+{
+  "keyframe_count": 25,
+  "retrieval_ready": 25,
+  "geometry_ready": 7,
+  "disk_bytes": 4206105,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7
+  },
+  "orb_features": {
+    "mean": 936.8,
+    "p10": 777.0000000000001,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 4,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3"
+    ]
+  }
+}
+[INFO] [1788772567.661001788] [phase2a_v1_capture]: nav → room_wp5 (-7.87,3.25)
+[INFO] [1788772588.011254998] [phase2a_v1_capture]: room_wp5: arrived d=0.20
+[INFO] [1788772592.117738441] [phase2a_v1_capture]: saved kf_000026 region=room_wp5 loc=room_wp5_A geo=False orb=1000 pose=(-8.01,3.08,0.50)
+{
+  "keyframe_count": 26,
+  "retrieval_ready": 26,
+  "geometry_ready": 7,
+  "disk_bytes": 4364957,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 1
+  },
+  "orb_features": {
+    "mean": 939.2307692307693,
+    "p10": 798.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 5,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5"
+    ]
+  }
+}
+[INFO] [1788772595.378418451] [phase2a_v1_capture]: saved kf_000027 region=room_wp5 loc=room_wp5_A geo=True orb=1000 pose=(-8.06,3.08,1.14)
+{
+  "keyframe_count": 27,
+  "retrieval_ready": 27,
+  "geometry_ready": 8,
+  "disk_bytes": 4548462,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 2
+  },
+  "orb_features": {
+    "mean": 941.4814814814815,
+    "p10": 819.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 5,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5"
+    ]
+  }
+}
+[INFO] [1788772598.128560130] [phase2a_v1_capture]: saved kf_000028 region=room_wp5 loc=room_wp5_A geo=True orb=953 pose=(-8.06,3.09,1.50)
+{
+  "keyframe_count": 28,
+  "retrieval_ready": 28,
+  "geometry_ready": 9,
+  "disk_bytes": 4784829,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 3
+  },
+  "orb_features": {
+    "mean": 941.8928571428571,
+    "p10": 840.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 5,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5"
+    ]
+  }
+}
+[INFO] [1788772604.008003390] [phase2a_v1_capture]: saved kf_000029 region=room_wp5 loc=room_wp5_B geo=True orb=1000 pose=(-8.01,3.56,1.07)
+{
+  "keyframe_count": 29,
+  "retrieval_ready": 29,
+  "geometry_ready": 10,
+  "disk_bytes": 4983104,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 4
+  },
+  "orb_features": {
+    "mean": 943.8965517241379,
+    "p10": 861.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 5,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5"
+    ]
+  }
+}
+[INFO] [1788772606.975390967] [phase2a_v1_capture]: saved kf_000030 region=room_wp5 loc=room_wp5_B geo=True orb=445 pose=(-8.03,3.56,1.59)
+{
+  "keyframe_count": 30,
+  "retrieval_ready": 30,
+  "geometry_ready": 11,
+  "disk_bytes": 5207986,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 5
+  },
+  "orb_features": {
+    "mean": 927.2666666666667,
+    "p10": 686.8000000000001,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 5,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5"
+    ]
+  }
+}
+[INFO] [1788772609.388247413] [phase2a_v1_capture]: saved kf_000031 region=room_wp5 loc=room_wp5_B geo=False orb=525 pose=(-8.04,3.56,1.77)
+{
+  "keyframe_count": 31,
+  "retrieval_ready": 31,
+  "geometry_ready": 11,
+  "disk_bytes": 5426636,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6
+  },
+  "orb_features": {
+    "mean": 914.2903225806451,
+    "p10": 631.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 5,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5"
+    ]
+  }
+}
+{
+  "keyframe_count": 31,
+  "retrieval_ready": 31,
+  "geometry_ready": 11,
+  "disk_bytes": 5426624,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6
+  },
+  "orb_features": {
+    "mean": 914.2903225806451,
+    "p10": 631.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 5,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5"
+    ]
+  }
+}
+[INFO] [1788772609.409788073] [phase2a_v1_capture]: nav → open_wp6 (-0.75,9.39)
+[INFO] [1788772648.231647999] [phase2a_v1_capture]: open_wp6: arrived d=0.19
+[INFO] [1788772652.019109045] [phase2a_v1_capture]: saved kf_000032 region=open_wp6 loc=open_wp6_A geo=True orb=1000 pose=(-0.98,9.44,-0.64)
+{
+  "keyframe_count": 32,
+  "retrieval_ready": 32,
+  "geometry_ready": 12,
+  "disk_bytes": 5628024,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 1
+  },
+  "orb_features": {
+    "mean": 916.96875,
+    "p10": 637.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}
+[INFO] [1788772655.566457585] [phase2a_v1_capture]: saved kf_000033 region=open_wp6 loc=open_wp6_A geo=False orb=1000 pose=(-0.98,9.46,0.14)
+{
+  "keyframe_count": 33,
+  "retrieval_ready": 33,
+  "geometry_ready": 12,
+  "disk_bytes": 5861377,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 2
+  },
+  "orb_features": {
+    "mean": 919.4848484848485,
+    "p10": 643.4,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}
+[INFO] [1788772658.229335847] [phase2a_v1_capture]: saved kf_000034 region=open_wp6 loc=open_wp6_A geo=True orb=973 pose=(-1.00,9.47,0.45)
+{
+  "keyframe_count": 34,
+  "retrieval_ready": 34,
+  "geometry_ready": 13,
+  "disk_bytes": 6059623,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 3
+  },
+  "orb_features": {
+    "mean": 921.0588235294117,
+    "p10": 649.6,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}
+[INFO] [1788772664.151880554] [phase2a_v1_capture]: saved kf_000035 region=open_wp6 loc=open_wp6_B geo=True orb=1000 pose=(-0.60,9.66,0.03)
+{
+  "keyframe_count": 35,
+  "retrieval_ready": 35,
+  "geometry_ready": 14,
+  "disk_bytes": 6307707,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 4
+  },
+  "orb_features": {
+    "mean": 923.3142857142857,
+    "p10": 655.8000000000001,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}
+[INFO] [1788772667.092825899] [phase2a_v1_capture]: saved kf_000036 region=open_wp6 loc=open_wp6_B geo=False orb=945 pose=(-0.61,9.68,0.50)
+{
+  "keyframe_count": 36,
+  "retrieval_ready": 36,
+  "geometry_ready": 14,
+  "disk_bytes": 6484051,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 5
+  },
+  "orb_features": {
+    "mean": 923.9166666666666,
+    "p10": 662.0,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}
+[INFO] [1788772669.635113854] [phase2a_v1_capture]: saved kf_000037 region=open_wp6 loc=open_wp6_B geo=False orb=841 pose=(-0.60,9.69,0.71)
+{
+  "keyframe_count": 37,
+  "retrieval_ready": 37,
+  "geometry_ready": 14,
+  "disk_bytes": 6630089,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 6
+  },
+  "orb_features": {
+    "mean": 921.6756756756756,
+    "p10": 668.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}
+{
+  "keyframe_count": 37,
+  "retrieval_ready": 37,
+  "geometry_ready": 14,
+  "disk_bytes": 6630089,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 6
+  },
+  "orb_features": {
+    "mean": 921.6756756756756,
+    "p10": 668.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}
+{
+  "keyframe_count": 37,
+  "retrieval_ready": 37,
+  "geometry_ready": 14,
+  "disk_bytes": 6630089,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 6
+  },
+  "orb_features": {
+    "mean": 921.6756756756756,
+    "p10": 668.2,
+    "p90": 1000.0
+  },
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+  "map_coverage": {
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
+}

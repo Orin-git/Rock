@@ -1,0 +1,520 @@
+[
+  {
+    "id": "kf_000001",
+    "region_id": "charger_room",
+    "region_class": "room",
+    "location_id": "charger_room_A",
+    "pose": {
+      "x": 1.6735034348354858,
+      "y": -0.21234936567941054,
+      "yaw": 1.2549805458301055
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000001/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000001/scan.npz",
+    "keyframe_id": "kf_000001"
+  },
+  {
+    "id": "kf_000002",
+    "region_id": "charger_room",
+    "region_class": "room",
+    "location_id": "charger_room_A",
+    "pose": {
+      "x": 1.6707164268315808,
+      "y": -0.21007775689309333,
+      "yaw": 1.9847876484446523
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000002/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000002/scan.npz",
+    "keyframe_id": "kf_000002"
+  },
+  {
+    "id": "kf_000003",
+    "region_id": "charger_room",
+    "region_class": "room",
+    "location_id": "charger_room_A",
+    "pose": {
+      "x": 1.714512800201392,
+      "y": -0.20602657074652395,
+      "yaw": 2.3206056490988787
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000003/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000003/scan.npz",
+    "keyframe_id": "kf_000003"
+  },
+  {
+    "id": "kf_000004",
+    "region_id": "charger_room",
+    "region_class": "room",
+    "location_id": "charger_room_B",
+    "pose": {
+      "x": 1.4634783619706548,
+      "y": 0.10246616401101372,
+      "yaw": 1.890679889818991
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000004/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000004/scan.npz",
+    "keyframe_id": "kf_000004"
+  },
+  {
+    "id": "kf_000005",
+    "region_id": "charger_room",
+    "region_class": "room",
+    "location_id": "charger_room_B",
+    "pose": {
+      "x": 1.4596292506100224,
+      "y": 0.10221769351292526,
+      "yaw": 2.4596474601103595
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000005/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000005/scan.npz",
+    "keyframe_id": "kf_000005"
+  },
+  {
+    "id": "kf_000006",
+    "region_id": "charger_room",
+    "region_class": "room",
+    "location_id": "charger_room_B",
+    "pose": {
+      "x": 1.452783082784515,
+      "y": 0.10038877210736358,
+      "yaw": 2.664704793758465
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000006/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000006/scan.npz",
+    "keyframe_id": "kf_000006"
+  },
+  {
+    "id": "kf_000007",
+    "region_id": "doorway_wp9",
+    "region_class": "doorway",
+    "location_id": "doorway_wp9_A",
+    "pose": {
+      "x": 0.14492601607481603,
+      "y": -0.5379024281484402,
+      "yaw": 2.9115548231341846
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000007/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000007/scan.npz",
+    "keyframe_id": "kf_000007"
+  },
+  {
+    "id": "kf_000008",
+    "region_id": "doorway_wp9",
+    "region_class": "doorway",
+    "location_id": "doorway_wp9_A",
+    "pose": {
+      "x": 0.18248194052864664,
+      "y": -0.5548734480373652,
+      "yaw": -2.5888202189226472
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000008/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000008/scan.npz",
+    "keyframe_id": "kf_000008"
+  },
+  {
+    "id": "kf_000009",
+    "region_id": "doorway_wp9",
+    "region_class": "doorway",
+    "location_id": "doorway_wp9_A",
+    "pose": {
+      "x": 0.18413807039844365,
+      "y": -0.5672063414600098,
+      "yaw": -2.256597004203898
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000009/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000009/scan.npz",
+    "keyframe_id": "kf_000009"
+  },
+  {
+    "id": "kf_000010",
+    "region_id": "doorway_wp9",
+    "region_class": "doorway",
+    "location_id": "doorway_wp9_B",
+    "pose": {
+      "x": -0.1564229152600345,
+      "y": -0.9351478359818606,
+      "yaw": -2.7246636264902917
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000010/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000010/scan.npz",
+    "keyframe_id": "kf_000010"
+  },
+  {
+    "id": "kf_000011",
+    "region_id": "doorway_wp9",
+    "region_class": "doorway",
+    "location_id": "doorway_wp9_B",
+    "pose": {
+      "x": -0.22710171178713434,
+      "y": -0.9604572018496615,
+      "yaw": -2.127598873036003
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000011/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000011/scan.npz",
+    "keyframe_id": "kf_000011"
+  },
+  {
+    "id": "kf_000012",
+    "region_id": "doorway_wp9",
+    "region_class": "doorway",
+    "location_id": "doorway_wp9_B",
+    "pose": {
+      "x": -0.24940788552104998,
+      "y": -0.9631676371848721,
+      "yaw": -1.991018123816904
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000012/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000012/scan.npz",
+    "keyframe_id": "kf_000012"
+  },
+  {
+    "id": "kf_000013",
+    "region_id": "corridor_wp2",
+    "region_class": "corridor",
+    "location_id": "corridor_wp2_A",
+    "pose": {
+      "x": -3.822721383127579,
+      "y": -1.0608652474552533,
+      "yaw": 2.4444921074444506
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000013/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000013/scan.npz",
+    "keyframe_id": "kf_000013"
+  },
+  {
+    "id": "kf_000014",
+    "region_id": "corridor_wp2",
+    "region_class": "corridor",
+    "location_id": "corridor_wp2_A",
+    "pose": {
+      "x": -3.812539260881123,
+      "y": -1.098964613614613,
+      "yaw": -3.074630534761376
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000014/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000014/scan.npz",
+    "keyframe_id": "kf_000014"
+  },
+  {
+    "id": "kf_000015",
+    "region_id": "corridor_wp2",
+    "region_class": "corridor",
+    "location_id": "corridor_wp2_A",
+    "pose": {
+      "x": -3.803237755209292,
+      "y": -1.1023196490348977,
+      "yaw": -2.7323655211875164
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000015/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000015/scan.npz",
+    "keyframe_id": "kf_000015"
+  },
+  {
+    "id": "kf_000016",
+    "region_id": "corridor_wp2",
+    "region_class": "corridor",
+    "location_id": "corridor_wp2_B",
+    "pose": {
+      "x": -4.252729600513347,
+      "y": -1.2766186710384289,
+      "yaw": -3.0868231676673523
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000016/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000016/scan.npz",
+    "keyframe_id": "kf_000016"
+  },
+  {
+    "id": "kf_000017",
+    "region_id": "corridor_wp2",
+    "region_class": "corridor",
+    "location_id": "corridor_wp2_B",
+    "pose": {
+      "x": -4.255146218306157,
+      "y": -1.292517097225166,
+      "yaw": -2.593295126998436
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000017/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000017/scan.npz",
+    "keyframe_id": "kf_000017"
+  },
+  {
+    "id": "kf_000018",
+    "region_id": "corridor_wp2",
+    "region_class": "corridor",
+    "location_id": "corridor_wp2_B",
+    "pose": {
+      "x": -4.2730225265356525,
+      "y": -1.298034343363578,
+      "yaw": -2.4618414574129464
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000018/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000018/scan.npz",
+    "keyframe_id": "kf_000018"
+  },
+  {
+    "id": "kf_000019",
+    "region_id": "similar_corridor_wp3",
+    "region_class": "visual_similar",
+    "location_id": "similar_corridor_wp3_A",
+    "pose": {
+      "x": -9.289177221348526,
+      "y": 0.7918620290229708,
+      "yaw": 1.640206998202063
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000019/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000019/scan.npz",
+    "keyframe_id": "kf_000019"
+  },
+  {
+    "id": "kf_000020",
+    "region_id": "similar_corridor_wp3",
+    "region_class": "visual_similar",
+    "location_id": "similar_corridor_wp3_A",
+    "pose": {
+      "x": -9.152724732358584,
+      "y": 0.9369008880389582,
+      "yaw": 2.669875402783762
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000020/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000020/scan.npz",
+    "keyframe_id": "kf_000020"
+  },
+  {
+    "id": "kf_000021",
+    "region_id": "similar_corridor_wp3",
+    "region_class": "visual_similar",
+    "location_id": "similar_corridor_wp3_A",
+    "pose": {
+      "x": -9.153229820952266,
+      "y": 0.9049912523914944,
+      "yaw": -2.979705058985894
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000021/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000021/scan.npz",
+    "keyframe_id": "kf_000021"
+  },
+  {
+    "id": "kf_000022",
+    "region_id": "similar_corridor_wp3",
+    "region_class": "visual_similar",
+    "location_id": "similar_corridor_wp3_A",
+    "pose": {
+      "x": -9.169071968797404,
+      "y": 0.8790759262927991,
+      "yaw": -2.516900367292072
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000022/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000022/scan.npz",
+    "keyframe_id": "kf_000022"
+  },
+  {
+    "id": "kf_000023",
+    "region_id": "similar_corridor_wp3",
+    "region_class": "visual_similar",
+    "location_id": "similar_corridor_wp3_B",
+    "pose": {
+      "x": -9.51813517081083,
+      "y": 0.6337983715985716,
+      "yaw": -2.9532058821124645
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000023/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000023/scan.npz",
+    "keyframe_id": "kf_000023"
+  },
+  {
+    "id": "kf_000024",
+    "region_id": "similar_corridor_wp3",
+    "region_class": "visual_similar",
+    "location_id": "similar_corridor_wp3_B",
+    "pose": {
+      "x": -9.528365337070479,
+      "y": 0.6177585124297112,
+      "yaw": -2.4616307319359367
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000024/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000024/scan.npz",
+    "keyframe_id": "kf_000024"
+  },
+  {
+    "id": "kf_000025",
+    "region_id": "similar_corridor_wp3",
+    "region_class": "visual_similar",
+    "location_id": "similar_corridor_wp3_B",
+    "pose": {
+      "x": -9.536633624740906,
+      "y": 0.604259804680831,
+      "yaw": -2.221587884245773
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000025/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000025/scan.npz",
+    "keyframe_id": "kf_000025"
+  },
+  {
+    "id": "kf_000026",
+    "region_id": "room_wp5",
+    "region_class": "room",
+    "location_id": "room_wp5_A",
+    "pose": {
+      "x": -8.012238669616762,
+      "y": 3.0762895183428087,
+      "yaw": 0.49701989621448434
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000026/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000026/scan.npz",
+    "keyframe_id": "kf_000026"
+  },
+  {
+    "id": "kf_000027",
+    "region_id": "room_wp5",
+    "region_class": "room",
+    "location_id": "room_wp5_A",
+    "pose": {
+      "x": -8.055289479913805,
+      "y": 3.0774047412564567,
+      "yaw": 1.1412852028754161
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000027/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000027/scan.npz",
+    "keyframe_id": "kf_000027"
+  },
+  {
+    "id": "kf_000028",
+    "region_id": "room_wp5",
+    "region_class": "room",
+    "location_id": "room_wp5_A",
+    "pose": {
+      "x": -8.05968548069111,
+      "y": 3.094141038900275,
+      "yaw": 1.4986464876318495
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000028/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000028/scan.npz",
+    "keyframe_id": "kf_000028"
+  },
+  {
+    "id": "kf_000029",
+    "region_id": "room_wp5",
+    "region_class": "room",
+    "location_id": "room_wp5_B",
+    "pose": {
+      "x": -8.012895717953686,
+      "y": 3.555599126114825,
+      "yaw": 1.0725172524382585
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000029/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000029/scan.npz",
+    "keyframe_id": "kf_000029"
+  },
+  {
+    "id": "kf_000030",
+    "region_id": "room_wp5",
+    "region_class": "room",
+    "location_id": "room_wp5_B",
+    "pose": {
+      "x": -8.030252988587426,
+      "y": 3.5635994682053944,
+      "yaw": 1.594122158978507
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000030/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000030/scan.npz",
+    "keyframe_id": "kf_000030"
+  },
+  {
+    "id": "kf_000031",
+    "region_id": "room_wp5",
+    "region_class": "room",
+    "location_id": "room_wp5_B",
+    "pose": {
+      "x": -8.04287475501877,
+      "y": 3.5553446301240967,
+      "yaw": 1.7704257456959192
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000031/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000031/scan.npz",
+    "keyframe_id": "kf_000031"
+  },
+  {
+    "id": "kf_000032",
+    "region_id": "open_wp6",
+    "region_class": "open",
+    "location_id": "open_wp6_A",
+    "pose": {
+      "x": -0.9791074801775963,
+      "y": 9.439862526445694,
+      "yaw": -0.6420369136546578
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000032/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000032/scan.npz",
+    "keyframe_id": "kf_000032"
+  },
+  {
+    "id": "kf_000033",
+    "region_id": "open_wp6",
+    "region_class": "open",
+    "location_id": "open_wp6_A",
+    "pose": {
+      "x": -0.9803887847192936,
+      "y": 9.463341783972615,
+      "yaw": 0.14077717620548974
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000033/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000033/scan.npz",
+    "keyframe_id": "kf_000033"
+  },
+  {
+    "id": "kf_000034",
+    "region_id": "open_wp6",
+    "region_class": "open",
+    "location_id": "open_wp6_A",
+    "pose": {
+      "x": -0.9951951945390825,
+      "y": 9.4686814478489,
+      "yaw": 0.45368198247813973
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000034/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000034/scan.npz",
+    "keyframe_id": "kf_000034"
+  },
+  {
+    "id": "kf_000035",
+    "region_id": "open_wp6",
+    "region_class": "open",
+    "location_id": "open_wp6_B",
+    "pose": {
+      "x": -0.6025819542093194,
+      "y": 9.661359398194646,
+      "yaw": 0.03178470310328413
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000035/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000035/scan.npz",
+    "keyframe_id": "kf_000035"
+  },
+  {
+    "id": "kf_000036",
+    "region_id": "open_wp6",
+    "region_class": "open",
+    "location_id": "open_wp6_B",
+    "pose": {
+      "x": -0.6108922569606721,
+      "y": 9.679554473992807,
+      "yaw": 0.49934720593124304
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000036/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000036/scan.npz",
+    "keyframe_id": "kf_000036"
+  },
+  {
+    "id": "kf_000037",
+    "region_id": "open_wp6",
+    "region_class": "open",
+    "location_id": "open_wp6_B",
+    "pose": {
+      "x": -0.6016968828431715,
+      "y": 9.69059117458052,
+      "yaw": 0.7111001821286956
+    },
+    "rgb": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000037/rgb.jpg",
+    "scan": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/queries_v1/kf_000037/scan.npz",
+    "keyframe_id": "kf_000037"
+  }
+]

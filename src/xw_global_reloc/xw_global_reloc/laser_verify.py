@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
@@ -22,6 +22,15 @@ class LaserScore:
     p90_dist: float
     laser_score: float
     runtime_sec: float
+
+
+@dataclass
+class PreparedScan:
+    """Precomputed beam endpoints in lidar frame (stride already applied)."""
+
+    bx: np.ndarray  # (N,)
+    by: np.ndarray  # (N,)
+    n_valid: int
 
 
 class DistanceField:
@@ -42,15 +51,12 @@ class DistanceField:
 
     @staticmethod
     def _distance_transform(occ: np.ndarray) -> np.ndarray:
-        # Pure numpy EDT approximation via OpenCV if available.
         try:
             import cv2
 
-            # distance to nearest zero in (1-occ) → distance to occupied
             inv = (1 - occ).astype(np.uint8)
             return cv2.distanceTransform(inv, cv2.DIST_L2, 3)
         except Exception:  # noqa: BLE001
-            # Fallback slow: coarse
             ys, xs = np.where(occ > 0)
             if len(xs) == 0:
                 return np.full(occ.shape, 1e3, dtype=np.float32)
@@ -78,6 +84,61 @@ class DistanceField:
             return False
         return bool(self.free[iy, ix])
 
+    def sample_dist_batch(self, mx: np.ndarray, my: np.ndarray) -> np.ndarray:
+        """Sample distance field at world points; OOB → 1e3."""
+        ix = np.floor((mx - self.origin_x) / self.resolution).astype(np.int32)
+        iy = np.floor((my - self.origin_y) / self.resolution).astype(np.int32)
+        out = np.full(mx.shape, 1e3, dtype=np.float64)
+        ok = (ix >= 0) & (iy >= 0) & (ix < self.width) & (iy < self.height)
+        if np.any(ok):
+            out[ok] = self.dist_m[iy[ok], ix[ok]]
+        return out
+
+
+def prepare_scan(scan: LaserScan, beam_stride: int = 6) -> PreparedScan:
+    ranges = np.asarray(scan.ranges, dtype=np.float64)
+    rmin = float(scan.range_min)
+    rmax = float(scan.range_max)
+    stride = max(1, int(beam_stride))
+    idx = np.arange(0, len(ranges), stride, dtype=np.int32)
+    r = ranges[idx]
+    valid = np.isfinite(r) & (r >= rmin) & (r <= rmax)
+    idx = idx[valid]
+    r = r[valid]
+    ang = float(scan.angle_min) + idx.astype(np.float64) * float(scan.angle_increment)
+    bx = r * np.cos(ang)
+    by = r * np.sin(ang)
+    return PreparedScan(bx=bx, by=by, n_valid=int(bx.size))
+
+
+def _score_from_dists(
+    dists: np.ndarray,
+    *,
+    match_dist_m: float,
+    min_valid_beams: int,
+    min_laser_score: float,
+    runtime_sec: float,
+) -> LaserScore:
+    valid = int(dists.size)
+    if valid < min_valid_beams:
+        return LaserScore(False, 'few_beams', valid, 0.0, 999.0, 999.0, 0.0, runtime_sec)
+    mean_d = float(np.mean(dists))
+    p90 = float(np.percentile(dists, 90))
+    matched = int(np.count_nonzero(dists <= match_dist_m))
+    matched_ratio = float(matched) / float(valid)
+    score = matched_ratio * float(np.clip(1.0 - mean_d / max(match_dist_m * 4.0, 1e-3), 0.0, 1.0))
+    ok = score >= min_laser_score and matched_ratio >= min_laser_score * 0.8
+    return LaserScore(
+        ok,
+        'ok' if ok else 'laser_gate',
+        valid,
+        matched_ratio,
+        mean_d,
+        p90,
+        float(score),
+        runtime_sec,
+    )
+
 
 def score_scan_at_pose(
     field: DistanceField,
@@ -89,52 +150,71 @@ def score_scan_at_pose(
     beam_stride: int = 6,
     match_dist_m: float = 0.25,
     min_valid_beams: int = 20,
-    min_laser_score: float = 0.45,
+    min_laser_score: float = 0.38,
+    prepared: Optional[PreparedScan] = None,
 ) -> LaserScore:
     t0 = time.monotonic()
-    ranges = np.asarray(scan.ranges, dtype=np.float64)
-    rmin = float(scan.range_min)
-    rmax = float(scan.range_max)
-    dists = []
-    valid = 0
-    matched = 0
-    stride = max(1, int(beam_stride))
-    # URDF: lidar_link yaw = π vs base_link (see xw_gen2.urdf).
+    prep = prepared if prepared is not None else prepare_scan(scan, beam_stride=beam_stride)
+    if prep.n_valid < min_valid_beams:
+        return LaserScore(
+            False, 'few_beams', prep.n_valid, 0.0, 999.0, 999.0, 0.0, time.monotonic() - t0
+        )
+    # URDF: lidar_link yaw = π vs base_link
     lyaw = yaw + math.pi
     lc, ls = math.cos(lyaw), math.sin(lyaw)
-    for i in range(0, len(ranges), stride):
-        r = float(ranges[i])
-        if not math.isfinite(r) or r < rmin or r > rmax:
-            continue
-        ang = float(scan.angle_min) + float(i) * float(scan.angle_increment)
-        bx = r * math.cos(ang)
-        by = r * math.sin(ang)
-        mx = x + lc * bx - ls * by
-        my = y + ls * bx + lc * by
-        d = field.sample_dist(mx, my)
-        dists.append(d)
-        valid += 1
-        if d <= match_dist_m:
-            matched += 1
-
-    if valid < min_valid_beams:
-        return LaserScore(
-            False, 'few_beams', valid, 0.0, 999.0, 999.0, 0.0, time.monotonic() - t0
-        )
-    arr = np.asarray(dists, dtype=np.float64)
-    mean_d = float(np.mean(arr))
-    p90 = float(np.percentile(arr, 90))
-    matched_ratio = float(matched) / float(valid)
-    # Score: high match ratio, low mean distance
-    score = matched_ratio * float(np.clip(1.0 - mean_d / max(match_dist_m * 4.0, 1e-3), 0.0, 1.0))
-    ok = score >= min_laser_score and matched_ratio >= min_laser_score * 0.8
-    return LaserScore(
-        ok,
-        'ok' if ok else 'laser_gate',
-        valid,
-        matched_ratio,
-        mean_d,
-        p90,
-        float(score),
-        time.monotonic() - t0,
+    mx = x + lc * prep.bx - ls * prep.by
+    my = y + ls * prep.bx + lc * prep.by
+    dists = field.sample_dist_batch(mx, my)
+    return _score_from_dists(
+        dists,
+        match_dist_m=match_dist_m,
+        min_valid_beams=min_valid_beams,
+        min_laser_score=min_laser_score,
+        runtime_sec=time.monotonic() - t0,
     )
+
+
+def score_scan_at_poses(
+    field: DistanceField,
+    prepared: PreparedScan,
+    xs: np.ndarray,
+    ys: np.ndarray,
+    yaws: np.ndarray,
+    *,
+    match_dist_m: float = 0.25,
+    min_valid_beams: int = 20,
+    min_laser_score: float = 0.38,
+) -> List[LaserScore]:
+    """Vectorized scoring for many SE(2) poses with one prepared scan."""
+    t0 = time.monotonic()
+    xs = np.asarray(xs, dtype=np.float64).reshape(-1)
+    ys = np.asarray(ys, dtype=np.float64).reshape(-1)
+    yaws = np.asarray(yaws, dtype=np.float64).reshape(-1)
+    n = int(xs.size)
+    if n == 0:
+        return []
+    if prepared.n_valid < min_valid_beams:
+        rt = time.monotonic() - t0
+        return [
+            LaserScore(False, 'few_beams', prepared.n_valid, 0.0, 999.0, 999.0, 0.0, rt)
+            for _ in range(n)
+        ]
+    lyaw = yaws + math.pi
+    lc = np.cos(lyaw)
+    ls = np.sin(lyaw)
+    mx = xs[:, None] + lc[:, None] * prepared.bx[None, :] - ls[:, None] * prepared.by[None, :]
+    my = ys[:, None] + ls[:, None] * prepared.bx[None, :] + lc[:, None] * prepared.by[None, :]
+    dists = field.sample_dist_batch(mx.reshape(-1), my.reshape(-1)).reshape(n, prepared.n_valid)
+    rt = time.monotonic() - t0
+    out: List[LaserScore] = []
+    for i in range(n):
+        out.append(
+            _score_from_dists(
+                dists[i],
+                match_dist_m=match_dist_m,
+                min_valid_beams=min_valid_beams,
+                min_laser_score=min_laser_score,
+                runtime_sec=rt / max(n, 1),
+            )
+        )
+    return out

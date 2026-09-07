@@ -26,6 +26,7 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPo
 from sensor_msgs.msg import CameraInfo, Image, LaserScan
 from std_msgs.msg import Bool, Int8
 from std_srvs.srv import Empty
+from tf2_ros import Buffer, TransformException, TransformListener
 
 from xw_global_reloc.map_hash import map_pair_hash, resolve_map_files
 from xw_global_reloc.orb_utils import extract_orb, make_orb, pack_keypoints
@@ -43,21 +44,21 @@ BENCH = Path('/ros2_ws/bench/phase2a_poc_v1_2026-09-07')
 QUERY_ROOT = BENCH / 'queries_v1'
 STATE_PATH = BENCH / 'capture_state.json'
 
-# Travel-efficient order from current ~wp_9. Classes cover the required set.
+# Travel-efficient order from charger. Classes cover the required set.
 REGIONS = [
-    {
-        'id': 'doorway_wp9',
-        'cls': 'doorway',
-        'x': 0.014664885102192216,
-        'y': -0.5797687003570173,
-        'yaw': 3.252962113309337,
-    },
     {
         'id': 'charger_room',
         'cls': 'room',
         'x': 1.8663955491712294,
         'y': -0.05958837147746455,
         'yaw': -3.1286646850836126,
+    },
+    {
+        'id': 'doorway_wp9',
+        'cls': 'doorway',
+        'x': 0.014664885102192216,
+        'y': -0.5797687003570173,
+        'yaw': 3.252962113309337,
     },
     {
         'id': 'corridor_wp2',
@@ -179,6 +180,8 @@ class CaptureNode(Node):
         self.nomotion = self.create_client(Empty, '/request_nomotion_update')
         self.motion = self.create_client(MotionCommand, '/xw/motion/command')
         self.get_state = self.create_client(GetState, '/xw/supervisor/get_state')
+        self._tf = Buffer()
+        self._tfl = TransformListener(self._tf, self)
         self.rgb_req.publish(Bool(data=True))
 
         yaml_p, pgm_p = resolve_map_files(MAPS_DIR, MAP_NAME)
@@ -187,6 +190,36 @@ class CaptureNode(Node):
         self.idx = []
         self.count = 0
         self.queries = []
+        self._load_existing()
+
+    def _load_existing(self) -> None:
+        idx_p = self.root / 'descriptors' / 'index.json'
+        if not idx_p.is_file():
+            return
+        try:
+            idx = json.loads(idx_p.read_text(encoding='utf-8'))
+        except json.JSONDecodeError:
+            return
+        nums = []
+        for item in idx:
+            kid = str(item.get('id') or '')
+            kdir = self.root / 'keyframes' / kid
+            if not (kdir / 'meta.yaml').is_file():
+                continue
+            self.idx.append(item)
+            if kid.startswith('kf_'):
+                try:
+                    nums.append(int(kid.split('_')[-1]))
+                except ValueError:
+                    pass
+        self.count = max(nums) if nums else 0
+        qman = QUERY_ROOT / 'manifest.json'
+        if qman.is_file():
+            try:
+                self.queries = json.loads(qman.read_text(encoding='utf-8'))
+            except json.JSONDecodeError:
+                self.queries = []
+        self.get_logger().info(f'resume db count={self.count} n={len(self.idx)}')
 
     def _on_rgb(self, m):
         self.rgb_buf.push(m)
@@ -218,10 +251,26 @@ class CaptureNode(Node):
             rclpy.spin_once(self, timeout_sec=0.05)
 
     def pose(self) -> Pose2D | None:
+        try:
+            tr = self._tf.lookup_transform('map', 'base_link', rclpy.time.Time())
+            t = tr.transform.translation
+            return Pose2D(t.x, t.y, yaw_from_quat(tr.transform.rotation))
+        except TransformException:
+            pass
         if self.amcl is None:
             return None
         p = self.amcl.pose.pose
         return Pose2D(p.position.x, p.position.y, yaw_from_quat(p.orientation))
+
+    def wait_pose(self, timeout: float = 8.0) -> Pose2D | None:
+        self.request_nomotion()
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < timeout and rclpy.ok():
+            rclpy.spin_once(self, timeout_sec=0.05)
+            p = self.pose()
+            if p is not None:
+                return p
+        return None
 
     def speed(self) -> float:
         if self.odom is None:
@@ -353,6 +402,13 @@ class CaptureNode(Node):
         if p is None or self.info is None or self.scan is None:
             self.get_logger().warn('grab skip: missing pose/info/scan')
             return None
+        dreg = math.hypot(p.x - float(region['x']), p.y - float(region['y']))
+        if dreg > 2.0:
+            self.get_logger().warn(
+                f'grab skip: pose drifted {dreg:.2f}m from {region["id"]} '
+                f'({p.x:.2f},{p.y:.2f})'
+            )
+            return None
         pair = pair_nearest(self.rgb_buf, self.depth_buf, prefer='rgb')
         # RGB is required; depth optional
         rgb_msg = None
@@ -403,7 +459,7 @@ class CaptureNode(Node):
         T_bc = se3_from_xyz_rpy(0.251, 0.0, 0.49, -1.33, 0.0, -1.5708)
         T_mb = se3_from_xyz_rpy(p.x, p.y, 0.0, 0.0, 0.0, p.yaw)
         cam = se3_to_se2_yaw(T_mb @ T_bc)
-        cov = self.amcl.pose.covariance
+        cov = self.amcl.pose.covariance if self.amcl is not None else [0.0] * 36
         meta = {
             'keyframe_id': kid,
             'timestamp': time.time(),
@@ -487,15 +543,24 @@ class CaptureNode(Node):
 def backup_old_db() -> None:
     if not (VISUAL_ROOT / 'keyframes').is_dir():
         return
-    n = len(list((VISUAL_ROOT / 'keyframes').glob('kf_*')))
-    if n == 0:
+    kfs = list((VISUAL_ROOT / 'keyframes').glob('kf_*'))
+    if not kfs:
+        return
+    # Keep a v1 in-progress DB; only archive pre-v1 same-cell dumps.
+    has_region = False
+    for d in kfs:
+        mp = d / 'meta.yaml'
+        if mp.is_file() and 'region_id:' in mp.read_text(encoding='utf-8', errors='ignore'):
+            has_region = True
+            break
+    if has_region:
+        print(f'resume existing multi-region DB ({len(kfs)} kf)')
         return
     bak = MAPS_DIR / MAP_NAME / f'visual_backup_charger_local_{time.strftime("%Y%m%d_%H%M%S")}'
-    if VISUAL_ROOT.exists():
-        shutil.copytree(VISUAL_ROOT, bak)
-        shutil.rmtree(VISUAL_ROOT / 'keyframes', ignore_errors=True)
-        (VISUAL_ROOT / 'keyframes').mkdir(parents=True, exist_ok=True)
-        print(f'backed up previous visual DB ({n} kf) → {bak}')
+    shutil.copytree(VISUAL_ROOT, bak)
+    shutil.rmtree(VISUAL_ROOT / 'keyframes', ignore_errors=True)
+    (VISUAL_ROOT / 'keyframes').mkdir(parents=True, exist_ok=True)
+    print(f'backed up previous visual DB ({len(kfs)} kf) → {bak}')
 
 
 def write_manifest(node: CaptureNode) -> None:
@@ -585,17 +650,33 @@ def main() -> None:
     rclpy.init()
     node = CaptureNode()
     write_manifest(node)
-    node.spin_wait(2.0)
+    node.spin_wait(1.0)
+    p0 = node.wait_pose(10.0)
     bat = node.battery()
-    print(f'battery={bat} loc={node.loc} pose={node.pose()}')
+    print(f'battery={bat} loc={node.loc} pose={p0}')
+    if p0 is None:
+        print('FAIL: no map→base_link pose; abort capture')
+        node.rgb_req.publish(Bool(data=False))
+        node.destroy_node()
+        rclpy.shutdown()
+        return
+    t_rgb = time.monotonic()
+    while time.monotonic() - t_rgb < 8.0 and len(node.rgb_buf) == 0:
+        node.spin_wait(0.1)
+    print(f'rgb_buf={len(node.rgb_buf)} scan={node.scan is not None}')
     if node.loc != 0:
-        print('WARN: localization_status != 0; continuing with AMCL pose (DB-build allowed)')
+        print('WARN: localization_status != 0; TF/AMCL pose used for DB build only')
 
     log = []
     try:
         for region in REGIONS:
             if node.count >= MAX_KF:
                 break
+            n_have = sum(1 for i in node.idx if i.get('region_id') == region['id'])
+            if n_have >= 4:
+                print(f'skip {region["id"]}: already {n_have} kf')
+                log.append({'event': 'skip_done', 'region': region['id'], 'n': n_have})
+                continue
             bat = node.battery()
             if bat is not None and bat < 18:
                 print(f'STOP: battery {bat}%')

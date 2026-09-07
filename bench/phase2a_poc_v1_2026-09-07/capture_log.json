@@ -1,0 +1,62 @@
+[
+  {
+    "event": "skip_done",
+    "region": "charger_room",
+    "n": 6
+  },
+  {
+    "event": "skip_done",
+    "region": "doorway_wp9",
+    "n": 6
+  },
+  {
+    "event": "skip_done",
+    "region": "corridor_wp2",
+    "n": 6
+  },
+  {
+    "event": "nav",
+    "region": "similar_corridor_wp3",
+    "ok": true
+  },
+  {
+    "event": "poseA",
+    "region": "similar_corridor_wp3",
+    "n": 3
+  },
+  {
+    "event": "poseB",
+    "region": "similar_corridor_wp3",
+    "n": 3
+  },
+  {
+    "event": "nav",
+    "region": "room_wp5",
+    "ok": true
+  },
+  {
+    "event": "poseA",
+    "region": "room_wp5",
+    "n": 3
+  },
+  {
+    "event": "poseB",
+    "region": "room_wp5",
+    "n": 3
+  },
+  {
+    "event": "nav",
+    "region": "open_wp6",
+    "ok": true
+  },
+  {
+    "event": "poseA",
+    "region": "open_wp6",
+    "n": 3
+  },
+  {
+    "event": "poseB",
+    "region": "open_wp6",
+    "n": 3
+  }
+]

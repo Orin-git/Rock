@@ -1,0 +1,3356 @@
+{
+  "n_queries": 37,
+  "n_db": 37,
+  "regions": [
+    "charger_room",
+    "corridor_wp2",
+    "doorway_wp9",
+    "open_wp6",
+    "room_wp5",
+    "similar_corridor_wp3"
+  ],
+  "Hit@1": 0.918918918918919,
+  "Hit@3": 1.0,
+  "Hit@5": 1.0,
+  "counts": {
+    "hit1": 34,
+    "hit3": 37,
+    "hit5": 37
+  },
+  "proceed_laser_e2e": true,
+  "bottleneck": null,
+  "npu_descriptor": false,
+  "note": "LOO; GT=same region_id. Depth unused. No NPU.",
+  "trials": [
+    {
+      "query_id": "kf_000001",
+      "gt_region": "charger_room",
+      "gt_class": "room",
+      "gt_location": "charger_room_A",
+      "gt_pose": {
+        "x": 1.6735034348354858,
+        "y": -0.21234936567941054,
+        "yaw": 1.2549805458301055
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.2726918349999323,
+      "topk": [
+        {
+          "id": "kf_000002",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 1,
+          "visual_score": 0.031,
+          "match_count": 31,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.6707164268315808,
+            "y": -0.21007775689309333,
+            "yaw": 1.9847876484446523
+          }
+        },
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 2,
+          "visual_score": 0.031,
+          "match_count": 31,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 3,
+          "visual_score": 0.02,
+          "match_count": 20,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000011",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 4,
+          "visual_score": 0.017,
+          "match_count": 17,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.22710171178713434,
+            "y": -0.9604572018496615,
+            "yaw": -2.127598873036003
+          }
+        },
+        {
+          "id": "kf_000003",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 5,
+          "visual_score": 0.014,
+          "match_count": 14,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.714512800201392,
+            "y": -0.20602657074652395,
+            "yaw": 2.3206056490988787
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.0
+    },
+    {
+      "query_id": "kf_000002",
+      "gt_region": "charger_room",
+      "gt_class": "room",
+      "gt_location": "charger_room_A",
+      "gt_pose": {
+        "x": 1.6707164268315808,
+        "y": -0.21007775689309333,
+        "yaw": 1.9847876484446523
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.2364009620005163,
+      "topk": [
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 1,
+          "visual_score": 0.261,
+          "match_count": 261,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        },
+        {
+          "id": "kf_000003",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 2,
+          "visual_score": 0.167,
+          "match_count": 167,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.714512800201392,
+            "y": -0.20602657074652395,
+            "yaw": 2.3206056490988787
+          }
+        },
+        {
+          "id": "kf_000005",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 3,
+          "visual_score": 0.038,
+          "match_count": 38,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4596292506100224,
+            "y": 0.10221769351292526,
+            "yaw": 2.4596474601103595
+          }
+        },
+        {
+          "id": "kf_000001",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 4,
+          "visual_score": 0.031,
+          "match_count": 31,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.6735034348354858,
+            "y": -0.21234936567941054,
+            "yaw": 1.2549805458301055
+          }
+        },
+        {
+          "id": "kf_000011",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 5,
+          "visual_score": 0.019,
+          "match_count": 19,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.22710171178713434,
+            "y": -0.9604572018496615,
+            "yaw": -2.127598873036003
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.094
+    },
+    {
+      "query_id": "kf_000003",
+      "gt_region": "charger_room",
+      "gt_class": "room",
+      "gt_location": "charger_room_A",
+      "gt_pose": {
+        "x": 1.714512800201392,
+        "y": -0.20602657074652395,
+        "yaw": 2.3206056490988787
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.25199265199989895,
+      "topk": [
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 1,
+          "visual_score": 0.171,
+          "match_count": 171,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        },
+        {
+          "id": "kf_000002",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 2,
+          "visual_score": 0.14,
+          "match_count": 140,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.6707164268315808,
+            "y": -0.21007775689309333,
+            "yaw": 1.9847876484446523
+          }
+        },
+        {
+          "id": "kf_000005",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 3,
+          "visual_score": 0.123,
+          "match_count": 123,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4596292506100224,
+            "y": 0.10221769351292526,
+            "yaw": 2.4596474601103595
+          }
+        },
+        {
+          "id": "kf_000006",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 4,
+          "visual_score": 0.071,
+          "match_count": 71,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.452783082784515,
+            "y": 0.10038877210736358,
+            "yaw": 2.664704793758465
+          }
+        },
+        {
+          "id": "kf_000011",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 5,
+          "visual_score": 0.018,
+          "match_count": 18,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.22710171178713434,
+            "y": -0.9604572018496615,
+            "yaw": -2.127598873036003
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.031
+    },
+    {
+      "query_id": "kf_000004",
+      "gt_region": "charger_room",
+      "gt_class": "room",
+      "gt_location": "charger_room_B",
+      "gt_pose": {
+        "x": 1.4634783619706548,
+        "y": 0.10246616401101372,
+        "yaw": 1.890679889818991
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.23571611299939832,
+      "topk": [
+        {
+          "id": "kf_000002",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 1,
+          "visual_score": 0.271,
+          "match_count": 271,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.6707164268315808,
+            "y": -0.21007775689309333,
+            "yaw": 1.9847876484446523
+          }
+        },
+        {
+          "id": "kf_000003",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 2,
+          "visual_score": 0.213,
+          "match_count": 213,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.714512800201392,
+            "y": -0.20602657074652395,
+            "yaw": 2.3206056490988787
+          }
+        },
+        {
+          "id": "kf_000005",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 3,
+          "visual_score": 0.055,
+          "match_count": 55,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4596292506100224,
+            "y": 0.10221769351292526,
+            "yaw": 2.4596474601103595
+          }
+        },
+        {
+          "id": "kf_000001",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 4,
+          "visual_score": 0.034,
+          "match_count": 34,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.6735034348354858,
+            "y": -0.21234936567941054,
+            "yaw": 1.2549805458301055
+          }
+        },
+        {
+          "id": "kf_000006",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 5,
+          "visual_score": 0.018,
+          "match_count": 18,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.452783082784515,
+            "y": 0.10038877210736358,
+            "yaw": 2.664704793758465
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.058000000000000024
+    },
+    {
+      "query_id": "kf_000005",
+      "gt_region": "charger_room",
+      "gt_class": "room",
+      "gt_location": "charger_room_B",
+      "gt_pose": {
+        "x": 1.4596292506100224,
+        "y": 0.10221769351292526,
+        "yaw": 2.4596474601103595
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.2451284119997581,
+      "topk": [
+        {
+          "id": "kf_000006",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 1,
+          "visual_score": 0.173,
+          "match_count": 173,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.452783082784515,
+            "y": 0.10038877210736358,
+            "yaw": 2.664704793758465
+          }
+        },
+        {
+          "id": "kf_000003",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 2,
+          "visual_score": 0.115,
+          "match_count": 115,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.714512800201392,
+            "y": -0.20602657074652395,
+            "yaw": 2.3206056490988787
+          }
+        },
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 3,
+          "visual_score": 0.044,
+          "match_count": 44,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        },
+        {
+          "id": "kf_000002",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 4,
+          "visual_score": 0.03,
+          "match_count": 30,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.6707164268315808,
+            "y": -0.21007775689309333,
+            "yaw": 1.9847876484446523
+          }
+        },
+        {
+          "id": "kf_000007",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 5,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.14492601607481603,
+            "y": -0.5379024281484402,
+            "yaw": 2.9115548231341846
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.05799999999999998
+    },
+    {
+      "query_id": "kf_000006",
+      "gt_region": "charger_room",
+      "gt_class": "room",
+      "gt_location": "charger_room_B",
+      "gt_pose": {
+        "x": 1.452783082784515,
+        "y": 0.10038877210736358,
+        "yaw": 2.664704793758465
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.23049282699957985,
+      "topk": [
+        {
+          "id": "kf_000005",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 1,
+          "visual_score": 0.172,
+          "match_count": 172,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4596292506100224,
+            "y": 0.10221769351292526,
+            "yaw": 2.4596474601103595
+          }
+        },
+        {
+          "id": "kf_000003",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 2,
+          "visual_score": 0.075,
+          "match_count": 75,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.714512800201392,
+            "y": -0.20602657074652395,
+            "yaw": 2.3206056490988787
+          }
+        },
+        {
+          "id": "kf_000007",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 3,
+          "visual_score": 0.017,
+          "match_count": 17,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.14492601607481603,
+            "y": -0.5379024281484402,
+            "yaw": 2.9115548231341846
+          }
+        },
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 4,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        },
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 5,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.09699999999999999
+    },
+    {
+      "query_id": "kf_000007",
+      "gt_region": "doorway_wp9",
+      "gt_class": "doorway",
+      "gt_location": "doorway_wp9_A",
+      "gt_pose": {
+        "x": 0.14492601607481603,
+        "y": -0.5379024281484402,
+        "yaw": 2.9115548231341846
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.2293940929994278,
+      "topk": [
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 1,
+          "visual_score": 0.04,
+          "match_count": 40,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 2,
+          "visual_score": 0.037,
+          "match_count": 37,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        },
+        {
+          "id": "kf_000014",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 3,
+          "visual_score": 0.036,
+          "match_count": 36,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.812539260881123,
+            "y": -1.098964613614613,
+            "yaw": -3.074630534761376
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 4,
+          "visual_score": 0.034,
+          "match_count": 34,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 5,
+          "visual_score": 0.03,
+          "match_count": 30,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        }
+      ],
+      "same_region_best_rank": 2,
+      "hit@1": false,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.0030000000000000027
+    },
+    {
+      "query_id": "kf_000008",
+      "gt_region": "doorway_wp9",
+      "gt_class": "doorway",
+      "gt_location": "doorway_wp9_A",
+      "gt_pose": {
+        "x": 0.18248194052864664,
+        "y": -0.5548734480373652,
+        "yaw": -2.5888202189226472
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.2570476430000781,
+      "topk": [
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 1,
+          "visual_score": 0.127,
+          "match_count": 127,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 2,
+          "visual_score": 0.053,
+          "match_count": 53,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 3,
+          "visual_score": 0.046,
+          "match_count": 46,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000009",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 4,
+          "visual_score": 0.044,
+          "match_count": 44,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.18413807039844365,
+            "y": -0.5672063414600098,
+            "yaw": -2.256597004203898
+          }
+        },
+        {
+          "id": "kf_000018",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 5,
+          "visual_score": 0.043,
+          "match_count": 43,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.2730225265356525,
+            "y": -1.298034343363578,
+            "yaw": -2.4618414574129464
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.07400000000000001
+    },
+    {
+      "query_id": "kf_000009",
+      "gt_region": "doorway_wp9",
+      "gt_class": "doorway",
+      "gt_location": "doorway_wp9_A",
+      "gt_pose": {
+        "x": 0.18413807039844365,
+        "y": -0.5672063414600098,
+        "yaw": -2.256597004203898
+      },
+      "query_features": 684,
+      "runtime_sec": 0.2000949210005274,
+      "topk": [
+        {
+          "id": "kf_000018",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 1,
+          "visual_score": 0.08625730994152046,
+          "match_count": 59,
+          "raw_matches": 684,
+          "pose": {
+            "x": -4.2730225265356525,
+            "y": -1.298034343363578,
+            "yaw": -2.4618414574129464
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 2,
+          "visual_score": 0.07894736842105263,
+          "match_count": 54,
+          "raw_matches": 684,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        },
+        {
+          "id": "kf_000011",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 3,
+          "visual_score": 0.059941520467836254,
+          "match_count": 41,
+          "raw_matches": 684,
+          "pose": {
+            "x": -0.22710171178713434,
+            "y": -0.9604572018496615,
+            "yaw": -2.127598873036003
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 4,
+          "visual_score": 0.04239766081871345,
+          "match_count": 29,
+          "raw_matches": 684,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 5,
+          "visual_score": 0.038011695906432746,
+          "match_count": 26,
+          "raw_matches": 684,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        }
+      ],
+      "same_region_best_rank": 2,
+      "hit@1": false,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.007309941520467836
+    },
+    {
+      "query_id": "kf_000010",
+      "gt_region": "doorway_wp9",
+      "gt_class": "doorway",
+      "gt_location": "doorway_wp9_B",
+      "gt_pose": {
+        "x": -0.1564229152600345,
+        "y": -0.9351478359818606,
+        "yaw": -2.7246636264902917
+      },
+      "query_features": 996,
+      "runtime_sec": 0.2633994140005598,
+      "topk": [
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 1,
+          "visual_score": 0.13855421686746988,
+          "match_count": 138,
+          "raw_matches": 996,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 2,
+          "visual_score": 0.04819277108433735,
+          "match_count": 48,
+          "raw_matches": 996,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 3,
+          "visual_score": 0.04116465863453815,
+          "match_count": 41,
+          "raw_matches": 996,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000007",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 4,
+          "visual_score": 0.03313253012048193,
+          "match_count": 33,
+          "raw_matches": 996,
+          "pose": {
+            "x": 0.14492601607481603,
+            "y": -0.5379024281484402,
+            "yaw": 2.9115548231341846
+          }
+        },
+        {
+          "id": "kf_000016",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 5,
+          "visual_score": 0.03313253012048193,
+          "match_count": 33,
+          "raw_matches": 996,
+          "pose": {
+            "x": -4.252729600513347,
+            "y": -1.2766186710384289,
+            "yaw": -3.0868231676673523
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.09036144578313253
+    },
+    {
+      "query_id": "kf_000011",
+      "gt_region": "doorway_wp9",
+      "gt_class": "doorway",
+      "gt_location": "doorway_wp9_B",
+      "gt_pose": {
+        "x": -0.22710171178713434,
+        "y": -0.9604572018496615,
+        "yaw": -2.127598873036003
+      },
+      "query_features": 633,
+      "runtime_sec": 0.2184277579999616,
+      "topk": [
+        {
+          "id": "kf_000012",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 1,
+          "visual_score": 0.07109004739336493,
+          "match_count": 45,
+          "raw_matches": 633,
+          "pose": {
+            "x": -0.24940788552104998,
+            "y": -0.9631676371848721,
+            "yaw": -1.991018123816904
+          }
+        },
+        {
+          "id": "kf_000009",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 2,
+          "visual_score": 0.06951026856240126,
+          "match_count": 44,
+          "raw_matches": 633,
+          "pose": {
+            "x": 0.18413807039844365,
+            "y": -0.5672063414600098,
+            "yaw": -2.256597004203898
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 3,
+          "visual_score": 0.0631911532385466,
+          "match_count": 40,
+          "raw_matches": 633,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 4,
+          "visual_score": 0.0315955766192733,
+          "match_count": 20,
+          "raw_matches": 633,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        },
+        {
+          "id": "kf_000018",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 5,
+          "visual_score": 0.02843601895734597,
+          "match_count": 18,
+          "raw_matches": 633,
+          "pose": {
+            "x": -4.2730225265356525,
+            "y": -1.298034343363578,
+            "yaw": -2.4618414574129464
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.001579778830963663
+    },
+    {
+      "query_id": "kf_000012",
+      "gt_region": "doorway_wp9",
+      "gt_class": "doorway",
+      "gt_location": "doorway_wp9_B",
+      "gt_pose": {
+        "x": -0.24940788552104998,
+        "y": -0.9631676371848721,
+        "yaw": -1.991018123816904
+      },
+      "query_features": 333,
+      "runtime_sec": 0.11955515800036665,
+      "topk": [
+        {
+          "id": "kf_000011",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 1,
+          "visual_score": 0.11411411411411411,
+          "match_count": 38,
+          "raw_matches": 333,
+          "pose": {
+            "x": -0.22710171178713434,
+            "y": -0.9604572018496615,
+            "yaw": -2.127598873036003
+          }
+        },
+        {
+          "id": "kf_000009",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 2,
+          "visual_score": 0.04804804804804805,
+          "match_count": 16,
+          "raw_matches": 333,
+          "pose": {
+            "x": 0.18413807039844365,
+            "y": -0.5672063414600098,
+            "yaw": -2.256597004203898
+          }
+        },
+        {
+          "id": "kf_000018",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 3,
+          "visual_score": 0.04504504504504504,
+          "match_count": 15,
+          "raw_matches": 333,
+          "pose": {
+            "x": -4.2730225265356525,
+            "y": -1.298034343363578,
+            "yaw": -2.4618414574129464
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 4,
+          "visual_score": 0.03003003003003003,
+          "match_count": 10,
+          "raw_matches": 333,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 5,
+          "visual_score": 0.024024024024024024,
+          "match_count": 8,
+          "raw_matches": 333,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.06606606606606606
+    },
+    {
+      "query_id": "kf_000013",
+      "gt_region": "corridor_wp2",
+      "gt_class": "corridor",
+      "gt_location": "corridor_wp2_A",
+      "gt_pose": {
+        "x": -3.822721383127579,
+        "y": -1.0608652474552533,
+        "yaw": 2.4444921074444506
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.23377210900071077,
+      "topk": [
+        {
+          "id": "kf_000014",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 1,
+          "visual_score": 0.057,
+          "match_count": 57,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.812539260881123,
+            "y": -1.098964613614613,
+            "yaw": -3.074630534761376
+          }
+        },
+        {
+          "id": "kf_000016",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 2,
+          "visual_score": 0.02,
+          "match_count": 20,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.252729600513347,
+            "y": -1.2766186710384289,
+            "yaw": -3.0868231676673523
+          }
+        },
+        {
+          "id": "kf_000026",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 3,
+          "visual_score": 0.018,
+          "match_count": 18,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.012238669616762,
+            "y": 3.0762895183428087,
+            "yaw": 0.49701989621448434
+          }
+        },
+        {
+          "id": "kf_000018",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 4,
+          "visual_score": 0.017,
+          "match_count": 17,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.2730225265356525,
+            "y": -1.298034343363578,
+            "yaw": -2.4618414574129464
+          }
+        },
+        {
+          "id": "kf_000003",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 5,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.714512800201392,
+            "y": -0.20602657074652395,
+            "yaw": 2.3206056490988787
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.037000000000000005
+    },
+    {
+      "query_id": "kf_000014",
+      "gt_region": "corridor_wp2",
+      "gt_class": "corridor",
+      "gt_location": "corridor_wp2_A",
+      "gt_pose": {
+        "x": -3.812539260881123,
+        "y": -1.098964613614613,
+        "yaw": -3.074630534761376
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.24847390499962785,
+      "topk": [
+        {
+          "id": "kf_000016",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 1,
+          "visual_score": 0.309,
+          "match_count": 309,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.252729600513347,
+            "y": -1.2766186710384289,
+            "yaw": -3.0868231676673523
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 2,
+          "visual_score": 0.195,
+          "match_count": 195,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000013",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 3,
+          "visual_score": 0.054,
+          "match_count": 54,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.822721383127579,
+            "y": -1.0608652474552533,
+            "yaw": 2.4444921074444506
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 4,
+          "visual_score": 0.053,
+          "match_count": 53,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        },
+        {
+          "id": "kf_000007",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 5,
+          "visual_score": 0.037,
+          "match_count": 37,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.14492601607481603,
+            "y": -0.5379024281484402,
+            "yaw": 2.9115548231341846
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.11399999999999999
+    },
+    {
+      "query_id": "kf_000015",
+      "gt_region": "corridor_wp2",
+      "gt_class": "corridor",
+      "gt_location": "corridor_wp2_A",
+      "gt_pose": {
+        "x": -3.803237755209292,
+        "y": -1.1023196490348977,
+        "yaw": -2.7323655211875164
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.2636662949998936,
+      "topk": [
+        {
+          "id": "kf_000016",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 1,
+          "visual_score": 0.267,
+          "match_count": 267,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.252729600513347,
+            "y": -1.2766186710384289,
+            "yaw": -3.0868231676673523
+          }
+        },
+        {
+          "id": "kf_000014",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 2,
+          "visual_score": 0.22,
+          "match_count": 220,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.812539260881123,
+            "y": -1.098964613614613,
+            "yaw": -3.074630534761376
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 3,
+          "visual_score": 0.125,
+          "match_count": 125,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 4,
+          "visual_score": 0.062,
+          "match_count": 62,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 5,
+          "visual_score": 0.059,
+          "match_count": 59,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.047000000000000014
+    },
+    {
+      "query_id": "kf_000016",
+      "gt_region": "corridor_wp2",
+      "gt_class": "corridor",
+      "gt_location": "corridor_wp2_B",
+      "gt_pose": {
+        "x": -4.252729600513347,
+        "y": -1.2766186710384289,
+        "yaw": -3.0868231676673523
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.24897937500008993,
+      "topk": [
+        {
+          "id": "kf_000014",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 1,
+          "visual_score": 0.325,
+          "match_count": 325,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.812539260881123,
+            "y": -1.098964613614613,
+            "yaw": -3.074630534761376
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 2,
+          "visual_score": 0.24,
+          "match_count": 240,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 3,
+          "visual_score": 0.079,
+          "match_count": 79,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 4,
+          "visual_score": 0.042,
+          "match_count": 42,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 5,
+          "visual_score": 0.037,
+          "match_count": 37,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.08500000000000002
+    },
+    {
+      "query_id": "kf_000017",
+      "gt_region": "corridor_wp2",
+      "gt_class": "corridor",
+      "gt_location": "corridor_wp2_B",
+      "gt_pose": {
+        "x": -4.255146218306157,
+        "y": -1.292517097225166,
+        "yaw": -2.593295126998436
+      },
+      "query_features": 972,
+      "runtime_sec": 0.261247739999817,
+      "topk": [
+        {
+          "id": "kf_000018",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 1,
+          "visual_score": 0.1522633744855967,
+          "match_count": 148,
+          "raw_matches": 972,
+          "pose": {
+            "x": -4.2730225265356525,
+            "y": -1.298034343363578,
+            "yaw": -2.4618414574129464
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 2,
+          "visual_score": 0.13991769547325103,
+          "match_count": 136,
+          "raw_matches": 972,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000016",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 3,
+          "visual_score": 0.10185185185185185,
+          "match_count": 99,
+          "raw_matches": 972,
+          "pose": {
+            "x": -4.252729600513347,
+            "y": -1.2766186710384289,
+            "yaw": -3.0868231676673523
+          }
+        },
+        {
+          "id": "kf_000014",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 4,
+          "visual_score": 0.08024691358024691,
+          "match_count": 78,
+          "raw_matches": 972,
+          "pose": {
+            "x": -3.812539260881123,
+            "y": -1.098964613614613,
+            "yaw": -3.074630534761376
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 5,
+          "visual_score": 0.05246913580246913,
+          "match_count": 51,
+          "raw_matches": 972,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.012345679012345678
+    },
+    {
+      "query_id": "kf_000018",
+      "gt_region": "corridor_wp2",
+      "gt_class": "corridor",
+      "gt_location": "corridor_wp2_B",
+      "gt_pose": {
+        "x": -4.2730225265356525,
+        "y": -1.298034343363578,
+        "yaw": -2.4618414574129464
+      },
+      "query_features": 927,
+      "runtime_sec": 0.2413436590004494,
+      "topk": [
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 1,
+          "visual_score": 0.15426105717367852,
+          "match_count": 143,
+          "raw_matches": 927,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        },
+        {
+          "id": "kf_000009",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 2,
+          "visual_score": 0.05393743257820928,
+          "match_count": 50,
+          "raw_matches": 927,
+          "pose": {
+            "x": 0.18413807039844365,
+            "y": -0.5672063414600098,
+            "yaw": -2.256597004203898
+          }
+        },
+        {
+          "id": "kf_000011",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 3,
+          "visual_score": 0.042071197411003236,
+          "match_count": 39,
+          "raw_matches": 927,
+          "pose": {
+            "x": -0.22710171178713434,
+            "y": -0.9604572018496615,
+            "yaw": -2.127598873036003
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 4,
+          "visual_score": 0.042071197411003236,
+          "match_count": 39,
+          "raw_matches": 927,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 5,
+          "visual_score": 0.03559870550161812,
+          "match_count": 33,
+          "raw_matches": 927,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.10032362459546924
+    },
+    {
+      "query_id": "kf_000019",
+      "gt_region": "similar_corridor_wp3",
+      "gt_class": "visual_similar",
+      "gt_location": "similar_corridor_wp3_A",
+      "gt_pose": {
+        "x": -9.289177221348526,
+        "y": 0.7918620290229708,
+        "yaw": 1.640206998202063
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.23696010000003298,
+      "topk": [
+        {
+          "id": "kf_000026",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 1,
+          "visual_score": 0.027,
+          "match_count": 27,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.012238669616762,
+            "y": 3.0762895183428087,
+            "yaw": 0.49701989621448434
+          }
+        },
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 2,
+          "visual_score": 0.024,
+          "match_count": 24,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 3,
+          "visual_score": 0.019,
+          "match_count": 19,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        },
+        {
+          "id": "kf_000018",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 4,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -4.2730225265356525,
+            "y": -1.298034343363578,
+            "yaw": -2.4618414574129464
+          }
+        },
+        {
+          "id": "kf_000029",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 5,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.012895717953686,
+            "y": 3.555599126114825,
+            "yaw": 1.0725172524382585
+          }
+        }
+      ],
+      "same_region_best_rank": 2,
+      "hit@1": false,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.002999999999999999
+    },
+    {
+      "query_id": "kf_000020",
+      "gt_region": "similar_corridor_wp3",
+      "gt_class": "visual_similar",
+      "gt_location": "similar_corridor_wp3_A",
+      "gt_pose": {
+        "x": -9.152724732358584,
+        "y": 0.9369008880389582,
+        "yaw": 2.669875402783762
+      },
+      "query_features": 992,
+      "runtime_sec": 0.25982087400007003,
+      "topk": [
+        {
+          "id": "kf_000021",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 1,
+          "visual_score": 0.021169354838709676,
+          "match_count": 21,
+          "raw_matches": 992,
+          "pose": {
+            "x": -9.153229820952266,
+            "y": 0.9049912523914944,
+            "yaw": -2.979705058985894
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 2,
+          "visual_score": 0.018145161290322582,
+          "match_count": 18,
+          "raw_matches": 992,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 3,
+          "visual_score": 0.016129032258064516,
+          "match_count": 16,
+          "raw_matches": 992,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        },
+        {
+          "id": "kf_000028",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 4,
+          "visual_score": 0.015120967741935484,
+          "match_count": 15,
+          "raw_matches": 992,
+          "pose": {
+            "x": -8.05968548069111,
+            "y": 3.094141038900275,
+            "yaw": 1.4986464876318495
+          }
+        },
+        {
+          "id": "kf_000007",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 5,
+          "visual_score": 0.01310483870967742,
+          "match_count": 13,
+          "raw_matches": 992,
+          "pose": {
+            "x": 0.14492601607481603,
+            "y": -0.5379024281484402,
+            "yaw": 2.9115548231341846
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.003024193548387094
+    },
+    {
+      "query_id": "kf_000021",
+      "gt_region": "similar_corridor_wp3",
+      "gt_class": "visual_similar",
+      "gt_location": "similar_corridor_wp3_A",
+      "gt_pose": {
+        "x": -9.153229820952266,
+        "y": 0.9049912523914944,
+        "yaw": -2.979705058985894
+      },
+      "query_features": 985,
+      "runtime_sec": 0.23585932400055754,
+      "topk": [
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 1,
+          "visual_score": 0.1847715736040609,
+          "match_count": 182,
+          "raw_matches": 985,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        },
+        {
+          "id": "kf_000022",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 2,
+          "visual_score": 0.14416243654822336,
+          "match_count": 142,
+          "raw_matches": 985,
+          "pose": {
+            "x": -9.169071968797404,
+            "y": 0.8790759262927991,
+            "yaw": -2.516900367292072
+          }
+        },
+        {
+          "id": "kf_000024",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 3,
+          "visual_score": 0.10050761421319797,
+          "match_count": 99,
+          "raw_matches": 985,
+          "pose": {
+            "x": -9.528365337070479,
+            "y": 0.6177585124297112,
+            "yaw": -2.4616307319359367
+          }
+        },
+        {
+          "id": "kf_000025",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 4,
+          "visual_score": 0.04263959390862944,
+          "match_count": 42,
+          "raw_matches": 985,
+          "pose": {
+            "x": -9.536633624740906,
+            "y": 0.604259804680831,
+            "yaw": -2.221587884245773
+          }
+        },
+        {
+          "id": "kf_000020",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 5,
+          "visual_score": 0.04060913705583756,
+          "match_count": 40,
+          "raw_matches": 985,
+          "pose": {
+            "x": -9.152724732358584,
+            "y": 0.9369008880389582,
+            "yaw": 2.669875402783762
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.040609137055837546
+    },
+    {
+      "query_id": "kf_000022",
+      "gt_region": "similar_corridor_wp3",
+      "gt_class": "visual_similar",
+      "gt_location": "similar_corridor_wp3_A",
+      "gt_pose": {
+        "x": -9.169071968797404,
+        "y": 0.8790759262927991,
+        "yaw": -2.516900367292072
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.23777882700051123,
+      "topk": [
+        {
+          "id": "kf_000024",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 1,
+          "visual_score": 0.345,
+          "match_count": 345,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.528365337070479,
+            "y": 0.6177585124297112,
+            "yaw": -2.4616307319359367
+          }
+        },
+        {
+          "id": "kf_000025",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 2,
+          "visual_score": 0.278,
+          "match_count": 278,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.536633624740906,
+            "y": 0.604259804680831,
+            "yaw": -2.221587884245773
+          }
+        },
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 3,
+          "visual_score": 0.167,
+          "match_count": 167,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        },
+        {
+          "id": "kf_000021",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 4,
+          "visual_score": 0.142,
+          "match_count": 142,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.153229820952266,
+            "y": 0.9049912523914944,
+            "yaw": -2.979705058985894
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 5,
+          "visual_score": 0.042,
+          "match_count": 42,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.06699999999999995
+    },
+    {
+      "query_id": "kf_000023",
+      "gt_region": "similar_corridor_wp3",
+      "gt_class": "visual_similar",
+      "gt_location": "similar_corridor_wp3_B",
+      "gt_pose": {
+        "x": -9.51813517081083,
+        "y": 0.6337983715985716,
+        "yaw": -2.9532058821124645
+      },
+      "query_features": 911,
+      "runtime_sec": 0.20982718600043881,
+      "topk": [
+        {
+          "id": "kf_000021",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 1,
+          "visual_score": 0.20197585071350166,
+          "match_count": 184,
+          "raw_matches": 911,
+          "pose": {
+            "x": -9.153229820952266,
+            "y": 0.9049912523914944,
+            "yaw": -2.979705058985894
+          }
+        },
+        {
+          "id": "kf_000022",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 2,
+          "visual_score": 0.16465422612513722,
+          "match_count": 150,
+          "raw_matches": 911,
+          "pose": {
+            "x": -9.169071968797404,
+            "y": 0.8790759262927991,
+            "yaw": -2.516900367292072
+          }
+        },
+        {
+          "id": "kf_000024",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 3,
+          "visual_score": 0.15806805708013172,
+          "match_count": 144,
+          "raw_matches": 911,
+          "pose": {
+            "x": -9.528365337070479,
+            "y": 0.6177585124297112,
+            "yaw": -2.4616307319359367
+          }
+        },
+        {
+          "id": "kf_000025",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 4,
+          "visual_score": 0.09440175631174534,
+          "match_count": 86,
+          "raw_matches": 911,
+          "pose": {
+            "x": -9.536633624740906,
+            "y": 0.604259804680831,
+            "yaw": -2.221587884245773
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 5,
+          "visual_score": 0.04061470911086718,
+          "match_count": 37,
+          "raw_matches": 911,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.03732162458836444
+    },
+    {
+      "query_id": "kf_000024",
+      "gt_region": "similar_corridor_wp3",
+      "gt_class": "visual_similar",
+      "gt_location": "similar_corridor_wp3_B",
+      "gt_pose": {
+        "x": -9.528365337070479,
+        "y": 0.6177585124297112,
+        "yaw": -2.4616307319359367
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.23389636299998529,
+      "topk": [
+        {
+          "id": "kf_000022",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 1,
+          "visual_score": 0.343,
+          "match_count": 343,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.169071968797404,
+            "y": 0.8790759262927991,
+            "yaw": -2.516900367292072
+          }
+        },
+        {
+          "id": "kf_000025",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 2,
+          "visual_score": 0.282,
+          "match_count": 282,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.536633624740906,
+            "y": 0.604259804680831,
+            "yaw": -2.221587884245773
+          }
+        },
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 3,
+          "visual_score": 0.134,
+          "match_count": 134,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        },
+        {
+          "id": "kf_000021",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 4,
+          "visual_score": 0.081,
+          "match_count": 81,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.153229820952266,
+            "y": 0.9049912523914944,
+            "yaw": -2.979705058985894
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 5,
+          "visual_score": 0.034,
+          "match_count": 34,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.061000000000000054
+    },
+    {
+      "query_id": "kf_000025",
+      "gt_region": "similar_corridor_wp3",
+      "gt_class": "visual_similar",
+      "gt_location": "similar_corridor_wp3_B",
+      "gt_pose": {
+        "x": -9.536633624740906,
+        "y": 0.604259804680831,
+        "yaw": -2.221587884245773
+      },
+      "query_features": 997,
+      "runtime_sec": 0.24070431100062706,
+      "topk": [
+        {
+          "id": "kf_000024",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 1,
+          "visual_score": 0.30190571715145437,
+          "match_count": 301,
+          "raw_matches": 997,
+          "pose": {
+            "x": -9.528365337070479,
+            "y": 0.6177585124297112,
+            "yaw": -2.4616307319359367
+          }
+        },
+        {
+          "id": "kf_000022",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 2,
+          "visual_score": 0.2948846539618857,
+          "match_count": 294,
+          "raw_matches": 997,
+          "pose": {
+            "x": -9.169071968797404,
+            "y": 0.8790759262927991,
+            "yaw": -2.516900367292072
+          }
+        },
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 3,
+          "visual_score": 0.08224674022066199,
+          "match_count": 82,
+          "raw_matches": 997,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        },
+        {
+          "id": "kf_000021",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 4,
+          "visual_score": 0.033099297893681046,
+          "match_count": 33,
+          "raw_matches": 997,
+          "pose": {
+            "x": -9.153229820952266,
+            "y": 0.9049912523914944,
+            "yaw": -2.979705058985894
+          }
+        },
+        {
+          "id": "kf_000016",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 5,
+          "visual_score": 0.020060180541624874,
+          "match_count": 20,
+          "raw_matches": 997,
+          "pose": {
+            "x": -4.252729600513347,
+            "y": -1.2766186710384289,
+            "yaw": -3.0868231676673523
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.007021063189568688
+    },
+    {
+      "query_id": "kf_000026",
+      "gt_region": "room_wp5",
+      "gt_class": "room",
+      "gt_location": "room_wp5_A",
+      "gt_pose": {
+        "x": -8.012238669616762,
+        "y": 3.0762895183428087,
+        "yaw": 0.49701989621448434
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.20720125100069708,
+      "topk": [
+        {
+          "id": "kf_000027",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 1,
+          "visual_score": 0.089,
+          "match_count": 89,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.055289479913805,
+            "y": 3.0774047412564567,
+            "yaw": 1.1412852028754161
+          }
+        },
+        {
+          "id": "kf_000029",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 2,
+          "visual_score": 0.05,
+          "match_count": 50,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.012895717953686,
+            "y": 3.555599126114825,
+            "yaw": 1.0725172524382585
+          }
+        },
+        {
+          "id": "kf_000019",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 3,
+          "visual_score": 0.037,
+          "match_count": 37,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.289177221348526,
+            "y": 0.7918620290229708,
+            "yaw": 1.640206998202063
+          }
+        },
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 4,
+          "visual_score": 0.025,
+          "match_count": 25,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        },
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 5,
+          "visual_score": 0.017,
+          "match_count": 17,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.03899999999999999
+    },
+    {
+      "query_id": "kf_000027",
+      "gt_region": "room_wp5",
+      "gt_class": "room",
+      "gt_location": "room_wp5_A",
+      "gt_pose": {
+        "x": -8.055289479913805,
+        "y": 3.0774047412564567,
+        "yaw": 1.1412852028754161
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.25769982499969046,
+      "topk": [
+        {
+          "id": "kf_000028",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 1,
+          "visual_score": 0.316,
+          "match_count": 316,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.05968548069111,
+            "y": 3.094141038900275,
+            "yaw": 1.4986464876318495
+          }
+        },
+        {
+          "id": "kf_000029",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 2,
+          "visual_score": 0.263,
+          "match_count": 263,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.012895717953686,
+            "y": 3.555599126114825,
+            "yaw": 1.0725172524382585
+          }
+        },
+        {
+          "id": "kf_000026",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 3,
+          "visual_score": 0.075,
+          "match_count": 75,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.012238669616762,
+            "y": 3.0762895183428087,
+            "yaw": 0.49701989621448434
+          }
+        },
+        {
+          "id": "kf_000019",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 4,
+          "visual_score": 0.021,
+          "match_count": 21,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.289177221348526,
+            "y": 0.7918620290229708,
+            "yaw": 1.640206998202063
+          }
+        },
+        {
+          "id": "kf_000020",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 5,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.152724732358584,
+            "y": 0.9369008880389582,
+            "yaw": 2.669875402783762
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.05299999999999999
+    },
+    {
+      "query_id": "kf_000028",
+      "gt_region": "room_wp5",
+      "gt_class": "room",
+      "gt_location": "room_wp5_A",
+      "gt_pose": {
+        "x": -8.05968548069111,
+        "y": 3.094141038900275,
+        "yaw": 1.4986464876318495
+      },
+      "query_features": 952,
+      "runtime_sec": 0.23973566299991944,
+      "topk": [
+        {
+          "id": "kf_000027",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 1,
+          "visual_score": 0.3855042016806723,
+          "match_count": 367,
+          "raw_matches": 952,
+          "pose": {
+            "x": -8.055289479913805,
+            "y": 3.0774047412564567,
+            "yaw": 1.1412852028754161
+          }
+        },
+        {
+          "id": "kf_000029",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 2,
+          "visual_score": 0.28361344537815125,
+          "match_count": 270,
+          "raw_matches": 952,
+          "pose": {
+            "x": -8.012895717953686,
+            "y": 3.555599126114825,
+            "yaw": 1.0725172524382585
+          }
+        },
+        {
+          "id": "kf_000030",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 3,
+          "visual_score": 0.045168067226890755,
+          "match_count": 43,
+          "raw_matches": 952,
+          "pose": {
+            "x": -8.030252988587426,
+            "y": 3.5635994682053944,
+            "yaw": 1.594122158978507
+          }
+        },
+        {
+          "id": "kf_000031",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 4,
+          "visual_score": 0.03046218487394958,
+          "match_count": 29,
+          "raw_matches": 952,
+          "pose": {
+            "x": -8.04287475501877,
+            "y": 3.5553446301240967,
+            "yaw": 1.7704257456959192
+          }
+        },
+        {
+          "id": "kf_000004",
+          "region_id": "charger_room",
+          "location_id": "charger_room_B",
+          "rank": 5,
+          "visual_score": 0.009453781512605041,
+          "match_count": 9,
+          "raw_matches": 952,
+          "pose": {
+            "x": 1.4634783619706548,
+            "y": 0.10246616401101372,
+            "yaw": 1.890679889818991
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.10189075630252103
+    },
+    {
+      "query_id": "kf_000029",
+      "gt_region": "room_wp5",
+      "gt_class": "room",
+      "gt_location": "room_wp5_B",
+      "gt_pose": {
+        "x": -8.012895717953686,
+        "y": 3.555599126114825,
+        "yaw": 1.0725172524382585
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.21813112600011664,
+      "topk": [
+        {
+          "id": "kf_000027",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 1,
+          "visual_score": 0.272,
+          "match_count": 272,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.055289479913805,
+            "y": 3.0774047412564567,
+            "yaw": 1.1412852028754161
+          }
+        },
+        {
+          "id": "kf_000028",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 2,
+          "visual_score": 0.245,
+          "match_count": 245,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.05968548069111,
+            "y": 3.094141038900275,
+            "yaw": 1.4986464876318495
+          }
+        },
+        {
+          "id": "kf_000026",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 3,
+          "visual_score": 0.042,
+          "match_count": 42,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.012238669616762,
+            "y": 3.0762895183428087,
+            "yaw": 0.49701989621448434
+          }
+        },
+        {
+          "id": "kf_000030",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 4,
+          "visual_score": 0.015,
+          "match_count": 15,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -8.030252988587426,
+            "y": 3.5635994682053944,
+            "yaw": 1.594122158978507
+          }
+        },
+        {
+          "id": "kf_000019",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 5,
+          "visual_score": 0.014,
+          "match_count": 14,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.289177221348526,
+            "y": 0.7918620290229708,
+            "yaw": 1.640206998202063
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.027000000000000024
+    },
+    {
+      "query_id": "kf_000030",
+      "gt_region": "room_wp5",
+      "gt_class": "room",
+      "gt_location": "room_wp5_B",
+      "gt_pose": {
+        "x": -8.030252988587426,
+        "y": 3.5635994682053944,
+        "yaw": 1.594122158978507
+      },
+      "query_features": 458,
+      "runtime_sec": 0.12177041699942492,
+      "topk": [
+        {
+          "id": "kf_000031",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 1,
+          "visual_score": 0.27729257641921395,
+          "match_count": 127,
+          "raw_matches": 458,
+          "pose": {
+            "x": -8.04287475501877,
+            "y": 3.5553446301240967,
+            "yaw": 1.7704257456959192
+          }
+        },
+        {
+          "id": "kf_000028",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 2,
+          "visual_score": 0.12445414847161572,
+          "match_count": 57,
+          "raw_matches": 458,
+          "pose": {
+            "x": -8.05968548069111,
+            "y": 3.094141038900275,
+            "yaw": 1.4986464876318495
+          }
+        },
+        {
+          "id": "kf_000027",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 3,
+          "visual_score": 0.034934497816593885,
+          "match_count": 16,
+          "raw_matches": 458,
+          "pose": {
+            "x": -8.055289479913805,
+            "y": 3.0774047412564567,
+            "yaw": 1.1412852028754161
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 4,
+          "visual_score": 0.026200873362445413,
+          "match_count": 12,
+          "raw_matches": 458,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000037",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 5,
+          "visual_score": 0.026200873362445413,
+          "match_count": 12,
+          "raw_matches": 458,
+          "pose": {
+            "x": -0.6016968828431715,
+            "y": 9.69059117458052,
+            "yaw": 0.7111001821286956
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.15283842794759822
+    },
+    {
+      "query_id": "kf_000031",
+      "gt_region": "room_wp5",
+      "gt_class": "room",
+      "gt_location": "room_wp5_B",
+      "gt_pose": {
+        "x": -8.04287475501877,
+        "y": 3.5553446301240967,
+        "yaw": 1.7704257456959192
+      },
+      "query_features": 513,
+      "runtime_sec": 0.13907131399992068,
+      "topk": [
+        {
+          "id": "kf_000030",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 1,
+          "visual_score": 0.19298245614035087,
+          "match_count": 99,
+          "raw_matches": 513,
+          "pose": {
+            "x": -8.030252988587426,
+            "y": 3.5635994682053944,
+            "yaw": 1.594122158978507
+          }
+        },
+        {
+          "id": "kf_000028",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 2,
+          "visual_score": 0.07602339181286549,
+          "match_count": 39,
+          "raw_matches": 513,
+          "pose": {
+            "x": -8.05968548069111,
+            "y": 3.094141038900275,
+            "yaw": 1.4986464876318495
+          }
+        },
+        {
+          "id": "kf_000027",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_A",
+          "rank": 3,
+          "visual_score": 0.031189083820662766,
+          "match_count": 16,
+          "raw_matches": 513,
+          "pose": {
+            "x": -8.055289479913805,
+            "y": 3.0774047412564567,
+            "yaw": 1.1412852028754161
+          }
+        },
+        {
+          "id": "kf_000010",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 4,
+          "visual_score": 0.029239766081871343,
+          "match_count": 15,
+          "raw_matches": 513,
+          "pose": {
+            "x": -0.1564229152600345,
+            "y": -0.9351478359818606,
+            "yaw": -2.7246636264902917
+          }
+        },
+        {
+          "id": "kf_000029",
+          "region_id": "room_wp5",
+          "location_id": "room_wp5_B",
+          "rank": 5,
+          "visual_score": 0.021442495126705652,
+          "match_count": 11,
+          "raw_matches": 513,
+          "pose": {
+            "x": -8.012895717953686,
+            "y": 3.555599126114825,
+            "yaw": 1.0725172524382585
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.11695906432748537
+    },
+    {
+      "query_id": "kf_000032",
+      "gt_region": "open_wp6",
+      "gt_class": "open",
+      "gt_location": "open_wp6_A",
+      "gt_pose": {
+        "x": -0.9791074801775963,
+        "y": 9.439862526445694,
+        "yaw": -0.6420369136546578
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.29676976300015667,
+      "topk": [
+        {
+          "id": "kf_000033",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 1,
+          "visual_score": 0.036,
+          "match_count": 36,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.9803887847192936,
+            "y": 9.463341783972615,
+            "yaw": 0.14077717620548974
+          }
+        },
+        {
+          "id": "kf_000011",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_B",
+          "rank": 2,
+          "visual_score": 0.015,
+          "match_count": 15,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.22710171178713434,
+            "y": -0.9604572018496615,
+            "yaw": -2.127598873036003
+          }
+        },
+        {
+          "id": "kf_000001",
+          "region_id": "charger_room",
+          "location_id": "charger_room_A",
+          "rank": 3,
+          "visual_score": 0.013,
+          "match_count": 13,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 1.6735034348354858,
+            "y": -0.21234936567941054,
+            "yaw": 1.2549805458301055
+          }
+        },
+        {
+          "id": "kf_000008",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 4,
+          "visual_score": 0.013,
+          "match_count": 13,
+          "raw_matches": 1000,
+          "pose": {
+            "x": 0.18248194052864664,
+            "y": -0.5548734480373652,
+            "yaw": -2.5888202189226472
+          }
+        },
+        {
+          "id": "kf_000021",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_A",
+          "rank": 5,
+          "visual_score": 0.012,
+          "match_count": 12,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -9.153229820952266,
+            "y": 0.9049912523914944,
+            "yaw": -2.979705058985894
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.020999999999999998
+    },
+    {
+      "query_id": "kf_000033",
+      "gt_region": "open_wp6",
+      "gt_class": "open",
+      "gt_location": "open_wp6_A",
+      "gt_pose": {
+        "x": -0.9803887847192936,
+        "y": 9.463341783972615,
+        "yaw": 0.14077717620548974
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.2345785870002146,
+      "topk": [
+        {
+          "id": "kf_000034",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 1,
+          "visual_score": 0.143,
+          "match_count": 143,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.9951951945390825,
+            "y": 9.4686814478489,
+            "yaw": 0.45368198247813973
+          }
+        },
+        {
+          "id": "kf_000035",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 2,
+          "visual_score": 0.129,
+          "match_count": 129,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.6025819542093194,
+            "y": 9.661359398194646,
+            "yaw": 0.03178470310328413
+          }
+        },
+        {
+          "id": "kf_000032",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 3,
+          "visual_score": 0.046,
+          "match_count": 46,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.9791074801775963,
+            "y": 9.439862526445694,
+            "yaw": -0.6420369136546578
+          }
+        },
+        {
+          "id": "kf_000036",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 4,
+          "visual_score": 0.018,
+          "match_count": 18,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.6108922569606721,
+            "y": 9.679554473992807,
+            "yaw": 0.49934720593124304
+          }
+        },
+        {
+          "id": "kf_000037",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 5,
+          "visual_score": 0.016,
+          "match_count": 16,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.6016968828431715,
+            "y": 9.69059117458052,
+            "yaw": 0.7111001821286956
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.013999999999999985
+    },
+    {
+      "query_id": "kf_000034",
+      "gt_region": "open_wp6",
+      "gt_class": "open",
+      "gt_location": "open_wp6_A",
+      "gt_pose": {
+        "x": -0.9951951945390825,
+        "y": 9.4686814478489,
+        "yaw": 0.45368198247813973
+      },
+      "query_features": 972,
+      "runtime_sec": 0.25750090400015324,
+      "topk": [
+        {
+          "id": "kf_000033",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 1,
+          "visual_score": 0.16152263374485595,
+          "match_count": 157,
+          "raw_matches": 972,
+          "pose": {
+            "x": -0.9803887847192936,
+            "y": 9.463341783972615,
+            "yaw": 0.14077717620548974
+          }
+        },
+        {
+          "id": "kf_000035",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 2,
+          "visual_score": 0.15946502057613168,
+          "match_count": 155,
+          "raw_matches": 972,
+          "pose": {
+            "x": -0.6025819542093194,
+            "y": 9.661359398194646,
+            "yaw": 0.03178470310328413
+          }
+        },
+        {
+          "id": "kf_000036",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 3,
+          "visual_score": 0.14609053497942387,
+          "match_count": 142,
+          "raw_matches": 972,
+          "pose": {
+            "x": -0.6108922569606721,
+            "y": 9.679554473992807,
+            "yaw": 0.49934720593124304
+          }
+        },
+        {
+          "id": "kf_000037",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 4,
+          "visual_score": 0.05555555555555555,
+          "match_count": 54,
+          "raw_matches": 972,
+          "pose": {
+            "x": -0.6016968828431715,
+            "y": 9.69059117458052,
+            "yaw": 0.7111001821286956
+          }
+        },
+        {
+          "id": "kf_000017",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_B",
+          "rank": 5,
+          "visual_score": 0.01131687242798354,
+          "match_count": 11,
+          "raw_matches": 972,
+          "pose": {
+            "x": -4.255146218306157,
+            "y": -1.292517097225166,
+            "yaw": -2.593295126998436
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.0020576131687242705
+    },
+    {
+      "query_id": "kf_000035",
+      "gt_region": "open_wp6",
+      "gt_class": "open",
+      "gt_location": "open_wp6_B",
+      "gt_pose": {
+        "x": -0.6025819542093194,
+        "y": 9.661359398194646,
+        "yaw": 0.03178470310328413
+      },
+      "query_features": 1000,
+      "runtime_sec": 0.25161201899936714,
+      "topk": [
+        {
+          "id": "kf_000033",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 1,
+          "visual_score": 0.144,
+          "match_count": 144,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.9803887847192936,
+            "y": 9.463341783972615,
+            "yaw": 0.14077717620548974
+          }
+        },
+        {
+          "id": "kf_000034",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 2,
+          "visual_score": 0.144,
+          "match_count": 144,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.9951951945390825,
+            "y": 9.4686814478489,
+            "yaw": 0.45368198247813973
+          }
+        },
+        {
+          "id": "kf_000036",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 3,
+          "visual_score": 0.086,
+          "match_count": 86,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.6108922569606721,
+            "y": 9.679554473992807,
+            "yaw": 0.49934720593124304
+          }
+        },
+        {
+          "id": "kf_000037",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 4,
+          "visual_score": 0.031,
+          "match_count": 31,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -0.6016968828431715,
+            "y": 9.69059117458052,
+            "yaw": 0.7111001821286956
+          }
+        },
+        {
+          "id": "kf_000015",
+          "region_id": "corridor_wp2",
+          "location_id": "corridor_wp2_A",
+          "rank": 5,
+          "visual_score": 0.011,
+          "match_count": 11,
+          "raw_matches": 1000,
+          "pose": {
+            "x": -3.803237755209292,
+            "y": -1.1023196490348977,
+            "yaw": -2.7323655211875164
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.0
+    },
+    {
+      "query_id": "kf_000036",
+      "gt_region": "open_wp6",
+      "gt_class": "open",
+      "gt_location": "open_wp6_B",
+      "gt_pose": {
+        "x": -0.6108922569606721,
+        "y": 9.679554473992807,
+        "yaw": 0.49934720593124304
+      },
+      "query_features": 946,
+      "runtime_sec": 0.22808739599986438,
+      "topk": [
+        {
+          "id": "kf_000034",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 1,
+          "visual_score": 0.18816067653276955,
+          "match_count": 178,
+          "raw_matches": 946,
+          "pose": {
+            "x": -0.9951951945390825,
+            "y": 9.4686814478489,
+            "yaw": 0.45368198247813973
+          }
+        },
+        {
+          "id": "kf_000037",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 2,
+          "visual_score": 0.12896405919661733,
+          "match_count": 122,
+          "raw_matches": 946,
+          "pose": {
+            "x": -0.6016968828431715,
+            "y": 9.69059117458052,
+            "yaw": 0.7111001821286956
+          }
+        },
+        {
+          "id": "kf_000035",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 3,
+          "visual_score": 0.09408033826638477,
+          "match_count": 89,
+          "raw_matches": 946,
+          "pose": {
+            "x": -0.6025819542093194,
+            "y": 9.661359398194646,
+            "yaw": 0.03178470310328413
+          }
+        },
+        {
+          "id": "kf_000033",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 4,
+          "visual_score": 0.04334038054968287,
+          "match_count": 41,
+          "raw_matches": 946,
+          "pose": {
+            "x": -0.9803887847192936,
+            "y": 9.463341783972615,
+            "yaw": 0.14077717620548974
+          }
+        },
+        {
+          "id": "kf_000023",
+          "region_id": "similar_corridor_wp3",
+          "location_id": "similar_corridor_wp3_B",
+          "rank": 5,
+          "visual_score": 0.013742071881606765,
+          "match_count": 13,
+          "raw_matches": 946,
+          "pose": {
+            "x": -9.51813517081083,
+            "y": 0.6337983715985716,
+            "yaw": -2.9532058821124645
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.059196617336152224
+    },
+    {
+      "query_id": "kf_000037",
+      "gt_region": "open_wp6",
+      "gt_class": "open",
+      "gt_location": "open_wp6_B",
+      "gt_pose": {
+        "x": -0.6016968828431715,
+        "y": 9.69059117458052,
+        "yaw": 0.7111001821286956
+      },
+      "query_features": 839,
+      "runtime_sec": 0.233891986999879,
+      "topk": [
+        {
+          "id": "kf_000036",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 1,
+          "visual_score": 0.17163289630512515,
+          "match_count": 144,
+          "raw_matches": 839,
+          "pose": {
+            "x": -0.6108922569606721,
+            "y": 9.679554473992807,
+            "yaw": 0.49934720593124304
+          }
+        },
+        {
+          "id": "kf_000034",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 2,
+          "visual_score": 0.10131108462455304,
+          "match_count": 85,
+          "raw_matches": 839,
+          "pose": {
+            "x": -0.9951951945390825,
+            "y": 9.4686814478489,
+            "yaw": 0.45368198247813973
+          }
+        },
+        {
+          "id": "kf_000035",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_B",
+          "rank": 3,
+          "visual_score": 0.04052443384982122,
+          "match_count": 34,
+          "raw_matches": 839,
+          "pose": {
+            "x": -0.6025819542093194,
+            "y": 9.661359398194646,
+            "yaw": 0.03178470310328413
+          }
+        },
+        {
+          "id": "kf_000009",
+          "region_id": "doorway_wp9",
+          "location_id": "doorway_wp9_A",
+          "rank": 4,
+          "visual_score": 0.021454112038140644,
+          "match_count": 18,
+          "raw_matches": 839,
+          "pose": {
+            "x": 0.18413807039844365,
+            "y": -0.5672063414600098,
+            "yaw": -2.256597004203898
+          }
+        },
+        {
+          "id": "kf_000033",
+          "region_id": "open_wp6",
+          "location_id": "open_wp6_A",
+          "rank": 5,
+          "visual_score": 0.021454112038140644,
+          "match_count": 18,
+          "raw_matches": 839,
+          "pose": {
+            "x": -0.9803887847192936,
+            "y": 9.463341783972615,
+            "yaw": 0.14077717620548974
+          }
+        }
+      ],
+      "same_region_best_rank": 1,
+      "hit@1": true,
+      "hit@3": true,
+      "hit@5": true,
+      "top1_top2_margin": 0.07032181168057211
+    }
+  ]
+}

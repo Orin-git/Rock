@@ -1,0 +1,78 @@
+[INFO] [1788779012.130430713] [phase2b_amcl_handoff_validate]: Phase2B handoff debug n=10
+[INFO] [1788779012.133189650] [phase2b_amcl_handoff_validate]: === trial 1/10 doorway_wp9_A ===
+[WARN] [1788779013.990891245] [phase2b_amcl_handoff_validate]: no physical prior; weak doorway seed for setup only
+[INFO] [1788779013.991606136] [phase2b_amcl_handoff_validate]: setup re-seed at physical prior (0.00,-0.60) — not destination
+[INFO] [1788779016.516535359] [phase2b_amcl_handoff_validate]: nav → doorway_wp9_A (0.01,-0.58)
+{"trial": "doorway_wp9_A", "decision": null, "ready": null, "fa": null, "nav": null, "final_xy": null, "cand_xy": null, "aborted": "goto_failed"}
+[INFO] [1788779136.832650885] [phase2b_amcl_handoff_validate]: === trial 2/10 doorway_wp9_B ===
+[INFO] [1788779137.361767441] [phase2b_amcl_handoff_validate]: nav → doorway_wp9_B (0.01,-0.58)
+[INFO] [1788779168.054906533] [phase2b_amcl_handoff_validate]: nav → doorway_wp9_B_nav (-1.35,-0.82)
+[INFO] [1788779181.744385446] [phase2b_amcl_handoff_validate]: nav → doorway_wp9_B_return (-0.45,-0.85)
+[WARN] [1788779186.879189639] [phase2b_amcl_handoff_validate]: doorway_wp9_B_return: nav fail goal failed/aborted
+{"trial": "doorway_wp9_B", "decision": "ACCEPT", "ready": true, "fa": false, "nav": true, "final_xy": 0.3648334914527605, "cand_xy": 0.37100020370665776, "aborted": null}
+[INFO] [1788779186.907870161] [phase2b_amcl_handoff_validate]: === trial 3/10 corridor_wp2_A ===
+[INFO] [1788779187.435696062] [phase2b_amcl_handoff_validate]: nav → corridor_wp2_A (-4.08,-0.94)
+{"trial": "corridor_wp2_A", "decision": "ACCEPT", "ready": false, "fa": false, "nav": null, "final_xy": null, "cand_xy": 0.1253477425978586, "aborted": null}
+[INFO] [1788779234.039332312] [phase2b_amcl_handoff_validate]: === trial 4/10 corridor_wp2_B ===
+[INFO] [1788779234.573368520] [phase2b_amcl_handoff_validate]: corridor_wp2_B: already near
+[INFO] [1788779255.706449808] [phase2b_amcl_handoff_validate]: nav → corridor_wp2_B_nav (-4.78,-1.10)
+[INFO] [1788779260.072581253] [phase2b_amcl_handoff_validate]: nav → corridor_wp2_B_return (-3.90,-0.92)
+[WARN] [1788779263.281679943] [phase2b_amcl_handoff_validate]: corridor_wp2_B_return: nav fail goal failed/aborted
+{"trial": "corridor_wp2_B", "decision": "ACCEPT", "ready": true, "fa": false, "nav": true, "final_xy": 0.18850414774178056, "cand_xy": 0.1830563647902425, "aborted": null}
+[INFO] [1788779263.322424070] [phase2b_amcl_handoff_validate]: === trial 5/10 similar_corridor_wp3_A ===
+[INFO] [1788779263.841743321] [phase2b_amcl_handoff_validate]: setup re-seed at physical prior (-4.05,-1.03) — not destination
+[INFO] [1788779265.369436767] [phase2b_amcl_handoff_validate]: nav → similar_corridor_wp3_A (-9.21,1.19)
+[WARN] [1788779265.640023785] [phase2b_amcl_handoff_validate]: similar_corridor_wp3_A: nav fail goal failed/aborted
+{"trial": "similar_corridor_wp3_A", "decision": null, "ready": null, "fa": null, "nav": null, "final_xy": null, "cand_xy": null, "aborted": "goto_failed"}
+[INFO] [1788779265.652398314] [phase2b_amcl_handoff_validate]: === trial 6/10 similar_corridor_wp3_B ===
+[INFO] [1788779266.178788307] [phase2b_amcl_handoff_validate]: nav → similar_corridor_wp3_B (-9.21,1.19)
+[WARN] [1788779266.360507446] [phase2b_amcl_handoff_validate]: similar_corridor_wp3_B: nav fail goal failed/aborted
+{"trial": "similar_corridor_wp3_B", "decision": null, "ready": null, "fa": null, "nav": null, "final_xy": null, "cand_xy": null, "aborted": "goto_failed"}
+[INFO] [1788779266.363174798] [phase2b_amcl_handoff_validate]: === trial 7/10 room_wp5_A ===
+[INFO] [1788779266.871505551] [phase2b_amcl_handoff_validate]: nav → room_wp5_A (-7.87,3.25)
+[WARN] [1788779269.272691525] [phase2b_amcl_handoff_validate]: room_wp5_A: nav fail goal failed/aborted
+{"trial": "room_wp5_A", "decision": null, "ready": null, "fa": null, "nav": null, "final_xy": null, "cand_xy": null, "aborted": "goto_failed"}
+[INFO] [1788779269.279721142] [phase2b_amcl_handoff_validate]: === trial 8/10 room_wp5_B ===
+[INFO] [1788779269.829465996] [phase2b_amcl_handoff_validate]: nav → room_wp5_B (-7.87,3.25)
+[WARN] [1788779270.068815393] [phase2b_amcl_handoff_validate]: room_wp5_B: nav fail goal failed/aborted
+{"trial": "room_wp5_B", "decision": null, "ready": null, "fa": null, "nav": null, "final_xy": null, "cand_xy": null, "aborted": "goto_failed"}
+[INFO] [1788779270.071278573] [phase2b_amcl_handoff_validate]: === trial 9/10 open_wp6_A ===
+[INFO] [1788779270.595425891] [phase2b_amcl_handoff_validate]: nav → open_wp6_A (-0.75,9.39)
+[WARN] [1788779271.016177670] [phase2b_amcl_handoff_validate]: open_wp6_A: nav fail goal failed/aborted
+{"trial": "open_wp6_A", "decision": null, "ready": null, "fa": null, "nav": null, "final_xy": null, "cand_xy": null, "aborted": "goto_failed"}
+[INFO] [1788779271.021423121] [phase2b_amcl_handoff_validate]: === trial 10/10 open_wp6_B ===
+[INFO] [1788779271.578184467] [phase2b_amcl_handoff_validate]: nav → open_wp6_B (-0.75,9.39)
+[WARN] [1788779271.793193439] [phase2b_amcl_handoff_validate]: open_wp6_B: nav fail goal failed/aborted
+{"trial": "open_wp6_B", "decision": null, "ready": null, "fa": null, "nav": null, "final_xy": null, "cand_xy": null, "aborted": "goto_failed"}
+{
+  "out": "/ros2_ws/bench/phase2b_amcl_handoff_2026-09-07/handoff_debug10.json",
+  "stats": {
+    "n_trials": 10,
+    "aborted": 7,
+    "active": 3,
+    "reloc_ACCEPT": 3,
+    "reloc_UNKNOWN": 0,
+    "amcl_ready": 2,
+    "amcl_timeout": 1,
+    "false_handoff": 0,
+    "wrong_convergence": 0,
+    "amcl_convergence_success_rate": 0.6666666666666666,
+    "nav_trials": 2,
+    "nav_success": 2,
+    "nav_success_rate": 1.0,
+    "reloc_wall_p50": 23.233828655000252,
+    "reloc_wall_p95": 31.160561856499772,
+    "amcl_conv_p50": 2.950885534286499,
+    "amcl_conv_p95": 3.2762653827667236,
+    "cand_to_amcl_dxy_p50": 0.0206853098747746,
+    "final_error_xy_p50": 0.2766688195972705,
+    "final_error_xy_p95": 0.3560170242672115
+  },
+  "gate": {
+    "pass": false,
+    "false_handoff": 0,
+    "amcl_convergence_success_rate": 0.6666666666666666,
+    "nav_success_rate": 1.0,
+    "require": "FA=0, AMCL\u226590%, Nav\u226590%"
+  }
+}

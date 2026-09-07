@@ -1,0 +1,31 @@
+{
+  "mode": "debug",
+  "validator": "lite_v1",
+  "allow_amcl_handoff": true,
+  "per_region": 2,
+  "cool_after_reloc_sec": 8.0,
+  "cool_after_region_sec": 12.0,
+  "stop_reason": null,
+  "stats": {
+    "n": 0,
+    "aborted": 0,
+    "ACCEPT": 0,
+    "UNKNOWN": 0,
+    "amcl_ready": 0,
+    "amcl_timeout": 0,
+    "false_handoff": 0,
+    "amcl_success_rate": null,
+    "nav_success_rate": null,
+    "reloc_wall_p50": null,
+    "reloc_wall_p95": null,
+    "amcl_conv_p50": null,
+    "amcl_conv_p95": null
+  },
+  "debug_gate": {
+    "pass": false,
+    "false_handoff": 0,
+    "amcl_success_rate": null,
+    "nav_success_rate": null
+  },
+  "trials": []
+}

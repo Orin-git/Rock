@@ -1,0 +1,17 @@
+{
+  "count": 37,
+  "last": {
+    "id": "kf_000037",
+    "pose": {
+      "x": -0.6016968828431715,
+      "y": 9.69059117458052,
+      "yaw": 0.7111001821286956
+    },
+    "retrieval_ready": true,
+    "geometry_ready": false,
+    "orb_features": 841,
+    "region_id": "open_wp6",
+    "region_class": "open",
+    "location_id": "open_wp6_B"
+  }
+}

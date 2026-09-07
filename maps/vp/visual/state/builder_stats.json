@@ -1,16 +1,31 @@
 {
-  "keyframe_count": 12,
-  "retrieval_ready": 12,
-  "geometry_ready": 0,
-  "disk_bytes": 1621367,
+  "keyframe_count": 37,
+  "retrieval_ready": 37,
+  "geometry_ready": 14,
+  "disk_bytes": 6630089,
+  "regions": {
+    "charger_room": 6,
+    "doorway_wp9": 6,
+    "corridor_wp2": 6,
+    "similar_corridor_wp3": 7,
+    "room_wp5": 6,
+    "open_wp6": 6
+  },
   "orb_features": {
-    "mean": 1000.0,
-    "p10": 1000.0,
+    "mean": 921.6756756756756,
+    "p10": 668.2,
     "p90": 1000.0
   },
-  "orb_depth_coverage_mean": 0.0005,
+  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
   "map_coverage": {
-    "note": "single region charger_local \u2014 operator multi-region pending"
-  },
-  "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f"
+    "n_regions": 6,
+    "region_ids": [
+      "charger_room",
+      "doorway_wp9",
+      "corridor_wp2",
+      "similar_corridor_wp3",
+      "room_wp5",
+      "open_wp6"
+    ]
+  }
 }

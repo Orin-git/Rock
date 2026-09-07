@@ -1,0 +1,559 @@
+{
+  "source": "/ros2_ws/bench/phase2a_poc_v1_2026-09-07/laser_dryrun_debug.json",
+  "accept_policy": "pose_cluster_v1",
+  "missing_fields_note": "valid_beams/matched_ratio/mean/P90 absent in prior debug JSON; absolute gate uses laser_score + refine dx/dy/dyaw + legacy reason. Sufficient for SE(2) clustering.",
+  "params": {
+    "cluster_xy_m": 0.25,
+    "cluster_yaw_rad": 0.10471975511965978,
+    "cluster_min_score_margin": 0.03,
+    "min_laser_score": 0.45
+  },
+  "stats": {
+    "n": 10,
+    "old_ACCEPT": 0,
+    "old_UNKNOWN": 10,
+    "new_ACCEPT": 7,
+    "new_UNKNOWN": 3,
+    "Correct_Accept": 7,
+    "False_Accept": 0,
+    "poc_quality_accepts": 7,
+    "decision_flips": 7,
+    "Correct_Accept_rate": 0.7,
+    "UNKNOWN_rate": 0.3
+  },
+  "trials": [
+    {
+      "query_id": "kf_000007",
+      "gt_region": "doorway_wp9",
+      "gt": [
+        0.14492601607481603,
+        -0.5379024281484402,
+        2.9115548231341846
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "ACCEPT",
+      "new_reason": "best_cluster_ok",
+      "refined_pose": [
+        0.19357708473996543,
+        -0.5351478359818598,
+        2.94765644249128
+      ],
+      "position_error": 0.048728987884679775,
+      "yaw_error": 0.03610161935709533,
+      "laser_score": 0.629092315641721,
+      "cluster_count": 1,
+      "cluster_support": 1,
+      "best_cluster_score": 0.629092315641721,
+      "second_cluster_score": null,
+      "cluster_margin": 0.629092315641721,
+      "false_accept": false,
+      "poc_quality_ok": true,
+      "cluster_accept": {
+        "status": "ACCEPT",
+        "reason": "best_cluster_ok",
+        "cluster_margin": 0.629092315641721,
+        "cluster_count": 1,
+        "best_cluster": {
+          "cluster_id": 0,
+          "center": [
+            0.19357708473996543,
+            -0.5351478359818598,
+            2.94765644249128
+          ],
+          "best_laser_score": 0.629092315641721,
+          "median_laser_score": 0.629092315641721,
+          "support_count": 1,
+          "member_ids": [
+            "kf_000010"
+          ],
+          "member_regions": [
+            "doorway_wp9"
+          ],
+          "visual_ranks": [
+            5
+          ],
+          "pose_spread_xy_m": 0.0,
+          "pose_spread_yaw_rad": 0.0
+        },
+        "second_cluster": null,
+        "survivor_count": 1,
+        "rejected_count": 4
+      }
+    },
+    {
+      "query_id": "kf_000008",
+      "gt_region": "doorway_wp9",
+      "gt": [
+        0.18248194052864664,
+        -0.5548734480373652,
+        -2.5888202189226472
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "ACCEPT",
+      "new_reason": "best_cluster_ok",
+      "refined_pose": [
+        0.2841380703984435,
+        -0.5172063414600092,
+        -2.605662854602765
+      ],
+      "position_error": 0.10841023779152457,
+      "yaw_error": 0.0168426356801179,
+      "laser_score": 0.5521986703622649,
+      "cluster_count": 1,
+      "cluster_support": 2,
+      "best_cluster_score": 0.5521986703622649,
+      "second_cluster_score": null,
+      "cluster_margin": 0.5521986703622649,
+      "false_accept": false,
+      "poc_quality_ok": true,
+      "cluster_accept": {
+        "status": "ACCEPT",
+        "reason": "best_cluster_ok",
+        "cluster_margin": 0.5521986703622649,
+        "cluster_count": 1,
+        "best_cluster": {
+          "cluster_id": 0,
+          "center": [
+            0.2841380703984435,
+            -0.5172063414600092,
+            -2.605662854602765
+          ],
+          "best_laser_score": 0.5521986703622649,
+          "median_laser_score": 0.5518162857353417,
+          "support_count": 2,
+          "member_ids": [
+            "kf_000009",
+            "kf_000010"
+          ],
+          "member_regions": [
+            "doorway_wp9"
+          ],
+          "visual_ranks": [
+            4,
+            1
+          ],
+          "pose_spread_xy_m": 0.06753328216060715,
+          "pose_spread_yaw_rad": 0.0031722757520737943
+        },
+        "second_cluster": null,
+        "survivor_count": 2,
+        "rejected_count": 3
+      }
+    },
+    {
+      "query_id": "kf_000013",
+      "gt_region": "corridor_wp2",
+      "gt": [
+        -3.822721383127579,
+        -1.0608652474552533,
+        2.4444921074444506
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "UNKNOWN",
+      "new_reason": "no_survivor",
+      "refined_pose": null,
+      "position_error": null,
+      "yaw_error": null,
+      "laser_score": null,
+      "cluster_count": 0,
+      "cluster_support": 0,
+      "best_cluster_score": null,
+      "second_cluster_score": null,
+      "cluster_margin": 0.0,
+      "false_accept": false,
+      "poc_quality_ok": false,
+      "cluster_accept": {
+        "status": "UNKNOWN",
+        "reason": "no_survivor",
+        "cluster_margin": 0.0,
+        "cluster_count": 0,
+        "best_cluster": null,
+        "second_cluster": null,
+        "survivor_count": 0,
+        "rejected_count": 5
+      }
+    },
+    {
+      "query_id": "kf_000014",
+      "gt_region": "corridor_wp2",
+      "gt": [
+        -3.812539260881123,
+        -1.098964613614613,
+        -3.074630534761376
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "ACCEPT",
+      "new_reason": "best_cluster_ok",
+      "refined_pose": [
+        -4.0051462183061615,
+        -1.0925170972251648,
+        3.1313848195429648
+      ],
+      "position_error": 0.1927148424904599,
+      "yaw_error": 0.07716995287524522,
+      "laser_score": 0.6246613522779528,
+      "cluster_count": 1,
+      "cluster_support": 4,
+      "best_cluster_score": 0.6246613522779528,
+      "second_cluster_score": null,
+      "cluster_margin": 0.6246613522779528,
+      "false_accept": false,
+      "poc_quality_ok": true,
+      "cluster_accept": {
+        "status": "ACCEPT",
+        "reason": "best_cluster_ok",
+        "cluster_margin": 0.6246613522779528,
+        "cluster_count": 1,
+        "best_cluster": {
+          "cluster_id": 0,
+          "center": [
+            -4.0051462183061615,
+            -1.0925170972251648,
+            3.1313848195429648
+          ],
+          "best_laser_score": 0.6246613522779528,
+          "median_laser_score": 0.6201809629773389,
+          "support_count": 4,
+          "member_ids": [
+            "kf_000017",
+            "kf_000016",
+            "kf_000015",
+            "kf_000013"
+          ],
+          "member_regions": [
+            "corridor_wp2"
+          ],
+          "visual_ranks": [
+            4,
+            1,
+            2,
+            3
+          ],
+          "pose_spread_xy_m": 0.03965475215365865,
+          "pose_spread_yaw_rad": 0.07602747390050313
+        },
+        "second_cluster": null,
+        "survivor_count": 4,
+        "rejected_count": 1
+      }
+    },
+    {
+      "query_id": "kf_000019",
+      "gt_region": "similar_corridor_wp3",
+      "gt": [
+        -9.289177221348526,
+        0.7918620290229708,
+        1.640206998202063
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "UNKNOWN",
+      "new_reason": "no_survivor",
+      "refined_pose": null,
+      "position_error": null,
+      "yaw_error": null,
+      "laser_score": null,
+      "cluster_count": 0,
+      "cluster_support": 0,
+      "best_cluster_score": null,
+      "second_cluster_score": null,
+      "cluster_margin": 0.0,
+      "false_accept": false,
+      "poc_quality_ok": false,
+      "cluster_accept": {
+        "status": "UNKNOWN",
+        "reason": "no_survivor",
+        "cluster_margin": 0.0,
+        "cluster_count": 0,
+        "best_cluster": null,
+        "second_cluster": null,
+        "survivor_count": 0,
+        "rejected_count": 5
+      }
+    },
+    {
+      "query_id": "kf_000020",
+      "gt_region": "similar_corridor_wp3",
+      "gt": [
+        -9.152724732358584,
+        0.9369008880389582,
+        2.669875402783762
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "ACCEPT",
+      "new_reason": "best_cluster_ok",
+      "refined_pose": [
+        -9.103229820952267,
+        0.9049912523914947,
+        2.6926150099956776
+      ],
+      "position_error": 0.05888948210226527,
+      "yaw_error": 0.022739607211915477,
+      "laser_score": 0.6728113525114272,
+      "cluster_count": 1,
+      "cluster_support": 1,
+      "best_cluster_score": 0.6728113525114272,
+      "second_cluster_score": null,
+      "cluster_margin": 0.6728113525114272,
+      "false_accept": false,
+      "poc_quality_ok": true,
+      "cluster_accept": {
+        "status": "ACCEPT",
+        "reason": "best_cluster_ok",
+        "cluster_margin": 0.6728113525114272,
+        "cluster_count": 1,
+        "best_cluster": {
+          "cluster_id": 0,
+          "center": [
+            -9.103229820952267,
+            0.9049912523914947,
+            2.6926150099956776
+          ],
+          "best_laser_score": 0.6728113525114272,
+          "median_laser_score": 0.6728113525114272,
+          "support_count": 1,
+          "member_ids": [
+            "kf_000021"
+          ],
+          "member_regions": [
+            "similar_corridor_wp3"
+          ],
+          "visual_ranks": [
+            1
+          ],
+          "pose_spread_xy_m": 0.0,
+          "pose_spread_yaw_rad": 0.0
+        },
+        "second_cluster": null,
+        "survivor_count": 1,
+        "rejected_count": 4
+      }
+    },
+    {
+      "query_id": "kf_000026",
+      "gt_region": "room_wp5",
+      "gt": [
+        -8.012238669616762,
+        3.0762895183428087,
+        0.49701989621448434
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "ACCEPT",
+      "new_reason": "best_cluster_ok",
+      "refined_pose": [
+        -8.162895717953687,
+        3.005599126114825,
+        0.5140118918000731
+      ],
+      "position_error": 0.16641717990321972,
+      "yaw_error": 0.01699199558558878,
+      "laser_score": 0.6620154830440879,
+      "cluster_count": 1,
+      "cluster_support": 2,
+      "best_cluster_score": 0.6620154830440879,
+      "second_cluster_score": null,
+      "cluster_margin": 0.6620154830440879,
+      "false_accept": false,
+      "poc_quality_ok": true,
+      "cluster_accept": {
+        "status": "ACCEPT",
+        "reason": "best_cluster_ok",
+        "cluster_margin": 0.6620154830440879,
+        "cluster_count": 1,
+        "best_cluster": {
+          "cluster_id": 0,
+          "center": [
+            -8.162895717953687,
+            3.005599126114825,
+            0.5140118918000731
+          ],
+          "best_laser_score": 0.6620154830440879,
+          "median_laser_score": 0.6550578534775529,
+          "support_count": 2,
+          "member_ids": [
+            "kf_000029",
+            "kf_000027"
+          ],
+          "member_regions": [
+            "room_wp5"
+          ],
+          "visual_ranks": [
+            2,
+            1
+          ],
+          "pose_spread_xy_m": 0.061595158192930974,
+          "pose_spread_yaw_rad": 0.016408072877327706
+        },
+        "second_cluster": null,
+        "survivor_count": 2,
+        "rejected_count": 3
+      }
+    },
+    {
+      "query_id": "kf_000027",
+      "gt_region": "room_wp5",
+      "gt": [
+        -8.055289479913805,
+        3.0774047412564567,
+        1.1412852028754161
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "ACCEPT",
+      "new_reason": "best_cluster_ok",
+      "refined_pose": [
+        -8.10968548069111,
+        3.1441410389002753,
+        1.0972207596731538
+      ],
+      "position_error": 0.08609679624567346,
+      "yaw_error": 0.04406444320226233,
+      "laser_score": 0.6972151015340945,
+      "cluster_count": 1,
+      "cluster_support": 3,
+      "best_cluster_score": 0.6972151015340945,
+      "second_cluster_score": null,
+      "cluster_margin": 0.6972151015340945,
+      "false_accept": false,
+      "poc_quality_ok": true,
+      "cluster_accept": {
+        "status": "ACCEPT",
+        "reason": "best_cluster_ok",
+        "cluster_margin": 0.6972151015340945,
+        "cluster_count": 1,
+        "best_cluster": {
+          "cluster_id": 0,
+          "center": [
+            -8.10968548069111,
+            3.1441410389002753,
+            1.0972207596731538
+          ],
+          "best_laser_score": 0.6972151015340945,
+          "median_laser_score": 0.6953920654381468,
+          "support_count": 3,
+          "member_ids": [
+            "kf_000028",
+            "kf_000029",
+            "kf_000026"
+          ],
+          "member_regions": [
+            "room_wp5"
+          ],
+          "visual_ranks": [
+            1,
+            2,
+            3
+          ],
+          "pose_spread_xy_m": 0.08279510083987669,
+          "pose_spread_yaw_rad": 0.010664374739345783
+        },
+        "second_cluster": null,
+        "survivor_count": 3,
+        "rejected_count": 2
+      }
+    },
+    {
+      "query_id": "kf_000032",
+      "gt_region": "open_wp6",
+      "gt": [
+        -0.9791074801775963,
+        9.439862526445694,
+        -0.6420369136546578
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "UNKNOWN",
+      "new_reason": "no_survivor",
+      "refined_pose": null,
+      "position_error": null,
+      "yaw_error": null,
+      "laser_score": null,
+      "cluster_count": 0,
+      "cluster_support": 0,
+      "best_cluster_score": null,
+      "second_cluster_score": null,
+      "cluster_margin": 0.0,
+      "false_accept": false,
+      "poc_quality_ok": false,
+      "cluster_accept": {
+        "status": "UNKNOWN",
+        "reason": "no_survivor",
+        "cluster_margin": 0.0,
+        "cluster_count": 0,
+        "best_cluster": null,
+        "second_cluster": null,
+        "survivor_count": 0,
+        "rejected_count": 5
+      }
+    },
+    {
+      "query_id": "kf_000033",
+      "gt_region": "open_wp6",
+      "gt": [
+        -0.9803887847192936,
+        9.463341783972615,
+        0.14077717620548974
+      ],
+      "old_decision": "UNKNOWN",
+      "old_reason": "no_survivor",
+      "new_decision": "ACCEPT",
+      "new_reason": "best_cluster_ok",
+      "refined_pose": [
+        -0.9608922569606715,
+        9.379554473992807,
+        0.0630148929326607
+      ],
+      "position_error": 0.08602573980091756,
+      "yaw_error": 0.07776228327282904,
+      "laser_score": 0.6244413510841919,
+      "cluster_count": 1,
+      "cluster_support": 3,
+      "best_cluster_score": 0.6244413510841919,
+      "second_cluster_score": null,
+      "cluster_margin": 0.6244413510841919,
+      "false_accept": false,
+      "poc_quality_ok": true,
+      "cluster_accept": {
+        "status": "ACCEPT",
+        "reason": "best_cluster_ok",
+        "cluster_margin": 0.6244413510841919,
+        "cluster_count": 1,
+        "best_cluster": {
+          "cluster_id": 0,
+          "center": [
+            -0.9608922569606715,
+            9.379554473992807,
+            0.0630148929326607
+          ],
+          "best_laser_score": 0.6244413510841919,
+          "median_laser_score": 0.6224145262820792,
+          "support_count": 3,
+          "member_ids": [
+            "kf_000036",
+            "kf_000034",
+            "kf_000035"
+          ],
+          "member_regions": [
+            "open_wp6"
+          ],
+          "visual_ranks": [
+            4,
+            1,
+            2
+          ],
+          "pose_spread_xy_m": 0.08718899808686266,
+          "pose_spread_yaw_rad": 0.010758638413216714
+        },
+        "second_cluster": null,
+        "survivor_count": 3,
+        "rejected_count": 2
+      }
+    }
+  ]
+}
