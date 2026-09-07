@@ -124,6 +124,7 @@ class RechargeNode(Node):
         self._retry_from = ''
         self._retry_step = 0
         self._last_det: Optional[LaserChargerDetection] = None
+        self._last_idle_pub = 0.0  # throttle status JSON when IDLE/FAIL/SUCCESS
 
         latch = QoSProfile(
             depth=1,
@@ -147,13 +148,8 @@ class RechargeNode(Node):
         self.create_subscription(String, '/xw/nav/map_name', self._on_map_name, latch, callback_group=self._cb)
         self.create_subscription(Int8, '/xw/localization_status', self._on_loc, latch, callback_group=self._cb)
         self.create_subscription(PowerState, '/xw/power', self._on_power, 10, callback_group=self._cb)
-        self.create_subscription(
-            LaserScan,
-            str(self.get_parameter('scan_topic').value),
-            self._on_scan,
-            10,
-            callback_group=self._cb,
-        )
+        # LaserScan deserialize is expensive — only subscribe while docking (not IDLE).
+        self._scan_sub = None
 
         self._wp_cli = self.create_client(WaypointManage, '/xw/map/waypoint', callback_group=self._cb)
         self._nav_client = ActionClient(
@@ -161,7 +157,10 @@ class RechargeNode(Node):
         )
 
         hz = float(self.get_parameter('control_hz').value)
-        self.create_timer(1.0 / max(hz, 5.0), self._tick, callback_group=self._cb)
+        self._control_hz = max(hz, 5.0)
+        self.create_timer(1.0 / self._control_hz, self._tick, callback_group=self._cb)
+        if bool(self.get_parameter('diagnose_always').value):
+            self._ensure_scan_sub()
         self._set_charge_mode(0)
         self._publish_status()
         self.get_logger().info('xw_recharge ready (Laser-Lock Dock)')
@@ -236,6 +235,27 @@ class RechargeNode(Node):
         if bool(self._p('diagnose_always')):
             self._try_detect(publish=True)
 
+    def _ensure_scan_sub(self) -> None:
+        if self._scan_sub is not None:
+            return
+        self._scan_sub = self.create_subscription(
+            LaserScan,
+            str(self.get_parameter('scan_topic').value),
+            self._on_scan,
+            10,
+            callback_group=self._cb,
+        )
+
+    def _stop_scan_sub(self) -> None:
+        if self._scan_sub is None:
+            return
+        try:
+            self.destroy_subscription(self._scan_sub)
+        except Exception:  # noqa: BLE001
+            pass
+        self._scan_sub = None
+        self._latest_scan = None
+
     def _on_enable(self, msg: Bool) -> None:
         if bool(msg.data):
             self._start('api')
@@ -281,6 +301,7 @@ class RechargeNode(Node):
         self._session_t0 = time.monotonic()
         self._tracker.reset()
         self._dock_odom = None
+        self._ensure_scan_sub()
         self.get_logger().info(f'recharge start ({reason}) staging={self._staging}')
         self._enter(Phase.PREP, '检查定位与接近点')
 
@@ -291,6 +312,7 @@ class RechargeNode(Node):
         self._cmd(0.0, 0.0)
         self._cancel_nav()
         self._tracker.reset()
+        self._stop_scan_sub()
         if success:
             self._phase = Phase.SUCCESS
             self._message = message
@@ -333,17 +355,22 @@ class RechargeNode(Node):
         self.get_logger().info(f'phase {phase.value}: {message}')
 
     def _tick(self) -> None:
-        if self._phase in (Phase.IDLE, Phase.FAIL):
+        # Standby: do not burn CPU at control_hz — gate all idle work to ≤1 Hz.
+        if self._phase in (Phase.IDLE, Phase.FAIL, Phase.SUCCESS):
+            if not bool(self._p('diagnose_always')):
+                self._stop_scan_sub()
+            now = time.monotonic()
+            if now - self._last_idle_pub < 1.0:
+                return
+            self._last_idle_pub = now
             self._cmd(0.0, 0.0)
-            self._publish_status()
-            return
-        if self._phase == Phase.SUCCESS:
-            self._cmd(0.0, 0.0)
-            self._set_charge_mode(0)
+            if self._phase == Phase.SUCCESS:
+                self._set_charge_mode(0)
             self._publish_status()
             return
         if not self._enabled:
             return
+        self._ensure_scan_sub()
         now = time.monotonic()
         if now - self._session_t0 > float(self._p('session_timeout_sec')):
             self._fail('会话超时')

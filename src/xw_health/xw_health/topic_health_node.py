@@ -39,9 +39,10 @@ class TopicHealthNode(Node):
         default_log = os.environ.get('XW_LOG', '/ros2_ws/log')
         self.declare_parameter('status_file', str(Path(default_log) / 'topic_health_status'))
         self.declare_parameter('stale_sec', 2.0)
-        self.declare_parameter('write_period', 0.5)
-        self.declare_parameter('watch_depth', True)
-        self.declare_parameter('watch_points_nav', True)
+        self.declare_parameter('write_period', 1.0)
+        # Off by default: Python Image/PointCloud2 deserialization is very expensive.
+        self.declare_parameter('watch_depth', False)
+        self.declare_parameter('watch_points_nav', False)
         self.declare_parameter('cmd_period_warn_sec', 0.15)
         self.declare_parameter('tf_probe_period', 2.0)
         self.declare_parameter('map_frame', 'map')

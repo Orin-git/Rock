@@ -136,11 +136,13 @@ class UltrasonicNode(Node):
         arr = UltrasonicArray()
         arr.stamp = self.get_clock().now().to_msg()
         arr.labels = ['front_left', 'front_right', 'rear_left', 'rear_right']
-        arr.ranges = [float(v) / 100.0 for v in self._dists]
+        # Protocol: 30..255 cm valid; 0x00 probe lost; 0x01 blind zone.
+        # Never publish blind/lost as ~0.01 m — that falsely trips safety_gate.
+        arr.ranges = [self._byte_to_meters(v) for v in self._dists]
         self._arr_pub.publish(arr)
 
         for i, v in enumerate(self._dists):
-            cm = float('nan') if v == 0 else (2.5 if v == 1 else float(v))
+            meters = self._byte_to_meters(v)
             msg = Range()
             msg.header.stamp = self.get_clock().now().to_msg()
             msg.header.frame_id = 'base_link'
@@ -148,8 +150,15 @@ class UltrasonicNode(Node):
             msg.field_of_view = 1.0
             msg.min_range = 0.15
             msg.max_range = 2.55
-            msg.range = cm
+            msg.range = meters
             self._ranges[i].publish(msg)
+
+    @staticmethod
+    def _byte_to_meters(v: int) -> float:
+        """Convert probe byte to meters; invalid → NaN (downstream skips)."""
+        if v == 0 or v == 1 or v < 30:
+            return float('nan')
+        return float(v) / 100.0
 
 
 def main(args=None):

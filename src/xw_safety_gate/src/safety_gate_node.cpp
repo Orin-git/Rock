@@ -292,7 +292,8 @@ private:
         continue;
       }
       const float r = ultra.ranges[i];
-      if (std::isfinite(r) && r > 0.0f) {
+      // Valid module range starts ~0.30 m; skip NaN / lost / blind ghosts.
+      if (std::isfinite(r) && r >= 0.15f) {
         best = std::min(best, static_cast<double>(r));
         any = true;
       }
@@ -386,10 +387,10 @@ private:
 
     std::optional<double> ultra_front, ultra_rear, ultra_left, ultra_right;
     if (ultra.has_value()) {
-      ultra_front = ultra_min_for(*ultra, {"front", "f", "前"});
+      ultra_front = ultra_min_for(*ultra, {"front", "前"});
       ultra_rear = ultra_min_for(*ultra, {"rear", "back", "aft", "后"});
-      ultra_left = ultra_min_for(*ultra, {"left", "l", "左"});
-      ultra_right = ultra_min_for(*ultra, {"right", "r", "右"});
+      ultra_left = ultra_min_for(*ultra, {"left", "左"});
+      ultra_right = ultra_min_for(*ultra, {"right", "右"});
     }
 
     std::optional<double> d_depth;

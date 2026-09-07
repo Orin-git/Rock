@@ -31,8 +31,9 @@ _SENSOR_QOS = QoSProfile(
     depth=1,
 )
 
+# Match SENSOR_DATA / pc_nav_filter (BEST_EFFORT) — RELIABLE mismatches drop the link.
 _POINTS_QOS = QoSProfile(
-    reliability=ReliabilityPolicy.RELIABLE,
+    reliability=ReliabilityPolicy.BEST_EFFORT,
     history=HistoryPolicy.KEEP_LAST,
     depth=1,
 )
