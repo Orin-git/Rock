@@ -43,6 +43,7 @@ setup(
         'console_scripts': [
             'perception_stub_node = xw_perception.perception_stub_node:main',
             'person_perception_node = xw_perception.person_perception_node:main',
+            'perception_mode_manager = xw_perception.perception_mode_manager_node:main',
         ],
     },
 )

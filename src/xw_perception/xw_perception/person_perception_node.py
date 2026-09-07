@@ -14,6 +14,7 @@ One shared RKNN runtime; cams are time-multiplexed to limit NPU/CPU load.
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import threading
@@ -27,7 +28,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 
 from xw_interfaces.msg import FallStatus, PersonTrack, PersonTracks
 
@@ -344,6 +345,12 @@ class PersonPerceptionNode(Node):
 
         self.create_subscription(Bool, '/xw/follow/enable', self._on_follow, _LATCHED_QOS)
         self.create_subscription(Bool, '/xw/fall/enable', self._on_fall, _LATCHED_QOS)
+        self.create_subscription(
+            String, '/xw/perception/profile_config', self._on_profile_cfg, _LATCHED_QOS
+        )
+        self._profile = 'IDLE'
+        self._profile_fall_fps: Optional[float] = None
+        self._profile_follow_fps: Optional[float] = None
 
         for cam_id, slot in self._cams.items():
             self.create_subscription(
@@ -390,13 +397,33 @@ class PersonPerceptionNode(Node):
         return 'up'
 
     def _follow_period(self) -> float:
-        fps = float(self.get_parameter('follow_infer_fps').value)
+        if self._profile_follow_fps is not None:
+            fps = float(self._profile_follow_fps)
+        else:
+            fps = float(self.get_parameter('follow_infer_fps').value)
         if fps <= 0.0:
             fps = float(self.get_parameter('infer_fps').value)
         return 1.0 / max(1.0, fps)
 
     def _fall_period(self) -> float:
-        return 1.0 / max(1.0, float(self.get_parameter('fall_infer_fps').value))
+        if self._profile_fall_fps is not None:
+            fps = float(self._profile_fall_fps)
+            if fps <= 0.0:
+                return 1e9  # disabled by profile (shared path only)
+        else:
+            fps = float(self.get_parameter('fall_infer_fps').value)
+        return 1.0 / max(1.0, fps)
+
+    def _on_profile_cfg(self, msg: String) -> None:
+        try:
+            cfg = json.loads(msg.data or '{}')
+        except json.JSONDecodeError:
+            return
+        self._profile = str(cfg.get('profile') or self._profile)
+        if 'fall_infer_fps' in cfg:
+            self._profile_fall_fps = float(cfg['fall_infer_fps'])
+        if 'follow_infer_fps' in cfg:
+            self._profile_follow_fps = float(cfg['follow_infer_fps'])
 
     def _on_follow(self, msg: Bool) -> None:
         en = bool(msg.data)
@@ -447,7 +474,16 @@ class PersonPerceptionNode(Node):
         slot.img_h = int(msg.height) or slot.img_h
 
     def _active(self) -> bool:
-        return bool(self._follow_en or self._fall_en)
+        if self._follow_en:
+            return True
+        if not self._fall_en:
+            return False
+        # Profile can defer fall RGB/NPU during NAVIGATION/IDLE/RECHARGE.
+        if self._profile in ('NAVIGATION', 'IDLE', 'RECHARGE'):
+            return False
+        if self._profile_fall_fps is not None and self._profile_fall_fps <= 0.0:
+            return False
+        return True
 
     def _cam_due(self, cam_id: str, now: float) -> bool:
         slot = self._cams[cam_id]

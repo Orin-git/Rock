@@ -20,6 +20,7 @@ Phase1 Task D lazy rules:
 from __future__ import annotations
 
 import os
+import json
 import time
 from pathlib import Path
 from typing import Optional
@@ -28,7 +29,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image, PointCloud2
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from std_srvs.srv import SetBool
 
 
@@ -111,9 +112,11 @@ class DepthTopicBridge(Node):
         # Task C: false when launch remaps vendor depth → public topics.
         self.declare_parameter('relay_depth', True)
         # Task D lazy flags (safe defaults on).
-        self.declare_parameter('lazy_mjpeg', False)
-        self.declare_parameter('lazy_rgb_info', False)
-        self.declare_parameter('cache_depth_info', False)
+        self.declare_parameter('lazy_mjpeg', True)
+        self.declare_parameter('lazy_rgb_info', True)
+        self.declare_parameter('cache_depth_info', True)
+        # Task E: honor /xw/perception/profile for RGB (nav must not keep RGB on via fall latch).
+        self.declare_parameter('gate_rgb_on_profile', True)
 
         self._preview_period = 1.0 / max(0.5, float(self.get_parameter('preview_fps').value))
         self._points_period = 1.0 / max(0.5, float(self.get_parameter('points_fps').value))
@@ -145,6 +148,14 @@ class DepthTopicBridge(Node):
         self._lazy_mjpeg = bool(self.get_parameter('lazy_mjpeg').value)
         self._lazy_rgb_info = bool(self.get_parameter('lazy_rgb_info').value)
         self._cache_depth_info = bool(self.get_parameter('cache_depth_info').value)
+        self._gate_rgb_on_profile = bool(self.get_parameter('gate_rgb_on_profile').value)
+        self._profile = 'IDLE'
+        self._profile_rgb_up = False
+        self._profile_rgb_down = False
+        self._camera_id = 'front_up'
+        out_rgb = str(self.get_parameter('rgb_image_out').value)
+        if 'front_down' in out_rgb:
+            self._camera_id = 'front_down'
 
         # Manual preference (persisted) OR nav auto → effective pointcloud.
         launch_default = bool(self.get_parameter('enable_pointcloud').value)
@@ -190,6 +201,10 @@ class DepthTopicBridge(Node):
         if self._gate_rgb:
             self.create_subscription(Bool, '/xw/fall/enable', self._on_fall_en, _LATCHED_QOS)
             self.create_subscription(Bool, '/xw/follow/enable', self._on_follow_en, _LATCHED_QOS)
+        if self._gate_rgb_on_profile:
+            self.create_subscription(
+                String, '/xw/perception/profile_config', self._on_profile_cfg, _LATCHED_QOS
+            )
         if self._follow_pc_topic and not self._manage_pc:
             self.create_subscription(
                 Bool, '/xw/camera/pointcloud_enabled', self._on_pc_enabled_mirror, _LATCHED_QOS
@@ -230,7 +245,28 @@ class DepthTopicBridge(Node):
 
     @property
     def _rgb_wanted(self) -> bool:
-        return bool(self._force_rgb or self._fall_en or self._follow_en)
+        if self._force_rgb:
+            return True
+        if self._follow_en:
+            # Follow uses front_up primarily; down bridge stays off unless profile says so.
+            if self._camera_id == 'front_down':
+                return bool(self._gate_rgb_on_profile and self._profile_rgb_down)
+            return True
+        if self._gate_rgb_on_profile:
+            if self._camera_id == 'front_down':
+                return bool(self._profile_rgb_down)
+            return bool(self._profile_rgb_up)
+        return bool(self._fall_en)
+
+    def _on_profile_cfg(self, msg: String) -> None:
+        try:
+            cfg = json.loads(msg.data or '{}')
+        except json.JSONDecodeError:
+            return
+        self._profile = str(cfg.get('profile') or self._profile)
+        self._profile_rgb_up = bool(cfg.get('rgb_up', False))
+        self._profile_rgb_down = bool(cfg.get('rgb_down', False))
+        self._sync_rgb_relay()
 
     def _publish_enabled(self) -> None:
         if self._enabled_pub is None:
