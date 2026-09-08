@@ -1,0 +1,142 @@
+{
+  "trial": "P1_OFFDOCK_CHARGER_PRIOR",
+  "physical_gt_not_charger": true,
+  "charging": false,
+  "docked": false,
+  "amcl_pose": [
+    0.22164911955675373,
+    -0.6455409500116361,
+    -2.7680909049637004
+  ],
+  "charger_waypoint": {
+    "x": 1.8663955491712294,
+    "y": -0.05958837147746455,
+    "yaw": -3.1286646850836126
+  },
+  "dist_to_charger_m": 1.7460043648342949,
+  "loc_status": 0,
+  "charger_prior_available_injected": true,
+  "charger_prior_seen": true,
+  "threshold": 0.38,
+  "raw_exact": {
+    "total_beams": 1800,
+    "nan_inf_beams": 472,
+    "valid_beams": 224,
+    "in_map_beams": 221,
+    "out_of_map_beams": 3,
+    "matched_beams": 67,
+    "matched_ratio": 0.3031674208144796,
+    "mean_dist": 0.5130098649886399,
+    "laser_score": 0.14763954319348926,
+    "reason": "laser_gate",
+    "accepted": false,
+    "coverage_gate": "in_map_beams >= 20",
+    "coverage_pass": true
+  },
+  "exact_verify": {
+    "ok": false,
+    "laser_score": 0.14763954319348926,
+    "matched_ratio": 0.3031674208144796,
+    "valid_beams": 221,
+    "mean_dist": 0.5130098649886399,
+    "reason": "laser_gate"
+  },
+  "window": {
+    "ok": false,
+    "refined": true,
+    "laser_score": 0.2265961078586859,
+    "exact_laser_score": 0.14763954319348926,
+    "pose": {
+      "x": 1.7163955491712297,
+      "y": -0.4095883714774645,
+      "yaw": -2.9541317598841803
+    },
+    "reason": "laser_gate"
+  },
+  "boot": {
+    "svc": {
+      "ok": true,
+      "msg": "started"
+    },
+    "final": "UNKNOWN",
+    "selected_path": "NONE",
+    "stages": [
+      {
+        "stage": "START",
+        "t_mono": 758.282854406,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "service"
+      },
+      {
+        "stage": "WAIT_SENSORS",
+        "t_mono": 758.295253641,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "ok",
+        "runtime_sec": 0.0008114290000094115
+      },
+      {
+        "stage": "P1",
+        "t_mono": 758.899520553,
+        "attempt": 1,
+        "result": "laser_reject",
+        "reason": "laser_gate",
+        "score": 0.23219118149576712,
+        "runtime_sec": 2.305902172838053e-05
+      },
+      {
+        "stage": "P2",
+        "t_mono": 758.903752411,
+        "attempt": 1,
+        "result": "laser_reject",
+        "reason": "laser_gate",
+        "score": 0.15827106078803202,
+        "runtime_sec": 0.0003158800000164774
+      },
+      {
+        "stage": "P3",
+        "t_mono": 763.92655961,
+        "attempt": 1,
+        "result": "fail",
+        "reason": "relocalize_unavailable",
+        "score": null,
+        "runtime_sec": 5.021901267999965,
+        "reloc": {
+          "ok": false,
+          "error": "relocalize_unavailable",
+          "result_code": -1
+        }
+      },
+      {
+        "stage": "P3",
+        "t_mono": 798.978163611,
+        "attempt": 2,
+        "result": "fail",
+        "reason": "relocalize_unavailable",
+        "score": null,
+        "runtime_sec": 5.016065218999984,
+        "reloc": {
+          "ok": false,
+          "error": "relocalize_unavailable",
+          "result_code": -1
+        }
+      }
+    ],
+    "amcl_pose": [
+      0.22164911955675373,
+      -0.6455409500116361,
+      -2.7680909049637004
+    ]
+  },
+  "p1_stage": {
+    "stage": "P1",
+    "t_mono": 758.899520553,
+    "attempt": 1,
+    "result": "laser_reject",
+    "reason": "laser_gate",
+    "score": 0.23219118149576712,
+    "runtime_sec": 2.305902172838053e-05
+  },
+  "verdict": "PASS"
+}
