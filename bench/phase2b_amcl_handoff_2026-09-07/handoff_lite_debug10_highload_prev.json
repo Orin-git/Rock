@@ -1,0 +1,439 @@
+{
+  "mode": "debug",
+  "validator": "lite_v1",
+  "allow_amcl_handoff": true,
+  "per_region": 2,
+  "cool_after_reloc_sec": 8.0,
+  "cool_after_region_sec": 12.0,
+  "stop_reason": null,
+  "stats": {
+    "n": 10,
+    "aborted": 4,
+    "ACCEPT": 5,
+    "UNKNOWN": 1,
+    "amcl_ready": 4,
+    "amcl_timeout": 0,
+    "false_handoff": 0,
+    "amcl_success_rate": 0.8,
+    "nav_success_rate": 1.0,
+    "reloc_wall_p50": 19.505241532000014,
+    "reloc_wall_p95": 27.85561701300003,
+    "amcl_conv_p50": 2.804456949234009,
+    "amcl_conv_p95": 3.316256046295166
+  },
+  "debug_gate": {
+    "pass": false,
+    "false_handoff": 0,
+    "amcl_success_rate": 0.8,
+    "nav_success_rate": 1.0
+  },
+  "trials": [
+    {
+      "trial_id": "doorway_wp9_0",
+      "region": "doorway_wp9",
+      "cls": "doorway",
+      "gt": {
+        "x": -0.05579937789355693,
+        "y": -0.4542103566196395,
+        "yaw": 2.959029655994607
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 89.83680141172215,
+        "dt": 0.6738949890000185
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 0,
+        "success": true,
+        "laser_score": 0.6596110463142395,
+        "time_to_candidate_sec": 15.759346961975098,
+        "amcl_convergence_sec": 3.316256046295166,
+        "wall_sec": 19.505241532000014,
+        "candidate": [
+          -0.2050739839251841,
+          -0.3879024281484397,
+          3.016274578253842
+        ],
+        "amcl_handoff": {
+          "amcl_pose": [
+            -0.14235980081242555,
+            -0.41979098141272214,
+            3.1306544651905686
+          ],
+          "amcl_age_sec": 2.522902239000018,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.151877442,
+          "cov_xy": 0.06128101593222261,
+          "cov_yaw": 0.01415060919579179,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.07035587106126671,
+          "candidate_delta_yaw": 0.11437988693672674,
+          "near_candidate": true,
+          "stable_for_sec": 2.5223938519999933,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 3.3162561079999477
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.07035587106126671,
+          "dyaw": 0.11437988693672674
+        },
+        "decision": "ACCEPT"
+      },
+      "reloc_decision": "ACCEPT",
+      "handoff_attempted": true,
+      "candidate_error_xy": 0.16333906263977166,
+      "candidate_error_yaw": 0.05724492225923461,
+      "amcl_ready": true,
+      "amcl_timeout": false,
+      "amcl_after": {
+        "x": -0.14235980081242555,
+        "y": -0.41979098141272214,
+        "yaw": 3.1306544651905686
+      },
+      "amcl_cov_xy": 0.06128101593222261,
+      "amcl_cov_yaw": 0.01415060919579179,
+      "final_error_xy": 0.09315256413823482,
+      "final_error_yaw": 0.17162480919596135,
+      "candidate_to_amcl_dxy": 0.07035587106126671,
+      "candidate_to_amcl_dyaw": 0.11437988693672674,
+      "false_handoff": false,
+      "wrong_convergence": false,
+      "quality_ok": true,
+      "nav_success": true,
+      "localization_lost_during_nav": false
+    },
+    {
+      "trial_id": "doorway_wp9_1",
+      "region": "doorway_wp9",
+      "cls": "doorway",
+      "gt": {
+        "x": -0.6450329653873754,
+        "y": -0.4025154863350007,
+        "yaw": 2.820661816864156
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 91.29368265826507,
+        "dt": 0.6685016450000489
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 0,
+        "success": true,
+        "laser_score": 0.6911525130271912,
+        "time_to_candidate_sec": 15.164214134216309,
+        "amcl_convergence_sec": 2.7584846019744873,
+        "wall_sec": 18.56712431400001,
+        "candidate": [
+          -0.8050739839251839,
+          -0.4379024281484397,
+          2.806835068014523
+        ],
+        "amcl_handoff": {
+          "amcl_pose": [
+            -0.7845036578181943,
+            -0.4419315616399764,
+            2.8681020354741236
+          ],
+          "amcl_age_sec": 2.0012884960000292,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.082338567,
+          "cov_xy": 0.07301716089541185,
+          "cov_yaw": 0.017660734896794664,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.020961207809678355,
+          "candidate_delta_yaw": 0.061266967459600696,
+          "near_candidate": true,
+          "stable_for_sec": 2.5273499759999822,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.758484706000104
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.020961207809678355,
+          "dyaw": 0.061266967459600696
+        },
+        "decision": "ACCEPT"
+      },
+      "reloc_decision": "ACCEPT",
+      "handoff_attempted": true,
+      "candidate_error_xy": 0.16390656870768444,
+      "candidate_error_yaw": 0.013826748849633308,
+      "amcl_ready": true,
+      "amcl_timeout": false,
+      "amcl_after": {
+        "x": -0.7845036578181943,
+        "y": -0.4419315616399764,
+        "yaw": 2.8681020354741236
+      },
+      "amcl_cov_xy": 0.07301716089541185,
+      "amcl_cov_yaw": 0.017660734896794664,
+      "final_error_xy": 0.14493343658238286,
+      "final_error_yaw": 0.04744021860996739,
+      "candidate_to_amcl_dxy": 0.020961207809678355,
+      "candidate_to_amcl_dyaw": 0.061266967459600696,
+      "false_handoff": false,
+      "wrong_convergence": false,
+      "quality_ok": true,
+      "nav_success": true,
+      "localization_lost_during_nav": false
+    },
+    {
+      "trial_id": "corridor_wp2_0",
+      "region": "corridor_wp2",
+      "cls": "corridor",
+      "gt": {
+        "x": -3.907664080145076,
+        "y": -0.9143952435499406,
+        "yaw": -2.793373314481745
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 87.31467885218152,
+        "dt": 0.6759665450000512
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 4,
+        "success": false,
+        "laser_score": 0.0,
+        "time_to_candidate_sec": 0.0,
+        "amcl_convergence_sec": 0.0,
+        "wall_sec": 6.507756025000049,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null,
+        "decision": null
+      },
+      "reloc_decision": "ACCEPT",
+      "handoff_attempted": true,
+      "candidate_error_xy": 4.0132227977876855,
+      "candidate_error_yaw": 2.793373314481745,
+      "amcl_ready": false,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "corridor_wp2_1",
+      "region": "corridor_wp2",
+      "cls": "corridor",
+      "gt": {
+        "x": -3.9167531800832176,
+        "y": -0.9158089939707212,
+        "yaw": -2.77409613335483
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 87.17937609752397,
+        "dt": 0.6683694179999975
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 0,
+        "success": true,
+        "laser_score": 0.7459918260574341,
+        "time_to_candidate_sec": 20.87892723083496,
+        "amcl_convergence_sec": 2.804456949234009,
+        "wall_sec": 24.330170443000043,
+        "candidate": [
+          -3.962539260881126,
+          -0.9489646136146119,
+          -2.8128311469622296
+        ],
+        "amcl_handoff": {
+          "amcl_pose": [
+            -3.911902104887576,
+            -0.9680962002264148,
+            -2.738467857837589
+          ],
+          "amcl_age_sec": 1.8981991210000615,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.037151909000000004,
+          "cov_xy": 0.0774971947795426,
+          "cov_yaw": 0.012804524501891604,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.054130759955870245,
+          "candidate_delta_yaw": 0.07436328912464063,
+          "near_candidate": true,
+          "stable_for_sec": 2.5083088650000036,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.8044569290000254
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.054130759955870245,
+          "dyaw": 0.07436328912464063
+        },
+        "decision": "ACCEPT"
+      },
+      "reloc_decision": "ACCEPT",
+      "handoff_attempted": true,
+      "candidate_error_xy": 0.05653017166790627,
+      "candidate_error_yaw": 0.038735013607399615,
+      "amcl_ready": true,
+      "amcl_timeout": false,
+      "amcl_after": {
+        "x": -3.911902104887576,
+        "y": -0.9680962002264148,
+        "yaw": -2.738467857837589
+      },
+      "amcl_cov_xy": 0.0774971947795426,
+      "amcl_cov_yaw": 0.012804524501891604,
+      "final_error_xy": 0.052511759336164074,
+      "final_error_yaw": 0.035628275517241015,
+      "candidate_to_amcl_dxy": 0.054130759955870245,
+      "candidate_to_amcl_dyaw": 0.07436328912464063,
+      "false_handoff": false,
+      "wrong_convergence": false,
+      "quality_ok": true,
+      "nav_success": true,
+      "localization_lost_during_nav": false
+    },
+    {
+      "trial_id": "similar_corridor_wp3_0",
+      "region": "similar_corridor_wp3",
+      "cls": "similar",
+      "gt": {
+        "x": -9.153432090524882,
+        "y": 1.084071382463533,
+        "yaw": 2.982825767617504
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 2,
+        "cov_xy": 87.15840387502377,
+        "dt": 1.3390931430000137
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 1,
+        "success": false,
+        "laser_score": 0.0,
+        "time_to_candidate_sec": 20.318063735961914,
+        "amcl_convergence_sec": 0.0,
+        "wall_sec": 20.692366159000017,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null,
+        "decision": "UNKNOWN"
+      },
+      "reloc_decision": "UNKNOWN",
+      "handoff_attempted": false,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "similar_corridor_wp3_1",
+      "region": "similar_corridor_wp3",
+      "cls": "similar",
+      "gt": {
+        "x": -9.179226552719722,
+        "y": 1.0872675670844665,
+        "yaw": 3.059294587713664
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 87.26700009513505,
+        "dt": 2.0052961220000043
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 0,
+        "success": true,
+        "laser_score": 0.8187554478645325,
+        "time_to_candidate_sec": 24.596120834350586,
+        "amcl_convergence_sec": 2.593921661376953,
+        "wall_sec": 27.85561701300003,
+        "candidate": [
+          -9.152724732358582,
+          0.9869008880389583,
+          -3.019897958717757
+        ],
+        "amcl_handoff": {
+          "amcl_pose": [
+            -9.165494312271049,
+            0.9859216018822761,
+            -3.0289835277670494
+          ],
+          "amcl_age_sec": 2.5037188820000438,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.140172829,
+          "cov_xy": 0.12165916705399475,
+          "cov_yaw": 0.07912519048323925,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.012807075096115788,
+          "candidate_delta_yaw": 0.009085569049292364,
+          "near_candidate": true,
+          "stable_for_sec": 2.502537314000051,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.5939216689999967
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.012807075096115788,
+          "dyaw": 0.009085569049292364
+        },
+        "decision": "ACCEPT"
+      },
+      "reloc_decision": "ACCEPT",
+      "handoff_attempted": true,
+      "candidate_error_xy": 0.10380663150819518,
+      "candidate_error_yaw": 0.20399276074816555,
+      "amcl_ready": true,
+      "amcl_timeout": false,
+      "amcl_after": {
+        "x": -9.165494312271049,
+        "y": 0.9859216018822761,
+        "yaw": -3.0289835277670494
+      },
+      "amcl_cov_xy": 0.12165916705399475,
+      "amcl_cov_yaw": 0.07912519048323925,
+      "final_error_xy": 0.10227208363235675,
+      "final_error_yaw": 0.19490719169887272,
+      "candidate_to_amcl_dxy": 0.012807075096115788,
+      "candidate_to_amcl_dyaw": 0.009085569049292364,
+      "false_handoff": false,
+      "wrong_convergence": false,
+      "quality_ok": true,
+      "nav_success": true,
+      "localization_lost_during_nav": false
+    },
+    {
+      "trial_id": "room_wp5_0",
+      "region": "room_wp5",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "room_wp5_1",
+      "region": "room_wp5",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "open_wp6_0",
+      "region": "open_wp6",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "open_wp6_1",
+      "region": "open_wp6",
+      "aborted": "goto_failed"
+    }
+  ]
+}

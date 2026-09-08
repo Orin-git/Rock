@@ -1,34 +1,6 @@
-[INFO] [launch]: All log files can be found below /root/.ros/log/2026-09-07-11-18-19-429022-rock-5t-21338
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-09-07-11-49-02-428791-rock-5t-1237
 [INFO] [launch]: Default logging verbosity is set to INFO
-[INFO] [global_reloc_poc-1]: process started with pid [21340]
-[global_reloc_poc-1] [INFO] [1788779906.637849979] [xw_global_reloc_poc]: reloc PoC ready db_kfs=37 allow_amcl_handoff=True (sensors subscribed only during call)
-[global_reloc_poc-1] Traceback (most recent call last):
-[global_reloc_poc-1]   File "/ros2_ws/build/xw_global_reloc/xw_global_reloc/global_reloc_poc_node.py", line 825, in main
-[global_reloc_poc-1]     rclpy.spin(node)
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
-[global_reloc_poc-1]     executor.spin_once()
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
-[global_reloc_poc-1]     self._spin_once_impl(timeout_sec)
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
-[global_reloc_poc-1]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
-[global_reloc_poc-1]     return next(self._cb_iter)
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 681, in _wait_for_ready_callbacks
-[global_reloc_poc-1]     raise ExternalShutdownException()
-[global_reloc_poc-1] rclpy.executors.ExternalShutdownException
-[global_reloc_poc-1] 
-[global_reloc_poc-1] During handling of the above exception, another exception occurred:
-[global_reloc_poc-1] 
-[global_reloc_poc-1] Traceback (most recent call last):
-[global_reloc_poc-1]   File "/ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc", line 33, in <module>
-[global_reloc_poc-1]     sys.exit(load_entry_point('xw-global-reloc', 'console_scripts', 'global_reloc_poc')())
-[global_reloc_poc-1]   File "/ros2_ws/build/xw_global_reloc/xw_global_reloc/global_reloc_poc_node.py", line 832, in main
-[global_reloc_poc-1]     rclpy.shutdown()
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
-[global_reloc_poc-1]     _shutdown(context=context)
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
-[global_reloc_poc-1]     return context.shutdown()
-[global_reloc_poc-1]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
-[global_reloc_poc-1]     self.__context.shutdown()
-[global_reloc_poc-1] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
-[ERROR] [global_reloc_poc-1]: process has died [pid 21340, exit code 1, cmd '/ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/xw_global_reloc/share/xw_global_reloc/config/reloc_poc.yaml --params-file /tmp/launch_params_3v357tby'].
+[INFO] [global_reloc_poc-1]: process started with pid [1238]
+[global_reloc_poc-1] [INFO] [1788781747.060719608] [xw_global_reloc_poc]: reloc PoC ready db_kfs=37 allow_amcl_handoff=True (sensors subscribed only during call)
+[global_reloc_poc-1] [INFO] [1788782551.483169560] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-7.698882360949855, 2.950854524417708, 0.8725164396766423) conv=3.34s
+[global_reloc_poc-1] [INFO] [1788782582.498701140] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-7.464520574753134, 3.180522040284084, 0.775729164055849) conv=2.66s

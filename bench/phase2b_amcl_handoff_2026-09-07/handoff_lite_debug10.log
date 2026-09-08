@@ -1,49 +1,54 @@
-[INFO] [1788779986.005971952] [phase2b_handoff_lite]: LITE handoff debug regions=5 x2
-[INFO] [1788779989.249407580] [phase2b_handoff_lite]: nav doorway_wp9 → (0.01,-0.58)
+[INFO] [1788782350.198926543] [phase2b_handoff_lite]: LITE handoff debug regions=5 x2 load1=7.24
+[INFO] [1788782354.083225936] [phase2b_handoff_lite]: nav doorway_wp9 → (0.01,-0.58)
+[WARN] [1788782355.182517947] [phase2b_handoff_lite]: doorway_wp9: nav goal failed/aborted
+[INFO] [1788782358.008783073] [phase2b_handoff_lite]: nav doorway_wp9_retry → (0.01,-0.58)
+[WARN] [1788782360.176344161] [phase2b_handoff_lite]: doorway_wp9_retry: nav goal failed/aborted
+[INFO] [1788782376.015972034] [phase2b_handoff_lite]: nav corridor_wp2 → (-4.08,-0.94)
+[WARN] [1788782378.161200296] [phase2b_handoff_lite]: corridor_wp2: nav goal failed/aborted
+[INFO] [1788782380.979276699] [phase2b_handoff_lite]: nav corridor_wp2_retry → (-4.08,-0.94)
+[WARN] [1788782383.122856424] [phase2b_handoff_lite]: corridor_wp2_retry: nav goal failed/aborted
+[INFO] [1788782398.964053535] [phase2b_handoff_lite]: nav similar_corridor_wp3 → (-9.21,1.19)
+[INFO] [1788782425.838888922] [phase2b_handoff_lite]: === similar_corridor_wp3_0 ===
+{"trial": "similar_corridor_wp3_0", "dec": "UNKNOWN", "ready": null, "fa": false, "nav": null, "xy": null, "wall": 14.8, "load1": 7.25}
+[INFO] [1788782454.436596429] [phase2b_handoff_lite]: === similar_corridor_wp3_1 ===
+{"trial": "similar_corridor_wp3_1", "dec": "UNKNOWN", "ready": null, "fa": false, "nav": null, "xy": null, "wall": 13.5, "load1": 7.27}
+[INFO] [1788782497.508378379] [phase2b_handoff_lite]: nav room_wp5 → (-7.87,3.25)
+[INFO] [1788782532.962717295] [phase2b_handoff_lite]: === room_wp5_0 ===
+[INFO] [1788782552.221358411] [phase2b_handoff_lite]: room_wp5_0_nav: near, skip
+[INFO] [1788782552.624921669] [phase2b_handoff_lite]: room_wp5_0_back: near, skip
+{"trial": "room_wp5_0", "dec": "ACCEPT", "ready": true, "fa": false, "nav": true, "xy": 0.346, "wall": 17.1, "load1": 6.38}
+[INFO] [1788782562.644835922] [phase2b_handoff_lite]: === room_wp5_1 ===
+[INFO] [1788782583.292796550] [phase2b_handoff_lite]: room_wp5_1_nav: near, skip
+[INFO] [1788782583.695405744] [phase2b_handoff_lite]: room_wp5_1_back: near, skip
+{"trial": "room_wp5_1", "dec": "ACCEPT", "ready": true, "fa": false, "nav": true, "xy": 0.328, "wall": 17.8, "load1": 8.37}
+[INFO] [1788782609.548186704] [phase2b_handoff_lite]: nav open_wp6 → (-0.75,9.39)
+[INFO] [1788782653.556258447] [phase2b_handoff_lite]: === open_wp6_0 ===
+{"trial": "open_wp6_0", "dec": "NO_DATA", "ready": null, "fa": false, "nav": null, "xy": null, "wall": 6.5, "load1": 14.95}
+[INFO] [1788782673.816971964] [phase2b_handoff_lite]: === open_wp6_1 ===
+{"trial": "open_wp6_1", "dec": "NO_DATA", "ready": null, "fa": false, "nav": null, "xy": null, "wall": 6.3, "load1": 16.68}
 {
   "out": "/ros2_ws/bench/phase2b_amcl_handoff_2026-09-07/handoff_lite_debug10.json",
   "stats": {
-    "n": 0,
-    "aborted": 0,
-    "ACCEPT": 0,
-    "UNKNOWN": 0,
-    "amcl_ready": 0,
+    "n": 10,
+    "aborted": 4,
+    "ACCEPT": 2,
+    "UNKNOWN": 2,
+    "amcl_ready": 2,
     "amcl_timeout": 0,
     "false_handoff": 0,
-    "amcl_success_rate": null,
-    "nav_success_rate": null,
-    "reloc_wall_p50": null,
-    "reloc_wall_p95": null,
-    "amcl_conv_p50": null,
-    "amcl_conv_p95": null
+    "amcl_success_rate": 1.0,
+    "nav_success_rate": 1.0,
+    "reloc_wall_p50": 17.106770121999944,
+    "reloc_wall_p95": 17.83627322099983,
+    "amcl_conv_p50": 2.65641188621521,
+    "amcl_conv_p95": 3.338552236557007
   },
   "gate": {
     "pass": false,
     "false_handoff": 0,
-    "amcl_success_rate": null,
-    "nav_success_rate": null
+    "ACCEPT": 2,
+    "amcl_success_rate": 1.0,
+    "nav_success_rate": 1.0,
+    "require": "FA=0, ACCEPT\u22658, AMCL\u226590%, Nav\u226590%"
   }
 }
-Traceback (most recent call last):
-  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 404, in main
-    if not node.goto(region['x'], region['y'], region['yaw'], region['id']):
-  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 187, in goto
-    self._cancel.publish(Bool(data=True))
-  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/publisher.py", line 70, in publish
-    self.__publisher.publish(msg)
-rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:389
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 480, in <module>
-    main()
-  File "/ros2_ws/src/xw_global_reloc/scripts/phase2b_handoff_lite.py", line 476, in main
-    rclpy.shutdown()
-  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
-    _shutdown(context=context)
-  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
-    return context.shutdown()
-  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
-    self.__context.shutdown()
-rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241

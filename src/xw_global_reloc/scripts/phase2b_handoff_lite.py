@@ -35,13 +35,16 @@ from xw_interfaces.srv import Relocalize
 BENCH = Path('/ros2_ws/bench/phase2b_amcl_handoff_2026-09-07')
 
 RC_READY, RC_UNKNOWN, RC_REJECTED, RC_AMCL_TIMEOUT = 0, 1, 2, 3
+RC_NO_DATA, RC_MAP_HASH, RC_DRY_RUN = 4, 5, 6
 FA_XY_M, FA_YAW_RAD = 1.0, 0.52
 OK_XY_M, OK_YAW_RAD = 0.50, 0.35
-NAV_TOL, NAV_TIMEOUT = 0.60, 100.0
+NAV_TOL, NAV_TIMEOUT = 0.65, 150.0
 NAV_OFFSET = 0.80
-COOL_AFTER_RELOC = 8.0
-COOL_AFTER_REGION = 12.0
-SETTLE = 2.0
+COOL_AFTER_RELOC = 10.0
+COOL_AFTER_REGION = 15.0
+SETTLE = 2.5
+LOAD_WAIT_MAX = 120.0
+LOAD_OK = 12.0
 
 _LATCH = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
@@ -159,8 +162,8 @@ class LiteHandoff(Node):
         if p is not None and math.hypot(p[0] - x, p[1] - y) < NAV_TOL:
             self.get_logger().info(f'{label}: near, skip')
             return True
-        self._cancel.publish(Bool(data=True))
-        self.sleep_spin(0.4, hz=5.0)
+        # Do NOT publish /xw/nav/cancel before every goal — races nav_session
+        # (_patrol_stop / preempt) and caused instant goal failed/aborted.
         self._tasks.clear()
         msg = PoseStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
@@ -266,19 +269,40 @@ class LiteHandoff(Node):
         out['reloc']['decision'] = diag.get('decision')
         code = reloc.get('result_code')
         cand = reloc.get('candidate')
+        diag_decision = out['reloc'].get('decision')
 
-        if code in (RC_UNKNOWN, RC_REJECTED):
-            out['reloc_decision'] = 'UNKNOWN' if code == RC_UNKNOWN else 'REJECTED'
+        if code in (RC_UNKNOWN, RC_REJECTED) or diag_decision in ('UNKNOWN', 'REJECTED'):
+            out['reloc_decision'] = 'UNKNOWN' if (code == RC_UNKNOWN or diag_decision == 'UNKNOWN') else 'REJECTED'
             out['handoff_attempted'] = False
             out['false_handoff'] = False
             self.seed(gt[0], gt[1], gt[2])
             return out
 
+        if code in (RC_NO_DATA, RC_MAP_HASH) or (
+            diag_decision is not None and diag_decision != 'ACCEPT'
+        ):
+            out['reloc_decision'] = {
+                RC_NO_DATA: 'NO_DATA',
+                RC_MAP_HASH: 'MAP_HASH',
+            }.get(code, f'code_{code}')
+            out['handoff_attempted'] = False
+            out['false_handoff'] = False
+            self.seed(gt[0], gt[1], gt[2])
+            return out
+
+        # From here: Relocalizer claimed ACCEPT (READY / AMCL_TIMEOUT).
         out['reloc_decision'] = 'ACCEPT'
         out['handoff_attempted'] = True
         if cand is not None:
             out['candidate_error_xy'] = math.hypot(cand[0] - gt[0], cand[1] - gt[1])
             out['candidate_error_yaw'] = yaw_err(cand[2], gt[2])
+            # Wrong ACCEPT prior (even if AMCL later refuses) is a False Accept.
+            if out['candidate_error_xy'] > FA_XY_M or out['candidate_error_yaw'] > FA_YAW_RAD:
+                out['false_handoff'] = True
+                out['false_accept'] = True
+                out['amcl_ready'] = False
+                self.seed(gt[0], gt[1], gt[2])
+                return out
 
         if code == RC_AMCL_TIMEOUT:
             out['amcl_ready'] = False
@@ -289,6 +313,8 @@ class LiteHandoff(Node):
 
         if code != RC_READY:
             out['amcl_ready'] = False
+            out['amcl_timeout'] = False
+            out['reloc_decision'] = f'code_{code}'
             out['false_handoff'] = False
             self.seed(gt[0], gt[1], gt[2])
             return out
@@ -370,7 +396,22 @@ def gate_debug(s: Dict[str, Any]) -> Dict[str, Any]:
         and nav is not None
         and nav >= 0.90
     )
-    return {'pass': ok, 'false_handoff': fa, 'amcl_success_rate': conv, 'nav_success_rate': nav}
+    return {
+        'pass': ok,
+        'false_handoff': fa,
+        'ACCEPT': s.get('ACCEPT'),
+        'amcl_success_rate': conv,
+        'nav_success_rate': nav,
+        'require': 'FA=0, ACCEPT≥8, AMCL≥90%, Nav≥90%',
+    }
+
+
+def host_load1() -> float:
+    try:
+        with open('/proc/loadavg', encoding='utf-8') as f:
+            return float(f.read().split()[0])
+    except Exception:  # noqa: BLE001
+        return 99.0
 
 
 def main() -> None:
@@ -382,26 +423,51 @@ def main() -> None:
     out_path = Path(args.out) if args.out else BENCH / f'handoff_lite_{args.mode}.json'
     per_region = 2 if args.mode == 'debug' else 6
 
+    # Wait for 1-min load to settle (observer-effect avoidance).
+    t_load = time.monotonic()
+    while time.monotonic() - t_load < LOAD_WAIT_MAX:
+        load = host_load1()
+        if load <= LOAD_OK:
+            break
+        print(json.dumps({'waiting_load1': load, 'want_le': LOAD_OK}), flush=True)
+        time.sleep(5.0)
+
     rclpy.init()
     node = LiteHandoff()
     # Prefetch latch.
-    node.sleep_spin(1.0, hz=3.0)
+    node.sleep_spin(1.5, hz=3.0)
     trials: List[Dict[str, Any]] = []
     stop = None
-    node.get_logger().info(f'LITE handoff {args.mode} regions={len(REGIONS)} x{per_region}')
+    load_start = host_load1()
+    # Visit nearer regions first from current pose (avoid false doorway seed).
+    cur = node.pose()
+    regions = list(REGIONS)
+    if cur is not None:
+        regions.sort(key=lambda r: math.hypot(r['x'] - cur[0], r['y'] - cur[1]))
+        node.get_logger().info(
+            f'region order from ({cur[0]:.2f},{cur[1]:.2f}): '
+            + ','.join(r['id'] for r in regions)
+        )
+    node.get_logger().info(
+        f'LITE handoff {args.mode} regions={len(regions)} x{per_region} load1={load_start:.2f}'
+    )
     try:
-        for region in REGIONS:
-            # Setup localize only if clearly lost — seed at region ONLY after failed previous,
-            # but prefer current pose if already healthy near path.
+        for region in regions:
             p = node.pose()
             c = node.cov_xy()
             if node._loc != 0 or p is None or (c is not None and c > 1.5):
-                # Seed near last known / region approach: use current if any, else region.
                 if p is not None:
                     node.seed(p[0], p[1], p[2])
                 else:
                     node.seed(region['x'], region['y'], region['yaw'])
-            if not node.goto(region['x'], region['y'], region['yaw'], region['id']):
+            arrived = node.goto(region['x'], region['y'], region['yaw'], region['id'])
+            if not arrived:
+                # one retry after re-seed at current estimate
+                p2 = node.pose()
+                if p2 is not None:
+                    node.seed(p2[0], p2[1], p2[2])
+                arrived = node.goto(region['x'], region['y'], region['yaw'], f"{region['id']}_retry")
+            if not arrived:
                 for i in range(per_region):
                     trials.append(
                         {
@@ -429,7 +495,6 @@ def main() -> None:
             for i in range(per_region):
                 tid = f"{region['id']}_{i}"
                 node.get_logger().info(f'=== {tid} ===')
-                # Refresh GT each handoff (robot should still be at region).
                 gt_i = node.pose() or gt
                 one = node.one_handoff(tid, region, gt_i)
                 trials.append(one)
@@ -445,6 +510,7 @@ def main() -> None:
                             'wall': None
                             if not one.get('reloc')
                             else round(float(one['reloc'].get('wall_sec') or 0), 1),
+                            'load1': round(host_load1(), 2),
                         }
                     ),
                     flush=True,
@@ -460,11 +526,13 @@ def main() -> None:
         stats = summarize(trials)
         payload = {
             'mode': args.mode,
-            'validator': 'lite_v1',
+            'validator': 'lite_v2',
             'allow_amcl_handoff': True,
             'per_region': per_region,
             'cool_after_reloc_sec': COOL_AFTER_RELOC,
             'cool_after_region_sec': COOL_AFTER_REGION,
+            'load1_start': load_start,
+            'load1_end': host_load1(),
             'stop_reason': stop,
             'stats': stats,
             'debug_gate': gate_debug(stats) if args.mode == 'debug' else None,

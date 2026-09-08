@@ -1,0 +1,148 @@
+{
+  "mode": "debug",
+  "validator": "lite_v2",
+  "allow_amcl_handoff": true,
+  "per_region": 2,
+  "cool_after_reloc_sec": 10.0,
+  "cool_after_region_sec": 15.0,
+  "load1_start": 9.86,
+  "load1_end": 5.56,
+  "stop_reason": null,
+  "stats": {
+    "n": 10,
+    "aborted": 8,
+    "ACCEPT": 0,
+    "UNKNOWN": 2,
+    "amcl_ready": 0,
+    "amcl_timeout": 0,
+    "false_handoff": 0,
+    "amcl_success_rate": null,
+    "nav_success_rate": null,
+    "reloc_wall_p50": null,
+    "reloc_wall_p95": null,
+    "amcl_conv_p50": null,
+    "amcl_conv_p95": null
+  },
+  "debug_gate": {
+    "pass": false,
+    "false_handoff": 0,
+    "ACCEPT": 0,
+    "amcl_success_rate": null,
+    "nav_success_rate": null,
+    "require": "FA=0, ACCEPT\u22658, AMCL\u226590%, Nav\u226590%"
+  },
+  "trials": [
+    {
+      "trial_id": "doorway_wp9_0",
+      "region": "doorway_wp9",
+      "cls": "doorway",
+      "gt": {
+        "x": -0.230463829668541,
+        "y": -0.2975096782539185,
+        "yaw": 2.9716587879850085
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 2,
+        "cov_xy": 88.29906797589338,
+        "dt": 1.3370966740000085
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 1,
+        "success": false,
+        "laser_score": 0.0,
+        "time_to_candidate_sec": 14.234562873840332,
+        "amcl_convergence_sec": 0.0,
+        "wall_sec": 14.834867105,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null,
+        "decision": "UNKNOWN"
+      },
+      "reloc_decision": "UNKNOWN",
+      "handoff_attempted": false,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "doorway_wp9_1",
+      "region": "doorway_wp9",
+      "cls": "doorway",
+      "gt": {
+        "x": -5.346126423360668,
+        "y": 6.783662078586057,
+        "yaw": 1.7181856093374166
+      },
+      "unknown": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 44.59234857840544,
+        "dt": 2.0088694169999712
+      },
+      "reloc": {
+        "ok": true,
+        "result_code": 1,
+        "success": false,
+        "laser_score": 0.0,
+        "time_to_candidate_sec": 13.171813011169434,
+        "amcl_convergence_sec": 0.0,
+        "wall_sec": 13.470821361000048,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null,
+        "decision": "UNKNOWN"
+      },
+      "reloc_decision": "UNKNOWN",
+      "handoff_attempted": false,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "corridor_wp2_0",
+      "region": "corridor_wp2",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "corridor_wp2_1",
+      "region": "corridor_wp2",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "similar_corridor_wp3_0",
+      "region": "similar_corridor_wp3",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "similar_corridor_wp3_1",
+      "region": "similar_corridor_wp3",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "room_wp5_0",
+      "region": "room_wp5",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "room_wp5_1",
+      "region": "room_wp5",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "open_wp6_0",
+      "region": "open_wp6",
+      "aborted": "goto_failed"
+    },
+    {
+      "trial_id": "open_wp6_1",
+      "region": "open_wp6",
+      "aborted": "goto_failed"
+    }
+  ]
+}
