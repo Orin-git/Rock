@@ -1,0 +1,46 @@
+{
+  "trial": "BOOT_D",
+  "attempt": 2,
+  "score": "PASS",
+  "final": "READY",
+  "path": "P3",
+  "fa_pose": false,
+  "amcl_pose": [
+    -9.153700957092937,
+    0.8771543274463406,
+    -3.0960040610537933
+  ],
+  "stages": [
+    [
+      "START",
+      "ok",
+      "service",
+      null
+    ],
+    [
+      "WAIT_SENSORS",
+      "ok",
+      "ok",
+      null
+    ],
+    [
+      "P1",
+      "skip",
+      "charger_prior_unavailable",
+      null
+    ],
+    [
+      "P2",
+      "laser_reject",
+      "laser_gate",
+      0.0
+    ],
+    [
+      "P3",
+      "READY",
+      "relocalize_ready",
+      0.7599000930786133
+    ]
+  ],
+  "load_end": "8.23 6.58 3.87 7/1122 2440"
+}

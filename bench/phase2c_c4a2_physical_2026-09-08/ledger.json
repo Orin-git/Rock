@@ -1,0 +1,27 @@
+{
+  "trials": {
+    "BOOT_D": {
+      "score": "SAFE_UNKNOWN",
+      "final": "UNKNOWN",
+      "path": "NONE",
+      "stamp": 1788856234.1604486
+    },
+    "BOOT_E": {
+      "score": "PASS",
+      "final": "READY",
+      "path": "P3",
+      "stamp": 1788856654.686346
+    },
+    "LOST_C": {
+      "score": "PASS",
+      "final": "READY",
+      "stamp": 1788857335.2805786
+    },
+    "BOOT_A": {
+      "score": "FAIL",
+      "file": "/ros2_ws/bench/phase2c_c4a2_physical_2026-09-08/trial_BOOT_A.json",
+      "stamp": 1788857920.1901042,
+      "note": "charging-only; IR ignored; one scramble then P1"
+    }
+  }
+}

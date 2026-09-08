@@ -1,0 +1,18 @@
+{
+  "trial": "LOST_B",
+  "score": "SAFE_UNKNOWN",
+  "final": "UNKNOWN",
+  "follow_after": false,
+  "blocked_end": true,
+  "loc_state": "UNKNOWN",
+  "reason": "status_3",
+  "resume_policy": {
+    "nav": "forbidden",
+    "follow": "forbidden",
+    "recharge": "forbidden",
+    "detail": "NEED_OPERATOR"
+  },
+  "snapshot_task": "navigate",
+  "follow_was_on": false,
+  "load_end": "12.93 9.53 6.25 20/1136 3524"
+}

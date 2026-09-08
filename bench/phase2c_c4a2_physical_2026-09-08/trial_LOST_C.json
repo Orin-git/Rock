@@ -1,0 +1,12 @@
+{
+  "trial": "LOST_C",
+  "score": "PASS",
+  "final": "READY",
+  "loc_state": "READY",
+  "follow_after": false,
+  "blocked_end": false,
+  "reason": null,
+  "resume_policy": {},
+  "snapshot": null,
+  "load_end": "6.06 8.20 6.79 1/1132 3835"
+}

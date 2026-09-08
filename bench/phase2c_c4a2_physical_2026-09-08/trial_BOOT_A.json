@@ -1,0 +1,30 @@
+{
+  "trial": "BOOT_A",
+  "ir_policy": "ignored; charging state only",
+  "scramble_pose": {
+    "x": -8.936784667454088,
+    "y": 1.5960588981494703,
+    "yaw": -2.195708002205529
+  },
+  "prereq": {
+    "map": true,
+    "scan": true,
+    "amcl": true,
+    "tf": true,
+    "load": 10.45,
+    "load_max": 9.0,
+    "charging": false,
+    "docked_ignored": false,
+    "battery": 0.0,
+    "prior": null,
+    "loc": 1,
+    "pose_before": [
+      1.702089766132736,
+      0.00285801032502982,
+      -2.7366376312439473
+    ],
+    "boot_svc": true
+  },
+  "score": "FAIL",
+  "reason": "no_charging_evidence"
+}
