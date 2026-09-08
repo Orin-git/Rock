@@ -1,0 +1,81 @@
+
+===== b3_00_wp_6 (open) =====
+  NAV SETUP → wp_6
+  MANUAL PLACE at wp_6 then: docker exec ros2_humble_dev touch /tmp/phase2b3_placed
+  cool load1=4.49
+{"trial": "b3_00_wp_6", "layer": "SAFE_UNKNOWN", "fa": false, "load1": 4.49, "xy": null, "nav": null, "amcl_s": null, "vl": 12.967190742492676}
+  cool load1=3.79
+
+===== b3_01_wp_9 (doorway) =====
+  NAV SETUP → wp_9
+  cool load1=6.42
+{"trial": "b3_01_wp_9", "layer": "SUCCESS", "fa": false, "load1": 6.42, "xy": 0.45, "nav": true, "amcl_s": 3.149219512939453, "vl": 14.627013206481934}
+  cool load1=5.76
+
+===== b3_02_wp_2 (corridor) =====
+  NAV SETUP → wp_2
+  MANUAL PLACE at wp_2 then: docker exec ros2_humble_dev touch /tmp/phase2b3_placed
+  cool load1=8.55
+{"trial": "b3_02_wp_2", "layer": "SUCCESS", "fa": false, "load1": 8.55, "xy": 0.194, "nav": true, "amcl_s": 2.6062421798706055, "vl": 13.971471786499023}
+  cool load1=6.62
+
+===== b3_03_wp_5 (room) =====
+  NAV SETUP → wp_5
+  MANUAL PLACE at wp_5 then: docker exec ros2_humble_dev touch /tmp/phase2b3_placed
+  cool load1=12.02
+  cool load1=11.14
+  cool load1=11.29
+  cool load1=11.29
+  cool load1=10.55
+  cool load1=10.55
+  cool load1=9.70
+  cool load1=9.08
+  cool load1=9.08
+  cool load1=8.36
+{"trial": "b3_03_wp_5", "layer": "SUCCESS", "fa": false, "load1": 8.36, "xy": 0.682, "nav": true, "amcl_s": 3.3729984760284424, "vl": 14.592567443847656}
+  cool load1=9.34
+  cool load1=9.34
+  cool load1=8.67
+
+===== b3_04_wp_3 (similar_corridor) =====
+  NAV SETUP → wp_3
+  cool load1=6.69
+{"trial": "b3_04_wp_3", "layer": "SUCCESS", "fa": false, "load1": 6.15, "xy": 0.157, "nav": true, "amcl_s": 2.786357879638672, "vl": 12.739909172058105}
+  cool load1=6.40
+
+===== b3_05_wp_6 (open) =====
+  NAV SETUP → wp_6
+  MANUAL PLACE at wp_6 then: docker exec ros2_humble_dev touch /tmp/phase2b3_placed
+  cool load1=12.73
+  cool load1=11.87
+  cool load1=11.87
+  cool load1=11.00
+  cool load1=11.00
+  cool load1=10.28
+  cool load1=10.10
+  cool load1=10.10
+  cool load1=9.29
+  cool load1=9.29
+  cool load1=8.94
+{"trial": "b3_05_wp_6", "layer": "SUCCESS", "fa": false, "load1": 8.31, "xy": 0.132, "nav": true, "amcl_s": 2.787775993347168, "vl": 13.651239395141602}
+  cool load1=6.97
+
+===== b3_06_wp_9 (doorway) =====
+  NAV SETUP → wp_9
+  cool load1=6.66
+{"trial": "b3_06_wp_9", "layer": "SUCCESS", "fa": false, "load1": 6.66, "xy": 0.385, "nav": true, "amcl_s": 3.3104348182678223, "vl": 13.51430606842041}
+  cool load1=6.43
+{
+  "out": "/ros2_ws/bench/phase2b3_resource_coverage_2026-09-08/coverage_trials.json",
+  "n": 7,
+  "layers": [
+    "SAFE_UNKNOWN",
+    "SUCCESS",
+    "SUCCESS",
+    "SUCCESS",
+    "SUCCESS",
+    "SUCCESS",
+    "SUCCESS"
+  ],
+  "stop": null
+}

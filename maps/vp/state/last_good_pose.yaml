@@ -1,0 +1,13 @@
+map_name: vp
+map_hash: 56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25
+timestamp: 1788850758.378695
+x: 1.866
+y: -0.06
+yaw: -3.129
+covariance:
+- 0.05
+- 0.05
+- 0.02
+source: test
+quality: 0.9
+note: "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose"

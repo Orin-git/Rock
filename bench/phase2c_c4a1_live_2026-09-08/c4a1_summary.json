@@ -1,0 +1,35 @@
+{
+  "date": "2026-09-08",
+  "round": "C4A.1",
+  "scores": {
+    "BOOT_A": "FAIL",
+    "BOOT_B": "PASS",
+    "BOOT_C": "PASS",
+    "BOOT_D": "FAIL",
+    "BOOT_E": "FAIL",
+    "LOST_A": "PASS",
+    "LOST_B": "FAIL",
+    "LOST_C": "FAIL",
+    "LOST_D": "PASS",
+    "LOST_E": "PASS"
+  },
+  "reasons": {
+    "BOOT_A": "no charging/docked evidence; no PLACE_BOOT_A_CHARGING marker",
+    "BOOT_D": "robot not physically at similar_corridor; no marker; AUTO_NAV aborted (load/TF/flag_stop risk)",
+    "BOOT_E": "robot not physically at open; no marker",
+    "LOST_B": "no Follow LOST induction without /initialpose; no operator marker",
+    "LOST_C": "no manual carry confirmation"
+  },
+  "false_accept": 0,
+  "false_handoff": 0,
+  "false_recovery": 0,
+  "credit_from_c4a": [
+    "BOOT_B",
+    "BOOT_C",
+    "LOST_A",
+    "LOST_D",
+    "LOST_E"
+  ],
+  "ALLOW_PHASE2C_C4B_PRODUCTION_INTEGRATION": "NO",
+  "production_untouched": true
+}

@@ -1,0 +1,440 @@
+{
+  "mode": "debug",
+  "validator": "phase2b1_coverage_v1",
+  "pre_nav_isolated": true,
+  "allow_amcl_handoff": true,
+  "production_unchanged": true,
+  "stop_reason": null,
+  "stats": {
+    "n": 10,
+    "layers": {
+      "SUCCESS": 1,
+      "SETUP_FAILED": 4,
+      "RELOC_UNKNOWN": 5
+    },
+    "easy_n": 8,
+    "hard_n": 2,
+    "easy_correct_accept": 1,
+    "safe_unknown": 5,
+    "no_data": 0,
+    "setup_failed": 4,
+    "reloc_accept_n": 1,
+    "amcl_ready_n": 1,
+    "amcl_ready_rate_on_accept": 1.0,
+    "false_handoff": 0,
+    "nav_success_rate_after_ready": 1.0,
+    "success": 1,
+    "reloc_wall_p50": 16.60347697799989,
+    "reloc_wall_p95": 16.60347697799989,
+    "visual_laser_p50": 13.40395736694336,
+    "visual_laser_p95": 13.40395736694336,
+    "amcl_conv_p50": 2.6782126426696777,
+    "amcl_conv_p95": 2.6782126426696777
+  },
+  "debug_gate": {
+    "pass": false,
+    "false_handoff": 0,
+    "easy_correct_accept": 1,
+    "amcl_ready_rate_on_accept": 1.0,
+    "nav_success_rate_after_ready": 1.0,
+    "require": "FA=0, easy Correct ACCEPT\u22658, AMCL\u226590% on ACCEPT, Nav\u226590% after READY"
+  },
+  "trials": [
+    {
+      "trial_id": "easy_kf_000007",
+      "keyframe_id": "kf_000007",
+      "region": "doorway_wp9",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": 0.14492601607481603,
+        "y": -0.5379024281484402,
+        "yaw": 2.9115548231341846
+      },
+      "gt": {
+        "x": 0.006841408336039322,
+        "y": -0.42836122920731023,
+        "yaw": 2.5670961547001117
+      },
+      "gt_cov_xy": 0.00858918155609217,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 88.13430877098332,
+        "dt": 1.005028578999827
+      },
+      "reloc": {
+        "result_code": 0,
+        "laser_score": 0.6007366180419922,
+        "wall_sec": 16.60347697799989,
+        "time_to_candidate_sec": 13.40395736694336,
+        "amcl_convergence_sec": 2.6782126426696777,
+        "candidate": [
+          -0.10507398392518412,
+          -0.3879024281484397,
+          2.6497554353350337
+        ],
+        "decision": "ACCEPT",
+        "sensor_gate": {
+          "sensor_arm_timeout_sec": 10.0,
+          "sensor_fresh_sec": 1.0,
+          "scan_wait_ms": 106.29915100025755,
+          "rgb_request_to_first_rgb_ms": 3101.539969999976,
+          "sensor_ready_ms": 3101.6265980001663,
+          "sensor_ready": true,
+          "rgb": true,
+          "scan": true,
+          "camera_info": true,
+          "map": true
+        },
+        "amcl_handoff": {
+          "amcl_pose": [
+            -0.11247535733711495,
+            -0.41712332620431325,
+            2.720388601323341
+          ],
+          "amcl_age_sec": 1.8830398179998156,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.19551564600000002,
+          "cov_xy": 0.058793154974228067,
+          "cov_yaw": 0.014721606196022832,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.03014367614566262,
+          "candidate_delta_yaw": 0.07063316598830749,
+          "near_candidate": true,
+          "stable_for_sec": 2.5311573569997563,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.678212707000057
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.03014367614566262,
+          "dyaw": 0.07063316598830749
+        }
+      },
+      "layer": "SUCCESS",
+      "handoff_attempted": true,
+      "candidate": {
+        "x": -0.10507398392518412,
+        "y": -0.3879024281484397,
+        "yaw": 2.6497554353350337
+      },
+      "candidate_error_xy": 0.11900407391389915,
+      "candidate_error_yaw": 0.082659280634922,
+      "laser_score": 0.6007366180419922,
+      "amcl_ready": true,
+      "amcl_ready_pose": {
+        "x": -0.11247535733711495,
+        "y": -0.41712332620431325,
+        "yaw": 2.720388601323341
+      },
+      "amcl_cov_xy": 0.058793154974228067,
+      "amcl_cov_yaw": 0.014721606196022832,
+      "final_error_xy": 0.11984482064155787,
+      "final_error_yaw": 0.1532924466232295,
+      "candidate_to_amcl_dxy": 0.03014367614566262,
+      "candidate_to_amcl_dyaw": 0.07063316598830749,
+      "quality_ok": true,
+      "amcl_convergence_sec": 2.6782126426696777,
+      "false_handoff": false,
+      "nav_success": true
+    },
+    {
+      "trial_id": "easy_kf_000012",
+      "keyframe_id": "kf_000012",
+      "region": "doorway_wp9",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": -0.24940788552104998,
+        "y": -0.9631676371848721,
+        "yaw": -1.991018123816904
+      },
+      "layer": "SETUP_FAILED",
+      "setup_error": "setup_nav_failed"
+    },
+    {
+      "trial_id": "easy_kf_000014",
+      "keyframe_id": "kf_000014",
+      "region": "corridor_wp2",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": -3.812539260881123,
+        "y": -1.098964613614613,
+        "yaw": -3.074630534761376
+      },
+      "layer": "SETUP_FAILED",
+      "setup_error": "setup_nav_failed"
+    },
+    {
+      "trial_id": "easy_kf_000020",
+      "keyframe_id": "kf_000020",
+      "region": "similar_corridor_wp3",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": -9.152724732358584,
+        "y": 0.9369008880389582,
+        "yaw": 2.669875402783762
+      },
+      "layer": "SETUP_FAILED",
+      "setup_error": "setup_nav_failed"
+    },
+    {
+      "trial_id": "easy_kf_000023",
+      "keyframe_id": "kf_000023",
+      "region": "similar_corridor_wp3",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": -9.51813517081083,
+        "y": 0.6337983715985716,
+        "yaw": -2.9532058821124645
+      },
+      "gt": {
+        "x": -9.647768181422888,
+        "y": 0.6707631427695873,
+        "yaw": -2.9302459352218264
+      },
+      "gt_cov_xy": 0.3317832795162647,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 92.07447536340966,
+        "dt": 1.003738212999906
+      },
+      "reloc": {
+        "result_code": 1,
+        "laser_score": 0.0,
+        "wall_sec": 14.66292691200033,
+        "time_to_candidate_sec": 14.282234191894531,
+        "amcl_convergence_sec": 0.0,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "decision": "UNKNOWN",
+        "sensor_gate": {
+          "rgb_request_to_first_rgb_ms": 3311.566581000079,
+          "scan_wait_ms": 135.97669399996448,
+          "sensor_ready_ms": 3311.633373999939,
+          "sensor_ready": true
+        },
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null
+      },
+      "layer": "RELOC_UNKNOWN",
+      "safe_unknown": true,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "easy_kf_000026",
+      "keyframe_id": "kf_000026",
+      "region": "room_wp5",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": -8.012238669616762,
+        "y": 3.0762895183428087,
+        "yaw": 0.49701989621448434
+      },
+      "gt": {
+        "x": -8.126062851768488,
+        "y": 3.165447986052408,
+        "yaw": 0.44420847079909925
+      },
+      "gt_cov_xy": 0.4703310306349934,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 87.07365416437335,
+        "dt": 0.669232700000066
+      },
+      "reloc": {
+        "result_code": 1,
+        "laser_score": 0.0,
+        "wall_sec": 21.052479033000054,
+        "time_to_candidate_sec": 20.54793357849121,
+        "amcl_convergence_sec": 0.0,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "decision": "UNKNOWN",
+        "sensor_gate": {
+          "rgb_request_to_first_rgb_ms": 3661.974746999931,
+          "scan_wait_ms": 258.2487909999145,
+          "sensor_ready_ms": 3662.0319150001706,
+          "sensor_ready": true
+        },
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null
+      },
+      "layer": "RELOC_UNKNOWN",
+      "safe_unknown": true,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "easy_kf_000033",
+      "keyframe_id": "kf_000033",
+      "region": "open_wp6",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": -0.9803887847192936,
+        "y": 9.463341783972615,
+        "yaw": 0.14077717620548974
+      },
+      "gt": {
+        "x": -0.611692257778678,
+        "y": 9.660219107972816,
+        "yaw": 0.15421519785355975
+      },
+      "gt_cov_xy": 0.3585252177713074,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 89.770205452862,
+        "dt": 1.0068865429998368
+      },
+      "reloc": {
+        "result_code": 1,
+        "laser_score": 0.0,
+        "wall_sec": 23.99640388700027,
+        "time_to_candidate_sec": 23.738813400268555,
+        "amcl_convergence_sec": 0.0,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "decision": "UNKNOWN",
+        "sensor_gate": {
+          "rgb_request_to_first_rgb_ms": 8340.727872000116,
+          "scan_wait_ms": 139.0118539998184,
+          "sensor_ready_ms": 8340.927376999844,
+          "sensor_ready": true
+        },
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null
+      },
+      "layer": "RELOC_UNKNOWN",
+      "safe_unknown": true,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "easy_kf_000037",
+      "keyframe_id": "kf_000037",
+      "region": "open_wp6",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": -0.6016968828431715,
+        "y": 9.69059117458052,
+        "yaw": 0.7111001821286956
+      },
+      "layer": "SETUP_FAILED",
+      "setup_error": "setup_nav_failed"
+    },
+    {
+      "trial_id": "hard_kf_000013",
+      "keyframe_id": "kf_000013",
+      "region": "corridor_wp2",
+      "expect": "UNKNOWN",
+      "class": "hard_negative",
+      "target": {
+        "x": -3.822721383127579,
+        "y": -1.0608652474552533,
+        "yaw": 2.4444921074444506
+      },
+      "gt": {
+        "x": -3.8000436418967745,
+        "y": -1.1258007588888486,
+        "yaw": 2.1708306780268734
+      },
+      "gt_cov_xy": 0.31182513618588126,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 2,
+        "cov_xy": 0.24591683611777648,
+        "dt": 0.6687823550000758
+      },
+      "reloc": {
+        "result_code": 1,
+        "laser_score": 0.0,
+        "wall_sec": 21.961050420000447,
+        "time_to_candidate_sec": 21.41794204711914,
+        "amcl_convergence_sec": 0.0,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "decision": "UNKNOWN",
+        "sensor_gate": {
+          "rgb_request_to_first_rgb_ms": 2453.435847000037,
+          "scan_wait_ms": 208.08610299991415,
+          "sensor_ready_ms": 2453.4743479998724,
+          "sensor_ready": true
+        },
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null
+      },
+      "layer": "RELOC_UNKNOWN",
+      "safe_unknown": true,
+      "false_handoff": false
+    },
+    {
+      "trial_id": "hard_kf_000019",
+      "keyframe_id": "kf_000019",
+      "region": "similar_corridor_wp3",
+      "expect": "UNKNOWN",
+      "class": "hard_negative",
+      "target": {
+        "x": -9.289177221348526,
+        "y": 0.7918620290229708,
+        "yaw": 1.640206998202063
+      },
+      "gt": {
+        "x": -9.133851785770842,
+        "y": 0.5672395971987475,
+        "yaw": 1.8636780263741097
+      },
+      "gt_cov_xy": 0.03027669374293929,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 0,
+        "cov_xy": 84.27210523088058,
+        "dt": 0.6739713349998055
+      },
+      "reloc": {
+        "result_code": 1,
+        "laser_score": 0.0,
+        "wall_sec": 26.275345229000322,
+        "time_to_candidate_sec": 25.931438446044922,
+        "amcl_convergence_sec": 0.0,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "decision": "UNKNOWN",
+        "sensor_gate": {
+          "rgb_request_to_first_rgb_ms": 9385.468775999925,
+          "scan_wait_ms": 115.19701899987922,
+          "sensor_ready_ms": 9385.596236999845,
+          "sensor_ready": true
+        },
+        "amcl_handoff": null,
+        "candidate_to_amcl_correction": null
+      },
+      "layer": "RELOC_UNKNOWN",
+      "safe_unknown": true,
+      "false_handoff": false
+    }
+  ]
+}

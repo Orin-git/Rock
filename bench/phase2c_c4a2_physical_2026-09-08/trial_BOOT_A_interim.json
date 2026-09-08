@@ -1,0 +1,13 @@
+{
+  "trial": "BOOT_A",
+  "score": "PENDING_RETRY",
+  "charge_evidence": {
+    "charging": true,
+    "battery_state_status": 1,
+    "charger_prior_available": true,
+    "soft_prior_only": true
+  },
+  "blocked_reason": "Nav2 bringup load 15-27 pollution + map\u2192odom TF missing while phase2c_disable_blind_seed had been true; refused to score under load gate",
+  "note": "Operator confirmed on charger; /xw/power charging=true observed; cascade not executed this attempt",
+  "stamp": 1788855266.3833444
+}

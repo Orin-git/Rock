@@ -1,0 +1,79 @@
+{
+  "date": "2026-09-08",
+  "note": "Structural/offline C3 policy matrix; live A-E deferred (/map publishers=0)",
+  "flag_default": {
+    "phase2c_lost_recovery_enabled": false
+  },
+  "unit_tests": "13/13 PASS",
+  "smoke": "node starts enabled=False",
+  "scenarios": [
+    {
+      "id": "A",
+      "name": "Nav mid-LOST",
+      "expect": [
+        "STOP cancel+block",
+        "Reloc",
+        "READY",
+        "nav replan"
+      ],
+      "offline": "PASS_policy",
+      "live": "DEFERRED"
+    },
+    {
+      "id": "B",
+      "name": "Follow then LOST",
+      "expect": [
+        "Follow OFF",
+        "Reloc",
+        "READY",
+        "no auto Follow"
+      ],
+      "offline": "PASS_policy",
+      "live": "DEFERRED"
+    },
+    {
+      "id": "C",
+      "name": "Manual relocate",
+      "expect": [
+        "LOST debounce",
+        "Reloc",
+        "READY|UNKNOWN"
+      ],
+      "offline": "PASS_policy",
+      "live": "DEFERRED"
+    },
+    {
+      "id": "D",
+      "name": "Covariance flicker",
+      "expect": [
+        "debounce",
+        "no repeat Recovery"
+      ],
+      "offline": "PASS_policy",
+      "live": "DEFERRED"
+    },
+    {
+      "id": "E",
+      "name": "Reloc UNKNOWN",
+      "expect": [
+        "NEED_OPERATOR",
+        "no motion"
+      ],
+      "offline": "PASS_policy",
+      "live": "DEFERRED"
+    }
+  ],
+  "single_owner": {
+    "reloc_path": true,
+    "spin_reinit_parallel_forbidden": true,
+    "health_blocks_on_phase2c_recovery": true
+  },
+  "false_recovery": 0,
+  "false_handoff": 0,
+  "phase2b3_credit": {
+    "ACCEPT_to_AMCL_READY": "100%",
+    "FA": 0,
+    "FH": 0
+  },
+  "c2_debt": "live BOOT A-E incomplete \u2014 /map publisher missing"
+}

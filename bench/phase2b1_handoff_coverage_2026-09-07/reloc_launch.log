@@ -1,0 +1,5 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-09-08-01-46-42-609917-rock-5t-1679
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [global_reloc_poc-1]: process started with pid [1682]
+[global_reloc_poc-1] [INFO] [1788832004.311522869] [xw_global_reloc_poc]: reloc PoC ready db_kfs=37 allow_amcl_handoff=True (sensors subscribed only during call)
+[global_reloc_poc-1] [INFO] [1788832078.087266984] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-0.11247535733711495, -0.41712332620431325, 2.720388601323341) conv=2.68s

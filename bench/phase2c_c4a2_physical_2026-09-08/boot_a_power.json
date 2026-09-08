@@ -1,0 +1,19 @@
+{
+  "power": {
+    "charging": true,
+    "docked": false,
+    "battery": 80.0,
+    "I": 0.0,
+    "ir": 0,
+    "detail": "serial:/dev/chassis tx=1126718 rx=450736 bms_rx=22537 err=0 flag_stop=1 0x7c bms mode=0 ir=0 I=0A Ibms=3.38A SOC=80% V=27.09 last=7b00000000000000007b7d cmd=(0,0) meas=(0,0)"
+  },
+  "battery_state": {
+    "status": 1,
+    "current": 3.380000114440918,
+    "voltage": 27.09000015258789,
+    "pct": 0.800000011920929
+  },
+  "charger_prior_available": true,
+  "charger_prior_diag": "{\"charger_prior_available\":true,\"soft_prior_only\":true,\"reason\":\"soft_prior_charge_evidence_plus_waypoint\",\"charging\":true,\"docked\":false,\"battery_charging\":true,\"charger_waypoint\":{\"x\":1.8663955491712294,\"y\":-0.05958837147746455,\"yaw\":-3.1286646850836126},\"laser_verify_status\":\"not_run\",\"policy\":\"S",
+  "robot_charging_flag": true
+}

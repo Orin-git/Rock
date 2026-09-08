@@ -1,0 +1,20 @@
+[INFO] [launch]: All log files can be found below /root/.ros/log/2026-09-08-02-56-05-910080-rock-5t-8529
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [global_reloc_poc-1]: process started with pid [8530]
+[global_reloc_poc-1] [INFO] [1788836170.946191351] [xw_global_reloc_poc]: reloc PoC ready db_kfs=37 allow_amcl_handoff=True (IDLE: no RGB/Depth/Scan/map/amcl/TF)
+[global_reloc_poc-1] [INFO] [1788836232.198133497] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-0.9766045115397013, 9.53202776860075, -0.6139061190470071) conv=2.79s
+[global_reloc_poc-1] [INFO] [1788836426.429951547] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.6683111260214507, -0.26071765440866146, -2.2226585159470544) conv=2.62s
+[global_reloc_poc-1] [INFO] [1788837036.605907333] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.6846787957797781, -0.29601593227992995, -2.1305456695160143) conv=3.15s
+[global_reloc_poc-1] [INFO] [1788837270.212996364] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-4.015988068217598, -1.0726016364853488, 2.9164031738654694) conv=2.61s
+[global_reloc_poc-1] [INFO] [1788837506.475735651] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-8.249757229231962, 2.68236906356105, 1.3031608585249161) conv=3.37s
+[global_reloc_poc-1] [INFO] [1788837556.683112617] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-8.78280364082663, 1.5643486044538653, -2.153030524030377) conv=2.79s
+[global_reloc_poc-1] [INFO] [1788837771.103474303] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(-1.0179477656437819, 9.527771639056532, -0.5429075617344913) conv=2.79s
+[global_reloc_poc-1] [INFO] [1788837834.816060999] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.4790876849277902, -0.44458668302074983, -2.370341595107936) conv=3.31s
+[global_reloc_poc-1] [INFO] [1788850612.093679482] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.4726442488231638, -0.41476618493324463, -2.961745783859904) conv=3.26s
+[global_reloc_poc-1] [INFO] [1788850749.617233778] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.3891958600696787, -0.43439458214327675, -2.978123392291005) conv=3.42s
+[global_reloc_poc-1] [INFO] [1788850787.129276353] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.4068499651752746, -0.4389512875666375, -2.9702863513534394) conv=4.10s
+[global_reloc_poc-1] [INFO] [1788850820.906908230] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.4337926370079452, -0.44939447919867176, -2.870372858398895) conv=2.63s
+[global_reloc_poc-1] [INFO] [1788850995.255992641] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(0.10586189653380877, -0.410435036574516, 2.230579276095194) conv=3.22s
+[global_reloc_poc-1] [WARN] [1788853717.569471572] [xw_global_reloc_poc]: request_nomotion_update not ready
+[global_reloc_poc-1] [WARN] [1788853729.621567468] [xw_global_reloc_poc]: AMCL_TIMEOUT after handoff diag={"saw_post_seed_amcl": false, "localization_ready": false, "amcl_convergence_sec": 12.01717619000192}
+[global_reloc_poc-1] [INFO] [1788854177.603732036] [xw_global_reloc_poc]: LOCALIZATION_READY amcl=(1.7998096656566744, -0.052232346181241916, -3.047550837787948) conv=2.69s

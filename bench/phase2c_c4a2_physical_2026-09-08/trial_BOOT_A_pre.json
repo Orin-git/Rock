@@ -1,0 +1,24 @@
+{
+  "ready_window": false,
+  "load": "15.52 13.57 10.84 8/1153 20849",
+  "map": true,
+  "scan": true,
+  "amcl": false,
+  "tf": false,
+  "power": {
+    "charging": true,
+    "docked": false,
+    "battery": 83.0,
+    "I": 0.0
+  },
+  "battery_state": {
+    "status": 1,
+    "current": 3.309999942779541,
+    "charging_enum": true
+  },
+  "charger_prior_available": true,
+  "charge_evidence_ok": true,
+  "loc": 1,
+  "prereq_ok": false,
+  "reason": "load_pollution"
+}

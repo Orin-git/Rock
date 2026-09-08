@@ -1,0 +1,107 @@
+[INFO] [1788851974.689695573] [xw_nav_session]: nav session ready
+[WARN] [1788851974.744692511] [xw_nav_session]: sweeping orphan Nav2 pids=[14710, 14711, 14713, 14715, 14717, 14719, 14721, 14723, 14734, 14736, 14738, 14769, 14790, 14794]
+[INFO] [1788852165.898546084] [xw_nav_session]: nav map_name=vp
+[INFO] [1788852166.433772871] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852166.436059294] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852166.437337987] [xw_nav_session]: nav cancel (goals-blocked)
+[WARN] [1788852166.439977042] [xw_nav_session]: nav goals blocked (phase2c LOST cancel)
+[INFO] [1788852169.009420877] [xw_nav_session]: nav2 started pid=16454 map=/ros2_ws/maps/vp.yaml
+[WARN] [1788852169.012708321] [xw_nav_session]: phase2c_disable_blind_seed=true — skipping blind charger seed (BOOT cascade / operator must provide /initialpose)
+[WARN] [1788852248.360243857] [xw_nav_session]: Nav2 not active — retry STARTUP (attempt 22)
+[WARN] [1788852278.390074997] [xw_nav_session]: manage_nodes cmd=3 timed out
+[INFO] [1788852313.917593426] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852313.921222133] [xw_nav_session]: nav cancel (cancel-topic)
+[WARN] [1788852353.989562005] [xw_nav_session]: manage_nodes cmd=0 timed out
+[ERROR] [1788852355.996287871] [xw_nav_session]: Nav2 lifecycle did not become active log=/ros2_ws/log/nav2_session.launch.log
+[WARN] [1788852356.165149175] [xw_nav_session]: sweeping orphan Nav2 pids=[16457, 16459, 16461, 16463, 16465, 16469, 16471, 16503, 16550, 16570]
+[INFO] [1788852452.430042274] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852452.431088214] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852588.916156356] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852588.923288934] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852726.923760251] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852726.928653652] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852866.419077612] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788852866.421436082] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853003.423184403] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853003.425647875] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853142.913105518] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853142.915631408] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853253.088858654] [xw_nav_session]: nav map_name=vp
+[INFO] [1788853256.122178059] [xw_nav_session]: nav2 started pid=17421 map=/ros2_ws/maps/vp.yaml
+[WARN] [1788853256.124500070] [xw_nav_session]: phase2c_disable_blind_seed=true — skipping blind charger seed (BOOT cascade / operator must provide /initialpose)
+[INFO] [1788853281.424407507] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853281.428919109] [xw_nav_session]: nav cancel (cancel-topic)
+[WARN] [1788853335.268336952] [xw_nav_session]: Nav2 not active — retry STARTUP (attempt 22)
+[WARN] [1788853365.276484813] [xw_nav_session]: manage_nodes cmd=3 timed out
+[INFO] [1788853419.412628256] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853419.414554175] [xw_nav_session]: nav cancel (cancel-topic)
+[WARN] [1788853440.854198705] [xw_nav_session]: manage_nodes cmd=0 timed out
+[ERROR] [1788853442.863588715] [xw_nav_session]: Nav2 lifecycle did not become active log=/ros2_ws/log/nav2_session.launch.log
+[WARN] [1788853442.928896686] [xw_nav_session]: sweeping orphan Nav2 pids=[17427, 17429, 17431, 17433, 17435, 17437, 17439, 17441, 17443, 17472, 17487]
+[WARN] [1788853533.323873780] [xw_nav_session]: goal ignored (nav inactive)
+[WARN] [1788853537.655366884] [xw_nav_session]: goal ignored (nav inactive)
+[WARN] [1788853538.601496528] [xw_nav_session]: goal ignored (nav inactive)
+[WARN] [1788853555.832822146] [xw_nav_session]: goal ignored (nav inactive)
+[INFO] [1788853556.416905093] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853556.419130851] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853693.421709046] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853693.423555046] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853717.352209705] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853843.923857168] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853843.931093581] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853980.414469162] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853980.416146575] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788853986.133946933] [xw_nav_session]: nav map_name=vp
+[INFO] [1788853989.229803633] [xw_nav_session]: nav2 started pid=19655 map=/ros2_ws/maps/vp.yaml
+[WARN] [1788853989.237009421] [xw_nav_session]: phase2c_disable_blind_seed=true — skipping blind charger seed (BOOT cascade / operator must provide /initialpose)
+[WARN] [1788854069.764013439] [xw_nav_session]: Nav2 not active — retry STARTUP (attempt 22)
+[WARN] [1788854099.820955689] [xw_nav_session]: manage_nodes cmd=3 timed out
+[INFO] [1788854145.443742477] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788854145.448794841] [xw_nav_session]: nav cancel (cancel-topic)
+[INFO] [1788854174.502750637] [xw_nav_session]: nav cancel (cancel-topic)
+[WARN] [1788854175.405681789] [xw_nav_session]: manage_nodes cmd=0 timed out
+[ERROR] [1788854177.414975980] [xw_nav_session]: Nav2 lifecycle did not become active log=/ros2_ws/log/nav2_session.launch.log
+[WARN] [1788854177.524765585] [xw_nav_session]: sweeping orphan Nav2 pids=[19668, 19672, 19674, 19700, 19748, 19767]
+[INFO] [1788854399.369982635] [xw_nav_session]: nav map_name=vp
+[INFO] [1788854402.396690897] [xw_nav_session]: nav2 started pid=20149 map=/ros2_ws/maps/vp.yaml
+[WARN] [1788854402.397549291] [xw_nav_session]: phase2c_disable_blind_seed=true — skipping blind charger seed (BOOT cascade / operator must provide /initialpose)
+[WARN] [1788854481.704124735] [xw_nav_session]: Nav2 not active — retry STARTUP (attempt 22)
+[WARN] [1788854511.750985007] [xw_nav_session]: manage_nodes cmd=3 timed out
+[WARN] [1788854587.345043776] [xw_nav_session]: manage_nodes cmd=0 timed out
+[ERROR] [1788854589.357050820] [xw_nav_session]: Nav2 lifecycle did not become active log=/ros2_ws/log/nav2_session.launch.log
+[WARN] [1788854589.412403112] [xw_nav_session]: sweeping orphan Nav2 pids=[20162, 20182, 20197, 20199, 20214, 20216, 20234, 20236, 20241]
+[INFO] [1788854744.755678617] [xw_nav_session]: nav map_name=vp
+[INFO] [1788854747.817288210] [xw_nav_session]: nav2 started pid=20643 map=/ros2_ws/maps/vp.yaml
+[WARN] [1788854747.820937625] [xw_nav_session]: phase2c_disable_blind_seed=true — skipping blind charger seed (BOOT cascade / operator must provide /initialpose)
+[INFO] [1788854789.196926792] [xw_nav_session]: nav map_name=vp
+[WARN] [1788854827.758245695] [xw_nav_session]: Nav2 not active — retry STARTUP (attempt 22)
+[WARN] [1788854857.777207712] [xw_nav_session]: manage_nodes cmd=3 timed out
+[WARN] [1788854933.372679346] [xw_nav_session]: manage_nodes cmd=0 timed out
+[ERROR] [1788854935.387534579] [xw_nav_session]: Nav2 lifecycle did not become active log=/ros2_ws/log/nav2_session.launch.log
+[WARN] [1788854935.558913326] [xw_nav_session]: sweeping orphan Nav2 pids=[20644, 20648, 20650, 20652, 20665, 20678, 20697, 20700, 20707, 20717]
+[INFO] [1788854940.104662036] [xw_nav_session]: nav2 started pid=20919 map=/ros2_ws/maps/vp.yaml
+[WARN] [1788854940.105833979] [xw_nav_session]: phase2c_disable_blind_seed=true — skipping blind charger seed (BOOT cascade / operator must provide /initialpose)
+[WARN] [1788855015.373715419] [xw_nav_session]: Nav2 not active — retry STARTUP (attempt 34)
+[INFO] [1788855015.428354279] [xw_nav_session]: manage_nodes cmd=3 success=False
+[INFO] [1788855020.053457948] [xw_nav_session]: manage_nodes cmd=0 success=False
+[ERROR] [1788855062.206436379] [xw_nav_session]: Nav2 lifecycle did not become active log=/ros2_ws/log/nav2_session.launch.log
+[WARN] [1788855062.667571506] [xw_nav_session]: sweeping orphan Nav2 pids=[20926, 20930, 20937, 20943, 20945, 20972]
+[INFO] [1788855101.850797294] [xw_nav_session]: nav map_name=vp
+[INFO] [1788855104.892935655] [xw_nav_session]: nav2 started pid=21217 map=/ros2_ws/maps/vp.yaml
+[INFO] [1788855105.221432661] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855106.845940991] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855109.937910270] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855113.552818780] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855116.673464790] [xw_nav_session]: Nav2 lifecycle active + navigate_to_pose ready
+[INFO] [1788855116.675582046] [xw_nav_session]: nav active (enable-topic) map=vp
+[INFO] [1788855265.473065326] [xw_nav_session]: nav cancel (enable-topic)
+[WARN] [1788855265.695685825] [xw_nav_session]: sweeping orphan Nav2 pids=[21229, 21305]
+[INFO] [1788855267.199411458] [xw_nav_session]: nav stopped (enable-topic)
+[INFO] [1788855497.717524319] [xw_nav_session]: nav map_name=vp
+[INFO] [1788855500.764119014] [xw_nav_session]: nav2 started pid=22241 map=/ros2_ws/maps/vp.yaml
+[INFO] [1788855500.822870469] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855502.382795417] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855505.512544703] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855509.123101335] [xw_nav_session]: seeded /initialpose from charger: (1.87,-0.06,yaw=-3.13) (large cov — refine on UI if robot is not there)
+[INFO] [1788855511.380184319] [xw_nav_session]: Nav2 lifecycle active + navigate_to_pose ready
+[INFO] [1788855511.381186800] [xw_nav_session]: nav active (enable-topic) map=vp

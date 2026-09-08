@@ -1,0 +1,229 @@
+{
+  "mode": "debug",
+  "validator": "phase2b1_coverage_v1",
+  "pre_nav_isolated": true,
+  "allow_amcl_handoff": true,
+  "production_unchanged": true,
+  "stop_reason": "false_handoff",
+  "stats": {
+    "n": 2,
+    "layers": {
+      "SUCCESS": 1,
+      "AMCL_FALSE_CONVERGENCE": 1
+    },
+    "easy_n": 2,
+    "hard_n": 0,
+    "easy_correct_accept": 1,
+    "safe_unknown": 0,
+    "no_data": 0,
+    "setup_failed": 0,
+    "reloc_accept_n": 2,
+    "amcl_ready_n": 1,
+    "amcl_ready_rate_on_accept": 0.5,
+    "false_handoff": 1,
+    "nav_success_rate_after_ready": 1.0,
+    "success": 1,
+    "reloc_wall_p50": 17.250111988999947,
+    "reloc_wall_p95": 17.85344626899996,
+    "visual_laser_p50": 14.135075569152832,
+    "visual_laser_p95": 14.7952241897583,
+    "amcl_conv_p50": 2.664557933807373,
+    "amcl_conv_p95": 2.664557933807373
+  },
+  "debug_gate": {
+    "pass": false,
+    "false_handoff": 1,
+    "easy_correct_accept": 1,
+    "amcl_ready_rate_on_accept": 0.5,
+    "nav_success_rate_after_ready": 1.0,
+    "require": "FA=0, easy Correct ACCEPT\u22658, AMCL\u226590% on ACCEPT, Nav\u226590% after READY"
+  },
+  "trials": [
+    {
+      "trial_id": "easy_kf_000007",
+      "keyframe_id": "kf_000007",
+      "region": "doorway_wp9",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": 0.14492601607481603,
+        "y": -0.5379024281484402,
+        "yaw": 2.9115548231341846
+      },
+      "gt": {
+        "x": 0.164286942490159,
+        "y": -0.5537930499653168,
+        "yaw": 3.0378609036188737
+      },
+      "gt_cov_xy": 0.10478963454266685,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 1,
+        "cov_xy": 0.10478963454266685,
+        "dt": 0.3350156829999378
+      },
+      "reloc": {
+        "result_code": 0,
+        "laser_score": 0.5985046029090881,
+        "wall_sec": 17.250111988999947,
+        "time_to_candidate_sec": 14.135075569152832,
+        "amcl_convergence_sec": 2.664557933807373,
+        "candidate": [
+          0.1949260160748159,
+          -0.5379024281484397,
+          3.103541040853558
+        ],
+        "decision": "ACCEPT",
+        "sensor_gate": {
+          "sensor_arm_timeout_sec": 8.0,
+          "sensor_fresh_sec": 1.0,
+          "scan_wait_ms": 155.35458600004404,
+          "rgb_request_to_first_rgb_ms": 2492.6087589999497,
+          "sensor_ready_ms": 2492.7925130000403,
+          "sensor_ready": true,
+          "rgb": true,
+          "scan": true,
+          "camera_info": true,
+          "map": true
+        },
+        "amcl_handoff": {
+          "amcl_pose": [
+            0.21789782982037767,
+            -0.558189744561497,
+            3.096778603323225
+          ],
+          "amcl_age_sec": 1.8547838479998973,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.19846770400000002,
+          "cov_xy": 0.058344865630545896,
+          "cov_yaw": 0.017630041903017958,
+          "loc_status": 1,
+          "candidate_delta_xy": 0.030647666044974493,
+          "candidate_delta_yaw": 0.00676243753033301,
+          "near_candidate": true,
+          "stable_for_sec": 2.5118690489999835,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.664558040999964
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.030647666044974493,
+          "dyaw": 0.00676243753033301
+        }
+      },
+      "layer": "SUCCESS",
+      "handoff_attempted": true,
+      "candidate": {
+        "x": 0.1949260160748159,
+        "y": -0.5379024281484397,
+        "yaw": 3.103541040853558
+      },
+      "candidate_error_xy": 0.034514702546205304,
+      "candidate_error_yaw": 0.06568013723468448,
+      "laser_score": 0.5985046029090881,
+      "amcl_ready": true,
+      "amcl_ready_pose": {
+        "x": 0.21789782982037767,
+        "y": -0.558189744561497,
+        "yaw": 3.096778603323225
+      },
+      "amcl_cov_xy": 0.058344865630545896,
+      "amcl_cov_yaw": 0.017630041903017958,
+      "final_error_xy": 0.0537908743534206,
+      "final_error_yaw": 0.058917699704351456,
+      "candidate_to_amcl_dxy": 0.030647666044974493,
+      "candidate_to_amcl_dyaw": 0.00676243753033301,
+      "quality_ok": true,
+      "amcl_convergence_sec": 2.664557933807373,
+      "false_handoff": false,
+      "nav_success": true
+    },
+    {
+      "trial_id": "easy_kf_000008",
+      "keyframe_id": "kf_000008",
+      "region": "doorway_wp9",
+      "expect": "ACCEPT",
+      "class": "easy_correct_accept",
+      "target": {
+        "x": 0.18248194052864664,
+        "y": -0.5548734480373652,
+        "yaw": -2.5888202189226472
+      },
+      "gt": {
+        "x": 0.16109662324348253,
+        "y": -0.48348767672514087,
+        "yaw": -2.7266868829288144
+      },
+      "gt_cov_xy": 0.18852690716124343,
+      "unknown_induction": {
+        "ok": true,
+        "loc": 1,
+        "cov_xy": 0.18852690716124343,
+        "dt": 0.3345659249999926
+      },
+      "reloc": {
+        "result_code": 0,
+        "laser_score": 0.6436507701873779,
+        "wall_sec": 17.85344626899996,
+        "time_to_candidate_sec": 14.7952241897583,
+        "amcl_convergence_sec": 2.618595600128174,
+        "candidate": [
+          -0.35507398392518413,
+          -0.5379024281484397,
+          2.946461408174069
+        ],
+        "decision": "ACCEPT",
+        "sensor_gate": {
+          "sensor_arm_timeout_sec": 8.0,
+          "sensor_fresh_sec": 1.0,
+          "scan_wait_ms": 103.33658100000775,
+          "rgb_request_to_first_rgb_ms": 2852.8596390000303,
+          "sensor_ready_ms": 2852.9048489999695,
+          "sensor_ready": true,
+          "rgb": true,
+          "scan": true,
+          "camera_info": true,
+          "map": true
+        },
+        "amcl_handoff": {
+          "amcl_pose": [
+            -0.32794219632844307,
+            -0.5216705756120039,
+            2.939102623598416
+          ],
+          "amcl_age_sec": 1.7924381000000267,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.17553030900000002,
+          "cov_xy": 0.061250745411466884,
+          "cov_yaw": 0.02068811856129699,
+          "loc_status": 1,
+          "candidate_delta_xy": 0.03161656108686188,
+          "candidate_delta_yaw": 0.007358784575652865,
+          "near_candidate": true,
+          "stable_for_sec": 2.502043323999942,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.6185955890000514
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.03161656108686188,
+          "dyaw": 0.007358784575652865
+        }
+      },
+      "layer": "AMCL_FALSE_CONVERGENCE",
+      "handoff_attempted": true,
+      "candidate": {
+        "x": -0.35507398392518413,
+        "y": -0.5379024281484397,
+        "yaw": 2.946461408174069
+      },
+      "candidate_error_xy": 0.5190308862460205,
+      "candidate_error_yaw": 0.6100370160767031,
+      "laser_score": 0.6436507701873779,
+      "false_handoff": true,
+      "false_accept": true
+    }
+  ]
+}

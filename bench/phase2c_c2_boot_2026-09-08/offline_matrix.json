@@ -1,0 +1,143 @@
+{
+  "false_accept": 0,
+  "false_handoff": 0,
+  "trials": [
+    {
+      "id": "A_charger_laser",
+      "path": "P1",
+      "ok": true,
+      "implemented": true,
+      "status": "pass",
+      "reason": "ok",
+      "laser_score": 0.7750089935213327,
+      "matched_ratio": 0.9,
+      "valid_beams": 20,
+      "mean_dist": 0.13887889608740805,
+      "runtime_sec": 0.00022050500047043897,
+      "min_laser_score": 0.38,
+      "pose": {
+        "x": 1.8663955491712294,
+        "y": -0.05958837147746455,
+        "yaw": -3.1286646850836126
+      },
+      "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+    },
+    {
+      "id": "A_wrong_proposal",
+      "path": "P1",
+      "ok": false,
+      "implemented": true,
+      "status": "reject",
+      "reason": "laser_gate",
+      "laser_score": 0.0,
+      "matched_ratio": 0.05,
+      "valid_beams": 20,
+      "mean_dist": 100.791787289083,
+      "runtime_sec": 9.566900007484946e-05,
+      "min_laser_score": 0.38,
+      "pose": {
+        "x": 5.866395549171229,
+        "y": 2.9404116285225355,
+        "yaw": -1.9286646850836127
+      },
+      "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+    },
+    {
+      "id": "B_last_good",
+      "validate": "ok_proposal_only",
+      "ok": true,
+      "implemented": true,
+      "status": "pass",
+      "reason": "ok",
+      "laser_score": 0.7750089935213327,
+      "matched_ratio": 0.9,
+      "valid_beams": 20,
+      "mean_dist": 0.13887889608740805,
+      "runtime_sec": 0.00017121299970312975,
+      "min_laser_score": 0.38,
+      "pose": {
+        "x": 1.8663955491712294,
+        "y": -0.05958837147746455,
+        "yaw": -3.1286646850836126
+      },
+      "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+    },
+    {
+      "id": "C_moved_reject_p2",
+      "ok": false,
+      "implemented": true,
+      "status": "reject",
+      "reason": "laser_gate",
+      "laser_score": 0.10814146855846046,
+      "matched_ratio": 0.25,
+      "valid_beams": 20,
+      "mean_dist": 0.5674341257661581,
+      "runtime_sec": 0.00016654499995638616,
+      "min_laser_score": 0.38,
+      "pose": {
+        "x": 1.8663955491712294,
+        "y": -0.05958837147746455,
+        "yaw": -3.1286646850836126
+      },
+      "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+    },
+    {
+      "id": "D_similar_mismatch",
+      "ok": false,
+      "implemented": true,
+      "status": "reject",
+      "reason": "laser_gate",
+      "laser_score": 0.0,
+      "matched_ratio": 0.55,
+      "valid_beams": 20,
+      "mean_dist": 100.27229740470648,
+      "runtime_sec": 0.00022254699979384895,
+      "min_laser_score": 0.38,
+      "pose": {
+        "x": 1.8663955491712294,
+        "y": -0.05958837147746455,
+        "yaw": -3.1286646850836126
+      },
+      "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+    },
+    {
+      "id": "E_open_self",
+      "ok": true,
+      "implemented": true,
+      "status": "pass",
+      "reason": "ok",
+      "laser_score": 0.9637837979942561,
+      "matched_ratio": 1.0,
+      "valid_beams": 20,
+      "mean_dist": 0.03621620200574398,
+      "runtime_sec": 0.0001149200015788665,
+      "min_laser_score": 0.38,
+      "pose": {
+        "x": -0.75,
+        "y": 9.39,
+        "yaw": 5.48
+      },
+      "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+    }
+  ],
+  "p1": {
+    "A_laser": "PASS",
+    "wrong_reject": "PASS",
+    "no_charge_skip": "PASS",
+    "D_mismatch_reject": "PASS"
+  },
+  "p2": {
+    "B": "PASS",
+    "C_reject_stale": "PASS",
+    "E_open": "PASS"
+  },
+  "p3": {
+    "note": "live Reloc covered by Phase2B3; C2 offline checks cascade wiring"
+  },
+  "cascade_policy": {
+    "serial": true,
+    "p3_max_attempts": 2,
+    "blind_seed_default": false,
+    "production_bringup_untouched": true
+  }
+}

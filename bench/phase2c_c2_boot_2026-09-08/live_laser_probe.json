@@ -1,0 +1,8 @@
+{
+  "domain": 99,
+  "have_scan": true,
+  "have_map": false,
+  "charging": false,
+  "docked": false,
+  "prior_available": false
+}

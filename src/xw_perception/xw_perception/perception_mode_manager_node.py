@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Phase1 Perception Mode Manager — profiles for camera/NPU budget.
 
-Profiles: IDLE | NAVIGATION | FOLLOW | FALL_DETECTION | RECHARGE
+Profiles: IDLE | NAVIGATION | FOLLOW | FALL_DETECTION | RECHARGE | LOCALIZATION_RECOVERY
 
 Publishes:
   /xw/perception/profile          (latched String)
@@ -9,6 +9,9 @@ Publishes:
 
 Does NOT permanently force fall_enable_default=False. Fall latch remains
 orthogonal; NAVIGATION defers RGB so fall-default cannot keep dual RGB hot.
+
+LOCALIZATION_RECOVERY (Phase2C-C1): entered via /xw/localization/phase2c_recovery.
+Does not auto-start Reloc — only switches resource profile.
 """
 
 from __future__ import annotations
@@ -75,6 +78,18 @@ _PROFILES = {
         'follow_infer_fps': 0.0,
         'points_nav': False,
     },
+    # Phase2C-C1: front_up RGB ON for Reloc arm; depth/fall/points off; S1/AMCL remain
+    # outside this manager (always-on when Nav2 up). Nav goal pause owned by Supervisor.
+    'LOCALIZATION_RECOVERY': {
+        'rgb_up': True,
+        'rgb_down': False,
+        'depth_up': False,
+        'depth_down': False,
+        'preview': False,
+        'fall_infer_fps': 0.0,
+        'follow_infer_fps': 0.0,
+        'points_nav': False,
+    },
 }
 
 
@@ -95,13 +110,18 @@ class PerceptionModeManager(Node):
         self._fall = False
         self._recharge = False
         self._nav = False
+        self._phase2c_recovery = False
         self._mode = 0
         self._profile = ''
+        self._profile_before_recovery = ''
 
         self.create_subscription(Bool, '/xw/follow/enable', self._on_follow, latch)
         self.create_subscription(Bool, '/xw/fall/enable', self._on_fall, latch)
         self.create_subscription(Bool, '/xw/recharge/enable', self._on_recharge, latch)
         self.create_subscription(Bool, '/xw/nav/enable', self._on_nav, latch)
+        self.create_subscription(
+            Bool, '/xw/localization/phase2c_recovery', self._on_phase2c_recovery, latch
+        )
         self.create_subscription(RobotState, '/xw/robot_state', self._on_state, 10)
 
         self._last_profile_log = 0.0
@@ -125,12 +145,29 @@ class PerceptionModeManager(Node):
         self._nav = bool(msg.data)
         self._recompute()
 
+    def _on_phase2c_recovery(self, msg: Bool) -> None:
+        want = bool(msg.data)
+        if want and not self._phase2c_recovery:
+            # Remember prior profile name for logs; exit recomputes from latches.
+            if self._profile and self._profile != 'LOCALIZATION_RECOVERY':
+                self._profile_before_recovery = self._profile
+        elif not want and self._phase2c_recovery:
+            self.get_logger().info(
+                f'phase2c_recovery off → restore from latches '
+                f'(was_before={self._profile_before_recovery or "n/a"})'
+            )
+        self._phase2c_recovery = want
+        self._recompute(force=True)
+
     def _on_state(self, msg: RobotState) -> None:
         self._mode = int(msg.mode)
         self._recompute()
 
     def _choose(self) -> str:
-        # Priority: follow > recharge > fall-as-primary > navigation > idle
+        # Priority: phase2c recovery > follow > recharge > fall > navigation > idle
+        # Recovery forces Follow OFF at Supervisor; still preempt here if latch races.
+        if self._phase2c_recovery:
+            return 'LOCALIZATION_RECOVERY'
         if self._follow:
             return 'FOLLOW'
         if self._recharge:
@@ -178,7 +215,8 @@ class PerceptionModeManager(Node):
             self._last_profile_log = now
             self.get_logger().info(
                 f'profile → {self._profile} follow={self._follow} fall={self._fall} '
-                f'recharge={self._recharge} nav={self._nav} mode={self._mode}'
+                f'recharge={self._recharge} nav={self._nav} mode={self._mode} '
+                f'phase2c_recovery={self._phase2c_recovery}'
             )
 
 

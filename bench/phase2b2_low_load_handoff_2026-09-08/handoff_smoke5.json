@@ -1,0 +1,182 @@
+{
+  "mode": "smoke",
+  "validator": "phase2b2_low_load_v1",
+  "no_reinit": true,
+  "no_pre_initialpose": true,
+  "max_load1": 9.0,
+  "allow_amcl_handoff": true,
+  "production_unchanged": true,
+  "stop_reason": "load_abort",
+  "stats": {
+    "n": 2,
+    "scored_n": 1,
+    "layers": {
+      "SUCCESS": 1,
+      "SETUP_ABORTED": 1
+    },
+    "correct_accept": 1,
+    "safe_unknown": 0,
+    "no_data": 0,
+    "setup_aborted": 1,
+    "false_accept": 0,
+    "false_handoff": 0,
+    "reloc_accept_n": 1,
+    "amcl_ready_n": 1,
+    "amcl_ready_rate_on_accept": 1.0,
+    "nav_success_rate_after_ready": null,
+    "success": 1,
+    "visual_laser_p50": 14.45166015625,
+    "visual_laser_p95": 14.45166015625,
+    "sensor_arm_p50_ms": 2737.8160299995216,
+    "amcl_conv_p50": 2.8317923545837402,
+    "amcl_conv_p95": 2.8317923545837402,
+    "reloc_wall_p50": 17.78828077200069,
+    "reloc_wall_p95": 17.78828077200069,
+    "load1_at_start_max": 8.0,
+    "load1_at_start_mean": 8.0
+  },
+  "gate": {
+    "pass": false,
+    "false_accept": 0,
+    "false_handoff": 0,
+    "require": "FA=0, FH=0, no SETUP_ABORTED under smoke; mechanism exercised"
+  },
+  "trials": [
+    {
+      "trial_id": "smoke_kf_000007",
+      "keyframe_id": "kf_000007",
+      "region": "doorway_wp9",
+      "expect": "ACCEPT",
+      "class": "smoke",
+      "place_target": {
+        "x": 0.14492601607481603,
+        "y": -0.5379024281484402,
+        "yaw": 2.9115548231341846
+      },
+      "no_reinit": true,
+      "no_pre_initialpose": true,
+      "quiesce": {
+        "ok": true,
+        "load1": 8.0,
+        "cpu_total_pct": 30.508474576271183,
+        "wait_sec": 7.4738631380005245
+      },
+      "amcl_before": {
+        "x": 0.10517599662234156,
+        "y": -0.3189307168128625,
+        "yaw": -2.7910476216790157,
+        "cov_xy": 0.06512351016353415,
+        "loc_status": 0
+      },
+      "gt": {
+        "x": 0.10517599662234156,
+        "y": -0.3189307168128625,
+        "yaw": -2.7910476216790157,
+        "source": "amcl_at_place"
+      },
+      "load1_at_start": 8.0,
+      "cpu_total_pct_at_start": 43.58974358974359,
+      "reloc": {
+        "result_code": 0,
+        "laser_score": 0.6670830249786377,
+        "wall_sec": 17.78828077200069,
+        "time_to_candidate_sec": 14.45166015625,
+        "amcl_convergence_sec": 2.8317923545837402,
+        "candidate": [
+          0.13248194052864654,
+          -0.30487344803736494,
+          -2.7633531441220818
+        ],
+        "decision": "ACCEPT",
+        "sensor_gate": {
+          "sensor_arm_timeout_sec": 10.0,
+          "sensor_fresh_sec": 1.0,
+          "scan_wait_ms": 63.523265999720024,
+          "rgb_request_to_first_rgb_ms": 2737.692360999972,
+          "sensor_ready_ms": 2737.8160299995216,
+          "sensor_ready": true,
+          "rgb": true,
+          "scan": true,
+          "camera_info": true,
+          "map": true
+        },
+        "amcl_handoff": {
+          "amcl_pose": [
+            0.07506324512835334,
+            -0.3351281483395465,
+            -2.7910015037016747
+          ],
+          "amcl_age_sec": 2.0976809260000664,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.174665592,
+          "cov_xy": 0.060755036223777904,
+          "cov_yaw": 0.015944495347202284,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.06490187571901507,
+          "candidate_delta_yaw": 0.027648359579592885,
+          "near_candidate": true,
+          "stable_for_sec": 2.521462593999786,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.831792336000035
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.06490187571901507,
+          "dyaw": 0.027648359579592885
+        }
+      },
+      "sensor_ready_ms": 2737.8160299995216,
+      "load1_after": 11.59,
+      "layer": "SUCCESS",
+      "candidate": {
+        "x": 0.13248194052864654,
+        "y": -0.30487344803736494,
+        "yaw": -2.7633531441220818
+      },
+      "candidate_error_xy": 0.030711909384485567,
+      "candidate_error_yaw": 0.027694477556933886,
+      "amcl_ready": true,
+      "amcl_ready_pose": {
+        "x": 0.07506324512835334,
+        "y": -0.3351281483395465,
+        "yaw": -2.7910015037016747
+      },
+      "amcl_cov_xy": 0.060755036223777904,
+      "amcl_cov_yaw": 0.015944495347202284,
+      "final_error_xy": 0.03419261017530406,
+      "final_error_yaw": 4.611797734099809e-05,
+      "candidate_to_amcl_dxy": 0.06490187571901507,
+      "candidate_to_amcl_dyaw": 0.027648359579592885,
+      "amcl_convergence_sec": 2.8317923545837402,
+      "false_handoff": false,
+      "false_accept": false,
+      "load1_before_nav": 11.59,
+      "nav_success": null,
+      "nav_skipped": "load_high"
+    },
+    {
+      "trial_id": "smoke_kf_000014",
+      "keyframe_id": "kf_000014",
+      "region": "corridor_wp2",
+      "expect": "ACCEPT",
+      "class": "smoke",
+      "place_target": {
+        "x": -3.812539260881123,
+        "y": -1.098964613614613,
+        "yaw": -3.074630534761376
+      },
+      "no_reinit": true,
+      "no_pre_initialpose": true,
+      "quiesce": {
+        "ok": false,
+        "load1": 15.86,
+        "cpu_total_pct": 95.76271186440678,
+        "wait_sec": 91.69224136199955,
+        "error": "load_not_cooled"
+      },
+      "layer": "SETUP_ABORTED",
+      "setup_error": "load_not_cooled"
+    }
+  ]
+}

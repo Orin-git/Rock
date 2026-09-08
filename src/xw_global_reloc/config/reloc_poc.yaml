@@ -67,6 +67,9 @@ xw_global_reloc_poc:
     # /initialpose covariance from Visual+Laser PoC accuracy (Formal XY P95~0.27m)
     handoff_cov_xy: 0.12
     handoff_cov_yaw: 0.08
+    # Phase2B1 sensor arming (explicit ready gate; no fixed short sleep)
+    sensor_arm_timeout_sec: 10.0
+    sensor_fresh_sec: 1.0
     # Extrinsic
     extrinsic_source: "URDF"
     extrinsic_status: "EXTRINSIC_UNCALIBRATED"

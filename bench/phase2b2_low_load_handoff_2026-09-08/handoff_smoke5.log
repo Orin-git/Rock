@@ -1,0 +1,89 @@
+Phase2B2 smoke n=5 max_load1=9.0 NO reinit, NO pre-initialpose
+=== 1/5 smoke_kf_000007 ===
+
+=== PLACE robot: smoke_kf_000007 | doorway_wp9 | expect=ACCEPT ===
+Target map pose ≈ (0.14, -0.54, yaw=2.91)
+Push/teleop/carry — NO /reinitialize_global_localization, NO manual /initialpose.
+Stand still when done.
+
+[INFO] [1788833421.694124927] [phase2b2_low_load_handoff]: === PLACE robot: smoke_kf_000007 | doorway_wp9 | expect=ACCEPT ===
+Target map pose ≈ (0.14, -0.54, yaw=2.91)
+Push/teleop/carry — NO /reinitialize_global_localization, NO manual /initialpose.
+Stand still when done.
+Touch file when placed: /tmp/phase2b2_placed
+quiesce load1=9.19 cpu≈50.8 (need load1≤9.0)
+quiesce load1=8.70 cpu≈39.7 (need load1≤9.0)
+{"trial": "smoke_kf_000007", "layer": "SUCCESS", "fa": false, "load1": 8.0, "sensor_ms": 2737.8160299995216, "xy": 0.034, "nav": null}
+=== 2/5 smoke_kf_000014 ===
+
+=== PLACE robot: smoke_kf_000014 | corridor_wp2 | expect=ACCEPT ===
+Target map pose ≈ (-3.81, -1.10, yaw=-3.07)
+Push/teleop/carry — NO /reinitialize_global_localization, NO manual /initialpose.
+Stand still when done.
+
+[INFO] [1788833509.455956793] [phase2b2_low_load_handoff]: === PLACE robot: smoke_kf_000014 | corridor_wp2 | expect=ACCEPT ===
+Target map pose ≈ (-3.81, -1.10, yaw=-3.07)
+Push/teleop/carry — NO /reinitialize_global_localization, NO manual /initialpose.
+Stand still when done.
+Touch file when placed: /tmp/phase2b2_placed
+quiesce load1=17.39 cpu≈93.3 (need load1≤9.0)
+quiesce load1=17.39 cpu≈95.6 (need load1≤9.0)
+quiesce load1=16.55 cpu≈93.1 (need load1≤9.0)
+quiesce load1=16.19 cpu≈95.0 (need load1≤9.0)
+quiesce load1=15.13 cpu≈96.8 (need load1≤9.0)
+quiesce load1=16.32 cpu≈94.1 (need load1≤9.0)
+quiesce load1=16.78 cpu≈97.5 (need load1≤9.0)
+quiesce load1=16.78 cpu≈94.1 (need load1≤9.0)
+quiesce load1=16.64 cpu≈93.0 (need load1≤9.0)
+quiesce load1=16.02 cpu≈93.2 (need load1≤9.0)
+quiesce load1=16.10 cpu≈94.8 (need load1≤9.0)
+quiesce load1=17.14 cpu≈94.0 (need load1≤9.0)
+quiesce load1=16.96 cpu≈97.5 (need load1≤9.0)
+quiesce load1=16.96 cpu≈95.0 (need load1≤9.0)
+quiesce load1=16.65 cpu≈94.3 (need load1≤9.0)
+quiesce load1=15.31 cpu≈88.8 (need load1≤9.0)
+quiesce load1=15.53 cpu≈91.2 (need load1≤9.0)
+quiesce load1=15.73 cpu≈96.6 (need load1≤9.0)
+quiesce load1=16.07 cpu≈95.0 (need load1≤9.0)
+quiesce load1=16.07 cpu≈94.9 (need load1≤9.0)
+quiesce load1=17.10 cpu≈97.5 (need load1≤9.0)
+quiesce load1=16.37 cpu≈92.6 (need load1≤9.0)
+{"trial": "smoke_kf_000014", "layer": "SETUP_ABORTED", "fa": null, "load1": null, "sensor_ms": null, "xy": null, "nav": null}
+STOP: load abnormal — not retrying.
+{
+  "out": "/ros2_ws/bench/phase2b2_low_load_handoff_2026-09-08/handoff_smoke5.json",
+  "stats": {
+    "n": 2,
+    "scored_n": 1,
+    "layers": {
+      "SUCCESS": 1,
+      "SETUP_ABORTED": 1
+    },
+    "correct_accept": 1,
+    "safe_unknown": 0,
+    "no_data": 0,
+    "setup_aborted": 1,
+    "false_accept": 0,
+    "false_handoff": 0,
+    "reloc_accept_n": 1,
+    "amcl_ready_n": 1,
+    "amcl_ready_rate_on_accept": 1.0,
+    "nav_success_rate_after_ready": null,
+    "success": 1,
+    "visual_laser_p50": 14.45166015625,
+    "visual_laser_p95": 14.45166015625,
+    "sensor_arm_p50_ms": 2737.8160299995216,
+    "amcl_conv_p50": 2.8317923545837402,
+    "amcl_conv_p95": 2.8317923545837402,
+    "reloc_wall_p50": 17.78828077200069,
+    "reloc_wall_p95": 17.78828077200069,
+    "load1_at_start_max": 8.0,
+    "load1_at_start_mean": 8.0
+  },
+  "gate": {
+    "pass": false,
+    "false_accept": 0,
+    "false_handoff": 0,
+    "require": "FA=0, FH=0, no SETUP_ABORTED under smoke; mechanism exercised"
+  }
+}

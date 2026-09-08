@@ -1,0 +1,31 @@
+ferry → wp_6 (-0.75,9.39)
+  t=0s d=11.73 pos=(-9.14,1.19)
+  t=5s d=11.73 pos=(-9.14,1.19)
+  t=10s d=11.73 pos=(-9.14,1.19)
+  t=15s d=11.73 pos=(-9.14,1.19)
+  t=20s d=11.73 pos=(-9.14,1.19)
+  t=25s d=11.65 pos=(-9.05,1.20)
+  t=30s d=11.25 pos=(-8.77,1.50)
+  t=35s d=9.82 pos=(-7.84,2.59)
+  t=40s d=8.41 pos=(-6.90,3.64)
+  t=45s d=7.09 pos=(-6.00,4.62)
+  t=50s d=5.62 pos=(-5.12,5.85)
+  t=55s d=4.57 pos=(-4.41,6.65)
+  t=60s d=2.90 pos=(-3.24,7.90)
+  t=65s d=1.74 pos=(-2.35,8.68)
+Traceback (most recent call last):
+  File "/tmp/ferry_to_wp.py", line 41, in <module>
+    rclpy.spin_once(n, timeout_sec=0.1)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 208, in spin_once
+    executor.spin_once(timeout_sec=timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 808, in spin_once
+    self._spin_once_impl(timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 797, in _spin_once_impl
+    handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 780, in wait_for_ready_callbacks
+    return next(self._cb_iter)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 538, in _wait_for_ready_callbacks
+    timeout_timer = Timer(None, None, timeout_nsec, self._clock, context=self._context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/timer.py", line 28, in __init__
+    self.__timer = _rclpy.Timer(
+rclpy._rclpy_pybind11.RCLError: failed to create timer: the given context is not valid, either rcl_init() was not called or rcl_shutdown() was called., at ./src/rcl/guard_condition.c:67

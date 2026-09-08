@@ -1,0 +1,22 @@
+laser_fa {"wrong_pose_rejected": true, "wrong_score": 0.0, "charger_vs_live_scan": {"ok": false, "implemented": true, "status": "reject", "reason": "laser_gate", "laser_score": 0.0, "matched_ratio": 0.3169642857142857, "valid_beams": 224, "mean_dist": 9.405163280965228, "runtime_sec": 0.0002735880007094238, "min_laser_score": 0.38, "pose": {"x": 1.866, "y": -0.06, "yaw": -3.129}, "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"}, "amcl_self": {"ok": true, "implemented": true, "status": "pass", "reason": "ok", "laser_score": 0.5393302653763534, "matched_ratio": 0.7053571428571429, "valid_beams": 224, "mean_dist": 0.23537987693479018, "runtime_sec": 0.00015896100012469105, "min_laser_score": 0.38, "pose": {"x": 0.4726442488231638, "y": -0.41476618493324463, "yaw": -2.961745783859904}, "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"}, "false_accept": 0, "threshold": 0.38}
+setup reloc once...
+setup_reloc {'ok': True, 'result_code': 0, 'laser_score': 0.59736168384552, 'amcl_convergence_sec': 3.4183907508850098}
+{
+  "wrote": "/ros2_ws/bench/phase2c_c4a_live_2026-09-08/c4a_summary.json",
+  "boot_keys": [
+    "A_charger",
+    "B_unmoved",
+    "C_relocated",
+    "D_similar_corridor",
+    "E_open"
+  ],
+  "lost_keys": [
+    "lost_recovery_observed_state",
+    "note",
+    "A_nav",
+    "B_follow",
+    "C_manual_carry",
+    "D_debounce",
+    "E_unknown"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "map": false,
+  "scan": true,
+  "amcl": false,
+  "power": {
+    "charging": false,
+    "docked": false,
+    "battery": 79.0
+  },
+  "loc": 1,
+  "load": "8.46 8.32 7.45 94/1148 16771",
+  "markers": {},
+  "boot_nodes": ""
+}

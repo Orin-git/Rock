@@ -1,0 +1,25 @@
+[INFO] [1788850582.389600869] [xw_boot_localizer]: boot_localizer ready (dev/flag). thr=0.38 serial P1→P2→P3; no production bringup wiring
+[INFO] [1788850753.728561685] [xw_boot_localizer]: BOOT stage START: {"attempt": 1, "result": "ok", "reason": "service"}
+[INFO] [1788850753.734586447] [xw_boot_localizer]: BOOT stage WAIT_SENSORS: {"attempt": 1, "result": "ok", "reason": "ok", "runtime_sec": 0.0014945240000088234}
+[INFO] [1788850753.742873121] [xw_boot_localizer]: BOOT stage P1: {"attempt": 1, "result": "skip", "reason": "charger_prior_unavailable", "runtime_sec": 0.0058299270021962}
+[INFO] [1788850753.747544529] [xw_boot_localizer]: seed /initialpose source=P2 (0.39,-0.43,-2.98) cov=(0.25,0.15)
+[INFO] [1788850756.366245674] [xw_boot_localizer]: BOOT stage P2: {"attempt": 1, "result": "READY", "laser_score": 0.5819719918476113, "reason": "ok", "score": 0.5819719918476113, "runtime_sec": 0.0003628390004450921, "amcl": {"amcl_pose": [0.3361929516182244, -0.44724783184629807, -2.9675316066852], "cov
+[INFO] [1788850756.395423889] [xw_boot_localizer]: BOOT done final=READY path=P2 t=2.7s
+[INFO] [1788850759.419348069] [xw_boot_localizer]: BOOT stage START: {"attempt": 1, "result": "ok", "reason": "service"}
+[INFO] [1788850759.432223899] [xw_boot_localizer]: BOOT stage WAIT_SENSORS: {"attempt": 1, "result": "ok", "reason": "ok", "runtime_sec": 0.002718960000493098}
+[INFO] [1788850759.456696580] [xw_boot_localizer]: BOOT stage P1: {"attempt": 1, "result": "skip", "reason": "charger_prior_unavailable", "runtime_sec": 0.004485030000068946}
+[INFO] [1788850759.461715368] [xw_boot_localizer]: BOOT stage P2: {"attempt": 1, "result": "laser_reject", "reason": "laser_gate", "score": 0.0, "runtime_sec": 0.00044333999903756194}
+[INFO] [1788850787.159360499] [xw_boot_localizer]: BOOT stage P3: {"attempt": 1, "result": "READY", "score": 0.6009600162506104, "reason": "relocalize_ready", "runtime_sec": 27.69615264800086, "reloc": {"ok": true, "result_code": 0, "laser_score": 0.6009600162506104, "visual_score": 0.05013927444815636, "
+[INFO] [1788850787.160439974] [xw_boot_localizer]: BOOT done final=READY path=P3 t=27.8s
+Traceback (most recent call last):
+  File "/ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer", line 33, in <module>
+    sys.exit(load_entry_point('xw-phase2c', 'console_scripts', 'boot_localizer')())
+  File "/ros2_ws/build/xw_phase2c/xw_phase2c/boot_localizer_node.py", line 717, in main
+    rclpy.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+    _shutdown(context=context)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+    return context.shutdown()
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+    self.__context.shutdown()
+rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241

@@ -1,0 +1,44 @@
+[INFO] [1788851975.379162993] [xw_lost_recovery]: lost_recovery ready enabled=True (default false; Reloc-only owner; no spin+reinit)
+[WARN] [1788852166.421009563] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788852199.571511364] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788852253.497264354] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=87.1s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788852313.902795968] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788852337.363876321] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788852392.015293495] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=78.1s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788852452.422721568] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788852474.806130272] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788852528.778870785] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=76.4s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788852588.918974212] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788852612.194762724] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788852666.529743313] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=77.6s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788852726.918164499] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788852751.421437077] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788852806.116429358] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=79.2s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788852866.422425437] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788852890.093766901] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788852943.179899819] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=76.8s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853003.419504070] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788853027.581310998] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788853082.701301810] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=79.3s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853142.918823189] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788853166.329536532] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788853221.056220860] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=78.1s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853281.413663140] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788853304.846698237] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788853359.074210363] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=77.7s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853419.413794366] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788853442.592824658] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788853496.070487478] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=76.7s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853556.415392476] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788853579.776205487] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788853632.936832205] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=76.5s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853693.432322744] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788853729.677200350] [xw_lost_recovery]: Reloc fail/unknown code=3; cooldown 30s
+[INFO] [1788853783.465128542] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=90.1s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853843.916194911] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788853866.968530978] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788853920.180519991] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=76.3s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788853980.411277965] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate
+[WARN] [1788854023.660609501] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788854084.945536460] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=104.5s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788854145.464892872] [xw_lost_recovery]: LOST STOP complete reason=tf_dead task=navigate

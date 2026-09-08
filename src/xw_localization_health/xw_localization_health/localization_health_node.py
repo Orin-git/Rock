@@ -75,6 +75,7 @@ class LocalizationHealthNode(Node):
         self._nav_en = False
         self._follow_en = False
         self._recovery_en = False
+        self._phase2c_recovery = False
         self._status = 1
         self._latched_3 = False
         self._raw_bad_since: Optional[float] = None
@@ -103,6 +104,10 @@ class LocalizationHealthNode(Node):
         self.create_subscription(
             Bool, '/xw/localization/recovery_enable', self._on_recovery_en, latch_in
         )
+        # Phase2C-C3: Visual+Laser Reloc owns recovery — never spin+reinit in parallel.
+        self.create_subscription(
+            Bool, '/xw/localization/phase2c_recovery', self._on_phase2c_recovery, latch_in
+        )
         self.create_subscription(
             PoseWithCovarianceStamped, 'initialpose', self._on_initialpose, 10
         )
@@ -123,7 +128,8 @@ class LocalizationHealthNode(Node):
         hz = float(self.get_parameter('publish_hz').value)
         self.create_timer(1.0 / max(hz, 0.5), self._tick, callback_group=self._cb)
         self.get_logger().info(
-            'localization_health ready (detect always; heal gated by recovery_enable)'
+            'localization_health ready (detect always; heal gated by recovery_enable; '
+            'phase2c_recovery blocks spin+reinit)'
         )
 
     @property
@@ -162,6 +168,16 @@ class LocalizationHealthNode(Node):
             self.get_logger().info('localization recovery armed (heal execution allowed)')
         elif was and not self._recovery_en:
             self._abort_heal_motion('recovery disarmed')
+
+    def _on_phase2c_recovery(self, msg: Bool) -> None:
+        """Phase2C ACTIVE → Reloc is sole owner; abort/forbid spin+reinit."""
+        want = bool(msg.data)
+        if want and not self._phase2c_recovery:
+            self._abort_heal_motion('phase2c_recovery on → heal forbidden (Reloc owner)')
+            self.get_logger().warn(
+                'phase2c_recovery ACTIVE — spin+reinitialize_global_localization blocked'
+            )
+        self._phase2c_recovery = want
 
     def _on_initialpose(self, _msg: PoseWithCovarianceStamped) -> None:
         self._latched_3 = False
@@ -315,7 +331,13 @@ class LocalizationHealthNode(Node):
         self._cmd_pub.publish(Twist())
 
     def _heal_execution_allowed(self) -> bool:
-        """Spin/reinit only when not fighting follow, unless explicitly allowed."""
+        """Spin/reinit only when not fighting follow, unless explicitly allowed.
+
+        Phase2C-C3: when /xw/localization/phase2c_recovery is true, heal is always
+        forbidden so Visual+Laser Reloc remains the single recovery owner.
+        """
+        if self._phase2c_recovery:
+            return False
         if not bool(self.get_parameter('enable_self_heal').value):
             return False
         if self._follow_en and not bool(self.get_parameter('allow_self_heal_during_follow').value):

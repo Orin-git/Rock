@@ -1,0 +1,44 @@
+
+===== TEST wp_2 (corridor) =====
+  assume already at wp_2
+  cool load1=6.06 (need ≤9.0)
+  start reloc load1=6.06
+{"wp": "wp_2", "layer": "SUCCESS", "fa": false, "load1": 6.06, "sensor_ms": 3242.690197000229, "xy": 0.155, "nav": true, "amcl_s": 2.6659317016601562}
+  inter-trial cool + kill reloc…
+  cool load1=9.87 (need ≤9.0)
+  cool load1=9.16 (need ≤9.0)
+  cool load1=9.16 (need ≤9.0)
+  cool load1=8.66 (need ≤9.0)
+
+===== TEST wp_3 (similar_corridor) =====
+  NAV SETUP → wp_3 (-9.21,1.19)
+  cool load1=7.23 (need ≤9.0)
+  start reloc load1=7.23
+{"wp": "wp_3", "layer": "SAFE_UNKNOWN", "fa": false, "load1": 7.23, "sensor_ms": 2566.9930909998584, "xy": null, "nav": null, "amcl_s": null}
+  inter-trial cool + kill reloc…
+  cool load1=8.71 (need ≤9.0)
+
+===== TEST wp_5 (room) =====
+  NAV SETUP → wp_5 (-7.87,3.25)
+  cool load1=7.67 (need ≤9.0)
+  start reloc load1=7.14
+{"wp": "wp_5", "layer": "SUCCESS", "fa": false, "load1": 7.14, "sensor_ms": 1905.6737400005659, "xy": 0.193, "nav": true, "amcl_s": 2.658550262451172}
+  inter-trial cool + kill reloc…
+  cool load1=7.99 (need ≤9.0)
+
+===== TEST wp_6 (open) =====
+  NAV SETUP → wp_6 (-0.75,9.39)
+{"wp": "wp_6", "layer": "SETUP_ABORTED"}
+  inter-trial cool + kill reloc…
+  cool load1=7.35 (need ≤9.0)
+{
+  "out": "/ros2_ws/bench/phase2b2_low_load_handoff_2026-09-08/handoff_session_wp2plus.json",
+  "n": 4,
+  "stop": null,
+  "layers": [
+    "SUCCESS",
+    "SAFE_UNKNOWN",
+    "SUCCESS",
+    "SETUP_ABORTED"
+  ]
+}

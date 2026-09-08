@@ -53,6 +53,9 @@ class NavSessionNode(Node):
         self.declare_parameter('nav2_params', '')
         self.declare_parameter('nav2_launch_pkg', 'xw_nav_session')
         self.declare_parameter('use_nav2', True)
+        # Phase2C-C2: when true, skip blind charger /initialpose seed so boot_localizer
+        # owns P1→P2→P3. Default false — production behavior unchanged.
+        self.declare_parameter('phase2c_disable_blind_seed', False)
 
         self._cb = ReentrantCallbackGroup()
         self._lock = threading.Lock()
@@ -68,6 +71,7 @@ class NavSessionNode(Node):
         self._patrol_active = False
         self._follow_en = False
         self._recharge_en = False
+        self._goals_blocked = False
 
         latch = QoSProfile(
             depth=1,
@@ -89,6 +93,9 @@ class NavSessionNode(Node):
         )
         self.create_subscription(
             Bool, '/xw/recharge/enable', self._on_recharge_enable, latch, callback_group=self._cb
+        )
+        self.create_subscription(
+            Bool, '/xw/nav/goals_blocked', self._on_goals_blocked, latch, callback_group=self._cb
         )
         self.create_service(SessionControl, '/xw/session/nav/control', self._on_control, callback_group=self._cb)
 
@@ -163,6 +170,17 @@ class NavSessionNode(Node):
         if msg.data:
             # Soft cancel only — never stop Nav2 process here
             self._cancel_navigation('cancel-topic')
+
+    def _on_goals_blocked(self, msg: Bool) -> None:
+        """Phase2C-C1: Supervisor LOST cancel sets this to reject new goals."""
+        blocked = bool(msg.data)
+        was = self._goals_blocked
+        self._goals_blocked = blocked
+        if blocked and not was:
+            self._cancel_navigation('goals-blocked')
+            self.get_logger().warn('nav goals blocked (phase2c LOST cancel)')
+        elif was and not blocked:
+            self.get_logger().info('nav goals unblocked')
 
     def _on_follow_enable(self, msg: Bool) -> None:
         """Follow task preempts point/patrol; Nav2 process stays up."""
@@ -276,11 +294,14 @@ class NavSessionNode(Node):
             )
             self._proc = None
             return False
-        self.get_logger().info(f'nav2 started pid={self._proc.pid} map={yaml_path}')
+        self.get_logger().info(
+            f'nav2 started pid={self._proc.pid} map={yaml_path}'
+        )
         # Seed /initialpose immediately (and once more after 1.5 s): planner and
         # global_costmap activation block until map→base TF exists, which AMCL only
         # publishes once it has received /initialpose.
-        if map_name:
+        # Phase2C-C2: optional disable for BOOT cascade isolation (default keeps seed).
+        if map_name and not bool(self.get_parameter('phase2c_disable_blind_seed').value):
             try:
                 self._seed_initial_pose(map_name)
             except Exception:  # noqa: BLE001
@@ -290,6 +311,11 @@ class NavSessionNode(Node):
                 self._seed_initial_pose(map_name)
             except Exception:  # noqa: BLE001
                 pass
+        elif map_name and bool(self.get_parameter('phase2c_disable_blind_seed').value):
+            self.get_logger().warn(
+                'phase2c_disable_blind_seed=true — skipping blind charger seed '
+                '(BOOT cascade / operator must provide /initialpose)'
+            )
         if not self._ensure_nav2_active(deadline_sec=120.0, map_name=map_name):
             self.get_logger().error(f'Nav2 lifecycle did not become active log={log_path}')
             self._stop_nav2()
@@ -425,9 +451,12 @@ class NavSessionNode(Node):
             # consumes an initial pose). Once the stack is active we stop
             # seeding for good so a manual /initialpose is never clobbered.
             if not nav_ok and name and time.monotonic() - last_seed >= 2.0:
-                self._seed_initial_pose(name)
-                last_seed = time.monotonic()
-                seeded = True
+                if not bool(self.get_parameter('phase2c_disable_blind_seed').value):
+                    self._seed_initial_pose(name)
+                    last_seed = time.monotonic()
+                    seeded = True
+                else:
+                    last_seed = time.monotonic()
             if nav_ok:
                 if self._nav_client.wait_for_server(timeout_sec=5.0):
                     self.get_logger().info('Nav2 lifecycle active + navigate_to_pose ready')
@@ -457,7 +486,7 @@ class NavSessionNode(Node):
                 time.sleep(0.5)
                 self._nav2_manage(ManageLifecycleNodes.Request.STARTUP, timeout_sec=75.0)
                 # Re-seed after STARTUP — AMCL may have been reset.
-                if name:
+                if name and not bool(self.get_parameter('phase2c_disable_blind_seed').value):
                     time.sleep(0.5)
                     self._seed_initial_pose(name)
                     seeded = True
@@ -550,6 +579,10 @@ class NavSessionNode(Node):
         if not self._active:
             self.get_logger().warn('goal ignored (nav inactive)')
             return
+        if self._goals_blocked:
+            self.get_logger().warn('goal rejected (goals_blocked — localization recovery)')
+            self._emit_result(1, 'rejected: goals_blocked', 'goal')
+            return
         if self._follow_en:
             self.get_logger().warn('goal rejected (follow active — stop follow first)')
             self._emit_result(1, 'rejected: follow active', 'goal')
@@ -575,6 +608,10 @@ class NavSessionNode(Node):
     def _on_patrol_cmd(self, msg: String) -> None:
         if not self._active:
             self.get_logger().warn('patrol ignored (nav inactive)')
+            return
+        if self._goals_blocked:
+            self.get_logger().warn('patrol rejected (goals_blocked)')
+            self._emit_result(1, 'rejected: goals_blocked', 'patrol')
             return
         if self._follow_en:
             self.get_logger().warn('patrol rejected (follow active — stop follow first)')

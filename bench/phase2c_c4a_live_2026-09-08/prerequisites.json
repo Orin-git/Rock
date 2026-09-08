@@ -1,0 +1,13 @@
+{
+  "map_present": true,
+  "map_w": 651,
+  "scan_present": true,
+  "amcl_present": true,
+  "tf_map_odom_base": true,
+  "loc_status": 0,
+  "charging": false,
+  "docked": false,
+  "battery": 81.0,
+  "min_laser_score": 0.38,
+  "ok": true
+}

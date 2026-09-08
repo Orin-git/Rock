@@ -61,6 +61,14 @@ class SupervisorNode(Node):
         self.declare_parameter('profile', 'normal')
         # Fall is an orthogonal background latch; default ON so dual-cam RGB+NPU stay warm.
         self.declare_parameter('fall_enable_default', True)
+        # Phase2C-C1: LOST → cancel nav / block goals / snapshot. Default OFF (no prod change).
+        # Does NOT call Relocalizer. Ownership is /xw/localization/phase2c_recovery
+        # (independent of recovery_enable, which IDLE clears).
+        self.declare_parameter('phase2c_lost_cancel_enabled', False)
+        # Phase2C-C3: LOST → STOP → Reloc owned by xw_lost_recovery. Default OFF.
+        # When ON: suppress health spin+reinit arming; mirror snapshot; do not steal
+        # phase2c_recovery ownership from lost_recovery; IDLE must not mid-cut recovery.
+        self.declare_parameter('phase2c_lost_recovery_enabled', False)
 
         self._cb = ReentrantCallbackGroup()
         self._mode = 0
@@ -77,6 +85,11 @@ class SupervisorNode(Node):
         self._explore_map = ''
         self._loc_recovery_en = False
         self._prev_loc_status = 1
+        # Phase2C independent recovery latch (survives semantic distinction from recovery_enable).
+        self._phase2c_recovery_active = False
+        self._phase2c_task_snapshot = ''
+        self._phase2c_loc_state = 'READY'
+        self._last_goal_xy = None  # optional; filled if progress observed later
 
         # Keep robot_state VOLATILE (high rate) so CLI/Foxglove default QoS always sees updates.
         self._state_pub = self.create_publisher(RobotState, '/xw/robot_state', 10)
@@ -99,6 +112,14 @@ class SupervisorNode(Node):
         self._loc_recovery_pub = self.create_publisher(
             Bool, '/xw/localization/recovery_enable', latch
         )
+        self._phase2c_recovery_pub = self.create_publisher(
+            Bool, '/xw/localization/phase2c_recovery', latch
+        )
+        self._goals_blocked_pub = self.create_publisher(Bool, '/xw/nav/goals_blocked', latch)
+        self._nav_cancel_pub = self.create_publisher(Bool, '/xw/nav/cancel', 10)
+        self._task_snapshot_pub = self.create_publisher(
+            String, '/xw/localization/phase2c_task_snapshot', latch
+        )
         self._explore_map_pub = self.create_publisher(String, '/xw/explore/map_name', latch)
         self._nav_map_pub = self.create_publisher(String, '/xw/nav/map_name', latch)
 
@@ -115,6 +136,25 @@ class SupervisorNode(Node):
         )
         self.create_subscription(
             Bool, '/xw/explore/request_disable', self._on_explore_request_disable, 10
+        )
+        # C3: Supervisor owns snapshot mirror; lost_recovery owns Reloc + STOP latch publishes.
+        self.create_subscription(
+            String,
+            '/xw/localization/phase2c_task_snapshot',
+            self._on_phase2c_snapshot,
+            latch,
+        )
+        self.create_subscription(
+            String,
+            '/xw/localization/phase2c_loc_state',
+            self._on_phase2c_loc_state,
+            latch,
+        )
+        self.create_subscription(
+            Bool,
+            '/xw/localization/phase2c_recovery',
+            self._on_phase2c_recovery_ext,
+            latch,
         )
 
         self.create_service(SetMode, '/xw/supervisor/set_mode', self._on_set_mode, callback_group=self._cb)
@@ -133,11 +173,33 @@ class SupervisorNode(Node):
         self._publish_recharge()
         self._publish_explore()
         self._publish_loc_recovery()
+        self._publish_phase2c_recovery()
+        self._publish_goals_blocked()
+        lost_cancel = bool(self.get_parameter('phase2c_lost_cancel_enabled').value)
+        lost_rec = bool(self.get_parameter('phase2c_lost_recovery_enabled').value)
         self.get_logger().info(
             'supervisor ready (follow/recharge on nav; explore on mapping; '
             f'fall orthogonal default={"on" if self._fall_en else "off"}; '
-            'loc recovery gated)'
+            f'loc recovery gated; phase2c_lost_cancel={lost_cancel}; '
+            f'phase2c_lost_recovery={lost_rec})'
         )
+
+    def _c3_lost_recovery_on(self) -> bool:
+        return bool(self.get_parameter('phase2c_lost_recovery_enabled').value)
+
+    def _on_phase2c_snapshot(self, msg: String) -> None:
+        """Supervisor owns the mirrored task snapshot (C3 Reloc path)."""
+        if msg.data:
+            self._phase2c_task_snapshot = msg.data
+
+    def _on_phase2c_loc_state(self, msg: String) -> None:
+        self._phase2c_loc_state = (msg.data or 'READY').strip() or 'READY'
+
+    def _on_phase2c_recovery_ext(self, msg: Bool) -> None:
+        """Mirror external Phase2C latch (xw_lost_recovery) without republishing."""
+        if not self._c3_lost_recovery_on():
+            return
+        self._phase2c_recovery_active = bool(msg.data)
 
     def _on_motor_disabled(self, msg: Bool) -> None:
         """MCU Flag_Stop → RobotState.emergency_stop (UI only).
@@ -158,22 +220,58 @@ class SupervisorNode(Node):
         prev = self._prev_loc_status
         self._loc_status = int(msg.data)
         self._prev_loc_status = self._loc_status
-        # FOLLOW + sustained DEGRADED/LOST → stop follow, arm recovery (no heal steal).
+        c3 = self._c3_lost_recovery_on()
+        # FOLLOW + sustained DEGRADED/LOST → stop follow; arm heal ONLY if C3 off.
         if self._follow_en and self._loc_status in (2, 3) and prev != self._loc_status:
-            self._enter_localization_recovery(
-                f'follow interrupted by loc status={self._loc_status}'
-            )
+            if c3:
+                # Stop follow; do NOT arm recovery_enable (spin+reinit). Reloc owns heal.
+                self._follow_en = False
+                self._publish_follow()
+                self._loc_recovery_en = False
+                self._publish_loc_recovery()
+                self._detail = f'follow stopped for Phase2C Reloc (loc={self._loc_status})'
+                self._emit_event(2, 'follow_stop_phase2c', self._detail)
+                self._publish_state()
+            else:
+                self._enter_localization_recovery(
+                    f'follow interrupted by loc status={self._loc_status}'
+                )
         elif self._loc_recovery_en and self._loc_status == 0:
             self._exit_localization_recovery('loc converged → READY')
         elif self._loc_recovery_en and self._loc_status == 3:
             self._fail_localization_recovery('self-heal failed → NEED_INITIAL_POSE')
+
+        # Phase2C-C1 (flag default OFF): cancel nav / block goals. No Reloc call.
+        # Skipped when C3 lost_recovery owns STOP+Reloc.
+        if (not c3) and bool(self.get_parameter('phase2c_lost_cancel_enabled').value):
+            if (
+                self._loc_status in (2, 3)
+                and prev != self._loc_status
+                and (self._mode in (2, 3) or self._nav_active_capability())
+            ):
+                self._phase2c_enter_lost_cancel(
+                    f'loc status={self._loc_status} (phase2c_lost_cancel)'
+                )
+            elif self._phase2c_recovery_active and self._loc_status == 0:
+                # Note: status==0 is NOT full READY proof (latch clear ≠ READY).
+                # C1 only releases goal block; C2+ must require stable AMCL window.
+                self._phase2c_exit_lost_cancel('loc status=0 (release goal block only)')
 
     def _on_follow_exit_loc(self, msg: Bool) -> None:
         """Follow session exit handshake: False → localization recovery."""
         if msg.data:
             return
         if self._mode in (2, 3) or self._nav_active_capability():
+            if self._c3_lost_recovery_on():
+                if self._follow_en:
+                    self._follow_en = False
+                    self._publish_follow()
+                self._loc_recovery_en = False
+                self._publish_loc_recovery()
+                return
             self._enter_localization_recovery('follow exit loc handshake failed')
+            if bool(self.get_parameter('phase2c_lost_cancel_enabled').value):
+                self._phase2c_enter_lost_cancel('follow exit loc handshake failed')
 
     def _nav_active_capability(self) -> bool:
         return self._mode in (2, 3) or bool(self._active_map)
@@ -181,7 +279,97 @@ class SupervisorNode(Node):
     def _publish_loc_recovery(self) -> None:
         self._loc_recovery_pub.publish(Bool(data=bool(self._loc_recovery_en)))
 
+    def _publish_phase2c_recovery(self) -> None:
+        # C3: xw_lost_recovery owns the latch publisher — do not overwrite.
+        if self._c3_lost_recovery_on():
+            return
+        self._phase2c_recovery_pub.publish(Bool(data=bool(self._phase2c_recovery_active)))
+
+    def _publish_goals_blocked(self) -> None:
+        if self._c3_lost_recovery_on():
+            return
+        self._goals_blocked_pub.publish(Bool(data=bool(self._phase2c_recovery_active)))
+
+    def _phase2c_enter_lost_cancel(self, reason: str) -> None:
+        """Stop motion planning; keep Safety; snapshot task. No Relocalizer."""
+        import time as _time
+
+        if self._c3_lost_recovery_on():
+            # C3 path: xw_lost_recovery performs STOP + snapshot + Reloc.
+            return
+
+        if self._follow_en:
+            task_type = 'follow'
+        elif self._recharge_en:
+            task_type = 'recharge'
+        elif self._mode in (2, 3):
+            task_type = 'navigate'
+        else:
+            task_type = 'none'
+        snap = {
+            'task_type': task_type,
+            'nav_goal': self._last_goal_xy,
+            'follow_was_on': bool(self._follow_en),
+            'recharge_was_on': bool(self._recharge_en),
+            'map_name': self._active_map,
+            'reason': reason,
+            'stamp': _time.time(),
+            'note': 'Phase2C-C1 snapshot; Reloc NOT auto-invoked',
+        }
+        self._phase2c_task_snapshot = json.dumps(snap, separators=(',', ':'))
+        self._task_snapshot_pub.publish(String(data=self._phase2c_task_snapshot))
+
+        if self._follow_en:
+            self._follow_en = False
+            self._publish_follow()
+        if self._recharge_en:
+            self._recharge_en = False
+            self._publish_recharge()
+        if self._mode == 3:
+            self._mode = 2
+            self._set_session(2, True)
+
+        # Cancel active Nav2 goal (soft). Safety gate remains in bringup.
+        # Publish twice — /xw/nav/cancel is volatile; ensures late nav_session sees it.
+        self._nav_cancel_pub.publish(Bool(data=True))
+        self._nav_cancel_pub.publish(Bool(data=True))
+
+        already = self._phase2c_recovery_active
+        self._phase2c_recovery_active = True
+        self._publish_phase2c_recovery()
+        self._publish_goals_blocked()
+        self._detail = f'PHASE2C_LOST_CANCEL: {reason}'
+        if not already:
+            self._emit_event(2, 'phase2c_lost_cancel', reason)
+            self.get_logger().warn(
+                f'PHASE2C_LOST_CANCEL: {reason} (goals blocked; no Reloc)'
+            )
+        self._publish_state()
+
+    def _phase2c_exit_lost_cancel(self, reason: str) -> None:
+        if not self._phase2c_recovery_active:
+            return
+        self._phase2c_recovery_active = False
+        self._publish_phase2c_recovery()
+        self._publish_goals_blocked()
+        self._detail = f'PHASE2C_LOST_CANCEL_CLEARED: {reason}'
+        self._emit_event(1, 'phase2c_lost_cancel_cleared', reason)
+        self.get_logger().info(f'PHASE2C_LOST_CANCEL cleared: {reason}')
+        self._publish_state()
+
     def _enter_localization_recovery(self, reason: str) -> None:
+        # C3: Reloc owns recovery — never arm spin+reinit via recovery_enable.
+        if self._c3_lost_recovery_on():
+            if self._follow_en:
+                self._follow_en = False
+                self._publish_follow()
+            if self._loc_recovery_en:
+                self._loc_recovery_en = False
+                self._publish_loc_recovery()
+            self._detail = f'Phase2C Reloc path (heal suppressed): {reason}'
+            self._publish_state()
+            self.get_logger().warn(self._detail)
+            return
         if self._loc_recovery_en and not self._follow_en:
             # Already recovering and follow already stopped.
             self._detail = f'{LOC_RECOVERY_DETAIL}: {reason}'
@@ -240,6 +428,10 @@ class SupervisorNode(Node):
         tags.append('explore=on' if self._explore_en else 'explore=off')
         tags.append('fall=on' if self._fall_en else 'fall=off')
         tags.append(f'loc={LOC_STATUS_NAMES.get(self._loc_status, str(self._loc_status))}')
+        if self._phase2c_recovery_active:
+            tags.append('phase2c_recovery=on')
+        if self._c3_lost_recovery_on() and self._phase2c_loc_state not in ('', 'READY'):
+            tags.append(f'phase2c_loc={self._phase2c_loc_state}')
         base = self._detail or ''
         tag_s = ' '.join(tags)
         s.detail = f'{base} | {tag_s}' if base else tag_s
@@ -523,6 +715,20 @@ class SupervisorNode(Node):
             if self._loc_recovery_en:
                 self._loc_recovery_en = False
                 self._publish_loc_recovery()
+            # Clear Phase2C latch on IDLE; ownership is still independent of recovery_enable
+            # during active recovery (this is an explicit mode exit, not a silent drop).
+            # C3: NEVER mid-cut Reloc ownership while LOST/RECOVERING.
+            if self._phase2c_recovery_active:
+                if self._c3_lost_recovery_on() and self._phase2c_loc_state in (
+                    'LOST',
+                    'RECOVERING',
+                ):
+                    self.get_logger().warn(
+                        'IDLE requested during Phase2C Reloc — keeping recovery ownership '
+                        f'(state={self._phase2c_loc_state})'
+                    )
+                else:
+                    self._phase2c_exit_lost_cancel('entered IDLE')
             self._mode = 0
 
         self._detail = reason

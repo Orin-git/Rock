@@ -1,0 +1,72 @@
+[INFO] [1788831283.595030874] [phase2b1_handoff_coverage]: Phase2B1 coverage debug n=10 prompt=False setup_nav=True
+[INFO] [1788831283.598348364] [phase2b1_handoff_coverage]: === 1/10 easy_kf_000007 ===
+SETUP placement nav → easy_kf_000007 (doorway_wp9) (not scored as handoff)
+[INFO] [1788831285.434097939] [phase2b1_handoff_coverage]: SETUP nav → easy_kf_000007
+{"trial": "easy_kf_000007", "layer": "SUCCESS", "expect": "ACCEPT", "fa": false, "xy": 0.209, "nav": true, "sensor_ms": 2521.4404440000635}
+[INFO] [1788831329.708970632] [phase2b1_handoff_coverage]: === 2/10 easy_kf_000012 ===
+SETUP placement nav → easy_kf_000012 (doorway_wp9) (not scored as handoff)
+{"trial": "easy_kf_000012", "layer": "AMCL_FALSE_CONVERGENCE", "expect": "ACCEPT", "fa": true, "xy": null, "nav": null, "sensor_ms": 2560.6513710001764}
+[INFO] [1788831362.933871699] [phase2b1_handoff_coverage]: === 3/10 easy_kf_000014 ===
+SETUP placement nav → easy_kf_000014 (corridor_wp2) (not scored as handoff)
+{"trial": "easy_kf_000014", "layer": "RELOC_UNKNOWN", "expect": "ACCEPT", "fa": false, "xy": null, "nav": null, "sensor_ms": 3060.991097999704}
+[INFO] [1788831393.186317121] [phase2b1_handoff_coverage]: === 4/10 easy_kf_000020 ===
+SETUP placement nav → easy_kf_000020 (similar_corridor_wp3) (not scored as handoff)
+{"trial": "easy_kf_000020", "layer": "RELOC_UNKNOWN", "expect": "ACCEPT", "fa": false, "xy": null, "nav": null, "sensor_ms": 3068.4938129998045}
+[INFO] [1788831426.052644307] [phase2b1_handoff_coverage]: === 5/10 easy_kf_000023 ===
+SETUP placement nav → easy_kf_000023 (similar_corridor_wp3) (not scored as handoff)
+{"trial": "easy_kf_000023", "layer": "RELOC_UNKNOWN", "expect": "ACCEPT", "fa": false, "xy": null, "nav": null, "sensor_ms": 5587.461557000097}
+[INFO] [1788831468.066383093] [phase2b1_handoff_coverage]: === 6/10 easy_kf_000026 ===
+SETUP placement nav → easy_kf_000026 (room_wp5) (not scored as handoff)
+{"trial": "easy_kf_000026", "layer": "RELOC_UNKNOWN", "expect": "ACCEPT", "fa": false, "xy": null, "nav": null, "sensor_ms": 5557.289695999771}
+[INFO] [1788831509.387439308] [phase2b1_handoff_coverage]: === 7/10 easy_kf_000033 ===
+SETUP placement nav → easy_kf_000033 (open_wp6) (not scored as handoff)
+{"trial": "easy_kf_000033", "layer": "NO_DATA", "expect": "ACCEPT", "fa": null, "xy": null, "nav": null, "sensor_ms": 8004.268949999641}
+[INFO] [1788831535.503691627] [phase2b1_handoff_coverage]: === 8/10 easy_kf_000037 ===
+SETUP placement nav → easy_kf_000037 (open_wp6) (not scored as handoff)
+{"trial": "easy_kf_000037", "layer": "NO_DATA", "expect": "ACCEPT", "fa": null, "xy": null, "nav": null, "sensor_ms": 8002.523868000026}
+[INFO] [1788831563.739427076] [phase2b1_handoff_coverage]: === 9/10 hard_kf_000013 ===
+SETUP placement nav → hard_kf_000013 (corridor_wp2) (not scored as handoff)
+[INFO] [1788831566.053207555] [phase2b1_handoff_coverage]: SETUP nav → hard_kf_000013
+{"trial": "hard_kf_000013", "layer": "SETUP_FAILED", "expect": "UNKNOWN", "fa": null, "xy": null, "nav": null, "sensor_ms": null}
+[INFO] [1788831576.616020827] [phase2b1_handoff_coverage]: === 10/10 hard_kf_000019 ===
+SETUP placement nav → hard_kf_000019 (similar_corridor_wp3) (not scored as handoff)
+{"trial": "hard_kf_000019", "layer": "SETUP_FAILED", "expect": "UNKNOWN", "fa": null, "xy": null, "nav": null, "sensor_ms": null}
+{
+  "out": "/ros2_ws/bench/phase2b1_handoff_coverage_2026-09-07/coverage_debug10.json",
+  "stats": {
+    "n": 10,
+    "layers": {
+      "SUCCESS": 1,
+      "AMCL_FALSE_CONVERGENCE": 1,
+      "RELOC_UNKNOWN": 4,
+      "NO_DATA": 2,
+      "SETUP_FAILED": 2
+    },
+    "easy_n": 8,
+    "hard_n": 2,
+    "easy_correct_accept": 1,
+    "safe_unknown": 4,
+    "no_data": 2,
+    "setup_failed": 2,
+    "reloc_accept_n": 2,
+    "amcl_ready_n": 1,
+    "amcl_ready_rate_on_accept": 0.5,
+    "false_handoff": 1,
+    "nav_success_rate_after_ready": 1.0,
+    "success": 1,
+    "reloc_wall_p50": 16.239789098999836,
+    "reloc_wall_p95": 16.36088960899997,
+    "visual_laser_p50": 12.932141304016113,
+    "visual_laser_p95": 13.179730415344238,
+    "amcl_conv_p50": 2.7006735801696777,
+    "amcl_conv_p95": 2.7006735801696777
+  },
+  "gate": {
+    "pass": false,
+    "false_handoff": 1,
+    "easy_correct_accept": 1,
+    "amcl_ready_rate_on_accept": 0.5,
+    "nav_success_rate_after_ready": 1.0,
+    "require": "FA=0, easy Correct ACCEPT\u22658, AMCL\u226590% on ACCEPT, Nav\u226590% after READY"
+  }
+}

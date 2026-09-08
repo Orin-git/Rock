@@ -1,0 +1,142 @@
+{
+  "mode": "smoke",
+  "validator": "phase2b2_low_load_v1",
+  "no_reinit": true,
+  "no_pre_initialpose": true,
+  "max_load1": 9.0,
+  "allow_amcl_handoff": true,
+  "production_unchanged": true,
+  "stop_reason": "false_handoff",
+  "stats": {
+    "n": 1,
+    "scored_n": 1,
+    "layers": {
+      "FALSE_HANDOFF": 1
+    },
+    "correct_accept": 0,
+    "safe_unknown": 0,
+    "no_data": 0,
+    "setup_aborted": 0,
+    "false_accept": 1,
+    "false_handoff": 1,
+    "reloc_accept_n": 1,
+    "amcl_ready_n": 0,
+    "amcl_ready_rate_on_accept": 0.0,
+    "nav_success_rate_after_ready": null,
+    "success": 0,
+    "visual_laser_p50": 12.493481636047363,
+    "visual_laser_p95": 12.493481636047363,
+    "sensor_arm_p50_ms": 2302.7481219996844,
+    "amcl_conv_p50": null,
+    "amcl_conv_p95": null,
+    "reloc_wall_p50": 15.510547121999934,
+    "reloc_wall_p95": 15.510547121999934,
+    "load1_at_start_max": 4.99,
+    "load1_at_start_mean": 4.99
+  },
+  "gate": {
+    "pass": false,
+    "false_accept": 1,
+    "false_handoff": 1,
+    "require": "FA=0, FH=0, no SETUP_ABORTED under smoke; mechanism exercised"
+  },
+  "trials": [
+    {
+      "trial_id": "smoke_kf_000007",
+      "keyframe_id": "kf_000007",
+      "region": "doorway_wp9",
+      "expect": "ACCEPT",
+      "class": "smoke",
+      "place_target": {
+        "x": 0.14492601607481603,
+        "y": -0.5379024281484402,
+        "yaw": 2.9115548231341846
+      },
+      "no_reinit": true,
+      "no_pre_initialpose": true,
+      "quiesce": {
+        "ok": true,
+        "load1": 4.99,
+        "cpu_total_pct": 30.508474576271183,
+        "wait_sec": 3.3186996790000194
+      },
+      "gt": {
+        "x": 0.14492601607481603,
+        "y": -0.5379024281484402,
+        "yaw": 2.9115548231341846,
+        "source": "place_target_kf"
+      },
+      "amcl_before": {
+        "x": 0.033330565964905856,
+        "y": -0.37969912166440084,
+        "yaw": -2.794489195558136,
+        "cov_xy": 0.013031842304406906,
+        "loc_status": 0
+      },
+      "load1_at_start": 4.99,
+      "cpu_total_pct_at_start": 44.34782608695652,
+      "reloc": {
+        "result_code": 0,
+        "laser_score": 0.6722998023033142,
+        "wall_sec": 15.510547121999934,
+        "time_to_candidate_sec": 12.493481636047363,
+        "amcl_convergence_sec": 2.6322097778320312,
+        "candidate": [
+          0.08248194052864655,
+          -0.30487344803736494,
+          -2.7633531441220818
+        ],
+        "decision": "ACCEPT",
+        "sensor_gate": {
+          "sensor_arm_timeout_sec": 10.0,
+          "sensor_fresh_sec": 1.0,
+          "scan_wait_ms": 66.97608900003615,
+          "rgb_request_to_first_rgb_ms": 2302.695620999657,
+          "sensor_ready_ms": 2302.7481219996844,
+          "sensor_ready": true,
+          "rgb": true,
+          "scan": true,
+          "camera_info": true,
+          "map": true
+        },
+        "amcl_handoff": {
+          "amcl_pose": [
+            0.10517599662234156,
+            -0.3189307168128625,
+            -2.7910476216790157
+          ],
+          "amcl_age_sec": 1.8427753690002646,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.19166170500000002,
+          "cov_xy": 0.06512351016353415,
+          "cov_yaw": 0.015841193097016627,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.026695074216236122,
+          "candidate_delta_yaw": 0.027694477556933886,
+          "near_candidate": true,
+          "stable_for_sec": 2.502241356000013,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.632209858999886
+        },
+        "candidate_to_amcl_correction": {
+          "dxy": 0.026695074216236122,
+          "dyaw": 0.027694477556933886
+        }
+      },
+      "sensor_ready_ms": 2302.7481219996844,
+      "load1_after": 6.43,
+      "layer": "FALSE_HANDOFF",
+      "candidate": {
+        "x": 0.08248194052864655,
+        "y": -0.30487344803736494,
+        "yaw": -2.7633531441220818
+      },
+      "candidate_error_xy": 0.24125042620153783,
+      "candidate_error_yaw": 0.6082773399233201,
+      "false_accept": true,
+      "false_handoff": true
+    }
+  ]
+}

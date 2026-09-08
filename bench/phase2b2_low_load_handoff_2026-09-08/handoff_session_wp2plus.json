@@ -1,0 +1,180 @@
+{
+  "validator": "phase2b2_wp_session_v1",
+  "start_wp": "wp_2",
+  "stop_reason": null,
+  "trials": [
+    {
+      "wp": "wp_2",
+      "region": "corridor",
+      "keyframe_id": "kf_000014",
+      "expect": "ACCEPT",
+      "wp_pose": {
+        "x": -4.0779483147098965,
+        "y": -0.9390276581991088,
+        "yaw": 3.3018138790728147
+      },
+      "gt": {
+        "x": -4.0779483147098965,
+        "y": -0.9390276581991088,
+        "yaw": 3.3018138790728147,
+        "source": "wp_pose"
+      },
+      "load1_at_start": 6.06,
+      "reloc": {
+        "result_code": 0,
+        "decision": "ACCEPT",
+        "laser_score": 0.7209894061088562,
+        "wall_sec": 17.02661938900019,
+        "time_to_candidate_sec": 13.993757247924805,
+        "amcl_convergence_sec": 2.6659317016601562,
+        "candidate": [
+          -4.102729600513352,
+          -0.7266186710384277,
+          -2.7377573172684895
+        ],
+        "sensor_ready_ms": 3242.690197000229,
+        "amcl_handoff": {
+          "amcl_pose": [
+            -4.136361729806484,
+            -0.795820240072644,
+            -2.736962991289563
+          ],
+          "amcl_age_sec": 1.878609933000007,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.196960188,
+          "cov_xy": 0.08383254899339693,
+          "cov_yaw": 0.01787700728468625,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.0769413885862955,
+          "candidate_delta_yaw": 0.00079432597892648,
+          "near_candidate": true,
+          "stable_for_sec": 2.522260282999923,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.6659316810000746
+        }
+      },
+      "candidate_error_xy": 0.21384969009259505,
+      "candidate_error_yaw": 0.2436141108382819,
+      "amcl_ready": true,
+      "final_error_xy": 0.1546625089337889,
+      "final_error_yaw": 0.24440843681720836,
+      "amcl_convergence_sec": 2.6659317016601562,
+      "nav_success": true,
+      "layer": "SUCCESS",
+      "false_handoff": false
+    },
+    {
+      "wp": "wp_3",
+      "region": "similar_corridor",
+      "keyframe_id": "kf_000020",
+      "expect": "ACCEPT",
+      "wp_pose": {
+        "x": -9.20885679699119,
+        "y": 1.1913716785939492,
+        "yaw": 3.385938748868999
+      },
+      "gt": {
+        "x": -9.118764115762357,
+        "y": 1.000736481286683,
+        "yaw": 3.0895835114847183,
+        "source": "amcl_at_place"
+      },
+      "load1_at_start": 7.23,
+      "reloc": {
+        "result_code": 1,
+        "decision": "UNKNOWN",
+        "laser_score": 0.0,
+        "wall_sec": 13.269934743000704,
+        "time_to_candidate_sec": 13.090829849243164,
+        "amcl_convergence_sec": 0.0,
+        "candidate": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "sensor_ready_ms": 2566.9930909998584,
+        "amcl_handoff": null
+      },
+      "layer": "SAFE_UNKNOWN",
+      "false_handoff": false
+    },
+    {
+      "wp": "wp_5",
+      "region": "room",
+      "keyframe_id": "kf_000026",
+      "expect": "ACCEPT",
+      "wp_pose": {
+        "x": -7.871928715871139,
+        "y": 3.2495538319074075,
+        "yaw": 0.8115781021773631
+      },
+      "gt": {
+        "x": -7.973954323546933,
+        "y": 3.0869348739544424,
+        "yaw": 1.0437454443717054,
+        "source": "amcl_at_place"
+      },
+      "load1_at_start": 7.14,
+      "reloc": {
+        "result_code": 0,
+        "decision": "ACCEPT",
+        "laser_score": 0.6789368391036987,
+        "wall_sec": 16.26177254800041,
+        "time_to_candidate_sec": 13.194732666015625,
+        "amcl_convergence_sec": 2.658550262451172,
+        "candidate": [
+          -8.112895717953688,
+          3.005599126114825,
+          1.0201573748784283
+        ],
+        "sensor_ready_ms": 1905.6737400005659,
+        "amcl_handoff": {
+          "amcl_pose": [
+            -8.14913850103148,
+            3.0062131591084,
+            1.0150157187075477
+          ],
+          "amcl_age_sec": 1.8829570360003345,
+          "map_odom_ok": true,
+          "map_odom_age_sec": -0.196428759,
+          "cov_xy": 0.05376248763096596,
+          "cov_yaw": 0.016117333527840033,
+          "loc_status": 0,
+          "candidate_delta_xy": 0.03624798424383238,
+          "candidate_delta_yaw": 0.005141656170880582,
+          "near_candidate": true,
+          "stable_for_sec": 2.516808611999295,
+          "gates_ok": true,
+          "saw_post_seed_amcl": true,
+          "localization_ready": true,
+          "amcl_convergence_sec": 2.658550299000126
+        }
+      },
+      "candidate_error_xy": 0.16099756195769896,
+      "candidate_error_yaw": 0.023588069493277075,
+      "amcl_ready": true,
+      "final_error_xy": 0.1928872501971631,
+      "final_error_yaw": 0.028729725664157657,
+      "amcl_convergence_sec": 2.658550262451172,
+      "nav_success": true,
+      "layer": "SUCCESS",
+      "false_handoff": false
+    },
+    {
+      "wp": "wp_6",
+      "region": "open",
+      "keyframe_id": "kf_000033",
+      "expect": "ACCEPT",
+      "wp_pose": {
+        "x": -0.7536999230552262,
+        "y": 9.387991011393888,
+        "yaw": 5.480333851262194
+      },
+      "layer": "SETUP_ABORTED",
+      "setup_error": "nav_to_wp_failed"
+    }
+  ],
+  "prior_wp9": "SUCCESS (earlier smoke)"
+}

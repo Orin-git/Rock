@@ -1,0 +1,13 @@
+[INFO] [1788850582.620962135] [xw_lost_recovery]: lost_recovery ready enabled=True (default false; Reloc-only owner; no spin+reinit)
+[WARN] [1788850583.602379800] [xw_lost_recovery]: LOST STOP complete reason=status_3 task=navigate
+[INFO] [1788850614.752617268] [xw_lost_recovery]: LOST recovery done final=READY t=31.2s resume={'nav': 'no_goal_saved', 'follow': 'no_auto', 'recharge': 'skip'}
+[WARN] [1788850793.596718684] [xw_lost_recovery]: LOST STOP complete reason=status_3 task=navigate
+[INFO] [1788850823.812797698] [xw_lost_recovery]: LOST recovery done final=READY t=30.2s resume={'nav': 'replan_published', 'follow': 'no_auto', 'recharge': 'skip'}
+[WARN] [1788850829.113533789] [xw_lost_recovery]: LOST STOP complete reason=pose_jump task=follow
+[WARN] [1788850852.889538866] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788850907.049086846] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=78.0s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}
+[WARN] [1788850968.101843256] [xw_lost_recovery]: LOST STOP complete reason=status_3 task=navigate
+[INFO] [1788850998.166037722] [xw_lost_recovery]: LOST recovery done final=READY t=30.1s resume={'nav': 'replan_published', 'follow': 'no_auto', 'recharge': 'skip'}
+[WARN] [1788851003.600829222] [xw_lost_recovery]: LOST STOP complete reason=pose_jump task=navigate
+[WARN] [1788851027.492156438] [xw_lost_recovery]: Reloc fail/unknown code=1; cooldown 30s
+[INFO] [1788851079.546164011] [xw_lost_recovery]: LOST recovery done final=UNKNOWN t=76.0s resume={'nav': 'forbidden', 'follow': 'forbidden', 'recharge': 'forbidden', 'detail': 'NEED_OPERATOR'}

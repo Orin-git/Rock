@@ -1,0 +1,147 @@
+[
+  {
+    "id": "kf_000028",
+    "retrieval_rank": 1,
+    "retrieval_score": 0.1320754716981132,
+    "ratio_matches": 21,
+    "visual_region": "room_wp5",
+    "seed": [
+      -8.05968548069111,
+      3.094141038900275,
+      1.4986464876318495
+    ],
+    "refined": [
+      -7.109685480691118,
+      3.6441410389002757,
+      1.638272827791397
+    ],
+    "laser_ok": false,
+    "laser_reason": "laser_score_gate",
+    "laser_score": 0.26485583194745044,
+    "laser_local_grid_margin": 0.0,
+    "valid_beams": 237,
+    "matched_ratio": 0.46835443037974683,
+    "mean_dist": 0.4344970074635518,
+    "p90_dist": 0.9806972026824952,
+    "dx": 0.9499999999999922,
+    "dy": 0.5500000000000007,
+    "dyaw": 0.13962634015954745,
+    "refine_runtime": 2.200444416999744
+  },
+  {
+    "id": "kf_000031",
+    "retrieval_rank": 2,
+    "retrieval_score": 0.10062893081761007,
+    "ratio_matches": 16,
+    "visual_region": "room_wp5",
+    "seed": [
+      -8.04287475501877,
+      3.5553446301240967,
+      1.7704257456959192
+    ],
+    "refined": [
+      -6.892874755018779,
+      3.655344630124097,
+      1.595892820496487
+    ],
+    "laser_ok": false,
+    "laser_reason": "laser_score_gate",
+    "laser_score": 0.2611603725719279,
+    "laser_local_grid_margin": 0.0,
+    "valid_beams": 237,
+    "matched_ratio": 0.4767932489451477,
+    "mean_dist": 0.45225656372082385,
+    "p90_dist": 1.042840909957886,
+    "dx": 1.1499999999999915,
+    "dy": 0.10000000000000009,
+    "dyaw": -0.1745329251994321,
+    "refine_runtime": 2.0747401039998294
+  },
+  {
+    "id": "kf_000023",
+    "retrieval_rank": 3,
+    "retrieval_score": 0.07547169811320754,
+    "ratio_matches": 12,
+    "visual_region": "similar_corridor_wp3",
+    "seed": [
+      -9.51813517081083,
+      0.6337983715985716,
+      -2.9532058821124645
+    ],
+    "refined": [
+      -9.61813517081083,
+      -0.4162016284014285,
+      2.823833941988766
+    ],
+    "laser_ok": false,
+    "laser_reason": "laser_score_gate",
+    "laser_score": 0.14487793384081965,
+    "laser_local_grid_margin": 0.0,
+    "valid_beams": 237,
+    "matched_ratio": 0.379746835443038,
+    "mean_dist": 0.6184881075525083,
+    "p90_dist": 1.348578691482544,
+    "dx": -0.09999999999999964,
+    "dy": -1.05,
+    "dyaw": -0.5061454830783563,
+    "refine_runtime": 1.9534537709996584
+  },
+  {
+    "id": "kf_000026",
+    "retrieval_rank": 4,
+    "retrieval_score": 0.07547169811320754,
+    "ratio_matches": 12,
+    "visual_region": "room_wp5",
+    "seed": [
+      -8.012238669616762,
+      3.0762895183428087,
+      0.49701989621448434
+    ],
+    "refined": [
+      -7.212238669616769,
+      4.126289518342809,
+      1.0904318418925563
+    ],
+    "laser_ok": false,
+    "laser_reason": "laser_score_gate",
+    "laser_score": 0.16479120668063682,
+    "laser_local_grid_margin": 0.0,
+    "valid_beams": 237,
+    "matched_ratio": 0.42616033755274263,
+    "mean_dist": 0.6133117229375156,
+    "p90_dist": 1.5744128465652467,
+    "dx": 0.7999999999999927,
+    "dy": 1.0500000000000007,
+    "dyaw": 0.593411945678072,
+    "refine_runtime": 2.0237406870000996
+  },
+  {
+    "id": "kf_000015",
+    "retrieval_rank": 5,
+    "retrieval_score": 0.06289308176100629,
+    "ratio_matches": 10,
+    "visual_region": "corridor_wp2",
+    "seed": [
+      -3.803237755209292,
+      -1.1023196490348977,
+      -2.7323655211875164
+    ],
+    "refined": [
+      -3.2032377552092948,
+      -0.002319649034896634,
+      -2.1215002829895058
+    ],
+    "laser_ok": false,
+    "laser_reason": "laser_score_gate",
+    "laser_score": 0.23022577313197218,
+    "laser_local_grid_margin": 0.0,
+    "valid_beams": 237,
+    "matched_ratio": 0.46835443037974683,
+    "mean_dist": 0.5084368627722756,
+    "p90_dist": 1.4355187177658082,
+    "dx": 0.5999999999999974,
+    "dy": 1.100000000000001,
+    "dyaw": 0.6108652381980106,
+    "refine_runtime": 1.9629445370001122
+  }
+]

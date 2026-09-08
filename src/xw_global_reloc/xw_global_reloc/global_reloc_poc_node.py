@@ -141,15 +141,20 @@ class GlobalRelocPoc(Node):
         # Covariance seeded on /initialpose from Visual+Laser PoC accuracy.
         self.declare_parameter('handoff_cov_xy', 0.12)
         self.declare_parameter('handoff_cov_yaw', 0.08)
+        # Sensor arming gate (Phase2B1) — no fixed short sleep before retrieval.
+        self.declare_parameter('sensor_arm_timeout_sec', 8.0)
+        self.declare_parameter('sensor_fresh_sec', 1.0)
         self.declare_parameter('debug_dump_dir', '/ros2_ws/bench/phase2a_poc_v1_2026-09-07/reloc_dumps')
 
         self._cb = ReentrantCallbackGroup()
         self._bridge = CvBridge()
-        self._orb = make_orb(1000)
+        # Lazy ORB — constructing ORB at init is fine; keep idle free of sensor work.
+        self._orb = None
         self._rgb_buf = ImageRingBuffer(40)
         self._depth_buf = ImageRingBuffer(40)
         self._info: Optional[CameraInfo] = None
         self._scan: Optional[LaserScan] = None
+        self._scan_mono: Optional[float] = None
         self._map: Optional[OccupancyGrid] = None
         self._field: Optional[DistanceField] = None
         self._amcl: Optional[PoseWithCovarianceStamped] = None
@@ -159,9 +164,13 @@ class GlobalRelocPoc(Node):
         self._kf_by_id: Dict[str, Dict[str, Any]] = {}
         # Gate camera decoding — idle reloc must not burn CPU on every RGB/depth frame.
         self._rgb_want = False
+        self._arm_mono: Optional[float] = None
+        self._first_rgb_mono: Optional[float] = None
+        self._first_scan_mono: Optional[float] = None
         # TF only during AMCL wait (TransformListener on /tf is expensive idle).
         self._tf: Optional[Buffer] = None
         self._tf_listener = None
+        self._active = False
 
         self._rgb_req = self.create_publisher(Bool, '/xw/reloc/rgb_request', _LATCH)
         self._initialpose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
@@ -169,21 +178,25 @@ class GlobalRelocPoc(Node):
         self._nav_cancel = self.create_publisher(Bool, '/xw/nav/cancel', 10)
         self._nomotion = self.create_client(Empty, '/request_nomotion_update', callback_group=self._cb)
 
-        # Heavy sensor subs are created only while a reloc call is active.
+        # Heavy / high-rate subs are created only while a reloc call is active.
         self._rgb_sub = None
         self._depth_sub = None
         self._info_sub = None
         self._scan_sub = None
-        self.create_subscription(OccupancyGrid, '/map', self._on_map, _MAP_QOS)
-        self.create_subscription(PoseWithCovarianceStamped, 'amcl_pose', self._on_amcl, _AMCL_QOS)
-        self.create_subscription(Int8, '/xw/localization_status', self._on_loc, _LATCH)
+        self._map_sub = None
+        self._amcl_sub = None
+        self._loc_sub = None
+        # localization_status is tiny + latched — keep for diagnostics without load.
+        self._loc_sub = self.create_subscription(Int8, '/xw/localization_status', self._on_loc, _LATCH)
 
         self.create_service(Relocalize, '/xw/relocalize', self._on_relocalize, callback_group=self._cb)
         self._load_db()
+        # Ensure idle release on startup.
+        self._request_rgb(False)
         allow = bool(self.get_parameter('allow_amcl_handoff').value)
         self.get_logger().info(
             f'reloc PoC ready db_kfs={len(self._keyframes)} '
-            f'allow_amcl_handoff={allow} (sensors subscribed only during call)'
+            f'allow_amcl_handoff={allow} (IDLE: no RGB/Depth/Scan/map/amcl/TF)'
         )
 
     def _db_root(self) -> Path:
@@ -240,6 +253,8 @@ class GlobalRelocPoc(Node):
     def _on_rgb(self, msg: Image) -> None:
         if self._rgb_want:
             self._rgb_buf.push(msg)
+            if self._first_rgb_mono is None:
+                self._first_rgb_mono = time.monotonic()
 
     def _on_depth(self, msg: Image) -> None:
         if self._rgb_want:
@@ -251,16 +266,52 @@ class GlobalRelocPoc(Node):
     def _on_scan(self, msg: LaserScan) -> None:
         if self._rgb_want:
             self._scan = msg
+            self._scan_mono = time.monotonic()
+            if self._first_scan_mono is None:
+                self._first_scan_mono = time.monotonic()
+
+    def _ensure_orb(self):
+        if self._orb is None:
+            self._orb = make_orb(1000)
+        return self._orb
+
+    def _destroy_sub(self, attr: str) -> None:
+        sub = getattr(self, attr, None)
+        if sub is None:
+            return
+        try:
+            self.destroy_subscription(sub)
+        except Exception:  # noqa: BLE001
+            pass
+        setattr(self, attr, None)
 
     def _arm_sensors(self, on: bool) -> None:
-        """Subscribe/unsubscribe heavy topics. Idle reloc must not deserialize Image/Scan."""
+        """Subscribe/unsubscribe heavy topics. Idle must not deserialize Image/Scan/map/amcl."""
         self._rgb_want = bool(on)
+        self._active = bool(on)
+        mode = str(self.get_parameter('pipeline_mode').value)
         if on:
+            self._arm_mono = time.monotonic()
+            self._first_rgb_mono = None
+            self._first_scan_mono = None
+            self._scan = None
+            self._scan_mono = None
+            self._rgb_buf = ImageRingBuffer(40)
+            self._depth_buf = ImageRingBuffer(40)
+            if self._map_sub is None:
+                self._map_sub = self.create_subscription(
+                    OccupancyGrid, '/map', self._on_map, _MAP_QOS
+                )
+            if self._amcl_sub is None:
+                self._amcl_sub = self.create_subscription(
+                    PoseWithCovarianceStamped, 'amcl_pose', self._on_amcl, _AMCL_QOS
+                )
             if self._rgb_sub is None:
                 self._rgb_sub = self.create_subscription(
                     Image, '/camera/front_up/color/image_raw', self._on_rgb, _SENSOR_QOS
                 )
-            if self._depth_sub is None:
+            # Depth only for rgbd_laser mode — visual_laser must not pay Depth bandwidth.
+            if mode == 'rgbd_laser' and self._depth_sub is None:
                 self._depth_sub = self.create_subscription(
                     Image, '/camera/front_up/depth/image_raw', self._on_depth, _SENSOR_QOS
                 )
@@ -275,26 +326,41 @@ class GlobalRelocPoc(Node):
             self._rgb_req.publish(Bool(data=True))
         else:
             self._rgb_req.publish(Bool(data=False))
-            for attr in ('_rgb_sub', '_depth_sub', '_info_sub', '_scan_sub'):
-                sub = getattr(self, attr)
-                if sub is not None:
-                    try:
-                        self.destroy_subscription(sub)
-                    except Exception:  # noqa: BLE001
-                        pass
-                    setattr(self, attr, None)
+            # Drop TF first (owns /tf subscription).
+            self._arm_tf(False)
+            for attr in (
+                '_rgb_sub',
+                '_depth_sub',
+                '_info_sub',
+                '_scan_sub',
+                '_map_sub',
+                '_amcl_sub',
+            ):
+                self._destroy_sub(attr)
             self._rgb_buf = ImageRingBuffer(40)
             self._depth_buf = ImageRingBuffer(40)
             self._scan = None
+            self._scan_mono = None
+            self._arm_mono = None
+            self._first_rgb_mono = None
+            self._first_scan_mono = None
+            # Keep last map field in memory (no ongoing sub). Clear amcl cache.
+            self._amcl = None
+            self._amcl_mono = None
 
     def _request_rgb(self, on: bool) -> None:
         self._arm_sensors(bool(on))
 
     def _on_map(self, msg: OccupancyGrid) -> None:
+        # Build distance field once per arming; ignore repeats while armed.
+        if self._field is not None and self._map is not None:
+            return
         self._map = msg
         self._field = DistanceField(msg)
 
     def _on_amcl(self, msg: PoseWithCovarianceStamped) -> None:
+        if not self._active and self._tf is None:
+            return
         self._amcl = msg
         self._amcl_mono = time.monotonic()
 
@@ -319,11 +385,67 @@ class GlobalRelocPoc(Node):
     def _arm_tf(self, on: bool) -> None:
         if on:
             if self._tf is None:
-                self._tf = Buffer()
-                self._tf_listener = TransformListener(self._tf, self)
+                self._tf = Buffer(cache_time=rclpy.duration.Duration(seconds=10.0))
+                self._tf_listener = TransformListener(self._tf, self, spin_thread=False)
+            # Need amcl during READY wait even if sensors already disarmed.
+            if self._amcl_sub is None:
+                self._amcl_sub = self.create_subscription(
+                    PoseWithCovarianceStamped, 'amcl_pose', self._on_amcl, _AMCL_QOS
+                )
         else:
+            listener = self._tf_listener
             self._tf_listener = None
             self._tf = None
+            if listener is not None:
+                # TransformListener does not always auto-destroy node subscriptions.
+                for attr in (
+                    'tf_sub',
+                    'tf_static_sub',
+                    'subscription',
+                    '_subscription',
+                    'tf_sub_',
+                    'tf_static_sub_',
+                ):
+                    sub = getattr(listener, attr, None)
+                    if sub is not None:
+                        try:
+                            self.destroy_subscription(sub)
+                        except Exception:  # noqa: BLE001
+                            pass
+                del listener
+            # If not in full sensor-arm session, drop amcl too.
+            if not self._rgb_want:
+                self._destroy_sub('_amcl_sub')
+                self._amcl = None
+                self._amcl_mono = None
+
+    def _release_idle(self) -> None:
+        """Force IDLE resource profile: no heavy subs / TF / RGB request."""
+        try:
+            self._rgb_want = False
+            self._active = False
+            self._arm_tf(False)
+            self._rgb_req.publish(Bool(data=False))
+            for attr in (
+                '_rgb_sub',
+                '_depth_sub',
+                '_info_sub',
+                '_scan_sub',
+                '_map_sub',
+                '_amcl_sub',
+            ):
+                self._destroy_sub(attr)
+            self._rgb_buf = ImageRingBuffer(40)
+            self._depth_buf = ImageRingBuffer(40)
+            self._scan = None
+            self._scan_mono = None
+            self._arm_mono = None
+            self._first_rgb_mono = None
+            self._first_scan_mono = None
+            self._amcl = None
+            self._amcl_mono = None
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().warn(f'release_idle failed: {exc}')
 
     def _map_odom_fresh(self) -> Tuple[bool, Optional[float]]:
         """map→odom must exist; stamp age is advisory (AMCL may be quiet while static)."""
@@ -458,7 +580,59 @@ class GlobalRelocPoc(Node):
         last_diag['amcl_convergence_sec'] = self._mono_now() - t0
         return False, last_diag
 
+    def _wait_sensors_ready(self, timeout: Optional[float] = None) -> Tuple[Optional[Image], Dict[str, Any]]:
+        """Explicit Sensor Ready Gate: new RGB + new Scan + CameraInfo + map after arm."""
+        if timeout is None:
+            timeout = float(self.get_parameter('sensor_arm_timeout_sec').value)
+        fresh = float(self.get_parameter('sensor_fresh_sec').value)
+        t0 = self._arm_mono or time.monotonic()
+        deadline = t0 + float(timeout)
+        metrics: Dict[str, Any] = {
+            'sensor_arm_timeout_sec': float(timeout),
+            'sensor_fresh_sec': fresh,
+        }
+        rgb_msg = None
+        while time.monotonic() < deadline and rclpy.ok():
+            rclpy.spin_once(self, timeout_sec=0.05)
+            now = time.monotonic()
+            if self._first_rgb_mono is not None and 'rgb_request_to_first_rgb_ms' not in metrics:
+                metrics['rgb_request_to_first_rgb_ms'] = (self._first_rgb_mono - t0) * 1000.0
+            if self._first_scan_mono is not None and 'scan_wait_ms' not in metrics:
+                metrics['scan_wait_ms'] = (self._first_scan_mono - t0) * 1000.0
+            if len(self._rgb_buf) > 0:
+                rgb_msg = self._rgb_buf._buf[-1].msg
+            # Ready = post-arm RGB frame + post-arm scan still fresh + camera_info + map.
+            rgb_ok = rgb_msg is not None and self._first_rgb_mono is not None
+            scan_ok = (
+                self._scan is not None
+                and self._first_scan_mono is not None
+                and self._scan_mono is not None
+                and (now - self._scan_mono) <= max(fresh, 2.0)
+            )
+            info_ok = self._info is not None
+            map_ok = self._field is not None
+            if rgb_ok and scan_ok and info_ok and map_ok:
+                metrics['sensor_ready_ms'] = (now - t0) * 1000.0
+                metrics['sensor_ready'] = True
+                metrics['rgb'] = True
+                metrics['scan'] = True
+                metrics['camera_info'] = True
+                metrics['map'] = True
+                return rgb_msg, metrics
+        metrics['sensor_ready'] = False
+        metrics['sensor_ready_ms'] = (time.monotonic() - t0) * 1000.0
+        metrics['rgb'] = len(self._rgb_buf) > 0
+        metrics['scan'] = self._scan is not None
+        metrics['camera_info'] = self._info is not None
+        metrics['map'] = self._field is not None
+        if self._first_rgb_mono is not None and 'rgb_request_to_first_rgb_ms' not in metrics:
+            metrics['rgb_request_to_first_rgb_ms'] = (self._first_rgb_mono - t0) * 1000.0
+        if self._first_scan_mono is not None and 'scan_wait_ms' not in metrics:
+            metrics['scan_wait_ms'] = (self._first_scan_mono - t0) * 1000.0
+        return None, metrics
+
     def _wait_rgb(self, timeout: float = 5.0):
+        # Legacy helper; prefer _wait_sensors_ready.
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline and rclpy.ok():
             rclpy.spin_once(self, timeout_sec=0.05)
@@ -530,293 +704,300 @@ class GlobalRelocPoc(Node):
             res.stage_timings_json = '{}'
             return res
 
-        self._request_rgb(True)
-        mode = str(self.get_parameter('pipeline_mode').value)
-        t0 = time.monotonic()
-        rgb_msg = self._wait_rgb(6.0)
-        timings['wait_rgb'] = time.monotonic() - t0
-        # Depth optional for visual_laser; still try nearest pair for diagnostics.
-        pair = pair_nearest(self._rgb_buf, self._depth_buf, prefer='rgb')
-        if rgb_msg is None or self._scan is None or self._field is None:
-            self._request_rgb(False)
-            res.result_code = NO_DATA
-            res.diagnostics_json = json.dumps(
-                {
-                    'rgb': rgb_msg is not None,
-                    'scan': self._scan is not None,
-                    'map': self._field is not None,
-                    'mode': mode,
-                }
-            )
-            res.stage_timings_json = json.dumps(timings)
-            return res
+        try:
+            self._request_rgb(True)
+            mode = str(self.get_parameter('pipeline_mode').value)
+            t0 = time.monotonic()
+            rgb_msg, sensor_metrics = self._wait_sensors_ready()
+            timings['sensor_ready'] = time.monotonic() - t0
+            timings.update({k: v for k, v in sensor_metrics.items() if isinstance(v, (int, float, bool))})
+            # Depth optional for visual_laser; still try nearest pair for diagnostics.
+            pair = pair_nearest(self._rgb_buf, self._depth_buf, prefer='rgb')
+            if rgb_msg is None or self._scan is None or self._field is None:
+                res.result_code = NO_DATA
+                res.diagnostics_json = json.dumps(
+                    {
+                        'error': 'sensor_not_ready',
+                        'rgb': rgb_msg is not None,
+                        'scan': self._scan is not None,
+                        'map': self._field is not None,
+                        'camera_info': self._info is not None,
+                        'mode': mode,
+                        'sensor_gate': sensor_metrics,
+                    }
+                )
+                res.stage_timings_json = json.dumps(timings)
+                return res
 
-        bgr = self._bridge.imgmsg_to_cv2(rgb_msg, 'bgr8')
-        depth_u16 = None
-        if pair is not None:
-            try:
-                depth_u16 = self._bridge.imgmsg_to_cv2(pair.depth, 'passthrough')
-                timings['pair_dt_ms'] = pair.pair_dt_sec * 1000.0
-            except Exception:  # noqa: BLE001
-                depth_u16 = None
+            bgr = self._bridge.imgmsg_to_cv2(rgb_msg, 'bgr8')
+            depth_u16 = None
+            if pair is not None:
+                try:
+                    depth_u16 = self._bridge.imgmsg_to_cv2(pair.depth, 'passthrough')
+                    timings['pair_dt_ms'] = pair.pair_dt_sec * 1000.0
+                except Exception:  # noqa: BLE001
+                    depth_u16 = None
 
-        t0 = time.monotonic()
-        qorb = extract_orb(bgr, self._orb)
-        timings['orb'] = time.monotonic() - t0
+            t0 = time.monotonic()
+            qorb = extract_orb(bgr, self._ensure_orb())
+            timings['orb'] = time.monotonic() - t0
 
-        retrieval_pool = [k for k in self._keyframes if k.get('retrieval_ready', True)]
-        t0 = time.monotonic()
-        retr = retrieve_topk(bgr, retrieval_pool, top_k=max_k)
-        timings['retrieval'] = time.monotonic() - t0
+            retrieval_pool = [k for k in self._keyframes if k.get('retrieval_ready', True)]
+            t0 = time.monotonic()
+            retr = retrieve_topk(bgr, retrieval_pool, top_k=max_k)
+            timings['retrieval'] = time.monotonic() - t0
 
-        import math as _math
+            import math as _math
 
-        topk_dbg = []
-        members: list = []
-        t_laser = 0.0
-        for cand in retr.candidates:
-            kf = self._kf_by_id.get(cand.keyframe_id)
-            if kf is None:
-                continue
-            mp = kf['meta']['map_pose']
-            seed = Pose2D(float(mp['x']), float(mp['y']), float(mp['yaw']))
-            tl = time.monotonic()
-            refined = refine_candidate_with_laser(
-                self._field,
-                self._scan,
-                seed,
-                coarse_xy_m=float(self.get_parameter('laser_coarse_xy_m').value),
-                coarse_yaw_rad=_math.radians(float(self.get_parameter('laser_coarse_yaw_deg').value)),
-                coarse_xy_step=float(self.get_parameter('laser_coarse_xy_step').value),
-                coarse_yaw_step=_math.radians(float(self.get_parameter('laser_coarse_yaw_step_deg').value)),
-                fine_xy_m=float(self.get_parameter('laser_fine_xy_m').value),
-                fine_yaw_rad=_math.radians(float(self.get_parameter('laser_fine_yaw_deg').value)),
-                fine_xy_step=float(self.get_parameter('laser_fine_xy_step').value),
-                fine_yaw_step=_math.radians(float(self.get_parameter('laser_fine_yaw_step_deg').value)),
-                beam_stride=int(self.get_parameter('laser_beam_stride').value),
-                match_dist_m=float(self.get_parameter('laser_match_dist_m').value),
-                min_valid_beams=int(self.get_parameter('min_valid_beams').value),
-                min_laser_score=float(self.get_parameter('min_laser_score').value),
-                min_margin=float(self.get_parameter('laser_min_margin').value),
-                max_refine_trans_m=float(self.get_parameter('laser_max_refine_trans_m').value),
-                max_refine_yaw_rad=_math.radians(float(self.get_parameter('laser_max_refine_yaw_deg').value)),
-                reject_local_grid_margin=bool(
-                    self.get_parameter('laser_reject_local_grid_margin').value
-                ),
-            )
-            t_laser += time.monotonic() - tl
-            seed_t = seed.as_tuple()
-            refined_t = refined.refined.as_tuple()
-            abs_ok, abs_reason, dx, dy, dyaw = absolute_gate_member(
-                refined=refined_t,
-                seed=seed_t,
-                laser_score=refined.top1_score,
-                min_laser_score=float(self.get_parameter('min_laser_score').value),
-                max_refine_trans_m=float(self.get_parameter('laser_max_refine_trans_m').value),
-                max_refine_yaw_rad=_math.radians(
-                    float(self.get_parameter('laser_max_refine_yaw_deg').value)
-                ),
-                free_space=self._field.is_free(refined.refined.x, refined.refined.y),
-                valid_beams=refined.score.valid_beams,
-                min_valid_beams=int(self.get_parameter('min_valid_beams').value),
-                legacy_reason=refined.reason,
-            )
-            if not refined.accepted and refined.reason != 'ambiguous_margin':
-                abs_ok = False
-                abs_reason = refined.reason
-            region = str((kf.get('meta') or {}).get('region_id') or '')
-            entry = {
-                'id': cand.keyframe_id,
-                'retrieval_rank': cand.rank,
-                'retrieval_score': cand.score,
-                'ratio_matches': cand.ratio_matches,
-                'visual_region': region,
-                'seed': seed_t,
-                'refined': refined_t,
-                'laser_ok': abs_ok,
-                'laser_reason': abs_reason,
-                'laser_score': refined.top1_score,
-                'laser_local_grid_margin': refined.margin,
-                'valid_beams': refined.score.valid_beams,
-                'matched_ratio': refined.score.matched_ratio,
-                'mean_dist': refined.score.mean_dist,
-                'p90_dist': refined.score.p90_dist,
-                'dx': dx,
-                'dy': dy,
-                'dyaw': dyaw,
-                'refine_runtime': refined.runtime_sec,
-            }
-            topk_dbg.append(entry)
-            members.append(
-                ClusterMember(
-                    keyframe_id=cand.keyframe_id,
+            topk_dbg = []
+            members: list = []
+            t_laser = 0.0
+            for cand in retr.candidates:
+                kf = self._kf_by_id.get(cand.keyframe_id)
+                if kf is None:
+                    continue
+                mp = kf['meta']['map_pose']
+                seed = Pose2D(float(mp['x']), float(mp['y']), float(mp['yaw']))
+                tl = time.monotonic()
+                refined = refine_candidate_with_laser(
+                    self._field,
+                    self._scan,
+                    seed,
+                    coarse_xy_m=float(self.get_parameter('laser_coarse_xy_m').value),
+                    coarse_yaw_rad=_math.radians(float(self.get_parameter('laser_coarse_yaw_deg').value)),
+                    coarse_xy_step=float(self.get_parameter('laser_coarse_xy_step').value),
+                    coarse_yaw_step=_math.radians(float(self.get_parameter('laser_coarse_yaw_step_deg').value)),
+                    fine_xy_m=float(self.get_parameter('laser_fine_xy_m').value),
+                    fine_yaw_rad=_math.radians(float(self.get_parameter('laser_fine_yaw_deg').value)),
+                    fine_xy_step=float(self.get_parameter('laser_fine_xy_step').value),
+                    fine_yaw_step=_math.radians(float(self.get_parameter('laser_fine_yaw_step_deg').value)),
+                    beam_stride=int(self.get_parameter('laser_beam_stride').value),
+                    match_dist_m=float(self.get_parameter('laser_match_dist_m').value),
+                    min_valid_beams=int(self.get_parameter('min_valid_beams').value),
+                    min_laser_score=float(self.get_parameter('min_laser_score').value),
+                    min_margin=float(self.get_parameter('laser_min_margin').value),
+                    max_refine_trans_m=float(self.get_parameter('laser_max_refine_trans_m').value),
+                    max_refine_yaw_rad=_math.radians(float(self.get_parameter('laser_max_refine_yaw_deg').value)),
+                    reject_local_grid_margin=bool(
+                        self.get_parameter('laser_reject_local_grid_margin').value
+                    ),
+                )
+                t_laser += time.monotonic() - tl
+                seed_t = seed.as_tuple()
+                refined_t = refined.refined.as_tuple()
+                abs_ok, abs_reason, dx, dy, dyaw = absolute_gate_member(
                     refined=refined_t,
                     seed=seed_t,
-                    laser_score=float(refined.top1_score),
-                    visual_rank=int(cand.rank),
-                    visual_score=float(cand.score),
-                    visual_region=region,
-                    dx=dx,
-                    dy=dy,
-                    dyaw=dyaw,
+                    laser_score=refined.top1_score,
+                    min_laser_score=float(self.get_parameter('min_laser_score').value),
+                    max_refine_trans_m=float(self.get_parameter('laser_max_refine_trans_m').value),
+                    max_refine_yaw_rad=_math.radians(
+                        float(self.get_parameter('laser_max_refine_yaw_deg').value)
+                    ),
+                    free_space=self._field.is_free(refined.refined.x, refined.refined.y),
                     valid_beams=refined.score.valid_beams,
-                    matched_ratio=refined.score.matched_ratio,
-                    mean_dist=refined.score.mean_dist,
-                    p90_dist=refined.score.p90_dist,
-                    absolute_ok=abs_ok,
-                    absolute_reason=abs_reason,
+                    min_valid_beams=int(self.get_parameter('min_valid_beams').value),
+                    legacy_reason=refined.reason,
                 )
-            )
-
-        timings['laser_total'] = t_laser
-        timings['total'] = time.monotonic() - t_all
-        res.candidate_count = len(retr.candidates)
-        res.time_to_candidate_sec = float(timings['total'])
-        res.stage_timings_json = json.dumps(timings)
-
-        dec = decide_pose_clusters(
-            members,
-            cluster_xy_m=float(self.get_parameter('cluster_xy_m').value),
-            cluster_yaw_rad=_math.radians(float(self.get_parameter('cluster_yaw_deg').value)),
-            cluster_min_score_margin=float(self.get_parameter('cluster_min_score_margin').value),
-        )
-        cluster_dbg = decision_to_dict(dec)
-        decision_status = dec.status
-        decision_reason = dec.reason
-        best_cand = None
-        best_ref_pose = None
-        margin = float(dec.cluster_margin)
-        if dec.best_cluster is not None:
-            best_ref_pose = Pose2D(*dec.best_cluster.center)
-            best_id = dec.best_cluster.members[0].keyframe_id
-            best_cand = next((c for c in retr.candidates if c.keyframe_id == best_id), None)
-
-        if decision_status != 'ACCEPT' or best_ref_pose is None or best_cand is None:
-            dump_depth = depth_u16 if depth_u16 is not None else np.zeros((480, 640), np.uint16)
-            self._dump_failure(
-                bgr,
-                dump_depth,
-                topk_dbg,
-                {
-                    'decision': decision_status,
-                    'reason': decision_reason,
-                    'mode': mode,
-                    'cluster_accept': cluster_dbg,
-                },
-            )
-            self._request_rgb(False)
-            res.result_code = UNKNOWN
-            res.diagnostics_json = json.dumps(
-                {
-                    'decision': decision_status,
-                    'reason': decision_reason,
-                    'pipeline_mode': mode,
-                    'accept_policy': 'pose_cluster_v1',
-                    'query_features': retr.query_features,
-                    'topk': topk_dbg,
-                    'cluster_accept': cluster_dbg,
-                    'note': 'Visual proposes; Laser absolute gates + SE(2) clusters decide.',
+                if not refined.accepted and refined.reason != 'ambiguous_margin':
+                    abs_ok = False
+                    abs_reason = refined.reason
+                region = str((kf.get('meta') or {}).get('region_id') or '')
+                entry = {
+                    'id': cand.keyframe_id,
+                    'retrieval_rank': cand.rank,
+                    'retrieval_score': cand.score,
+                    'ratio_matches': cand.ratio_matches,
+                    'visual_region': region,
+                    'seed': seed_t,
+                    'refined': refined_t,
+                    'laser_ok': abs_ok,
+                    'laser_reason': abs_reason,
+                    'laser_score': refined.top1_score,
+                    'laser_local_grid_margin': refined.margin,
+                    'valid_beams': refined.score.valid_beams,
+                    'matched_ratio': refined.score.matched_ratio,
+                    'mean_dist': refined.score.mean_dist,
+                    'p90_dist': refined.score.p90_dist,
+                    'dx': dx,
+                    'dy': dy,
+                    'dyaw': dyaw,
+                    'refine_runtime': refined.runtime_sec,
                 }
-            )
-            return res
-
-        res.visual_score = float(best_cand.score)
-        res.geometry_score = 0.0  # not used in visual_laser V1
-        res.laser_score = float(dec.best_cluster.best_laser_score)
-        res.composite_score = float(0.4 * best_cand.score + 0.6 * res.laser_score)
-        res.confidence = float(res.composite_score)
-        cov_xy = float(self.get_parameter('handoff_cov_xy').value)
-        cov_yaw = float(self.get_parameter('handoff_cov_yaw').value)
-        pose_msg = PoseWithCovarianceStamped()
-        pose_msg.header.stamp = self.get_clock().now().to_msg()
-        pose_msg.header.frame_id = 'map'
-        pose_msg.pose.pose.position.x = best_ref_pose.x
-        pose_msg.pose.pose.position.y = best_ref_pose.y
-        pose_msg.pose.pose.orientation = _yaw_to_quat(best_ref_pose.yaw)
-        pose_msg.pose.covariance[0] = cov_xy
-        pose_msg.pose.covariance[7] = cov_xy
-        pose_msg.pose.covariance[35] = cov_yaw
-        res.pose = pose_msg
-        diag_base = {
-            'decision': 'ACCEPT',
-            'reason': decision_reason,
-            'pipeline_mode': mode,
-            'accept_policy': 'pose_cluster_v1',
-            'keyframe_id': best_cand.keyframe_id,
-            'visual_rank': best_cand.rank,
-            'cluster_margin': margin,
-            'cluster_support': dec.best_cluster.support_count,
-            'refined': best_ref_pose.as_tuple(),
-            'laser_score': float(res.laser_score),
-            'apply_initial_pose': apply_pose,
-            'allow_amcl_handoff': allow_handoff,
-            'handoff_cov_xy': cov_xy,
-            'handoff_cov_yaw': cov_yaw,
-            'topk': topk_dbg,
-            'cluster_accept': cluster_dbg,
-        }
-        res.diagnostics_json = json.dumps(diag_base)
-
-        if not apply_pose:
-            self._request_rgb(False)
-            res.success = True
-            res.result_code = DRY_RUN_OK
-            return res
-
-        # ACCEPT-only handoff. UNKNOWN/REJECTED never reach here.
-        # Do NOT call reinitialize_global_localization (would wipe Visual+Laser prior).
-        if bool(req.allow_motion):
-            self.get_logger().warn('allow_motion ignored in Phase2B handoff (no auto spin)')
-        self._stop_robot()
-        time.sleep(0.15)
-        amcl_mono_before = self._amcl_mono
-        # Free camera/scan DDS while waiting on AMCL.
-        self._request_rgb(False)
-        self._arm_tf(True)
-        self._initialpose_pub.publish(pose_msg)
-        if self._nomotion.service_is_ready():
-            try:
-                self._nomotion.call_async(Empty.Request())
-            except Exception as exc:  # noqa: BLE001
-                self.get_logger().warn(f'nomotion failed: {exc}')
-        else:
-            self.get_logger().warn('request_nomotion_update not ready')
-
-        ready, amcl_diag = self._wait_amcl_ready(best_ref_pose, amcl_mono_before)
-        self._arm_tf(False)
-        res.amcl_convergence_sec = float(amcl_diag.get('amcl_convergence_sec') or 0.0)
-        amcl_pose = amcl_diag.get('amcl_pose')
-        cand_t = best_ref_pose.as_tuple()
-        correction = None
-        if amcl_pose is not None:
-            correction = {
-                'dxy': math.hypot(amcl_pose[0] - cand_t[0], amcl_pose[1] - cand_t[1]),
-                'dyaw': abs(
-                    math.atan2(
-                        math.sin(amcl_pose[2] - cand_t[2]),
-                        math.cos(amcl_pose[2] - cand_t[2]),
+                topk_dbg.append(entry)
+                members.append(
+                    ClusterMember(
+                        keyframe_id=cand.keyframe_id,
+                        refined=refined_t,
+                        seed=seed_t,
+                        laser_score=float(refined.top1_score),
+                        visual_rank=int(cand.rank),
+                        visual_score=float(cand.score),
+                        visual_region=region,
+                        dx=dx,
+                        dy=dy,
+                        dyaw=dyaw,
+                        valid_beams=refined.score.valid_beams,
+                        matched_ratio=refined.score.matched_ratio,
+                        mean_dist=refined.score.mean_dist,
+                        p90_dist=refined.score.p90_dist,
+                        absolute_ok=abs_ok,
+                        absolute_reason=abs_reason,
                     )
-                ),
-            }
-        diag_base['amcl_handoff'] = amcl_diag
-        diag_base['candidate_to_amcl_correction'] = correction
-        diag_base['localization_ready'] = bool(ready)
-        res.diagnostics_json = json.dumps(diag_base)
-        self._request_rgb(False)
-        if ready:
-            res.success = True
-            res.result_code = READY
-            self.get_logger().info(
-                f'LOCALIZATION_READY amcl={amcl_pose} conv={res.amcl_convergence_sec:.2f}s'
-            )
-        else:
-            res.success = False
-            res.result_code = AMCL_TIMEOUT
-            self.get_logger().warn(
-                f'AMCL_TIMEOUT after handoff diag={json.dumps(amcl_diag, default=str)[:400]}'
-            )
-        return res
+                )
 
+            timings['laser_total'] = t_laser
+            timings['total'] = time.monotonic() - t_all
+            res.candidate_count = len(retr.candidates)
+            res.time_to_candidate_sec = float(timings['total'])
+            res.stage_timings_json = json.dumps(timings)
+
+            dec = decide_pose_clusters(
+                members,
+                cluster_xy_m=float(self.get_parameter('cluster_xy_m').value),
+                cluster_yaw_rad=_math.radians(float(self.get_parameter('cluster_yaw_deg').value)),
+                cluster_min_score_margin=float(self.get_parameter('cluster_min_score_margin').value),
+            )
+            cluster_dbg = decision_to_dict(dec)
+            decision_status = dec.status
+            decision_reason = dec.reason
+            best_cand = None
+            best_ref_pose = None
+            margin = float(dec.cluster_margin)
+            if dec.best_cluster is not None:
+                best_ref_pose = Pose2D(*dec.best_cluster.center)
+                best_id = dec.best_cluster.members[0].keyframe_id
+                best_cand = next((c for c in retr.candidates if c.keyframe_id == best_id), None)
+
+            if decision_status != 'ACCEPT' or best_ref_pose is None or best_cand is None:
+                dump_depth = depth_u16 if depth_u16 is not None else np.zeros((480, 640), np.uint16)
+                self._dump_failure(
+                    bgr,
+                    dump_depth,
+                    topk_dbg,
+                    {
+                        'decision': decision_status,
+                        'reason': decision_reason,
+                        'mode': mode,
+                        'cluster_accept': cluster_dbg,
+                    },
+                )
+                self._request_rgb(False)
+                res.result_code = UNKNOWN
+                res.diagnostics_json = json.dumps(
+                    {
+                        'decision': decision_status,
+                        'reason': decision_reason,
+                        'pipeline_mode': mode,
+                        'accept_policy': 'pose_cluster_v1',
+                        'query_features': retr.query_features,
+                        'topk': topk_dbg,
+                        'cluster_accept': cluster_dbg,
+                        'note': 'Visual proposes; Laser absolute gates + SE(2) clusters decide.',
+                    }
+                )
+                return res
+
+            res.visual_score = float(best_cand.score)
+            res.geometry_score = 0.0  # not used in visual_laser V1
+            res.laser_score = float(dec.best_cluster.best_laser_score)
+            res.composite_score = float(0.4 * best_cand.score + 0.6 * res.laser_score)
+            res.confidence = float(res.composite_score)
+            cov_xy = float(self.get_parameter('handoff_cov_xy').value)
+            cov_yaw = float(self.get_parameter('handoff_cov_yaw').value)
+            pose_msg = PoseWithCovarianceStamped()
+            pose_msg.header.stamp = self.get_clock().now().to_msg()
+            pose_msg.header.frame_id = 'map'
+            pose_msg.pose.pose.position.x = best_ref_pose.x
+            pose_msg.pose.pose.position.y = best_ref_pose.y
+            pose_msg.pose.pose.orientation = _yaw_to_quat(best_ref_pose.yaw)
+            pose_msg.pose.covariance[0] = cov_xy
+            pose_msg.pose.covariance[7] = cov_xy
+            pose_msg.pose.covariance[35] = cov_yaw
+            res.pose = pose_msg
+            diag_base = {
+                'decision': 'ACCEPT',
+                'reason': decision_reason,
+                'pipeline_mode': mode,
+                'accept_policy': 'pose_cluster_v1',
+                'keyframe_id': best_cand.keyframe_id,
+                'visual_rank': best_cand.rank,
+                'cluster_margin': margin,
+                'cluster_support': dec.best_cluster.support_count,
+                'refined': best_ref_pose.as_tuple(),
+                'laser_score': float(res.laser_score),
+                'apply_initial_pose': apply_pose,
+                'allow_amcl_handoff': allow_handoff,
+                'handoff_cov_xy': cov_xy,
+                'handoff_cov_yaw': cov_yaw,
+                'sensor_gate': sensor_metrics,
+                'topk': topk_dbg,
+                'cluster_accept': cluster_dbg,
+            }
+            res.diagnostics_json = json.dumps(diag_base)
+
+            if not apply_pose:
+                self._request_rgb(False)
+                res.success = True
+                res.result_code = DRY_RUN_OK
+                return res
+
+            # ACCEPT-only handoff. UNKNOWN/REJECTED never reach here.
+            # Do NOT call reinitialize_global_localization (would wipe Visual+Laser prior).
+            if bool(req.allow_motion):
+                self.get_logger().warn('allow_motion ignored in Phase2B handoff (no auto spin)')
+            self._stop_robot()
+            time.sleep(0.15)
+            amcl_mono_before = self._amcl_mono
+            # Free camera/scan DDS while waiting on AMCL.
+            self._request_rgb(False)
+            self._arm_tf(True)
+            self._initialpose_pub.publish(pose_msg)
+            if self._nomotion.service_is_ready():
+                try:
+                    self._nomotion.call_async(Empty.Request())
+                except Exception as exc:  # noqa: BLE001
+                    self.get_logger().warn(f'nomotion failed: {exc}')
+            else:
+                self.get_logger().warn('request_nomotion_update not ready')
+
+            ready, amcl_diag = self._wait_amcl_ready(best_ref_pose, amcl_mono_before)
+            self._arm_tf(False)
+            res.amcl_convergence_sec = float(amcl_diag.get('amcl_convergence_sec') or 0.0)
+            amcl_pose = amcl_diag.get('amcl_pose')
+            cand_t = best_ref_pose.as_tuple()
+            correction = None
+            if amcl_pose is not None:
+                correction = {
+                    'dxy': math.hypot(amcl_pose[0] - cand_t[0], amcl_pose[1] - cand_t[1]),
+                    'dyaw': abs(
+                        math.atan2(
+                            math.sin(amcl_pose[2] - cand_t[2]),
+                            math.cos(amcl_pose[2] - cand_t[2]),
+                        )
+                    ),
+                }
+            diag_base['amcl_handoff'] = amcl_diag
+            diag_base['candidate_to_amcl_correction'] = correction
+            diag_base['localization_ready'] = bool(ready)
+            res.diagnostics_json = json.dumps(diag_base)
+            self._request_rgb(False)
+            if ready:
+                res.success = True
+                res.result_code = READY
+                self.get_logger().info(
+                    f'LOCALIZATION_READY amcl={amcl_pose} conv={res.amcl_convergence_sec:.2f}s'
+                )
+            else:
+                res.success = False
+                res.result_code = AMCL_TIMEOUT
+                self.get_logger().warn(
+                    f'AMCL_TIMEOUT after handoff diag={json.dumps(amcl_diag, default=str)[:400]}'
+                )
+            return res
+
+        finally:
+            self._release_idle()
 
 def main(args=None) -> None:
     rclpy.init(args=args)
@@ -825,8 +1006,8 @@ def main(args=None) -> None:
         rclpy.spin(node)
     finally:
         try:
-            node._request_rgb(False)
-        except Exception:  # noqa: BLE001
+            node._release_idle()
+        except Exception:
             pass
         node.destroy_node()
         rclpy.shutdown()
