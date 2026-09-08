@@ -1,0 +1,128 @@
+{
+  "same_scan_stamp": 1788859242.055151,
+  "same_candidate": [
+    1.7993268507431137,
+    0.01590625307226233,
+    -2.8414570739649156
+  ],
+  "A": {
+    "state": "A_amcl_at_capture",
+    "amcl_pose": [
+      1.6728061984025624,
+      0.05144313255483309,
+      -2.7308609075441974
+    ],
+    "candidate": [
+      1.7993268507431137,
+      0.01590625307226233,
+      -2.8414570739649156
+    ],
+    "scan_stamp": 1788859242.055151,
+    "score": {
+      "ok": false,
+      "reason": "laser_gate",
+      "laser_score": 0.0,
+      "matched_ratio": 0.7004405286343612,
+      "valid_beams": 227,
+      "mean_dist": 4.628790105787405
+    }
+  },
+  "B": {
+    "state": "B_wrong_corridor_initialpose",
+    "published_initialpose": [
+      -8.93,
+      1.6,
+      0.0
+    ],
+    "amcl_pose_after": [
+      -8.918329954038628,
+      1.602073207943007,
+      0.004859234821164692
+    ],
+    "live_tf_after": {
+      "map_to_base_link_live": {
+        "ok": true,
+        "parent": "map",
+        "child": "base_link",
+        "stamp_sec": 1788859242.1822917,
+        "xyz": [
+          1.67271546713478,
+          0.05140034628192769,
+          0.0
+        ],
+        "quat_xyzw": [
+          0.0,
+          0.0,
+          0.9858244440474221,
+          -0.16778011061681689
+        ],
+        "yaw": -2.804437802543968
+      },
+      "map_to_odom_live": {
+        "ok": true,
+        "parent": "map",
+        "child": "odom",
+        "stamp_sec": 1788859242.355151,
+        "xyz": [
+          4.131240999313851,
+          -7.867483952074688,
+          0.0
+        ],
+        "quat_xyzw": [
+          0.0,
+          0.0,
+          0.9192781507251631,
+          0.39360853852441313
+        ],
+        "yaw": 2.332485225783356
+      },
+      "odom_to_base_link_live": {
+        "ok": true,
+        "parent": "odom",
+        "child": "base_link",
+        "stamp_sec": 1788859242.1822917,
+        "xyz": [
+          7.4274087628017185,
+          -3.6860107695707525,
+          0.0
+        ],
+        "quat_xyzw": [
+          0.0,
+          0.0,
+          0.5422655084794386,
+          0.8402071877302264
+        ],
+        "yaw": 1.1462622788522623
+      }
+    },
+    "score_same_saved_scan": {
+      "ok": false,
+      "reason": "laser_gate",
+      "laser_score": 0.0,
+      "matched_ratio": 0.7004405286343612,
+      "valid_beams": 227,
+      "mean_dist": 4.628790105787405
+    },
+    "score_fresh_scan_after_bad_amcl": {
+      "ok": false,
+      "reason": "laser_gate",
+      "laser_score": 0.0,
+      "matched_ratio": 0.6946902654867256,
+      "valid_beams": 226,
+      "mean_dist": 4.649813671522172
+    }
+  },
+  "scores_equal": true,
+  "delta_laser_score": 0.0,
+  "restored_pose_target": [
+    1.6728061984025624,
+    0.05144313255483309,
+    -2.7308609075441974
+  ],
+  "amcl_after_restore": [
+    1.6897320881642306,
+    0.05870815494818158,
+    -2.735243781560564
+  ],
+  "conclusion": "INDEPENDENT"
+}

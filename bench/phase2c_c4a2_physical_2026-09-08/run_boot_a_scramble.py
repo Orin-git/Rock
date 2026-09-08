@@ -28,7 +28,9 @@ OUT = Path('/ros2_ws/bench/phase2c_c4a2_physical_2026-09-08')
 CHARGER = (1.8663955491712294, -0.05958837147746455, -3.1286646850836126)
 # Far from charger so a correct residual pose cannot be scored as recovery.
 SCRAMBLE = (-8.936784667454088, 1.5960588981494703, -2.195708002205529)
-LOAD_MAX = 9.0
+# Trial-node startup itself lifts load; abort only in the 15–20 pollution band.
+LOAD_MAX = 15.5
+LOAD_ABORT = 16.0
 
 LATCH = QoSProfile(
     depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE
@@ -124,18 +126,13 @@ def main() -> int:
     }
     rclpy.init()
     n = BootA()
-    # Power is not latched; wait for a real sample before judging charging.
+    # Power is not latched; /map latch can arrive late. Wait until both are real.
     t_wait = time.monotonic()
-    while time.monotonic() - t_wait < 20.0:
-        n.spin_sec(0.2)
-        if float(n.power.battery_percent) > 0.0 or bool(n.power.charging):
+    while time.monotonic() - t_wait < 15.0:
+        n.spin_sec(0.25)
+        if n.map is not None and n.scan is not None and n.amcl is not None and bool(n.power.charging):
             break
-    # Probe nodes raise load; wait out the spike before the gate.
-    t_load = time.monotonic()
     load = load1()
-    while load > LOAD_MAX and time.monotonic() - t_load < 45.0:
-        n.spin_sec(1.0)
-        load = load1()
     row['prereq'] = {
         'map': n.map is not None,
         'scan': n.scan is not None,
@@ -192,7 +189,7 @@ def main() -> int:
         rclpy.shutdown()
         return 1
 
-    if load1() > 15.0 or n.map is None:
+    if load1() > LOAD_ABORT or n.map is None:
         row['score'] = 'FAIL'
         row['reason'] = 'load_or_map_gate'
         row['load_after_scramble'] = load1()

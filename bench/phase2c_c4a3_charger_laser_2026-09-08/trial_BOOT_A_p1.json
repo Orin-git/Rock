@@ -1,0 +1,47 @@
+{
+  "trial": "BOOT_A_P1_AFTER_FIX",
+  "final": "READY",
+  "path": "P1",
+  "amcl_pose": [
+    1.806110120940879,
+    -0.1253242427858794,
+    -3.0417372064328516
+  ],
+  "stages": [
+    [
+      "START",
+      "ok",
+      "service",
+      null,
+      null
+    ],
+    [
+      "WAIT_SENSORS",
+      "ok",
+      "ok",
+      null,
+      null
+    ],
+    [
+      "P1",
+      "READY",
+      "ok",
+      0.4514124363448962,
+      {
+        "x": 1.8663955491712294,
+        "y": -0.05958837147746455,
+        "yaw": -3.1286646850836126
+      }
+    ]
+  ],
+  "power": {
+    "charging": true,
+    "docked": false,
+    "battery_charging": false
+  },
+  "svc": {
+    "ok": true,
+    "msg": "started"
+  },
+  "load_end": "12.75 9.87 8.35 22/1149 7864"
+}

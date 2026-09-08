@@ -1,0 +1,52 @@
+{
+  "charger": {
+    "ok": true,
+    "implemented": true,
+    "status": "pass",
+    "reason": "ok",
+    "laser_score": 0.5665787927104103,
+    "matched_ratio": 0.7268722466960352,
+    "valid_beams": 227,
+    "mean_dist": 0.2205249336650718,
+    "runtime_sec": 2.2449784197687908e-05,
+    "min_laser_score": 0.38,
+    "pose": {
+      "x": 1.7163955491712297,
+      "y": 0.14041162852253536,
+      "yaw": -2.866865297284464
+    },
+    "seed_pose": {
+      "x": 1.8663955491712294,
+      "y": -0.05958837147746455,
+      "yaw": -3.1286646850836126
+    },
+    "refined": true,
+    "exact_laser_score": 0.26517525743658343,
+    "note": "CHARGER_PRIOR_LOCAL_WINDOW \u2014 same 0.38 gate, not a global search"
+  },
+  "wrong": {
+    "ok": false,
+    "implemented": true,
+    "status": "reject",
+    "reason": "laser_gate",
+    "laser_score": 0.01645636667784955,
+    "matched_ratio": 0.23348017621145375,
+    "valid_beams": 227,
+    "mean_dist": 0.9295170710212859,
+    "runtime_sec": 2.0400723950854032e-05,
+    "min_laser_score": 0.38,
+    "pose": {
+      "x": -9.28,
+      "y": 1.9500000000000006,
+      "yaw": 0.349065850398866
+    },
+    "seed_pose": {
+      "x": -8.93,
+      "y": 1.6,
+      "yaw": 0.0
+    },
+    "refined": true,
+    "exact_laser_score": 0.0011476536609391376,
+    "note": "CHARGER_PRIOR_LOCAL_WINDOW \u2014 same 0.38 gate, not a global search"
+  }
+}

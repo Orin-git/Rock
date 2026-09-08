@@ -1,0 +1,6 @@
+{
+  "vp_yaml_sha256": "6258178c8ab24bcf108e847ad8d59dc3b402596415adcee1de6f2263af5de4cd",
+  "vp_pgm_sha256": "3abe80cf623fdb29274c70dd206d660cd5a3c7a7822a19062ba86413d8ffbf8e",
+  "vp_yaml": "image: vp.pgm\nmode: trinary\nresolution: 0.05\norigin: [-24.2, -8.15, 0]\nnegate: 0\noccupied_thresh: 0.65\nfree_thresh: 0.25",
+  "live_grid_sha256": "6677b877fbb7d16ed4630f12cab1711fbadfae64b2f89d529831a1df69bb4234"
+}

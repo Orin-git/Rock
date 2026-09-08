@@ -124,8 +124,9 @@ def verify_charger_with_laser(
             'note': 'Need fresh /scan + /map; never blind-seed charger',
             'laser_thr': float(min_score),
         }
-    from xw_phase2c.laser_prior_verify import verify_pose_with_laser
+    from xw_phase2c.laser_prior_verify import verify_prior_in_window
 
-    return verify_pose_with_laser(
+    # Exact waypoint first, then a 0.35 m / 20° window. Gate stays 0.38.
+    return verify_prior_in_window(
         pose_xy_yaw, scan, occupancy_map, min_score=float(min_score)
     )

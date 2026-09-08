@@ -519,9 +519,15 @@ class BootLocalizerNode(Node):
                 runtime_sec=laser.get('runtime_sec') or (self._mono() - t0),
             )
             return False
+        verified = laser.get('pose') or {}
+        seed = (
+            float(verified.get('x', wp[0])),
+            float(verified.get('y', wp[1])),
+            float(verified.get('yaw', wp[2])),
+        )
         return self._try_prior_path(
             'P1',
-            wp,
+            seed,
             float(self.get_parameter('p1_seed_cov_xy').value),
             float(self.get_parameter('p1_seed_cov_yaw').value),
             laser,

@@ -1,0 +1,168 @@
+{
+  "captured_unix": 1788859243.0196204,
+  "charging": null,
+  "amcl_pose_at_capture": [
+    1.6728061984025624,
+    0.05144313255483309,
+    -2.7308609075441974
+  ],
+  "charger_waypoint": [
+    1.8663955491712294,
+    -0.05958837147746455,
+    -3.1286646850836126
+  ],
+  "pre_scramble_pose": [
+    1.7993268507431137,
+    0.01590625307226233,
+    -2.8414570739649156
+  ],
+  "wrong_corridor_pose": [
+    -8.93,
+    1.6,
+    0.0
+  ],
+  "map": {
+    "frame_id": "map",
+    "stamp_sec": 1788855653,
+    "resolution": 0.05000000074505806,
+    "width": 651,
+    "height": 484,
+    "origin_xyz": [
+      -24.2,
+      -8.15,
+      0.0
+    ],
+    "origin_yaw": 0.0,
+    "data_sha256": "6677b877fbb7d16ed4630f12cab1711fbadfae64b2f89d529831a1df69bb4234",
+    "n": 315084
+  },
+  "tf_at_capture": {
+    "base_link_to_lidar_link": {
+      "ok": true,
+      "parent": "base_link",
+      "child": "lidar_link",
+      "stamp_sec": 0.0,
+      "xyz": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "quat_xyzw": [
+        0.0,
+        0.0,
+        1.0,
+        6.123233995736766e-17
+      ],
+      "yaw": 3.141592653589793
+    },
+    "lidar_link_to_base_link": {
+      "ok": true,
+      "parent": "lidar_link",
+      "child": "base_link",
+      "stamp_sec": 0.0,
+      "xyz": [
+        0.0,
+        0.0,
+        -0.1
+      ],
+      "quat_xyzw": [
+        0.0,
+        0.0,
+        1.0,
+        -6.123233995736766e-17
+      ],
+      "yaw": -3.141592653589793
+    },
+    "base_footprint_to_base_link": {
+      "ok": false,
+      "error": "\"base_footprint\" passed to lookupTransform argument target_frame does not exist. ",
+      "parent": "base_footprint",
+      "child": "base_link"
+    },
+    "base_link_to_base_footprint": {
+      "ok": false,
+      "error": "\"base_footprint\" passed to lookupTransform argument source_frame does not exist. ",
+      "parent": "base_link",
+      "child": "base_footprint"
+    },
+    "map_to_base_link_live": {
+      "ok": true,
+      "parent": "map",
+      "child": "base_link",
+      "stamp_sec": 1788859242.1149259,
+      "xyz": [
+        1.67271546713478,
+        0.0514003462819268,
+        0.0
+      ],
+      "quat_xyzw": [
+        0.0,
+        0.0,
+        0.9858244440474221,
+        -0.16778011061681689
+      ],
+      "yaw": -2.804437802543968
+    },
+    "map_to_odom_live": {
+      "ok": true,
+      "parent": "map",
+      "child": "odom",
+      "stamp_sec": 1788859242.355151,
+      "xyz": [
+        4.131240999313851,
+        -7.867483952074688,
+        0.0
+      ],
+      "quat_xyzw": [
+        0.0,
+        0.0,
+        0.9192781507251631,
+        0.39360853852441313
+      ],
+      "yaw": 2.332485225783356
+    },
+    "odom_to_base_link_live": {
+      "ok": true,
+      "parent": "odom",
+      "child": "base_link",
+      "stamp_sec": 1788859242.1149259,
+      "xyz": [
+        7.4274087628017185,
+        -3.6860107695707525,
+        0.0
+      ],
+      "quat_xyzw": [
+        0.0,
+        0.0,
+        0.5422655084794386,
+        0.8402071877302264
+      ],
+      "yaw": 1.1462622788522623
+    },
+    "map_to_lidar_link_live": {
+      "ok": true,
+      "parent": "map",
+      "child": "lidar_link",
+      "stamp_sec": 1788859242.1149259,
+      "xyz": [
+        1.67271546713478,
+        0.0514003462819268,
+        0.09999999999999999
+      ],
+      "quat_xyzw": [
+        -0.0,
+        -0.0,
+        0.16778011061681686,
+        0.985824444047422
+      ],
+      "yaw": 0.3371548510458252
+    }
+  },
+  "scan_header": {
+    "stamp_sec": 1788859242,
+    "stamp_nanosec": 55150995,
+    "stamp": 1788859242.055151,
+    "frame_id": "lidar_link"
+  },
+  "note": "laser verify must score candidate*static extrinsic only; live map TF recorded but not used for scoring"
+}

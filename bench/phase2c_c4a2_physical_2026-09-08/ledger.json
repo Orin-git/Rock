@@ -20,7 +20,7 @@
     "BOOT_A": {
       "score": "FAIL",
       "file": "/ros2_ws/bench/phase2c_c4a2_physical_2026-09-08/trial_BOOT_A.json",
-      "stamp": 1788857920.1901042,
+      "stamp": 1788858514.9490333,
       "note": "charging-only; IR ignored; one scramble then P1"
     }
   }

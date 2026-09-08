@@ -84,8 +84,18 @@ class DistanceField:
             return False
         return bool(self.free[iy, ix])
 
+    def in_map_mask(self, mx: np.ndarray, my: np.ndarray) -> np.ndarray:
+        """True where the endpoint lies inside the occupancy grid."""
+        ix = np.floor((mx - self.origin_x) / self.resolution).astype(np.int32)
+        iy = np.floor((my - self.origin_y) / self.resolution).astype(np.int32)
+        return (ix >= 0) & (iy >= 0) & (ix < self.width) & (iy < self.height)
+
     def sample_dist_batch(self, mx: np.ndarray, my: np.ndarray) -> np.ndarray:
-        """Sample distance field at world points; OOB → 1e3."""
+        """Sample distance field at world points; OOB → 1e3 sentinel.
+
+        Callers that form a mean must drop the sentinel. An endpoint past the
+        map border is not a 1000 m mismatch.
+        """
         ix = np.floor((mx - self.origin_x) / self.resolution).astype(np.int32)
         iy = np.floor((my - self.origin_y) / self.resolution).astype(np.int32)
         out = np.full(mx.shape, 1e3, dtype=np.float64)
@@ -93,6 +103,13 @@ class DistanceField:
         if np.any(ok):
             out[ok] = self.dist_m[iy[ok], ix[ok]]
         return out
+
+    def sample_in_map_dists(self, mx: np.ndarray, my: np.ndarray) -> np.ndarray:
+        """Distance-to-obstacle for in-map endpoints only."""
+        ok = self.in_map_mask(mx, my)
+        if not np.any(ok):
+            return np.empty(0, dtype=np.float64)
+        return self.sample_dist_batch(mx[ok], my[ok])
 
 
 def prepare_scan(scan: LaserScan, beam_stride: int = 6) -> PreparedScan:
@@ -164,7 +181,8 @@ def score_scan_at_pose(
     lc, ls = math.cos(lyaw), math.sin(lyaw)
     mx = x + lc * prep.bx - ls * prep.by
     my = y + ls * prep.bx + lc * prep.by
-    dists = field.sample_dist_batch(mx, my)
+    # Drop out-of-map endpoints. The 1e3 OOB sentinel must not enter the mean.
+    dists = field.sample_in_map_dists(mx, my)
     return _score_from_dists(
         dists,
         match_dist_m=match_dist_m,
@@ -204,13 +222,14 @@ def score_scan_at_poses(
     ls = np.sin(lyaw)
     mx = xs[:, None] + lc[:, None] * prepared.bx[None, :] - ls[:, None] * prepared.by[None, :]
     my = ys[:, None] + ls[:, None] * prepared.bx[None, :] + lc[:, None] * prepared.by[None, :]
+    in_map = field.in_map_mask(mx, my)
     dists = field.sample_dist_batch(mx.reshape(-1), my.reshape(-1)).reshape(n, prepared.n_valid)
     rt = time.monotonic() - t0
     out: List[LaserScore] = []
     for i in range(n):
         out.append(
             _score_from_dists(
-                dists[i],
+                dists[i][in_map[i]],
                 match_dist_m=match_dist_m,
                 min_valid_beams=min_valid_beams,
                 min_laser_score=min_laser_score,
