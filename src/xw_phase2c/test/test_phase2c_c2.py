@@ -139,7 +139,9 @@ class TestBlindSeedFlag(unittest.TestCase):
             path = Path('/home/radxa/ros2_ws/src/xw_nav_session/xw_nav_session/nav_session_node.py')
         text = path.read_text(encoding='utf-8')
         self.assertIn("declare_parameter('phase2c_disable_blind_seed', False)", text)
-        self.assertIn('phase2c_disable_blind_seed=true', text)
+        self.assertIn("declare_parameter('phase2c_localization_enabled', False)", text)
+        self.assertIn('_phase2c_blind_seed_disabled', text)
+        self.assertIn('skipping legacy blind charger seed', text)
 
 
 class TestBootLocalizerSource(unittest.TestCase):
@@ -147,15 +149,22 @@ class TestBootLocalizerSource(unittest.TestCase):
         path = _SRC / 'xw_phase2c' / 'boot_localizer_node.py'
         text = path.read_text(encoding='utf-8')
         for st in (
-            'WAIT_SENSORS',
+            'PRE_LOCALIZATION_READY',
+            'POST_SEED_AMCL_READY',
+            'VERIFYING_OPERATOR_POSE',
             'TRY_CHARGER',
             'TRY_LAST_GOOD',
             'TRY_VISUAL_LASER',
-            'AMCL_VERIFY',
             'READY',
             'UNKNOWN',
         ):
             self.assertIn(st, text)
+        self.assertIn('map_odom_required=False', text)
+        self.assertIn('def _pre_localization_ready', text)
+        # PRE must not demand map→odom (that TF is a post-seed result).
+        pre = text.split('def _pre_localization_ready', 1)[1].split('def _rgb_sensor_ready', 1)[0]
+        self.assertNotIn("('map', 'odom')", pre)
+        self.assertNotIn("('map', 'base_link')", pre)
         self.assertIn('min_laser_score', text)
         self.assertIn('MIN_LASER_SCORE', text)
         from xw_phase2c.laser_prior_verify import MIN_LASER_SCORE as thr

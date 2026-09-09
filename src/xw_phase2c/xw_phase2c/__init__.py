@@ -1,1 +1,1 @@
-"""Phase2C C1: last_good_pose, charger soft prior, recovery ownership helpers."""
+"""Phase2C: last_good_pose, charger soft prior, BOOT/LOST, production ownership."""

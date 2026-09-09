@@ -32,22 +32,36 @@ class TestC3FlagDefaults(unittest.TestCase):
     def test_lost_recovery_flag_default_false(self) -> None:
         text = (_SRC / 'xw_phase2c' / 'lost_recovery_node.py').read_text(encoding='utf-8')
         self.assertIn("declare_parameter('phase2c_lost_recovery_enabled', False)", text)
+        self.assertIn("declare_parameter('phase2c_localization_enabled', False)", text)
 
     def test_supervisor_c3_flag_default_false(self) -> None:
         text = _read('xw_supervisor/xw_supervisor/supervisor_node.py')
         self.assertIn("declare_parameter('phase2c_lost_recovery_enabled', False)", text)
+        self.assertIn("declare_parameter('phase2c_localization_enabled', False)", text)
 
-    def test_robot_launch_unchanged(self) -> None:
+    def test_robot_launch_wires_phase2c(self) -> None:
+        # C4B: production bringup includes lost_recovery behind master switch.
         text = _read('xw_bringup/launch/robot.launch.py')
-        self.assertNotIn('phase2c_c3_lost', text)
-        self.assertNotIn('lost_recovery', text)
-        self.assertNotIn('phase2c_lost_recovery_enabled', text)
+        self.assertIn('phase2c_localization_enabled', text)
+        self.assertIn('lost_recovery', text)
+        self.assertIn('xw_boot_localizer', text)
 
 
 class TestLostDetectionAndStop(unittest.TestCase):
     def test_unified_states(self) -> None:
         for s in Phase2CLocState:
-            self.assertIn(s.value, ('READY', 'DEGRADED', 'LOST', 'RECOVERING', 'UNKNOWN'))
+            self.assertIn(
+                s.value,
+                (
+                    'READY',
+                    'BOOT_LOCALIZING',
+                    'DEGRADED',
+                    'LOST',
+                    'RECOVERING',
+                    'UNKNOWN',
+                    'NEED_OPERATOR',
+                ),
+            )
 
     def test_stop_order_and_no_reinit(self) -> None:
         text = (_SRC / 'xw_phase2c' / 'lost_recovery_node.py').read_text(encoding='utf-8')
@@ -74,9 +88,23 @@ class TestLostDetectionAndStop(unittest.TestCase):
         reloc_idx = text.find('_call_reloc')
         self.assertGreater(stop_idx, 0)
         self.assertGreater(reloc_idx, stop_idx)
-        # worker calls stop then reloc
         worker = text[text.find('def _recovery_worker') :]
-        self.assertLess(worker.find('_stop_motion_first'), worker.find('_call_reloc'))
+        self.assertLess(worker.find('_stop_motion_first'), worker.find('_try_r1'))
+        self.assertLess(worker.find('_try_r1'), worker.find('_try_r2'))
+        self.assertLess(worker.find('_try_r2'), worker.find('_try_r3'))
+        r3 = text[text.find('def _try_r3') :]
+        self.assertIn('_call_reloc', r3)
+        for code in (
+            'R1_CURRENT_ACCEPT',
+            'R1_CURRENT_REJECT',
+            'R1_CURRENT_SKIP',
+            'R2_LAST_GOOD_ACCEPT',
+            'R2_LAST_GOOD_REJECT',
+            'R2_LAST_GOOD_SKIP',
+            'R3_VISUAL_ACCEPT',
+            'R3_VISUAL_UNKNOWN',
+        ):
+            self.assertIn(code, text)
 
 
 class TestSnapshotAndResumePolicy(unittest.TestCase):
@@ -152,7 +180,8 @@ class TestLaunchNotProduction(unittest.TestCase):
         self.assertTrue(p.is_file())
         text = p.read_text(encoding='utf-8')
         self.assertIn('phase2c_lost_recovery_enabled', text)
-        self.assertIn('NOT in production', text)
+        # Dev launch retained; production wiring lives in robot.launch.py (C4B).
+        self.assertIn('xw_lost_recovery', text)
 
 
 if __name__ == '__main__':

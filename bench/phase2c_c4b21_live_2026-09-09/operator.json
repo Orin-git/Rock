@@ -1,0 +1,360 @@
+{
+  "gt_before": {},
+  "snap0": {
+    "boot": "READY",
+    "path": "P3",
+    "busy": false,
+    "sid": 2,
+    "loc": "READY",
+    "blocked": false,
+    "loc_status": 0,
+    "amcl": null,
+    "owner": {
+      "t": 1788923725.8490775,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788923626.0472414,
+      "note": "boot_READY"
+    }
+  },
+  "nav_start": {
+    "ok": true,
+    "message": "NAVIGATING"
+  },
+  "need_operator": {
+    "ok": true,
+    "snap": {
+      "boot": "UNKNOWN",
+      "path": "NONE",
+      "busy": false,
+      "sid": 3,
+      "loc": "NEED_OPERATOR",
+      "blocked": true,
+      "loc_status": 1,
+      "amcl": null,
+      "owner": {
+        "t": 1788923745.2720072,
+        "owner": "none",
+        "session_id": 3,
+        "stamp": 1788923745.2688103,
+        "note": "boot_UNKNOWN"
+      }
+    },
+    "states": [
+      {
+        "t": 1788923725.8551316,
+        "state": "READY",
+        "busy": false,
+        "sid": 2,
+        "path": "P3"
+      },
+      {
+        "t": 1788923729.0982518,
+        "state": "PRE_LOCALIZATION_READY",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923740.1441574,
+        "state": "TRY_CHARGER",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923740.1699884,
+        "state": "TRY_LAST_GOOD",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923740.217375,
+        "state": "TRY_VISUAL_LASER",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923745.2706714,
+        "state": "UNKNOWN",
+        "busy": true,
+        "sid": 3,
+        "path": "NONE"
+      }
+    ],
+    "loc_states": [
+      {
+        "t": 1788923725.8482347,
+        "loc": "READY"
+      },
+      {
+        "t": 1788923729.099003,
+        "loc": "BOOT_LOCALIZING"
+      },
+      {
+        "t": 1788923745.2688231,
+        "loc": "NEED_OPERATOR"
+      }
+    ]
+  },
+  "wrong_pose": {
+    "web": {
+      "http": 200,
+      "body": {
+        "ok": true,
+        "topic": "/initialpose",
+        "initialpose_owner": "operator",
+        "x": 12.0,
+        "y": 9.0,
+        "yaw": 0.0,
+        "frame_id": "map"
+      }
+    },
+    "saw_verifying": true,
+    "ready": false,
+    "elapsed_sec": 16.279760599136353,
+    "snap": {
+      "boot": "UNKNOWN",
+      "path": "NONE",
+      "busy": false,
+      "sid": 3,
+      "loc": "NEED_OPERATOR",
+      "blocked": true,
+      "loc_status": 3,
+      "amcl": {
+        "x": 11.969790722102065,
+        "y": 8.967158711277918,
+        "yaw": 0.01899508591408082,
+        "cov_xy": 0.2517263875429267,
+        "cov_yaw": 0.07569351237654987
+      },
+      "owner": {
+        "t": 1788923745.5815253,
+        "owner": "operator",
+        "session_id": 0,
+        "stamp": 1788923745.5767145,
+        "note": "web_initialpose"
+      }
+    },
+    "owners_tail": [
+      {
+        "t": 1788923725.8490775,
+        "owner": "none",
+        "session_id": 2,
+        "stamp": 1788923626.0472414,
+        "note": "boot_READY"
+      },
+      {
+        "t": 1788923729.0700705,
+        "owner": "boot",
+        "session_id": 3,
+        "stamp": 1788923729.0684643,
+        "note": "nav_enable"
+      },
+      {
+        "t": 1788923745.2720072,
+        "owner": "none",
+        "session_id": 3,
+        "stamp": 1788923745.2688103,
+        "note": "boot_UNKNOWN"
+      },
+      {
+        "t": 1788923745.5815253,
+        "owner": "operator",
+        "session_id": 0,
+        "stamp": 1788923745.5767145,
+        "note": "web_initialpose"
+      }
+    ],
+    "pass": true
+  },
+  "good_pose": {
+    "web": {
+      "http": 200,
+      "body": {
+        "ok": true,
+        "topic": "/initialpose",
+        "initialpose_owner": "operator",
+        "x": 0.4,
+        "y": -0.63,
+        "yaw": 0.0,
+        "frame_id": "map"
+      }
+    },
+    "saw_verifying": true,
+    "saw_owner_operator": true,
+    "snap": {
+      "boot": "READY",
+      "path": "OPERATOR",
+      "busy": false,
+      "sid": 3,
+      "loc": "READY",
+      "blocked": false,
+      "loc_status": 0,
+      "amcl": {
+        "x": 0.3875452116750586,
+        "y": -0.3611611966539977,
+        "yaw": 0.013726291805442839,
+        "cov_xy": 0.2386306175656969,
+        "cov_yaw": 0.07064603731430559
+      },
+      "owner": {
+        "t": 1788923765.5450895,
+        "owner": "none",
+        "session_id": 3,
+        "stamp": 1788923765.5419798,
+        "note": "operator_ready"
+      }
+    },
+    "owners_tail": [
+      {
+        "t": 1788923725.8490775,
+        "owner": "none",
+        "session_id": 2,
+        "stamp": 1788923626.0472414,
+        "note": "boot_READY"
+      },
+      {
+        "t": 1788923729.0700705,
+        "owner": "boot",
+        "session_id": 3,
+        "stamp": 1788923729.0684643,
+        "note": "nav_enable"
+      },
+      {
+        "t": 1788923745.2720072,
+        "owner": "none",
+        "session_id": 3,
+        "stamp": 1788923745.2688103,
+        "note": "boot_UNKNOWN"
+      },
+      {
+        "t": 1788923745.5815253,
+        "owner": "operator",
+        "session_id": 0,
+        "stamp": 1788923745.5767145,
+        "note": "web_initialpose"
+      },
+      {
+        "t": 1788923761.8927007,
+        "owner": "operator",
+        "session_id": 0,
+        "stamp": 1788923761.8713043,
+        "note": "web_initialpose"
+      },
+      {
+        "t": 1788923765.5450895,
+        "owner": "none",
+        "session_id": 3,
+        "stamp": 1788923765.5419798,
+        "note": "operator_ready"
+      }
+    ],
+    "states": [
+      {
+        "t": 1788923725.8551316,
+        "state": "READY",
+        "busy": false,
+        "sid": 2,
+        "path": "P3"
+      },
+      {
+        "t": 1788923729.0982518,
+        "state": "PRE_LOCALIZATION_READY",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923740.1441574,
+        "state": "TRY_CHARGER",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923740.1699884,
+        "state": "TRY_LAST_GOOD",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923740.217375,
+        "state": "TRY_VISUAL_LASER",
+        "busy": true,
+        "sid": 3,
+        "path": ""
+      },
+      {
+        "t": 1788923745.2706714,
+        "state": "UNKNOWN",
+        "busy": true,
+        "sid": 3,
+        "path": "NONE"
+      },
+      {
+        "t": 1788923745.6554425,
+        "state": "VERIFYING_OPERATOR_POSE",
+        "busy": false,
+        "sid": 3,
+        "path": "NONE"
+      },
+      {
+        "t": 1788923757.7177837,
+        "state": "UNKNOWN",
+        "busy": false,
+        "sid": 3,
+        "path": "NONE"
+      },
+      {
+        "t": 1788923761.9680145,
+        "state": "VERIFYING_OPERATOR_POSE",
+        "busy": false,
+        "sid": 3,
+        "path": "NONE"
+      },
+      {
+        "t": 1788923765.5401177,
+        "state": "READY",
+        "busy": false,
+        "sid": 3,
+        "path": "OPERATOR"
+      }
+    ],
+    "loc_states": [
+      {
+        "t": 1788923725.8482347,
+        "loc": "READY"
+      },
+      {
+        "t": 1788923729.099003,
+        "loc": "BOOT_LOCALIZING"
+      },
+      {
+        "t": 1788923745.2688231,
+        "loc": "NEED_OPERATOR"
+      },
+      {
+        "t": 1788923745.6533942,
+        "loc": "VERIFYING_OPERATOR_POSE"
+      },
+      {
+        "t": 1788923757.7182915,
+        "loc": "NEED_OPERATOR"
+      },
+      {
+        "t": 1788923761.9670866,
+        "loc": "VERIFYING_OPERATOR_POSE"
+      },
+      {
+        "t": 1788923765.536644,
+        "loc": "READY"
+      }
+    ],
+    "pass": true
+  },
+  "pass": true
+}

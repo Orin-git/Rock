@@ -1,0 +1,60 @@
+{
+  "kind": "hard_negative",
+  "scene": "similar_corridor_wp3",
+  "pose_A": {
+    "x": 0.9982002578342117,
+    "y": -1.0177079312711284,
+    "yaw": 0.9663200130331784,
+    "cov_xy": 0.13451932583799894,
+    "cov_yaw": 0.07003015993016182,
+    "t": 1788942964.2031226
+  },
+  "induction": "status_3 while NAV on; no goal",
+  "nav": {
+    "ok": true,
+    "message": "already_on"
+  },
+  "selected_recovery_path": null,
+  "r1_code": null,
+  "r2_code": null,
+  "r3_code": null,
+  "R1_SKIP_REASON": null,
+  "laser_score": null,
+  "seed_count": null,
+  "sequential_fallback_seed_count": null,
+  "final": null,
+  "reason": null,
+  "total_sec": null,
+  "timings": null,
+  "resume_policy": null,
+  "stages": [],
+  "lost_result": {},
+  "loc": "VERIFYING_OPERATOR_POSE",
+  "blocked": true,
+  "saw_lost": false,
+  "initialpose_count": 3,
+  "owners": {
+    "owners": [
+      "none",
+      "none",
+      "operator",
+      "operator",
+      "operator"
+    ],
+    "legacy_seen": false,
+    "boot_and_lost": false
+  },
+  "motion_count": 0,
+  "nav_en": true,
+  "follow_en": false,
+  "recharge_en": false,
+  "amcl_end": {
+    "x": 0.9314714141808551,
+    "y": -0.684430735172365,
+    "yaw": 0.8757298171706279,
+    "cov_xy": 0.16178418029355993,
+    "cov_yaw": 0.09907196217778584,
+    "t": 1788943152.0412943
+  },
+  "pass": false
+}

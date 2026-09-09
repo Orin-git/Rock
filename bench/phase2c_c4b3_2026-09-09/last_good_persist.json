@@ -1,0 +1,36 @@
+{
+  "threshold": 0.38,
+  "writer_modified": false,
+  "false_pose": {
+    "x": 0.388,
+    "y": -0.361,
+    "yaw": 0.014
+  },
+  "false_laser": {
+    "ok": false,
+    "laser_score": 0.020363322707756495,
+    "matched_ratio": 0.171875,
+    "valid_beams": 192,
+    "reason": "laser_gate"
+  },
+  "verified_pose_scored": 0.6197960799223355,
+  "file_before": {
+    "x": -3.850079700660221,
+    "y": -1.261773460147216,
+    "yaw": -3.0459001831218733,
+    "laser_verified": true,
+    "laser_score_at_write": 0.5739792664825225,
+    "timestamp": 1788930877.5811884
+  },
+  "file_after": {
+    "x": -3.850079700660221,
+    "y": -1.261773460147216,
+    "yaw": -3.0459001831218733,
+    "laser_verified": true,
+    "laser_score_at_write": 0.5739792664825225,
+    "timestamp": 1788930877.5811884
+  },
+  "false_pose_overwrote_file": false,
+  "verified_kept": true,
+  "file_bytes_unchanged": true
+}

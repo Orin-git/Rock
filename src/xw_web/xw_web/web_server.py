@@ -1067,6 +1067,9 @@ class BridgeNode(Node):
         self._initialpose_pub = self.create_publisher(
             PoseWithCovarianceStamped, '/initialpose', 10
         )
+        self._initialpose_owner_pub = self.create_publisher(
+            String, '/xw/localization/initialpose_owner', _LATCHED_BOOL_QOS
+        )
         self._patrol_pub = self.create_publisher(String, '/xw/nav/patrol_cmd', 10)
         self._nav_cancel_pub = self.create_publisher(Bool, '/xw/nav/cancel', 10)
         self._set_mode = self.create_client(SetMode, '/xw/supervisor/set_mode')
@@ -1742,11 +1745,24 @@ class BridgeNode(Node):
         msg.pose.covariance[0] = 0.25
         msg.pose.covariance[7] = 0.25
         msg.pose.covariance[35] = 0.068
+        # Declare owner before pose so BOOT does not treat this as an anonymous seed.
+        owner = String()
+        owner.data = json.dumps(
+            {
+                'owner': 'operator',
+                'session_id': 0,
+                'stamp': time.time(),
+                'note': 'web_initialpose',
+            },
+            separators=(',', ':'),
+        )
+        self._initialpose_owner_pub.publish(owner)
         self._initialpose_pub.publish(msg)
         self._push_task('位置定好了')
         return {
             'ok': True,
             'topic': '/initialpose',
+            'initialpose_owner': 'operator',
             'x': float(x),
             'y': float(y),
             'yaw': float(yaw),

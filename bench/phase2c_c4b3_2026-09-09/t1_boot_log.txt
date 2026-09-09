@@ -1,0 +1,2 @@
+[INFO] [1788930708.030904256] [xw_boot_localizer]: BOOT stage P2: {"attempt": 1, "result": "READY", "laser_score": 0.6268283575733147, "reason": "ok", "score": 0.6268283575733147, "runtime_sec": 0.0045553529998869635, "amcl": {"amcl_pose": [-3.8299277589710066, -1.2013080781604788, -3.008368549406337], "c
+[INFO] [1788930708.039405073] [xw_boot_localizer]: BOOT done final=READY path=P2 t=15.1s

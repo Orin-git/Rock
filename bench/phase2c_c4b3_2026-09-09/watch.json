@@ -1,0 +1,81 @@
+{
+  "final": "READY",
+  "selected_path": "P2",
+  "stages": [],
+  "initialpose_count": 0,
+  "initialposes": [],
+  "milestones": null,
+  "cold_break": null,
+  "owners": {
+    "owners": [
+      "none"
+    ],
+    "legacy_seen": false,
+    "allowed_only": true
+  },
+  "snap_end": {
+    "t": 1788930768.2340498,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 1,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_map_mono": 10477.031885236,
+        "first_map_wall": 1788930647.8312402,
+        "first_scan_mono": 10522.190760322,
+        "first_scan_wall": 1788930692.990106,
+        "amcl_lifecycle_active_mono": 10533.225436001,
+        "amcl_lifecycle_active_wall": 1788930704.4094198,
+        "pre_ok_mono": 10533.610392178,
+        "pre_ok_wall": 1788930704.409739,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 10533.619444257,
+        "p1_start_wall": 1788930704.4187925,
+        "p2_start_mono": 10533.662739066,
+        "p2_start_wall": 1788930704.4620845,
+        "initialpose_publish_mono": 10534.250549898,
+        "initialpose_publish_wall": 1788930705.049894,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 10534.369702793,
+        "first_map_odom_wall": 1788930705.1690469,
+        "ready_mono": 10537.232357817,
+        "ready_wall": 1788930708.0317018
+      }
+    },
+    "loc": "READY",
+    "blocked": false,
+    "status": 0,
+    "amcl": {
+      "x": -3.8299277589710066,
+      "y": -1.2013080781604788,
+      "yaw": -3.008368549406337,
+      "cov_xy": 0.20696938377177695,
+      "cov_yaw": 0.04686538725776727,
+      "t": 1788930746.6000743
+    },
+    "power": {
+      "charging": false,
+      "docked": false,
+      "battery_percent": 81.0,
+      "current": 0.0
+    },
+    "owner": {
+      "t": 1788930745.573591,
+      "owner": "none",
+      "session_id": 1,
+      "stamp": 1788930708.0319514,
+      "note": "boot_READY"
+    },
+    "nav_en": true,
+    "follow_en": false,
+    "recharge_en": false,
+    "recovery": false,
+    "initialpose_count": 0
+  },
+  "elapsed_sec": 21.43,
+  "result": {}
+}

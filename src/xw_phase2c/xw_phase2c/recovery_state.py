@@ -15,10 +15,14 @@ from typing import Any, Dict, Optional
 
 class Phase2CLocState(str, Enum):
     READY = 'READY'
+    BOOT_LOCALIZING = 'BOOT_LOCALIZING'
     DEGRADED = 'DEGRADED'
     LOST = 'LOST'
-    RECOVERING = 'RECOVERING'
+    RECOVERING = 'RECOVERING'  # LOCALIZATION_RECOVERY overlay
     UNKNOWN = 'UNKNOWN'
+    NEED_OPERATOR = 'NEED_OPERATOR'
+    # Operator /initialpose accepted for verification — not yet READY.
+    VERIFYING_OPERATOR_POSE = 'VERIFYING_OPERATOR_POSE'
 
 
 @dataclass

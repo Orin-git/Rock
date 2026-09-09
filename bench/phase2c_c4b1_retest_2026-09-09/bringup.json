@@ -1,0 +1,129 @@
+{
+  "pass": true,
+  "nodes_present": {
+    "/xw_global_reloc_poc": true,
+    "/xw_last_good_pose_writer": true,
+    "/xw_charger_prior": true,
+    "/xw_boot_localizer": true,
+    "/xw_lost_recovery": true,
+    "/xw_nav_session": true,
+    "/xw_supervisor": true,
+    "/amcl": true,
+    "/rplidar_node": true
+  },
+  "duplicates": {
+    "/xw_global_reloc_poc": 1,
+    "/xw_boot_localizer": 1,
+    "/xw_lost_recovery": 1,
+    "/xw_charger_prior": 1,
+    "/xw_last_good_pose_writer": 1
+  },
+  "params": {
+    "/xw_nav_session.phase2c_localization_enabled": "err:Command '['bash', '-lc', 'source /opt/ros/humble/setup.bash; source /ros2_ws/install/setup.bash; export ROS_DOMAIN_ID=99; ros2 param get /xw_nav_session phase2c_localization_enabled']' timed out after 8 seconds",
+    "/xw_boot_localizer.phase2c_localization_enabled": "Boolean value is: True",
+    "/xw_lost_recovery.phase2c_localization_enabled": "Boolean value is: True",
+    "/xw_supervisor.phase2c_localization_enabled": "Boolean value is: True"
+  },
+  "cpu_idle_baseline": {
+    "ps_top": [
+      "PID %CPU %MEM COMMAND         COMMAND",
+      "   3012 28.5  2.0 boot_localizer  /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer --ros-args -r __node:=xw_boot_localizer --params-file /tmp/launch_params_qtiibetg",
+      "   3014 28.2  0.8 lost_recovery   /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/lost_recovery --ros-args -r __node:=xw_lost_recovery --params-file /tmp/launch_params_suupt4t_",
+      "   3006 23.1  2.6 global_reloc_po /usr/bin/python3 /ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/xw_global_reloc/share/xw_global_reloc/config/reloc_poc.yaml --params-file /tmp/launch_params_0r7xjvvb",
+      "   3299 19.3  0.8 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c_2 --params-file /tmp/launch_params_o9mytnw_",
+      "   3016 18.3  0.8 topic_health_no /usr/bin/python3 /ros2_ws/install/xw_health/lib/xw_health/topic_health_node --ros-args -r __node:=xw_topic_health --params-file /tmp/launch_params_pzw7hg4y",
+      "   3029 17.7  0.8 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c --params-file /tmp/launch_params_hjqijl6q",
+      "   2966 16.6  0.8 localization_he /usr/bin/python3 /ros2_ws/install/xw_localization_health/lib/xw_localization_health/localization_health_node --ros-args -r __node:=xw_localization_health",
+      "   3008 14.7  0.8 last_good_pose_ /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/last_good_pose_writer --ros-args -r __node:=xw_last_good_pose_writer --params-file /tmp/launch_params_r2fae_da",
+      "   3000 13.9  4.5 person_percepti /usr/bin/python3 /ros2_ws/install/xw_perception/lib/xw_perception/person_perception_node --ros-args -r __node:=xw_perception --params-file /tmp/launch_params_bllxly03",
+      "   3027 13.7  0.9 web_server      /usr/bin/python3 /ros2_ws/install/xw_web/lib/xw_web/web_server --ros-args -r __node:=xw_web --params-file /tmp/launch_params_80kbc7s7",
+      "   6316 13.6  0.5 controller_serv /opt/ros/humble/lib/nav2_controller/controller_server --ros-args --log-level info --ros-args --params-file /tmp/launch_params_1dxmcrrj -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav",
+      "   6379 13.4  0.3 lifecycle_manag /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args --log-level info --ros-args -r __node:=lifecycle_manager_navigation --params-file /tmp/launch_params_gbcoglul --params-file /tmp/launch_params_p0mazi9u --params-file /tmp/launch_params_l7yrcx4_ --params-file /tmp/launch_params_gtn1s5r2",
+      "   6324 12.0  0.6 bt_navigator    /opt/ros/humble/lib/nav2_bt_navigator/bt_navigator --ros-args --log-level info --ros-args -r __node:=bt_navigator --params-file /tmp/launch_params_1dxmcrrj -r /tf:=tf -r /tf_static:=tf_static",
+      "   3451 11.5  0.3 rplidar_node    /ros2_ws/install/rplidar_ros/lib/rplidar_ros/rplidar_node --ros-args -r __node:=rplidar_node --params-file /tmp/launch_params_wggdap5h",
+      "   8065 10.9  0.7 python3         python3 /ros2_ws/src/xw_phase2c/scripts/phase2c_c4b1_physical_smoke.py --phase all",
+      "   6312 10.6  0.5 amcl            /opt/ros/humble/lib/nav2_amcl/amcl --ros-args --log-level info --ros-args -r __node:=amcl --params-file /tmp/launch_params_2nnk9s6k -r /tf:=tf -r /tf_static:=tf_static",
+      "   6320 10.4  0.6 planner_server  /opt/ros/humble/lib/nav2_planner/planner_server --ros-args --log-level info --ros-args -r __node:=planner_server --params-file /tmp/launch_params_1dxmcrrj -r /tf:=tf -r /tf_static:=tf_static",
+      "   6322 10.4  0.4 behavior_server /opt/ros/humble/lib/nav2_behaviors/behavior_server --ros-args --log-level info --ros-args -r __node:=behavior_server --params-file /tmp/launch_params_1dxmcrrj -r /tf:=tf -r /tf_static:=tf_static -r cmd_vel:=cmd_vel_nav",
+      "   3004 10.3  0.7 supervisor_node /usr/bin/python3 /ros2_ws/install/xw_supervisor/lib/xw_supervisor/supervisor_node --ros-args -r __node:=xw_supervisor --params-file /tmp/launch_params_bcr49yz3",
+      "   3031  9.9  1.0 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge --params-file /tmp/launch_params_t3e2_v7v",
+      "   6388  9.5  0.4 collision_monit /opt/ros/humble/lib/nav2_collision_monitor/collision_monitor --ros-args -r __node:=collision_monitor --params-file /ros2_ws/install/xw_nav_session/share/xw_nav_session/config/collision_monitor.yaml",
+      "   6318  9.2  0.4 smoother_server /opt/ros/humble/lib/nav2_smoother/smoother_server --ros-args --log-level info --ros-args -r __node:=smoother_server --params-file /tmp/launch_params_1dxmcrrj -r /tf:=tf -r /tf_static:=tf_static",
+      "   3301  9.1  1.1 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge_front_down --params-file /tmp/launch_params_hg3gcvkw",
+      "   6314  9.1  0.3 lifecycle_manag /opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager --ros-args --log-level info --ros-args -r __node:=lifecycle_manager_localization --params-file /tmp/launch_params_hvhbiyym --params-file /tmp/launch_params_8o2h4i_j --params-file /tmp/launch_params_8kr6pexs"
+    ],
+    "phase2c_hits": [
+      {
+        "match": "boot_localizer",
+        "cpu": 28.5,
+        "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer --ros-args -r __node:=xw_boot_localizer --params-file /tmp/launch_params_qtiibetg"
+      },
+      {
+        "match": "lost_recovery",
+        "cpu": 28.2,
+        "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/lost_recovery --ros-args -r __node:=xw_lost_recovery --params-file /tmp/launch_params_suupt4t_"
+      },
+      {
+        "match": "global_reloc",
+        "cpu": 23.1,
+        "cmd": "/usr/bin/python3 /ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/"
+      },
+      {
+        "match": "last_good_pose",
+        "cpu": 14.7,
+        "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/last_good_pose_writer --ros-args -r __node:=xw_last_good_pose_writer --params-file /tmp/launch_param"
+      },
+      {
+        "match": "amcl",
+        "cpu": 10.6,
+        "cmd": "/opt/ros/humble/lib/nav2_amcl/amcl --ros-args --log-level info --ros-args -r __node:=amcl --params-file /tmp/launch_params_2nnk9s6k -r /tf:=tf -r /tf_static:=tf"
+      },
+      {
+        "match": "nav_session",
+        "cpu": 9.5,
+        "cmd": "/opt/ros/humble/lib/nav2_collision_monitor/collision_monitor --ros-args -r __node:=collision_monitor --params-file /ros2_ws/install/xw_nav_session/share/xw_nav_"
+      },
+      {
+        "match": "charger_prior",
+        "cpu": 3.2,
+        "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/charger_prior_node --ros-args -r __node:=xw_charger_prior --params-file /tmp/launch_params_1n78tkks"
+      }
+    ],
+    "ps_sum_top40_cpu": 419.6,
+    "loadavg": "14.90 13.48 13.18 18/1163 8297"
+  },
+  "snapshot": {
+    "loc_state": "NEED_OPERATOR",
+    "boot_status": {
+      "state": "SENSOR_TIMEOUT",
+      "map_name": "vp",
+      "selected_path": "",
+      "busy": false,
+      "session_id": 6,
+      "master": true
+    },
+    "boot_result": {},
+    "lost_result": {},
+    "owner": {
+      "owner": "none",
+      "session_id": 9,
+      "stamp": 1788918689.8671386,
+      "note": "lost_UNKNOWN"
+    },
+    "goals_blocked": true,
+    "phase2c_rec": false,
+    "loc_status": 0,
+    "amcl": [
+      0.43710146013469503,
+      -0.5929084687336756,
+      0.3135030229409416
+    ],
+    "charging": false,
+    "docked": false,
+    "nav_en": true,
+    "mode": 2,
+    "detail": "NEED_OPERATOR | follow=off recharge=off explore=off fall=on loc=ok phase2c_loc=NEED_OPERATOR",
+    "initialpose_count": 0
+  },
+  "domain": "99"
+}

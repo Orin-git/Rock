@@ -1,0 +1,222 @@
+{
+  "kind": "positive",
+  "snap0": {
+    "t": 1788933402.945091,
+    "boot": {},
+    "loc": "",
+    "blocked": null,
+    "status": null,
+    "amcl": {
+      "x": -2.768852404353951,
+      "y": -1.1944924361368858,
+      "yaw": -0.0298003227636179,
+      "cov_xy": 0.1595127929827763,
+      "cov_yaw": 0.0046953630603597625,
+      "t": 1788933402.3486955
+    },
+    "owner": {
+      "t": 1788933402.5426574,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788933337.5210712,
+      "note": "web_initialpose"
+    },
+    "canonical": null,
+    "nav_en": null
+  },
+  "induction": "localization_status=3 debounce while nav goal active",
+  "scene": "verified_high_score",
+  "lost_result": {
+    "final": "UNKNOWN",
+    "reason": "status_3",
+    "snapshot": {
+      "task_type": "navigate",
+      "nav_goal": {
+        "x": -2.168852404353951,
+        "y": -1.1944924361368858,
+        "yaw": 0.0,
+        "frame": "map"
+      },
+      "follow_was_on": false,
+      "recharge_was_on": false,
+      "patrol_was_on": false,
+      "map_name": "vp",
+      "reason": "status_3",
+      "stamp": 1788933407.869214
+    },
+    "stages": [
+      {
+        "attempt": 1,
+        "reloc": {
+          "ok": false,
+          "result_code": 1,
+          "laser_score": 0.0,
+          "amcl_convergence_sec": 0.0,
+          "diagnostics_json": "{\"decision\": \"UNKNOWN\", \"reason\": \"no_survivor\", \"pipeline_mode\": \"visual_laser\", \"accept_policy\": \"pose_cluster_v1\", \"query_features\": 159, \"topk\": [{\"id\": \"kf_000028\", \"retrieval_rank\": 1, \"retrieval_score\": 0.16981132075471697, \"ratio_matches\": 27, \"visual_region\": \"room_wp5\", \"seed\": [-8.05968548069111, 3.094141038900275, 1.4986464876318495], \"refined\": [-7.359685480691117, 2.6941410389002747, 1.0099542970734372], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.2628319458556802, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 226, \"matched_ratio\": 0.48672566371681414, \"mean_dist\": 0.4599998203328753, \"p90_dist\": 1.263092815876007, \"dx\": 0.6999999999999931, \"dy\": -0.40000000000000036, \"dyaw\": -0.4886921905584123, \"refine_runtime\": 2.342277694000586}, {\"id\": \"kf_000015\", \"retrieval_rank\": 2, \"retrieval_score\": 0.07547169811320754, \"ratio_matches\": 12, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.803237755209292, -1.1023196490348977, -2.7323655211875164], \"refined\": [-4.8532377552092925, 0.09768035096510337, -2.453112840868426], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.21948828248395838, \"laser_local_grid_margin\": 0.003418745429241199, \"valid_beams\": 223, \"matched_ratio\": 0.452914798206278, \"mean_dist\": 0.5153872574859136, \"p90_dist\": 1.4201352119445807, \"dx\": -1.0500000000000003, \"dy\": 1.200000000000001, \"dyaw\": 0.27925268031909045, \"refine_runtime\": 2.2865392200001224}, {\"id\": \"kf_000026\", \"retrieval_rank\": 3, \"retrieval_score\": 0.06918238993710692, \"ratio_matches\": 11, \"visual_region\": \"room_wp5\", \"seed\": [-8.012238669616762, 3.0762895183428087, 0.49701989621448434], \"refined\": [-7.362238669616769, 2.676289518342808, 1.020618671812783], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.2670632937481226, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 226, \"matched_ratio\": 0.49557522123893805, \"mean_dist\": 0.46110442511539546, \"p90_dist\": 1.2616840600967407, \"dx\": 0.6499999999999932, \"dy\": -0.4000000000000008, \"dyaw\": 0.5235987755982987, \"refine_runtime\": 2.3702412879993062}, {\"id\": \"kf_000013\", \"retrieval_rank\": 4, \"retrieval_score\": 0.06289308176100629, \"ratio_matches\": 10, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.822721383127579, -1.0608652474552533, 2.4444921074444506], \"refined\": [-5.022721383127579, 0.03913475254474735, 3.0553573456424616], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.20074270597385943, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.43946188340807174, \"mean_dist\": 0.543207924161524, \"p90_dist\": 1.2707771301269533, \"dx\": -1.2000000000000002, \"dy\": 1.1000000000000008, \"dyaw\": 0.6108652381980111, \"refine_runtime\": 2.2992375080011698}, {\"id\": \"kf_000018\", \"retrieval_rank\": 5, \"retrieval_score\": 0.06289308176100629, \"ratio_matches\": 10, \"visual_region\": \"corridor_wp2\", \"seed\": [-4.2730225265356525, -1.298034343363578, -2.4618414574129464], \"refined\": [-5.473022526535653, -0.09803434336357712, -2.4443881648930055], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.23328907807456695, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.45739910313901344, \"mean_dist\": 0.48996603518991727, \"p90_dist\": 1.1789323568344117, \"dx\": -1.2000000000000002, \"dy\": 1.2000000000000008, \"dyaw\": 0.017453292519940877, \"refine_runtime\": 2.2859424559992476}, {\"id\": \"kf_000034\", \"retrieval_rank\": 6, \"retrieval_score\": 0.05660377358490566, \"ratio_matches\": 9, \"visual_region\": \"open_wp6\", \"seed\": [-0.9951951945390825, 9.4686814478489, 0.45368198247813973], \"refined\": [0.054804805460918204, 10.418681447848895, 1.0645472206761553], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.1338620506233978, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 199, \"matched_ratio\": 0.36180904522613067, \"mean_dist\": 0.6300201656381089, \"p90_dist\": 1.3554631471633911, \"dx\": 1.0500000000000007, \"dy\": 0.9499999999999957, \"dyaw\": 0.6108652381980155, \"refine_runtime\": 2.3411667100008344}, {\"id\": \"kf_000001\", \"retrieval_rank\": 7, \"retrieval_score\": 0.050314465408805034, \"ratio_matches\": 8, \"visual_region\": \"charger_room\", \"seed\": [1.6735034348354858, -0.21234936567941054, 1.2549805458301055], \"refined\": [1.8235034348354866, 0.98765063432059, 1.6564062737888023], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.25432753329522, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 209, \"matched_ratio\": 0.4784688995215311, \"mean_dist\": 0.46845545541299016, \"p90_dist\": 1.1011308908462527, \"dx\": 0.1500000000000008, \"dy\": 1.2000000000000006, \"dyaw\": 0.4014257279586968, \"refine_runtime\": 2.2956379679999372}, {\"id\": \"kf_000008\", \"retrieval_rank\": 8, \"retrieval_score\": 0.0440251572327044, \"ratio_matches\": 7, \"visual_region\": \"doorway_wp9\", \"seed\": [0.18248194052864664, -0.5548734480373652, -2.5888202189226472], \"refined\": [-1.0175180594713533, 0.6451265519626352, 3.1184064350988105], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.2889052913111177, \"laser_local_grid_margin\": 0.002364547351368762, \"valid_beams\": 206, \"matched_ratio\": 0.5048543689320388, \"mean_dist\": 0.42774528836451686, \"p90_dist\": 1.084201455116272, \"dx\": -1.2, \"dy\": 1.2000000000000004, \"dyaw\": -0.5759586531581287, \"refine_runtime\": 2.114526355000635}, {\"id\": \"kf_000016\", \"retrieval_rank\": 9, \"retrieval_score\": 0.0440251572327044, \"ratio_matches\": 7, \"visual_region\": \"corridor_wp2\", \"seed\": [-4.252729600513347, -1.2766186710384289, -3.0868231676673523], \"refined\": [-5.452729600513347, -0.07661867103842805, -2.4759579294693417], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.2308045103305493, \"laser_local_grid_margin\": 0.010394440439278535, \"valid_beams\": 223, \"matched_ratio\": 0.4439461883408072, \"mean_dist\": 0.4801070120837122, \"p90_dist\": 1.1641884326934815, \"dx\": -1.2000000000000002, \"dy\": 1.2000000000000008, \"dyaw\": 0.6108652381980106, \"refine_runtime\": 1.986984332999782}, {\"id\": \"kf_000023\", \"retrieval_rank\": 10, \"retrieval_score\": 0.03773584905660377, \"ratio_matches\": 6, \"visual_region\": \"similar_corridor_wp3\", \"seed\": [-9.51813517081083, 0.6337983715985716, -2.9532058821124645], \"refined\": [-10.718135170810829, 1.8337983715985724, 2.7889273569488795], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.16721860806064795, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 226, \"matched_ratio\": 0.40707964601769914, \"mean_dist\": 0.5892238541118866, \"p90_dist\": 1.4224884510040283, \"dx\": -1.1999999999999993, \"dy\": 1.2000000000000008, \"dyaw\": -0.5410520681182425, \"refine_runtime\": 2.1405888209992554}], \"cluster_accept\": {\"status\": \"UNKNOWN\", \"reason\": \"no_survivor\", \"cluster_margin\": 0.0, \"cluster_count\": 0, \"best_cluster\": null, \"second_cluster\": null, \"survivor_count\": 0, \"rejected_count\": 10}, \"note\": \"Visual proposes; Laser absolute gates + SE(2) clusters decide.\"}"
+        }
+      },
+      {
+        "attempt": 2,
+        "reloc": {
+          "ok": false,
+          "result_code": 1,
+          "laser_score": 0.0,
+          "amcl_convergence_sec": 0.0,
+          "diagnostics_json": "{\"decision\": \"UNKNOWN\", \"reason\": \"no_survivor\", \"pipeline_mode\": \"visual_laser\", \"accept_policy\": \"pose_cluster_v1\", \"query_features\": 997, \"topk\": [{\"id\": \"kf_000011\", \"retrieval_rank\": 1, \"retrieval_score\": 0.020060180541624874, \"ratio_matches\": 20, \"visual_region\": \"doorway_wp9\", \"seed\": [-0.22710171178713434, -0.9604572018496615, -2.127598873036003], \"refined\": [-0.4271017117871344, -1.4104572018496608, -1.5167336348379883], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.12016338504410447, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 202, \"matched_ratio\": 0.36633663366336633, \"mean_dist\": 0.6719864354201472, \"p90_dist\": 1.4818293571472168, \"dx\": -0.20000000000000007, \"dy\": -0.4499999999999993, \"dyaw\": 0.6108652381980146, \"refine_runtime\": 2.2836023609997937}, {\"id\": \"kf_000010\", \"retrieval_rank\": 2, \"retrieval_score\": 0.017051153460381142, \"ratio_matches\": 17, \"visual_region\": \"doorway_wp9\", \"seed\": [-0.1564229152600345, -0.9351478359818606, -2.7246636264902917], \"refined\": [0.9435770847399658, -2.1351478359818605, 3.1396426602106544], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.26454668205095194, \"laser_local_grid_margin\": 0.0025748273684498835, \"valid_beams\": 203, \"matched_ratio\": 0.5221674876847291, \"mean_dist\": 0.4933681466382713, \"p90_dist\": 1.1927624702453619, \"dx\": 1.1000000000000003, \"dy\": -1.2, \"dyaw\": -0.4188790204786399, \"refine_runtime\": 2.2847512629996345}, {\"id\": \"kf_000020\", \"retrieval_rank\": 3, \"retrieval_score\": 0.0160481444332999, \"ratio_matches\": 16, \"visual_region\": \"similar_corridor_wp3\", \"seed\": [-9.152724732358584, 0.9369008880389582, 2.669875402783762], \"refined\": [-10.352724732358583, 2.036900888038959, 2.9665813756227952], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.11628149350132626, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.33183856502242154, \"mean_dist\": 0.6495841479622195, \"p90_dist\": 1.4844569444656373, \"dx\": -1.1999999999999993, \"dy\": 1.1000000000000008, \"dyaw\": 0.2967059728390331, \"refine_runtime\": 2.078262615001222}, {\"id\": \"kf_000018\", \"retrieval_rank\": 4, \"retrieval_score\": 0.015045135406218655, \"ratio_matches\": 15, \"visual_region\": \"corridor_wp2\", \"seed\": [-4.2730225265356525, -1.298034343363578, -2.4618414574129464], \"refined\": [-5.473022526535653, -0.09803434336357712, -2.4443881648930055], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.23716988571727074, \"laser_local_grid_margin\": 0.009158289976233247, \"valid_beams\": 220, \"matched_ratio\": 0.4636363636363636, \"mean_dist\": 0.4884571092372591, \"p90_dist\": 1.1823745727539061, \"dx\": -1.2000000000000002, \"dy\": 1.2000000000000008, \"dyaw\": 0.017453292519940877, \"refine_runtime\": 2.041559322999092}, {\"id\": \"kf_000009\", \"retrieval_rank\": 5, \"retrieval_score\": 0.012036108324974924, \"ratio_matches\": 12, \"visual_region\": \"doorway_wp9\", \"seed\": [0.18413807039844365, -0.5672063414600098, -2.256597004203898], \"refined\": [-1.0158619296015563, 0.6327936585399907, -2.7452891947623104], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.22555840253492063, \"laser_local_grid_margin\": 0.000935500070216172, \"valid_beams\": 210, \"matched_ratio\": 0.44761904761904764, \"mean_dist\": 0.49609293050709224, \"p90_dist\": 1.2152741909027098, \"dx\": -1.2, \"dy\": 1.2000000000000006, \"dyaw\": -0.4886921905584125, \"refine_runtime\": 2.218838639999376}, {\"id\": \"kf_000008\", \"retrieval_rank\": 6, \"retrieval_score\": 0.011033099297893681, \"ratio_matches\": 11, \"visual_region\": \"doorway_wp9\", \"seed\": [0.18248194052864664, -0.5548734480373652, -2.5888202189226472], \"refined\": [-1.0175180594713533, 0.6451265519626352, 3.1184064350988105], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.27641456293274796, \"laser_local_grid_margin\": 0.0006992639542326429, \"valid_beams\": 203, \"matched_ratio\": 0.4876847290640394, \"mean_dist\": 0.43321054267325426, \"p90_dist\": 1.100003838539124, \"dx\": -1.2, \"dy\": 1.2000000000000004, \"dyaw\": -0.5759586531581287, \"refine_runtime\": 2.0009198999996443}, {\"id\": \"kf_000022\", \"retrieval_rank\": 7, \"retrieval_score\": 0.011033099297893681, \"ratio_matches\": 11, \"visual_region\": \"similar_corridor_wp3\", \"seed\": [-9.169071968797404, 0.8790759262927991, -2.516900367292072], \"refined\": [-10.369071968797403, 2.0790759262928, -2.2201943944530385], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.15246896691432021, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.3991031390134529, \"mean_dist\": 0.6179710154843437, \"p90_dist\": 2.037169766426087, \"dx\": -1.1999999999999993, \"dy\": 1.2000000000000006, \"dyaw\": 0.29670597283903355, \"refine_runtime\": 2.1067757210003037}, {\"id\": \"kf_000026\", \"retrieval_rank\": 8, \"retrieval_score\": 0.011033099297893681, \"ratio_matches\": 11, \"visual_region\": \"room_wp5\", \"seed\": [-8.012238669616762, 3.0762895183428087, 0.49701989621448434], \"refined\": [-7.412238669616769, 2.6262895183428085, 0.9857120867728965], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.2709542866123921, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.49327354260089684, \"mean_dist\": 0.45070176441305954, \"p90_dist\": 1.2794133663177492, \"dx\": 0.5999999999999934, \"dy\": -0.4500000000000002, \"dyaw\": 0.4886921905584121, \"refine_runtime\": 2.0911341569990327}, {\"id\": \"kf_000001\", \"retrieval_rank\": 9, \"retrieval_score\": 0.010030090270812437, \"ratio_matches\": 10, \"visual_region\": \"charger_room\", \"seed\": [1.6735034348354858, -0.21234936567941054, 1.2549805458301055], \"refined\": [1.8235034348354866, 0.98765063432059, 1.6564062737888023], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.24199945627884567, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 206, \"matched_ratio\": 0.46601941747572817, \"mean_dist\": 0.48070950006831037, \"p90_dist\": 1.1054489612579346, \"dx\": 0.1500000000000008, \"dy\": 1.2000000000000006, \"dyaw\": 0.4014257279586968, \"refine_runtime\": 2.046444558998701}, {\"id\": \"kf_000013\", \"retrieval_rank\": 10, \"retrieval_score\": 0.010030090270812437, \"ratio_matches\": 10, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.822721383127579, -1.0608652474552533, 2.4444921074444506], \"refined\": [-5.022721383127579, 0.03913475254474735, 3.0553573456424616], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.195110402094308, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 220, \"matched_ratio\": 0.42727272727272725, \"mean_dist\": 0.5433586333963004, \"p90_dist\": 1.2470772981643676, \"dx\": -1.2000000000000002, \"dy\": 1.1000000000000008, \"dyaw\": 0.6108652381980111, \"refine_runtime\": 2.0589258420004626}], \"cluster_accept\": {\"status\": \"UNKNOWN\", \"reason\": \"no_survivor\", \"cluster_margin\": 0.0, \"cluster_count\": 0, \"best_cluster\": null, \"second_cluster\": null, \"survivor_count\": 0, \"rejected_count\": 10}, \"note\": \"Visual proposes; Laser absolute gates + SE(2) clusters decide.\"}"
+        }
+      }
+    ],
+    "resume_policy": {
+      "nav": "forbidden",
+      "follow": "forbidden",
+      "recharge": "forbidden",
+      "detail": "NEED_OPERATOR"
+    },
+    "total_sec": 77.13153722300012,
+    "session_id": 2,
+    "false_recovery_note": "debounce+single_owner; no spin+reinit"
+  },
+  "final": "UNKNOWN",
+  "reason": "status_3",
+  "resume_policy": {
+    "nav": "forbidden",
+    "follow": "forbidden",
+    "recharge": "forbidden",
+    "detail": "NEED_OPERATOR"
+  },
+  "snapshot": {
+    "task_type": "navigate",
+    "nav_goal": {
+      "x": -2.168852404353951,
+      "y": -1.1944924361368858,
+      "yaw": 0.0,
+      "frame": "map"
+    },
+    "follow_was_on": false,
+    "recharge_was_on": false,
+    "patrol_was_on": false,
+    "map_name": "vp",
+    "reason": "status_3",
+    "stamp": 1788933407.869214
+  },
+  "loc": "NEED_OPERATOR",
+  "blocked": true,
+  "saw_lost": true,
+  "saw_need_operator": true,
+  "initialpose_count": 0,
+  "owners": {
+    "owners": [
+      "operator",
+      "none",
+      "none",
+      "lost",
+      "none"
+    ],
+    "legacy_seen": false
+  },
+  "cmd_motion_samples": [
+    {
+      "t": 1788933406.6027768,
+      "lin": 0.1150492676278233,
+      "ang": 0.026038499024338975
+    },
+    {
+      "t": 1788933406.6489105,
+      "lin": 0.11315925119943897,
+      "ang": 0.025952824496931762
+    },
+    {
+      "t": 1788933406.7056537,
+      "lin": 0.10937038760717285,
+      "ang": 0.022020021555076905
+    },
+    {
+      "t": 1788933406.758625,
+      "lin": 0.10617746958203261,
+      "ang": 0.0207911993884049
+    },
+    {
+      "t": 1788933406.8044574,
+      "lin": 0.1039594627556328,
+      "ang": 0.01957956745891001
+    },
+    {
+      "t": 1788933406.8540623,
+      "lin": 0.10224049063333836,
+      "ang": 0.02023090738947013
+    },
+    {
+      "t": 1788933406.9023392,
+      "lin": 0.09875815951014737,
+      "ang": 0.017935837328889394
+    },
+    {
+      "t": 1788933406.9539328,
+      "lin": 0.03875815951014737,
+      "ang": 0.0
+    }
+  ],
+  "replan_count": 0,
+  "goal_delta": 1,
+  "canonical_tail": [
+    {
+      "t": 1788933404.1803415,
+      "state": "NEED_OPERATOR",
+      "goals_blocked": true,
+      "source": "lost",
+      "incident_id": 1,
+      "generation": 1788933206548057118
+    },
+    {
+      "t": 1788933405.793827,
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933340481636500
+    },
+    {
+      "t": 1788933407.8694198,
+      "state": "LOST",
+      "goals_blocked": true,
+      "source": "lost",
+      "incident_id": 2,
+      "generation": 1788933407868135453
+    },
+    {
+      "t": 1788933407.8736668,
+      "state": "LOST",
+      "goals_blocked": true,
+      "source": "lost_stop",
+      "incident_id": 2,
+      "generation": 1788933407871044310
+    },
+    {
+      "t": 1788933407.8831527,
+      "state": "RECOVERING",
+      "goals_blocked": true,
+      "source": "lost",
+      "incident_id": 2,
+      "generation": 1788933407881211750
+    },
+    {
+      "t": 1788933484.9994547,
+      "state": "NEED_OPERATOR",
+      "goals_blocked": true,
+      "source": "lost",
+      "incident_id": 2,
+      "generation": 1788933484998372397
+    },
+    {
+      "t": 1788933485.015578,
+      "state": "NEED_OPERATOR",
+      "goals_blocked": true,
+      "source": "lost",
+      "incident_id": 2,
+      "generation": 1788933485013954167
+    }
+  ],
+  "follow_en": false,
+  "recharge_en": false,
+  "pass": false
+}

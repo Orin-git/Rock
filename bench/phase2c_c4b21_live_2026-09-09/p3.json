@@ -1,0 +1,367 @@
+{
+  "old_last_good": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788923907.7027273,
+    "x": 0.3875452116750586,
+    "y": -0.3611611966539977,
+    "yaw": 0.013726291805442839,
+    "quality": 0.6006095992182747
+  },
+  "snap0": {
+    "boot": null,
+    "path": null,
+    "busy": null,
+    "sid": null,
+    "loc": "",
+    "blocked": null,
+    "loc_status": null,
+    "amcl": null,
+    "owner": null
+  },
+  "note": "no web initialpose; no blind seed; last_good file not rewritten before session",
+  "nav_start": {
+    "ok": true,
+    "message": "NAVIGATING"
+  },
+  "settled": true,
+  "snap_end": {
+    "boot": "READY",
+    "path": "P3",
+    "busy": false,
+    "sid": 5,
+    "loc": "READY",
+    "blocked": false,
+    "loc_status": 0,
+    "amcl": {
+      "x": -3.796878847772127,
+      "y": -1.2511788592670163,
+      "yaw": -3.0373728785801606,
+      "cov_xy": 0.06023268322031834,
+      "cov_yaw": 0.0037787099186076083
+    },
+    "owner": {
+      "t": 1788928639.0129843,
+      "owner": "none",
+      "session_id": 5,
+      "stamp": 1788928639.0104015,
+      "note": "boot_READY"
+    }
+  },
+  "states": [
+    {
+      "t": 1788928600.0166411,
+      "state": "UNKNOWN",
+      "busy": false,
+      "sid": 4,
+      "path": "NONE"
+    },
+    {
+      "t": 1788928601.2358983,
+      "state": "PRE_LOCALIZATION_READY",
+      "busy": true,
+      "sid": 5,
+      "path": ""
+    },
+    {
+      "t": 1788928610.6487384,
+      "state": "TRY_CHARGER",
+      "busy": true,
+      "sid": 5,
+      "path": ""
+    },
+    {
+      "t": 1788928610.6739597,
+      "state": "TRY_LAST_GOOD",
+      "busy": true,
+      "sid": 5,
+      "path": ""
+    },
+    {
+      "t": 1788928610.7446876,
+      "state": "TRY_VISUAL_LASER",
+      "busy": true,
+      "sid": 5,
+      "path": ""
+    },
+    {
+      "t": 1788928636.3362553,
+      "state": "POST_SEED_AMCL_READY",
+      "busy": true,
+      "sid": 5,
+      "path": ""
+    },
+    {
+      "t": 1788928639.0121865,
+      "state": "READY",
+      "busy": true,
+      "sid": 5,
+      "path": "P3"
+    }
+  ],
+  "loc_states": [
+    {
+      "t": 1788928600.022841,
+      "loc": "NEED_OPERATOR"
+    },
+    {
+      "t": 1788928601.2330143,
+      "loc": "BOOT_LOCALIZING"
+    },
+    {
+      "t": 1788928639.010252,
+      "loc": "READY"
+    }
+  ],
+  "selected_path": "P3",
+  "final": "READY",
+  "stages_brief": [
+    {
+      "stage": "START",
+      "result": "ok",
+      "reason": "nav_enable",
+      "score": null,
+      "candidate_pose": null,
+      "amcl_pose": null
+    },
+    {
+      "stage": "PRE_LOCALIZATION_READY",
+      "result": "ok",
+      "reason": "ok",
+      "score": null,
+      "candidate_pose": null,
+      "amcl_pose": null
+    },
+    {
+      "stage": "P1",
+      "result": "skip",
+      "reason": "charger_prior_unavailable",
+      "score": null,
+      "candidate_pose": null,
+      "amcl_pose": null
+    },
+    {
+      "stage": "P2",
+      "result": "laser_reject",
+      "reason": "laser_gate",
+      "score": 0.014017923194680357,
+      "candidate_pose": null,
+      "amcl_pose": null
+    },
+    {
+      "stage": "P3",
+      "result": "READY",
+      "reason": "relocalize_ready",
+      "score": 0.6461122632026672,
+      "candidate_pose": [
+        -3.8125392608811266,
+        -1.198964613614612,
+        -3.0222706572015485
+      ],
+      "amcl_pose": [
+        -3.796878847772127,
+        -1.2511788592670163,
+        -3.0373728785801606
+      ]
+    }
+  ],
+  "p2_score": 0.014017923194680357,
+  "p2_result": "laser_reject",
+  "p2_reason": "laser_gate",
+  "p3_scores": [
+    {
+      "attempt": 1,
+      "result": "READY",
+      "reason": "relocalize_ready",
+      "laser_score": 0.6461122632026672,
+      "candidate_pose": [
+        -3.8125392608811266,
+        -1.198964613614612,
+        -3.0222706572015485
+      ]
+    }
+  ],
+  "amcl_final": [
+    -3.796878847772127,
+    -1.2511788592670163,
+    -3.0373728785801606
+  ],
+  "initialpose_count": 1,
+  "initialposes": [
+    {
+      "t": 1788928633.6419096,
+      "x": -3.8125392608811266,
+      "y": -1.198964613614612,
+      "yaw": -3.0222706572015485,
+      "frame": "map"
+    }
+  ],
+  "owners_tail": [
+    {
+      "t": 1788928599.7398627,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788923761.8713043,
+      "note": "web_initialpose"
+    },
+    {
+      "t": 1788928600.0288424,
+      "owner": "none",
+      "session_id": 4,
+      "stamp": 1788923928.6829197,
+      "note": "boot_UNKNOWN"
+    },
+    {
+      "t": 1788928600.0932674,
+      "owner": "none",
+      "session_id": 1,
+      "stamp": 1788923806.046506,
+      "note": "lost_UNKNOWN"
+    },
+    {
+      "t": 1788928601.1992877,
+      "owner": "boot",
+      "session_id": 5,
+      "stamp": 1788928601.1956477,
+      "note": "nav_enable"
+    },
+    {
+      "t": 1788928639.0129843,
+      "owner": "none",
+      "session_id": 5,
+      "stamp": 1788928639.0104015,
+      "note": "boot_READY"
+    }
+  ],
+  "boot_result": {
+    "t": 1788928639.0136395,
+    "final": "READY",
+    "selected_path": "P3",
+    "stages": [
+      {
+        "stage": "START",
+        "t_mono": 8430.414700829,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "nav_enable",
+        "session_id": 5
+      },
+      {
+        "stage": "PRE_LOCALIZATION_READY",
+        "t_mono": 8439.822906329,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "ok",
+        "runtime_sec": 9.337136984000608,
+        "map_odom_required": false,
+        "map_odom_before_seed": false
+      },
+      {
+        "stage": "P1",
+        "t_mono": 8439.862301173,
+        "attempt": 1,
+        "result": "skip",
+        "reason": "charger_prior_unavailable",
+        "runtime_sec": 0.014909460000126273
+      },
+      {
+        "stage": "P2",
+        "t_mono": 8439.925669807,
+        "attempt": 1,
+        "result": "laser_reject",
+        "reason": "laser_gate",
+        "score": 0.014017923194680357,
+        "runtime_sec": 0.0011322750015096972
+      },
+      {
+        "stage": "P3",
+        "t_mono": 8468.204289311,
+        "attempt": 1,
+        "result": "READY",
+        "score": 0.6461122632026672,
+        "reason": "relocalize_ready",
+        "runtime_sec": 25.586572158999843,
+        "reloc": {
+          "ok": true,
+          "result_code": 0,
+          "laser_score": 0.6461122632026672,
+          "visual_score": 0.23999999463558197,
+          "time_to_candidate_sec": 22.669998168945312,
+          "amcl_convergence_sec": 2.633906364440918,
+          "diagnostics_json": "{\"decision\": \"ACCEPT\", \"reason\": \"best_cluster_margin_ok\", \"pipeline_mode\": \"visual_laser\", \"accept_policy\": \"pose_cluster_v1\", \"keyframe_id\": \"kf_000014\", \"visual_rank\": 2, \"cluster_margin\": 0.17549246712900313, \"cluster_support\": 5, \"refined\": [-3.8125392608811266, -1.198964613614612, -3.0222706572015485], \"laser_score\": 0.6461122584462157, \"apply_initial_pose\": true, \"allow_amcl_handoff\": true, \"handoff_cov_xy\": 0.12, \"handoff_cov_yaw\": 0.08, \"sensor_gate\": {\"sensor_arm_timeout_sec\": 10.0, \"sensor_fresh_sec\": 1.0, \"scan_wait_ms\": 264.06110700008867, \"rgb_request_to_first_rgb_ms\": 743.8769829986995, \"sensor_ready_ms\": 743.9391089992569, \"sensor_ready\": true, \"rgb\": true, \"scan\": true, \"camera_info\": true, \"map\": true}, \"topk\": [{\"id\": \"kf_000016\", \"retrieval_rank\": 1, \"retrieval_score\": 0.28, \"ratio_matches\": 280, \"visual_region\": \"corridor_wp2\", \"seed\": [-4.252729600513347, -1.2766186710384289, -3.0868231676673523], \"refined\": [-3.802729600513352, -1.0766186710384276, -3.034463290107525], \"laser_ok\": true, \"laser_reason\": \"ok\", \"laser_score\": 0.6432170400480602, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.8026905829596412, \"mean_dist\": 0.19867374340381322, \"p90_dist\": 0.4699157714843751, \"dx\": 0.44999999999999485, \"dy\": 0.2000000000000013, \"dyaw\": 0.052359877559827524, \"refine_runtime\": 2.501653563000218}, {\"id\": \"kf_000014\", \"retrieval_rank\": 2, \"retrieval_score\": 0.24, \"ratio_matches\": 240, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.812539260881123, -1.098964613614613, -3.074630534761376], \"refined\": [-3.8125392608811266, -1.198964613614612, -3.0222706572015485], \"laser_ok\": true, \"laser_reason\": \"ok\", \"laser_score\": 0.6461122584462157, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.7757847533632287, \"mean_dist\": 0.16715009460401106, \"p90_dist\": 0.42090149521827713, \"dx\": -3.552713678800501e-15, \"dy\": -0.09999999999999898, \"dyaw\": 0.052359877559827524, \"refine_runtime\": 2.1360913400003483}, {\"id\": \"kf_000015\", \"retrieval_rank\": 3, \"retrieval_score\": 0.179, \"ratio_matches\": 179, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.803237755209292, -1.1023196490348977, -2.7323655211875164], \"refined\": [-3.8032377552092953, -1.2023196490348964, -3.011618201506611], \"laser_ok\": true, \"laser_reason\": \"ok\", \"laser_score\": 0.6423954522851946, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.7757847533632287, \"mean_dist\": 0.17194112219885327, \"p90_dist\": 0.42090149521827713, \"dx\": -3.1086244689504383e-15, \"dy\": -0.09999999999999876, \"dyaw\": -0.27925268031909445, \"refine_runtime\": 2.033392322000509}, {\"id\": \"kf_000017\", \"retrieval_rank\": 4, \"retrieval_score\": 0.077, \"ratio_matches\": 77, \"visual_region\": \"corridor_wp2\", \"seed\": [-4.255146218306157, -1.292517097225166, -2.593295126998436], \"refined\": [-3.705146218306162, -1.1425170972251646, -3.0296274399970193], \"laser_ok\": true, \"laser_reason\": \"ok\", \"laser_score\": 0.6396852337326898, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.7713004484304933, \"mean_dist\": 0.17064065626517538, \"p90_dist\": 0.41170181632041963, \"dx\": 0.5499999999999949, \"dy\": 0.15000000000000147, \"dyaw\": -0.4363323129985832, \"refine_runtime\": 2.082552093999766}, {\"id\": \"kf_000018\", \"retrieval_rank\": 5, \"retrieval_score\": 0.033, \"ratio_matches\": 33, \"visual_region\": \"corridor_wp2\", \"seed\": [-4.2730225265356525, -1.298034343363578, -2.4618414574129464], \"refined\": [-3.8230225265356568, -1.198034343363577, -3.020346818051132], \"laser_ok\": true, \"laser_reason\": \"ok\", \"laser_score\": 0.6437866393155428, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.7757847533632287, \"mean_dist\": 0.17014785799210383, \"p90_dist\": 0.4425299227237706, \"dx\": 0.44999999999999574, \"dy\": 0.10000000000000098, \"dyaw\": -0.5585053606381858, \"refine_runtime\": 2.0466646200002288}, {\"id\": \"kf_000007\", \"retrieval_rank\": 6, \"retrieval_score\": 0.031, \"ratio_matches\": 31, \"visual_region\": \"doorway_wp9\", \"seed\": [0.14492601607481603, -0.5379024281484402, 2.9115548231341846], \"refined\": [1.2949260160748164, -0.4379024281484397, -3.057471218686426], \"laser_ok\": true, \"laser_reason\": \"ok\", \"laser_score\": 0.47061979131721254, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 207, \"matched_ratio\": 0.6328502415458938, \"mean_dist\": 0.25634887936898476, \"p90_dist\": 0.6338806390762329, \"dx\": 1.1500000000000004, \"dy\": 0.10000000000000053, \"dyaw\": 0.31415926535897604, \"refine_runtime\": 2.023660352000661}, {\"id\": \"kf_000008\", \"retrieval_rank\": 7, \"retrieval_score\": 0.03, \"ratio_matches\": 30, \"visual_region\": \"doorway_wp9\", \"seed\": [0.18248194052864664, -0.5548734480373652, -2.5888202189226472], \"refined\": [1.382481940528647, -0.4048734480373647, -3.060059116961117], \"laser_ok\": false, \"laser_reason\": \"refine_too_far_from_visual_seed\", \"laser_score\": 0.4705307125963852, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 207, \"matched_ratio\": 0.6280193236714976, \"mean_dist\": 0.250770326865756, \"p90_dist\": 0.6037532210350037, \"dx\": 1.2000000000000004, \"dy\": 0.15000000000000047, \"dyaw\": -0.47123889803846986, \"refine_runtime\": 2.0603088019997813}, {\"id\": \"kf_000010\", \"retrieval_rank\": 8, \"retrieval_score\": 0.024, \"ratio_matches\": 24, \"visual_region\": \"doorway_wp9\", \"seed\": [-0.1564229152600345, -0.9351478359818606, -2.7246636264902917], \"refined\": [0.9935770847399656, -0.4851478359818598, -3.0562761843692154], \"laser_ok\": false, \"laser_reason\": \"refine_too_far_from_visual_seed\", \"laser_score\": 0.42419991054992057, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 207, \"matched_ratio\": 0.5893719806763285, \"mean_dist\": 0.28025097144398714, \"p90_dist\": 0.72628892660141, \"dx\": 1.1500000000000001, \"dy\": 0.4500000000000008, \"dyaw\": -0.3316125578789238, \"refine_runtime\": 2.0263282880005136}, {\"id\": \"kf_000013\", \"retrieval_rank\": 9, \"retrieval_score\": 0.02, \"ratio_matches\": 20, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.822721383127579, -1.0608652474552533, 2.4444921074444506], \"refined\": [-2.9227213831275827, -1.2108652474552524, 3.0379040531225185], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.34320629489858495, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 221, \"matched_ratio\": 0.5656108597285068, \"mean_dist\": 0.3932112706193018, \"p90_dist\": 0.964826226234436, \"dx\": 0.8999999999999964, \"dy\": -0.14999999999999902, \"dyaw\": 0.593411945678068, \"refine_runtime\": 2.074909963999744}, {\"id\": \"kf_000022\", \"retrieval_rank\": 10, \"retrieval_score\": 0.02, \"ratio_matches\": 20, \"visual_region\": \"similar_corridor_wp3\", \"seed\": [-9.169071968797404, 0.8790759262927991, -2.516900367292072], \"refined\": [-7.969071968797405, 1.7790759262927998, -2.1329279318533225], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.08161258069883488, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.273542600896861, \"mean_dist\": 0.7016458115436036, \"p90_dist\": 1.4054672718048096, \"dx\": 1.1999999999999984, \"dy\": 0.9000000000000007, \"dyaw\": 0.3839724354387495, \"refine_runtime\": 2.156831931999477}], \"cluster_accept\": {\"status\": \"ACCEPT\", \"reason\": \"best_cluster_margin_ok\", \"cluster_margin\": 0.17549246712900313, \"cluster_count\": 2, \"best_cluster\": {\"cluster_id\": 0, \"center\": [-3.8125392608811266, -1.198964613614612, -3.0222706572015485], \"best_laser_score\": 0.6461122584462157, \"median_laser_score\": 0.6432170400480602, \"support_count\": 5, \"member_ids\": [\"kf_000014\", \"kf_000018\", \"kf_000016\", \"kf_000015\", \"kf_000017\"], \"member_regions\": [\"corridor_wp2\"], \"visual_ranks\": [2, 5, 1, 3, 4], \"pose_spread_xy_m\": 0.17232399691013314, \"pose_spread_yaw_rad\": 0.012192632905976275}, \"second_cluster\": {\"cluster_id\": 1, \"center\": [1.2949260160748164, -0.4379024281484397, -3.057471218686426], \"best_laser_score\": 0.47061979131721254, \"median_laser_score\": 0.47061979131721254, \"support_count\": 1, \"member_ids\": [\"kf_000007\"], \"member_regions\": [\"doorway_wp9\"], \"visual_ranks\": [6], \"pose_spread_xy_m\": 0.0, \"pose_spread_yaw_rad\": 0.0}, \"survivor_count\": 6, \"rejected_count\": 4}, \"amcl_handoff\": {\"amcl_pose\": [-3.7872849895925356, -1.2137348993276806, -3.0190089019166617], \"amcl_age_sec\": 1.817408005001198, \"map_odom_ok\": true, \"map_odom_age_sec\": -0.11390693900000001, \"cov_xy\": 0.09199761238512022, \"cov_yaw\": 0.021759531061956133, \"loc_status\": 0, \"candidate_delta_xy\": 0.029256444732117318, \"candidate_delta_yaw\": 0.0032617552848868137, \"near_candidate\": true, \"stable_for_sec\": 2.5067231350003567, \"gates_ok\": true, \"saw_post_seed_amcl\": true, \"localization_ready\": true, \"amcl_convergence_sec\": 2.6339063710001938}, \"candidate_to_amcl_correction\": {\"dxy\": 0.029256444732117318, \"dyaw\": 0.0032617552848868137}, \"localization_ready\": true}",
+          "candidate_pose": [
+            -3.8125392608811266,
+            -1.198964613614612,
+            -3.0222706572015485
+          ]
+        },
+        "candidate_pose": [
+          -3.8125392608811266,
+          -1.198964613614612,
+          -3.0222706572015485
+        ],
+        "amcl": {
+          "amcl_pose": [
+            -3.796878847772127,
+            -1.2511788592670163,
+            -3.0373728785801606
+          ],
+          "cov_xy": 0.06023268322031834,
+          "cov_yaw": 0.0037787099186076083,
+          "loc_status": 0,
+          "tf_ok": true,
+          "near_candidate": true,
+          "stable_for_sec": 2.566627857999265,
+          "gates_ok": true,
+          "amcl_convergence_sec": 2.668002971000533,
+          "ready": true
+        }
+      }
+    ],
+    "total_boot_localization_sec": 37.796614889999546,
+    "amcl_pose": [
+      -3.796878847772127,
+      -1.2511788592670163,
+      -3.0373728785801606
+    ],
+    "map_name": "vp",
+    "session_id": 5,
+    "note": "READY requires post-seed AMCL+cov+TF+status0+stable_window; never latch-clear alone",
+    "false_accept_policy": "UNKNOWN allowed; FA must be 0",
+    "milestones": {
+      "first_map_mono": 2799.813325517,
+      "first_map_wall": 1788922970.612672,
+      "first_scan_mono": 2801.769814657,
+      "first_scan_wall": 1788922972.5691621,
+      "amcl_lifecycle_active_mono": 2802.166934867,
+      "amcl_lifecycle_active_wall": 1788922972.9669392,
+      "pre_ok_mono": 8439.822869578,
+      "pre_ok_wall": 1788928610.622214,
+      "map_odom_before_seed": false,
+      "p1_start_mono": 2802.174748212,
+      "p1_start_wall": 1788922972.9740977,
+      "p2_start_mono": 2802.276376526,
+      "p2_start_wall": 1788922973.0757234,
+      "p3_start_mono": 2803.453265787,
+      "p3_start_wall": 1788922974.252611,
+      "initialpose_publish_mono": 2827.994545432,
+      "initialpose_publish_wall": 1788922998.7938921,
+      "initialpose_source": "reloc_p3",
+      "first_map_odom_mono": 2832.181235487,
+      "first_map_odom_wall": 1788923002.9805794,
+      "ready_mono": 8468.210579536,
+      "ready_wall": 1788928639.0099244,
+      "operator_ready_mono": 3594.732183502,
+      "operator_ready_wall": 1788923765.5315344
+    },
+    "cold_break": {
+      "map_odom_required_in_pre": false,
+      "initialpose_publish_mono": 2827.994545432,
+      "first_map_odom_mono": 2832.181235487
+    }
+  },
+  "p2_false_accept": false,
+  "p3_participated": true,
+  "pass": true,
+  "outcome": "READY"
+}

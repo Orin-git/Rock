@@ -316,10 +316,45 @@ class OrientationControls {
 }
 
 
+let lastNavState = null;
+let poseToolExplicit = false;
+
+function locCodeOf(s) {
+  const code = Number(s?.localization_status ?? (s?.localization_ok ? 0 : 1));
+  return Number.isFinite(code) ? Math.max(0, Math.min(3, code)) : 1;
+}
+
+function locNeedOperator(s) {
+  const loc = String(s?.phase2c_loc_state || '');
+  if (loc === 'NEED_OPERATOR' || loc === 'VERIFYING_OPERATOR_POSE') return true;
+  const detail = String(s?.detail || '');
+  return /phase2c_loc=(NEED_OPERATOR|VERIFYING_OPERATOR_POSE)/.test(detail);
+}
+
+function locNormal(s) {
+  return locCodeOf(s) === 0 && !locNeedOperator(s);
+}
+
+function refreshSessionHint(s) {
+  if (!sessionHint) return;
+  if (!navActive) {
+    sessionHint.textContent = '选地图 → 进导航。定位正常则直接前往，失败才需确认初位姿';
+    return;
+  }
+  if (locNeedOperator(s)) {
+    sessionHint.textContent = '自动定位未成功，请拖设初位姿后点「确认」';
+    return;
+  }
+  if (locNormal(s)) {
+    sessionHint.textContent = '定位正常，可直接点航点前往';
+    return;
+  }
+  sessionHint.textContent = '正在自动定位，请稍等，无需点确认';
+}
+
 function applyLocSnapshot(s) {
   if (!navLocChip) return;
-  const code = Number(s?.localization_status ?? (s?.localization_ok ? 0 : 1));
-  const c = Number.isFinite(code) ? Math.max(0, Math.min(3, code)) : 1;
+  const c = locCodeOf(s);
   navLocChip.dataset.loc = String(c);
   if (navLocBadge) navLocBadge.textContent = String(c);
   const label = LOC_LABELS[c] ?? `状态 ${c}`;
@@ -439,12 +474,18 @@ function wireNavigation(ctx) {
     const name = nameMap[mode] || s.mode_name || String(s.mode);
     if (modeHint) modeHint.textContent = `模式：${name}`;
     navActive = mode === 2 || mode === 3;
-    if (sessionHint) {
-      sessionHint.textContent = navActive
-        ? '导航中 · 拖设初位姿后点「确认」'
-        : '选地图 → 进导航 → 拖设初位姿并确认';
-    }
+    lastNavState = s;
+    refreshSessionHint(s);
     applyLocSnapshot(s);
+    if (
+      window.XwMapCanvas
+      && !poseToolExplicit
+      && locNormal(s)
+      && window.XwMapCanvas.getInteractMode() === 'initial_pose'
+    ) {
+      window.XwMapCanvas.setInteractMode('view');
+      syncToolButtons('view');
+    }
     syncNavGoalFromState(s);
     syncNavSessionFromState(s);
   };
@@ -861,7 +902,15 @@ function wireNavigation(ctx) {
       return;
     }
     if (!navActive) {
-      flash('尚未进入导航，请先「进入导航」并确认初位姿', 'err');
+      flash('尚未进入导航，请先点「进导航」', 'err');
+      return;
+    }
+    if (locNeedOperator(lastNavState)) {
+      flash('自动定位未成功，请先拖设初位姿并点「确认」', 'err');
+      return;
+    }
+    if (!locNormal(lastNavState)) {
+      flash('正在自动定位，请稍等，定位正常后即可前往', 'err');
       return;
     }
     if (followEnabled) {
@@ -948,11 +997,13 @@ function wireNavigation(ctx) {
     pushLog(`>> 进入导航 setMode(2) map=${name}`);
     await setMode(2, { map_name: name });
     syncedActiveMap = name;
+    poseToolExplicit = false;
     if (window.XwMapCanvas) {
       window.XwMapCanvas.enableLiveMap();
-      window.XwMapCanvas.setInteractMode('initial_pose');
-      syncToolButtons('initial_pose');
+      window.XwMapCanvas.setInteractMode('view');
+      syncToolButtons('view');
     }
+    pushLog('>> 等待自动定位。定位正常则无需点「确认」');
     await loadWaypoints();
   };
 
@@ -980,6 +1031,7 @@ function wireNavigation(ctx) {
     const next = cur === mode ? 'view' : mode;
     window.XwMapCanvas.setInteractMode(next);
     syncToolButtons(next);
+    poseToolExplicit = next === 'initial_pose';
     if (next === 'initial_pose') {
       pushLog('>> 拖设初位姿：拖动蓝点，右上角调朝向，再点「确认初位姿」');
     } else if (next === 'edit_wp') {

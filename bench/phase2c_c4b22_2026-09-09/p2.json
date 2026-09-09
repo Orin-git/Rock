@@ -1,0 +1,31 @@
+{
+  "snap0": {
+    "boot": "READY",
+    "path": "P3",
+    "busy": false,
+    "sid": 5,
+    "loc": "READY",
+    "blocked": false,
+    "loc_status": null,
+    "amcl": null,
+    "owner": {
+      "t": 1788929591.5669599,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788923761.8713043,
+      "note": "web_initialpose"
+    }
+  },
+  "file_before": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788929434.4404626,
+    "x": -3.796878847772127,
+    "y": -1.2511788592670163,
+    "yaw": -3.0373728785801606,
+    "quality": 0.9216748442658458
+  },
+  "writer_ok": false,
+  "pass": false,
+  "reason": "no_fresh_last_good"
+}

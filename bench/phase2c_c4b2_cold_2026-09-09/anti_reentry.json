@@ -1,0 +1,37 @@
+{
+  "idle": {
+    "ok": true,
+    "message": "IDLE"
+  },
+  "nav": {
+    "ok": true,
+    "message": "NAVIGATING"
+  },
+  "transitions": [
+    [
+      "READY",
+      false,
+      1
+    ],
+    [
+      "PRE_LOCALIZATION_READY",
+      true,
+      2
+    ],
+    [
+      "TRY_CHARGER",
+      true,
+      2
+    ],
+    [
+      "TRY_LAST_GOOD",
+      true,
+      2
+    ],
+    [
+      "TRY_VISUAL_LASER",
+      true,
+      2
+    ]
+  ]
+}

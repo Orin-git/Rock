@@ -61,13 +61,16 @@ class SupervisorNode(Node):
         self.declare_parameter('profile', 'normal')
         # Fall is an orthogonal background latch; default ON so dual-cam RGB+NPU stay warm.
         self.declare_parameter('fall_enable_default', True)
+        # Phase2C-C4B production master switch. When true: suppress heal spin+reinit,
+        # mirror BOOT/LOST states, keep Reloc ownership semantics.
+        self.declare_parameter('phase2c_localization_enabled', False)
         # Phase2C-C1: LOST → cancel nav / block goals / snapshot. Default OFF (no prod change).
         # Does NOT call Relocalizer. Ownership is /xw/localization/phase2c_recovery
         # (independent of recovery_enable, which IDLE clears).
         self.declare_parameter('phase2c_lost_cancel_enabled', False)
         # Phase2C-C3: LOST → STOP → Reloc owned by xw_lost_recovery. Default OFF.
-        # When ON: suppress health spin+reinit arming; mirror snapshot; do not steal
-        # phase2c_recovery ownership from lost_recovery; IDLE must not mid-cut recovery.
+        # When ON (or master ON): suppress health spin+reinit arming; mirror snapshot;
+        # do not steal phase2c_recovery ownership from lost_recovery; IDLE must not mid-cut.
         self.declare_parameter('phase2c_lost_recovery_enabled', False)
 
         self._cb = ReentrantCallbackGroup()
@@ -89,6 +92,9 @@ class SupervisorNode(Node):
         self._phase2c_recovery_active = False
         self._phase2c_task_snapshot = ''
         self._phase2c_loc_state = 'READY'
+        self._phase2c_goals_blocked = False
+        self._canonical_gen = 0
+        self._boot_state = ''
         self._last_goal_xy = None  # optional; filled if progress observed later
 
         # Keep robot_state VOLATILE (high rate) so CLI/Foxglove default QoS always sees updates.
@@ -116,6 +122,9 @@ class SupervisorNode(Node):
             Bool, '/xw/localization/phase2c_recovery', latch
         )
         self._goals_blocked_pub = self.create_publisher(Bool, '/xw/nav/goals_blocked', latch)
+        self._phase2c_loc_pub = self.create_publisher(
+            String, '/xw/localization/phase2c_loc_state', latch
+        )
         self._nav_cancel_pub = self.create_publisher(Bool, '/xw/nav/cancel', 10)
         self._task_snapshot_pub = self.create_publisher(
             String, '/xw/localization/phase2c_task_snapshot', latch
@@ -156,6 +165,13 @@ class SupervisorNode(Node):
             self._on_phase2c_recovery_ext,
             latch,
         )
+        self.create_subscription(String, '/xw/boot/status', self._on_boot_status, latch)
+        self.create_subscription(
+            String, '/xw/localization/phase2c_event', self._on_canonical, latch
+        )
+        self._canonical_state_pub = self.create_publisher(
+            String, '/xw/localization/phase2c_state', latch
+        )
 
         self.create_service(SetMode, '/xw/supervisor/set_mode', self._on_set_mode, callback_group=self._cb)
         self.create_service(SetRunMode, '/xw/supervisor/set_run_mode', self._on_set_run_mode, callback_group=self._cb)
@@ -177,23 +193,132 @@ class SupervisorNode(Node):
         self._publish_goals_blocked()
         lost_cancel = bool(self.get_parameter('phase2c_lost_cancel_enabled').value)
         lost_rec = bool(self.get_parameter('phase2c_lost_recovery_enabled').value)
+        master = bool(self.get_parameter('phase2c_localization_enabled').value)
         self.get_logger().info(
             'supervisor ready (follow/recharge on nav; explore on mapping; '
             f'fall orthogonal default={"on" if self._fall_en else "off"}; '
-            f'loc recovery gated; phase2c_lost_cancel={lost_cancel}; '
+            f'loc recovery gated; phase2c_master={master}; '
+            f'phase2c_lost_cancel={lost_cancel}; '
             f'phase2c_lost_recovery={lost_rec})'
         )
 
     def _c3_lost_recovery_on(self) -> bool:
-        return bool(self.get_parameter('phase2c_lost_recovery_enabled').value)
+        return bool(self.get_parameter('phase2c_localization_enabled').value) or bool(
+            self.get_parameter('phase2c_lost_recovery_enabled').value
+        )
+
+    def _on_boot_status(self, msg: String) -> None:
+        try:
+            d = json.loads(msg.data or '{}')
+        except json.JSONDecodeError:
+            d = {}
+        self._boot_state = str(d.get('state') or '')
+        if self._boot_state in (
+            'WAIT_SENSORS',
+            'PRE_LOCALIZATION_READY',
+            'TRY_CHARGER',
+            'TRY_LAST_GOOD',
+            'TRY_VISUAL_LASER',
+            'AMCL_VERIFY',
+            'POST_SEED_AMCL_READY',
+            'WAIT_AMCL_SETTLE',
+        ):
+            self._detail = 'BOOT_LOCALIZING'
+        elif self._boot_state == 'VERIFYING_OPERATOR_POSE':
+            self._detail = 'VERIFYING_OPERATOR_POSE'
+        elif (
+            self._boot_state == 'READY'
+            and self._phase2c_loc_state in ('', 'READY')
+            and self._canonical_gen == 0
+        ):
+            if self._detail.startswith('BOOT_') or self._detail in (
+                'BOOT_LOCALIZING',
+                'NEED_OPERATOR',
+                'VERIFYING_OPERATOR_POSE',
+            ):
+                self._detail = 'READY'
+        elif self._boot_state in ('UNKNOWN', 'SENSOR_TIMEOUT'):
+            self._detail = 'NEED_OPERATOR'
 
     def _on_phase2c_snapshot(self, msg: String) -> None:
         """Supervisor owns the mirrored task snapshot (C3 Reloc path)."""
         if msg.data:
             self._phase2c_task_snapshot = msg.data
 
+    def _apply_canonical(self, state: str, goals_blocked: bool, generation: int) -> None:
+        if int(generation) <= int(self._canonical_gen):
+            return
+        self._canonical_gen = int(generation)
+        self._phase2c_loc_state = str(state or 'READY')
+        self._phase2c_goals_blocked = bool(goals_blocked)
+        self._canonical_state_pub.publish(
+            String(
+                data=json.dumps(
+                    {
+                        'state': self._phase2c_loc_state,
+                        'goals_blocked': self._phase2c_goals_blocked,
+                        'source': 'supervisor',
+                        'generation': int(self._canonical_gen),
+                    },
+                    separators=(',', ':'),
+                )
+            )
+        )
+        self._phase2c_loc_pub.publish(String(data=self._phase2c_loc_state))
+        self._goals_blocked_pub.publish(Bool(data=self._phase2c_goals_blocked))
+        self._on_phase2c_loc_state(String(data=self._phase2c_loc_state))
+
+    def _on_canonical(self, msg: String) -> None:
+        try:
+            data = json.loads(msg.data or '{}')
+        except json.JSONDecodeError:
+            return
+        if not isinstance(data, dict) or not data.get('state'):
+            return
+        try:
+            gen = int(data.get('generation') or 0)
+        except (TypeError, ValueError):
+            return
+        self._apply_canonical(
+            str(data.get('state') or 'READY'),
+            bool(data.get('goals_blocked')),
+            gen,
+        )
+
     def _on_phase2c_loc_state(self, msg: String) -> None:
-        self._phase2c_loc_state = (msg.data or 'READY').strip() or 'READY'
+        incoming = (msg.data or 'READY').strip() or 'READY'
+        # Old latched READY from boot/lost must not cover a newer incident.
+        if self._canonical_gen and incoming == 'READY' and self._phase2c_loc_state not in (
+            '',
+            'READY',
+        ):
+            return
+        if self._canonical_gen and incoming != self._phase2c_loc_state:
+            return
+        self._phase2c_loc_state = incoming
+        # Mirror Phase2C logical states into RobotState.detail.
+        st = self._phase2c_loc_state
+        if st == 'BOOT_LOCALIZING':
+            self._detail = 'BOOT_LOCALIZING'
+        elif st == 'LOST':
+            self._detail = 'LOST'
+        elif st == 'RECOVERING':
+            self._detail = LOC_RECOVERY_DETAIL
+        elif st == 'VERIFYING_OPERATOR_POSE':
+            self._detail = 'VERIFYING_OPERATOR_POSE'
+        elif st in ('UNKNOWN', 'NEED_OPERATOR'):
+            self._detail = 'NEED_OPERATOR'
+        elif st == 'DEGRADED':
+            self._detail = 'DEGRADED'
+        elif st == 'READY' and self._detail in (
+            'BOOT_LOCALIZING',
+            LOC_RECOVERY_DETAIL,
+            'LOST',
+            'NEED_OPERATOR',
+            'VERIFYING_OPERATOR_POSE',
+            'DEGRADED',
+        ):
+            self._detail = 'READY'
 
     def _on_phase2c_recovery_ext(self, msg: Bool) -> None:
         """Mirror external Phase2C latch (xw_lost_recovery) without republishing."""
@@ -287,6 +412,24 @@ class SupervisorNode(Node):
 
     def _publish_goals_blocked(self) -> None:
         if self._c3_lost_recovery_on():
+            # Authority publisher: newest canonical incident, not a second latch.
+            self._goals_blocked_pub.publish(Bool(data=bool(self._phase2c_goals_blocked)))
+            if self._phase2c_loc_state:
+                self._phase2c_loc_pub.publish(String(data=self._phase2c_loc_state))
+            if self._canonical_gen:
+                self._canonical_state_pub.publish(
+                    String(
+                        data=json.dumps(
+                            {
+                                'state': self._phase2c_loc_state,
+                                'goals_blocked': self._phase2c_goals_blocked,
+                                'source': 'supervisor',
+                                'generation': int(self._canonical_gen),
+                            },
+                            separators=(',', ':'),
+                        )
+                    )
+                )
             return
         self._goals_blocked_pub.publish(Bool(data=bool(self._phase2c_recovery_active)))
 
@@ -717,11 +860,12 @@ class SupervisorNode(Node):
                 self._publish_loc_recovery()
             # Clear Phase2C latch on IDLE; ownership is still independent of recovery_enable
             # during active recovery (this is an explicit mode exit, not a silent drop).
-            # C3: NEVER mid-cut Reloc ownership while LOST/RECOVERING.
+            # C3 / master: NEVER mid-cut Reloc ownership while LOST/RECOVERING/BOOT.
             if self._phase2c_recovery_active:
                 if self._c3_lost_recovery_on() and self._phase2c_loc_state in (
                     'LOST',
                     'RECOVERING',
+                    'BOOT_LOCALIZING',
                 ):
                     self.get_logger().warn(
                         'IDLE requested during Phase2C Reloc — keeping recovery ownership '

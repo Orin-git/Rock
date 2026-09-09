@@ -41,6 +41,9 @@ def generate_launch_description() -> LaunchDescription:
     lidar_scan_frequency = LaunchConfiguration('lidar_scan_frequency')
     imu_port = LaunchConfiguration('imu_port')
     imu_baudrate = LaunchConfiguration('imu_baudrate')
+    phase2c_localization_enabled = LaunchConfiguration('phase2c_localization_enabled')
+    maps_dir_arg = LaunchConfiguration('maps_dir')
+    map_name_arg = LaunchConfiguration('map_name')
 
     lidar_delay = float(os.environ.get('XW_LIDAR_START_DELAY', '25'))
 
@@ -63,6 +66,9 @@ def generate_launch_description() -> LaunchDescription:
 
     safety_yaml = os.path.join(
         get_package_share_directory('xw_safety_gate'), 'config', 'safety_gate.yaml'
+    )
+    reloc_params = os.path.join(
+        get_package_share_directory('xw_global_reloc'), 'config', 'reloc_poc.yaml'
     )
 
     # When EKF is on: chassis publishes /odom/wheel without TF; ekf publishes /odom + TF.
@@ -200,7 +206,14 @@ def generate_launch_description() -> LaunchDescription:
             package='xw_nav_session',
             executable='nav_session_node',
             name='xw_nav_session',
-            parameters=[{'maps_dir': maps_dir, 'use_nav2': True}],
+            parameters=[{
+                'maps_dir': maps_dir_arg,
+                'use_nav2': True,
+                # Master ON → skip legacy blind charger seed (code kept for rollback).
+                'phase2c_localization_enabled': ParameterValue(
+                    phase2c_localization_enabled, value_type=bool
+                ),
+            }],
             output='screen',
         ),
         Node(
@@ -306,6 +319,103 @@ def generate_launch_description() -> LaunchDescription:
                 'run_mode': 1,
                 # Keep product capability available; mode manager defers RGB in NAVIGATION.
                 'fall_enable_default': True,
+                'phase2c_localization_enabled': ParameterValue(
+                    phase2c_localization_enabled, value_type=bool
+                ),
+                # Legacy C3 flag follows master so heal suppression stays consistent.
+                'phase2c_lost_recovery_enabled': ParameterValue(
+                    phase2c_localization_enabled, value_type=bool
+                ),
+            }],
+            output='screen',
+            respawn=True,
+            respawn_delay=2.0,
+        ),
+        # --- Phase2C-C4B production localization stack (IDLE Reloc; master-gated) ---
+        Node(
+            package='xw_global_reloc',
+            executable='global_reloc_poc',
+            name='xw_global_reloc_poc',
+            parameters=[
+                reloc_params,
+                {
+                    'maps_dir': maps_dir_arg,
+                    'map_name': map_name_arg,
+                    'allow_amcl_handoff': True,
+                },
+            ],
+            output='screen',
+            respawn=True,
+            respawn_delay=3.0,
+        ),
+        Node(
+            package='xw_phase2c',
+            executable='last_good_pose_writer',
+            name='xw_last_good_pose_writer',
+            parameters=[{
+                'maps_dir': maps_dir_arg,
+                'tick_hz': 1.0,
+                'min_write_interval_sec': 10.0,
+                'block_write_during_follow': True,
+                'enabled': True,
+            }],
+            output='screen',
+            respawn=True,
+            respawn_delay=2.0,
+        ),
+        Node(
+            package='xw_phase2c',
+            executable='charger_prior_node',
+            name='xw_charger_prior',
+            parameters=[{
+                'maps_dir': maps_dir_arg,
+                'publish_hz': 1.0,
+            }],
+            output='screen',
+            respawn=True,
+            respawn_delay=2.0,
+        ),
+        Node(
+            package='xw_phase2c',
+            executable='boot_localizer',
+            name='xw_boot_localizer',
+            parameters=[{
+                'maps_dir': maps_dir_arg,
+                'map_name': map_name_arg,
+                'phase2c_localization_enabled': ParameterValue(
+                    phase2c_localization_enabled, value_type=bool
+                ),
+                'enabled': True,
+                'auto_start': False,  # NAV enable / map switch starts cascade
+                'min_laser_score': 0.38,
+                'sensor_timeout_sec': 90.0,
+                'accept_external_prior_inject': False,
+                'p3_max_attempts': 2,
+                'p3_cooldown_sec': 30.0,
+            }],
+            output='screen',
+            respawn=True,
+            respawn_delay=2.0,
+        ),
+        Node(
+            package='xw_phase2c',
+            executable='lost_recovery',
+            name='xw_lost_recovery',
+            parameters=[{
+                'phase2c_localization_enabled': ParameterValue(
+                    phase2c_localization_enabled, value_type=bool
+                ),
+                'phase2c_lost_recovery_enabled': ParameterValue(
+                    phase2c_localization_enabled, value_type=bool
+                ),
+                'status2_lost_sec': 6.0,
+                'status3_debounce_sec': 0.5,
+                'p3_max_attempts': 2,
+                'p3_cooldown_sec': 30.0,
+                'auto_resume_nav': True,
+                'auto_resume_follow': False,
+                'auto_resume_recharge': True,
+                'ready_stable_sec': 2.5,
             }],
             output='screen',
             respawn=True,
@@ -415,7 +525,7 @@ def generate_launch_description() -> LaunchDescription:
             '"^/camera/front_down/color/image_raw/compressed$","^/camera/front_down/.*/camera_info$",'
             '"^/camera/front_down/depth/points$"] '
             '-p service_whitelist:=["^/xw/.*"] '
-            '-p client_topic_whitelist:=["^/xw/cmd/teleop$","^/xw/goal_pose$","^/initialpose$"] '
+            '-p client_topic_whitelist:=["^/xw/cmd/teleop$","^/xw/goal_pose$","^/initialpose$","^/xw/localization/initialpose_owner$"] '
             '-p num_threads:=2; '
             'else echo "[xw_bringup] foxglove_bridge not installed, skip WS:8765"; sleep infinity; fi'
         ],
@@ -531,6 +641,24 @@ def generate_launch_description() -> LaunchDescription:
         ),
         DeclareLaunchArgument('use_foxglove', default_value='true'),
         DeclareLaunchArgument('profile', default_value='normal'),
+        DeclareLaunchArgument(
+            'maps_dir',
+            default_value=maps_dir,
+            description='Maps root (last_good_pose / charger / reloc DB)',
+        ),
+        DeclareLaunchArgument(
+            'map_name',
+            default_value='vp',
+            description='Default map name until /xw/nav/map_name is set',
+        ),
+        DeclareLaunchArgument(
+            'phase2c_localization_enabled',
+            default_value='true',
+            description=(
+                'Phase2C production master switch. true=BOOT+LOST+no blind seed; '
+                'false=legacy blind seed rollback (no rebuild)'
+            ),
+        ),
         *nodes,
         depth_cam,
         depth_cam_2,

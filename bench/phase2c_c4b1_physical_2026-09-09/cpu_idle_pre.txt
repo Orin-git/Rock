@@ -1,0 +1,25 @@
+    PID %CPU %MEM COMMAND         COMMAND
+   3000 32.4  4.3 person_percepti /usr/bin/python3 /ros2_ws/install/xw_perception/lib/xw_perception/person_perception_node --ros-args -r __node:=xw_perception --params-file /tmp/launch_params_bllxly03
+   3014 27.1  0.7 lost_recovery   /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/lost_recovery --ros-args -r __node:=xw_lost_recovery --params-file /tmp/launch_params_suupt4t_
+   3012 24.3  1.9 boot_localizer  /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer --ros-args -r __node:=xw_boot_localizer --params-file /tmp/launch_params_qtiibetg
+   3029 20.0  0.6 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c --params-file /tmp/launch_params_hjqijl6q
+   3016 18.6  0.7 topic_health_no /usr/bin/python3 /ros2_ws/install/xw_health/lib/xw_health/topic_health_node --ros-args -r __node:=xw_topic_health --params-file /tmp/launch_params_pzw7hg4y
+   3027 18.3  0.8 web_server      /usr/bin/python3 /ros2_ws/install/xw_web/lib/xw_web/web_server --ros-args -r __node:=xw_web --params-file /tmp/launch_params_80kbc7s7
+   3451 16.8  0.2 rplidar_node    /ros2_ws/install/rplidar_ros/lib/rplidar_ros/rplidar_node --ros-args -r __node:=rplidar_node --params-file /tmp/launch_params_wggdap5h
+   2966 16.5  0.7 localization_he /usr/bin/python3 /ros2_ws/install/xw_localization_health/lib/xw_localization_health/localization_health_node --ros-args -r __node:=xw_localization_health
+   3299 16.5  0.5 ascamera_node   /ros2_ws/install/ascamera/lib/ascamera/ascamera_node --ros-args -r __node:=camera_publisher -r __ns:=/ascamera_hp60c_2 --params-file /tmp/launch_params_o9mytnw_
+   3008 15.7  0.7 last_good_pose_ /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/last_good_pose_writer --ros-args -r __node:=xw_last_good_pose_writer --params-file /tmp/launch_params_r2fae_da
+   3004 14.3  0.7 supervisor_node /usr/bin/python3 /ros2_ws/install/xw_supervisor/lib/xw_supervisor/supervisor_node --ros-args -r __node:=xw_supervisor --params-file /tmp/launch_params_bcr49yz3
+   3031 13.9  0.8 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge --params-file /tmp/launch_params_t3e2_v7v
+   3301 12.9  0.7 depth_topic_bri /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/depth_topic_bridge --ros-args -r __node:=xw_depth_topic_bridge_front_down --params-file /tmp/launch_params_hg3gcvkw
+   3042 12.2  0.3 ekf_node        /opt/ros/humble/lib/robot_localization/ekf_node --ros-args -r __node:=ekf_filter_node --params-file /ros2_ws/install/xw_sensors/share/xw_sensors/config/ekf.yaml -r odometry/filtered:=odom
+   3006 11.4  2.2 global_reloc_po /usr/bin/python3 /ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/xw_global_reloc/share/xw_global_reloc/config/reloc_poc.yaml --params-file /tmp/launch_params_0r7xjvvb
+   2923 10.6  0.3 safety_gate_nod /ros2_ws/install/xw_safety_gate/lib/xw_safety_gate/safety_gate_node --ros-args -r __node:=xw_safety_gate --params-file /ros2_ws/install/xw_safety_gate/share/xw_safety_gate/config/safety_gate.yaml --params-file /tmp/launch_params_p1r6nur7
+   2906  9.8  0.3 chassis_node    /ros2_ws/install/xw_chassis/lib/xw_chassis/chassis_node --ros-args -r __node:=xw_chassis --params-file /tmp/launch_params_7o_gc8ii
+   2900  9.5  0.7 ultrasonic_node /usr/bin/python3 /ros2_ws/install/xw_sensors/lib/xw_sensors/ultrasonic_node --ros-args -r __node:=xw_ultrasonic --params-file /tmp/launch_params_8l31f4ei
+   3193  9.5  0.5 foxglove_bridge /opt/ros/humble/lib/foxglove_bridge/foxglove_bridge --ros-args -p port:=8765 -p address:=0.0.0.0 -p topic_whitelist:=[^/tf$,^/tf_static$,^/scan$,^/odom$,^/cmd_vel$,^/imu/data$,^/map$,^/plan$,^/local_plan$,^/xw/.*,^/safety_status$,^/camera/front_up/color/image_raw/compressed$,^/camera/front_up/.*/camera_info$,^/camera/front_up/depth/points$,^/camera/front_down/color/image_raw/compressed$,^/camera/front_down/.*/camera_info$,^/camera/front_down/depth/points$] -p service_whitelist:=[^/xw/.*] -p client_topic_whitelist:=[^/xw/cmd/teleop$,^/xw/goal_pose$,^/initialpose$] -p num_threads:=2
+   2912  9.3  0.3 cmd_arbiter_nod /ros2_ws/install/xw_cmd_arbiter_cpp/lib/xw_cmd_arbiter_cpp/cmd_arbiter_node --ros-args -r __node:=xw_cmd_arbiter
+   2998  9.2  0.7 fall_session_no /usr/bin/python3 /ros2_ws/install/xw_fall_session/lib/xw_fall_session/fall_session_node --ros-args -r __node:=xw_fall_session
+   2910  9.0  0.3 wt901_imu_node  /ros2_ws/install/xw_wt901_imu_cpp/lib/xw_wt901_imu_cpp/wt901_imu_node --ros-args -r __node:=xw_wt901_imu --params-file /tmp/launch_params_vl3bkbx3
+   2992  9.0  0.8 follow_session_ /usr/bin/python3 /ros2_ws/install/xw_follow_session/lib/xw_follow_session/follow_session_node --ros-args -r __node:=xw_follow_session --params-file /tmp/launch_params_ppw94tz8
+   2968  8.9  0.3 motion_node     /ros2_ws/install/xw_motion_cpp/lib/xw_motion_cpp/motion_node --ros-args -r __node:=xw_motion

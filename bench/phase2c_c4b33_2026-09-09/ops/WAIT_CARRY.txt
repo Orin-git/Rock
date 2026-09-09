@@ -1,0 +1,6 @@
+C4B3.3 Test 1 — Manual Carry.
+A recorded: x=-3.994 y=-1.078 yaw=3.072
+Robot is stopped. Physically carry it to a clearly different place B.
+Do NOT send /initialpose. Do NOT call reinitialize_global_localization.
+Set it down. Then: touch ops/PLACE_CARRY_DONE
+Optional: write ops/PLACE_B.json {"x":..,"y":..,"yaw":..,"label":".."}

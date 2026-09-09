@@ -1,0 +1,327 @@
+{
+  "started": {
+    "idle": {
+      "ok": true,
+      "message": "IDLE"
+    },
+    "nav": {
+      "ok": true,
+      "message": "NAVIGATING"
+    },
+    "last_good": {
+      "map_name": "vp",
+      "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+      "timestamp": 1788931491.5751503,
+      "x": -2.8183093859385933,
+      "y": -1.2636751612864845,
+      "yaw": -0.02171019980632948,
+      "covariance": [
+        0.261816454887531,
+        0.261816454887531,
+        0.06590208321949749
+      ],
+      "source": "amcl",
+      "quality": 0.5803769209837668,
+      "laser_verified": true,
+      "laser_score_at_write": 0.6612217820894516,
+      "laser_matched_ratio": 0.817351598173516,
+      "laser_valid_beams": 219,
+      "scan_stamp": 1788931491.3073936,
+      "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+      "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+    }
+  },
+  "last_good": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788931491.5751503,
+    "x": -2.8183093859385933,
+    "y": -1.2636751612864845,
+    "yaw": -0.02171019980632948,
+    "covariance": [
+      0.261816454887531,
+      0.261816454887531,
+      0.06590208321949749
+    ],
+    "source": "amcl",
+    "quality": 0.5803769209837668,
+    "laser_verified": true,
+    "laser_score_at_write": 0.6612217820894516,
+    "laser_matched_ratio": 0.817351598173516,
+    "laser_valid_beams": 219,
+    "scan_stamp": 1788931491.3073936,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+    "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+  },
+  "elapsed_sec": 16.42,
+  "saw_wait_amcl_settle": true,
+  "p3_ran": false,
+  "selected_path": "P2",
+  "final": "READY",
+  "p2_result": "READY",
+  "p2_score": 0.698234740526896,
+  "p2_reason": "ok",
+  "candidate_rejected": false,
+  "handoff_failed": false,
+  "amcl_settle": {
+    "tf_ok_after_sec": 0.4124137580001843,
+    "status_0_after_sec": 0.30901412399907713,
+    "stable_for_sec": 2.570331922999685,
+    "latched_pose_used": false,
+    "near_candidate": true,
+    "far_latched_rejected": 0,
+    "loc_status": 0,
+    "tf_ok": true,
+    "amcl_convergence_sec": 2.982749472999785
+  },
+  "sequential_fallback_seed_count": 0,
+  "initialpose_count": 1,
+  "initialposes": [
+    {
+      "t": 1788933010.511638,
+      "x": -2.8183093859385933,
+      "y": -1.2636751612864845,
+      "yaw": -0.021710199806329475,
+      "frame": "map"
+    }
+  ],
+  "owners": {
+    "owners": [
+      "boot",
+      "none"
+    ],
+    "legacy_seen": false
+  },
+  "loc": "READY",
+  "blocked": false,
+  "canonical_tail": [
+    {
+      "t": 1788932996.812925,
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "lost",
+      "incident_id": 0,
+      "generation": 1788932946852796767
+    },
+    {
+      "t": 1788932998.3815203,
+      "state": "BOOT_LOCALIZING",
+      "goals_blocked": true,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788932998380353348
+    },
+    {
+      "t": 1788932998.3835487,
+      "state": "BOOT_LOCALIZING",
+      "goals_blocked": true,
+      "source": "boot_pre",
+      "incident_id": 1,
+      "generation": 1788932998382352768
+    },
+    {
+      "t": 1788933009.7035844,
+      "state": "BOOT_LOCALIZING",
+      "goals_blocked": true,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933009702613076
+    },
+    {
+      "t": 1788933009.7787364,
+      "state": "BOOT_LOCALIZING",
+      "goals_blocked": true,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933009775081925
+    },
+    {
+      "t": 1788933010.546633,
+      "state": "BOOT_LOCALIZING",
+      "goals_blocked": true,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933010544647855
+    },
+    {
+      "t": 1788933013.5344062,
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933013533600343
+    },
+    {
+      "t": 1788933013.5362723,
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933013534179314
+    }
+  ],
+  "states_tail": [
+    {
+      "t": 1788932995.7993925,
+      "state": "IDLE",
+      "busy": false
+    },
+    {
+      "t": 1788932998.3834062,
+      "state": "PRE_LOCALIZATION_READY",
+      "busy": true
+    },
+    {
+      "t": 1788933009.7063158,
+      "state": "TRY_CHARGER",
+      "busy": true
+    },
+    {
+      "t": 1788933009.788099,
+      "state": "TRY_LAST_GOOD",
+      "busy": true
+    },
+    {
+      "t": 1788933010.5502925,
+      "state": "WAIT_AMCL_SETTLE",
+      "busy": true
+    },
+    {
+      "t": 1788933013.5361233,
+      "state": "READY",
+      "busy": true
+    },
+    {
+      "t": 1788933013.541842,
+      "state": "READY",
+      "busy": false
+    }
+  ],
+  "result": {
+    "final": "READY",
+    "selected_path": "P2",
+    "stages": [
+      {
+        "stage": "START",
+        "t_mono": 12827.562678683,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "nav_enable",
+        "session_id": 1
+      },
+      {
+        "stage": "PRE_LOCALIZATION_READY",
+        "t_mono": 12838.884844201,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "ok",
+        "runtime_sec": 11.246522970001024,
+        "map_odom_required": false,
+        "map_odom_before_seed": false
+      },
+      {
+        "stage": "P1",
+        "t_mono": 12838.922094669,
+        "attempt": 1,
+        "result": "skip",
+        "reason": "charger_prior_unavailable",
+        "runtime_sec": 0.018301330999747734
+      },
+      {
+        "stage": "P2_ACCEPTED",
+        "t_mono": 12839.733969849,
+        "attempt": 1,
+        "result": "accepted",
+        "laser_score": 0.698234740526896,
+        "reason": "laser_accept",
+        "score": 0.698234740526896,
+        "candidate_pose": {
+          "x": -2.8183093859385933,
+          "y": -1.2636751612864845,
+          "yaw": -0.02171019980632948
+        }
+      },
+      {
+        "stage": "P2",
+        "t_mono": 12842.733342073,
+        "attempt": 1,
+        "result": "READY",
+        "laser_score": 0.698234740526896,
+        "reason": "ok",
+        "score": 0.698234740526896,
+        "runtime_sec": 0.01695875899895327,
+        "amcl": {
+          "amcl_pose": [
+            -2.7906230749797114,
+            -1.1895375632125855,
+            -0.032907699295878085
+          ],
+          "cov_xy": 0.09159919821899153,
+          "cov_yaw": 0.004418683162063378,
+          "loc_status": 0,
+          "tf_ok": true,
+          "near_candidate": true,
+          "latched_pose_used": false,
+          "far_latched_rejected": 0,
+          "tf_ok_after_sec": 0.4124137580001843,
+          "status_0_after_sec": 0.30901412399907713,
+          "stable_for_sec": 2.570331922999685,
+          "gates_ok": true,
+          "amcl_convergence_sec": 2.982749472999785,
+          "ready": true
+        },
+        "candidate_pose": {
+          "x": -2.8183093859385933,
+          "y": -1.2636751612864845,
+          "yaw": -0.02171019980632948
+        },
+        "amcl_pose": [
+          -2.7906230749797114,
+          -1.1895375632125855,
+          -0.032907699295878085
+        ],
+        "candidate_rejected": false,
+        "handoff_failed": false
+      }
+    ],
+    "total_boot_localization_sec": 15.172626642999603,
+    "amcl_pose": [
+      -2.7906230749797114,
+      -1.1895375632125855,
+      -0.032907699295878085
+    ],
+    "map_name": "vp",
+    "session_id": 1,
+    "note": "READY requires post-seed AMCL+cov+TF+status0+stable_window; never latch-clear alone",
+    "false_accept_policy": "FA is a wrong candidate reaching AMCL READY; sequential P2 handoff-fail then P3 is not FH",
+    "sequential_fallback_seed_count": 0,
+    "milestones": {
+      "first_scan_mono": 12827.662516986,
+      "first_scan_wall": 1788932998.4618692,
+      "first_map_mono": 12838.815731635,
+      "first_map_wall": 1788933009.6150787,
+      "amcl_lifecycle_active_mono": 12838.883719508,
+      "amcl_lifecycle_active_wall": 1788933009.683912,
+      "pre_ok_mono": 12838.884815617,
+      "pre_ok_wall": 1788933009.6841612,
+      "map_odom_before_seed": false,
+      "p1_start_mono": 12838.903786921,
+      "p1_start_wall": 1788933009.703132,
+      "p2_start_mono": 12838.987289771,
+      "p2_start_wall": 1788933009.7866359,
+      "initialpose_publish_mono": 12839.710356564,
+      "initialpose_publish_wall": 1788933010.5097058,
+      "initialpose_source": "P2",
+      "first_map_odom_mono": 12840.057635596,
+      "first_map_odom_wall": 1788933010.8569818,
+      "ready_mono": 12842.73482319,
+      "ready_wall": 1788933013.5341668
+    },
+    "cold_break": {
+      "map_odom_required_in_pre": false,
+      "initialpose_publish_mono": 12839.710356564,
+      "first_map_odom_mono": 12840.057635596
+    }
+  },
+  "pass": true
+}

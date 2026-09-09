@@ -1,0 +1,12 @@
+{
+  "window_sec": 45.0,
+  "clk_tck": 100.0,
+  "by_key": {
+    "global_reloc_poc": 0.78,
+    "last_good_pose_writer": 1.04,
+    "charger_prior": 1.56,
+    "boot_localizer": 2.56,
+    "lost_recovery": 3.33
+  },
+  "note": "45s /proc stat while NEED_OPERATOR/IDLE, not navigating"
+}

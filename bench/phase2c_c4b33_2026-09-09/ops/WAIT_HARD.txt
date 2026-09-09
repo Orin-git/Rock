@@ -1,0 +1,5 @@
+C4B3.3 Test 2 — Dedicated hard-negative.
+Place the robot at known hard scene similar_corridor_wp3
+  x=-9.209 y=1.191 yaw=3.386
+Do not reuse the false-good belief injection. Do NOT send /initialpose.
+Set it down. Then: touch ops/PLACE_HARD_DONE

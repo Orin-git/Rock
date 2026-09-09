@@ -35,6 +35,7 @@ class ChargerPriorNode(Node):
         self._power = PowerState()
         self._battery_charging = False
         self._map_name = ''
+        self._last_payload = ''
 
         self._avail_pub = self.create_publisher(Bool, '/xw/localization/charger_prior_available', _LATCH)
         self._diag_pub = self.create_publisher(String, '/xw/localization/charger_prior_diag', _LATCH)
@@ -47,7 +48,7 @@ class ChargerPriorNode(Node):
         self.create_timer(1.0 / hz, self._tick)
         self.get_logger().info(
             'charger prior helper ready (SOFT PRIOR only; no /initialpose; '
-            'verify_charger_with_laser stub reserved)'
+            'production uses /xw/power+/battery_state; DEV inject isolated)'
         )
         # Touch reserved API so import/link is exercised in C1.
         _ = verify_charger_with_laser((0.0, 0.0, 0.0))
@@ -72,8 +73,12 @@ class ChargerPriorNode(Node):
             maps_dir=str(self.get_parameter('maps_dir').value),
             map_name=name,
         )
+        payload = json.dumps(res.as_dict(), separators=(',', ':'))
+        if payload == self._last_payload:
+            return
+        self._last_payload = payload
         self._avail_pub.publish(Bool(data=bool(res.charger_prior_available)))
-        self._diag_pub.publish(String(data=json.dumps(res.as_dict(), separators=(',', ':'))))
+        self._diag_pub.publish(String(data=payload))
 
 
 def main(args=None) -> None:

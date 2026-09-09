@@ -1,0 +1,126 @@
+{
+  "pose": {
+    "x": -2.2586,
+    "y": -1.1363,
+    "yaw": 0.0846
+  },
+  "snap0": {
+    "t": 1788937069.6710527,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 3,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_map_mono": 13542.197770029,
+        "first_map_wall": 1788933712.9971178,
+        "first_scan_mono": 15530.548121121,
+        "first_scan_wall": 1788935701.3474681,
+        "amcl_lifecycle_active_mono": 15541.458719907,
+        "amcl_lifecycle_active_wall": 1788935712.259124,
+        "pre_ok_mono": 16619.034919779,
+        "pre_ok_wall": 1788936789.8342633,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 15541.474621644,
+        "p1_start_wall": 1788935712.273967,
+        "p2_start_mono": 15541.486510248,
+        "p2_start_wall": 1788935712.285856,
+        "initialpose_publish_mono": 16619.130902763,
+        "initialpose_publish_wall": 1788936789.9302523,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 15542.635949822,
+        "first_map_odom_wall": 1788935713.4352937,
+        "ready_mono": 16621.975657215,
+        "ready_wall": 1788936792.775003,
+        "p3_start_mono": 16348.384552458,
+        "p3_start_wall": 1788936519.1839006,
+        "operator_ready_mono": 16486.101601515,
+        "operator_ready_wall": 1788936656.9009461
+      }
+    },
+    "loc": "NEED_OPERATOR",
+    "blocked": true,
+    "status": 0,
+    "amcl": {
+      "x": 2.4991551897473108,
+      "y": 0.7505289429331456,
+      "yaw": -0.05692139311130902,
+      "cov_xy": 0.3532199894168162,
+      "cov_yaw": 0.14736933969417204,
+      "t": 1788937069.1225986
+    },
+    "owner": {
+      "t": 1788937069.3688688,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788936977.5388308,
+      "note": "lost_UNKNOWN"
+    },
+    "nav_en": true
+  },
+  "web": {
+    "http": 200,
+    "body": {
+      "ok": true,
+      "topic": "/initialpose",
+      "initialpose_owner": "operator",
+      "x": -2.2586,
+      "y": -1.1363,
+      "yaw": 0.0846,
+      "frame_id": "map"
+    }
+  },
+  "saw_verifying": true,
+  "saw_owner_operator": true,
+  "loc": "READY",
+  "blocked": false,
+  "initialpose_count": 2,
+  "canonical_tail": [
+    {
+      "t": 1788937069.9684212,
+      "state": "VERIFYING_OPERATOR_POSE",
+      "goals_blocked": true,
+      "source": "supervisor",
+      "generation": 1788937069961534115
+    },
+    {
+      "t": 1788937073.6974962,
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "supervisor",
+      "generation": 1788937073682933179
+    },
+    {
+      "t": 1788937073.8152964,
+      "state": "LOST",
+      "goals_blocked": true,
+      "source": "supervisor",
+      "generation": 1788937073812852939
+    },
+    {
+      "t": 1788937073.834712,
+      "state": "RECOVERING",
+      "goals_blocked": true,
+      "source": "supervisor",
+      "generation": 1788937073832565972
+    },
+    {
+      "t": 1788937076.829419,
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "supervisor",
+      "generation": 1788937076825300888
+    },
+    {
+      "t": 1788937077.0340502,
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "supervisor",
+      "generation": 1788937077027591510
+    }
+  ],
+  "pass": true
+}

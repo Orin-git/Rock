@@ -1,0 +1,16 @@
+{
+  "late": {
+    "loc": "NEED_OPERATOR",
+    "blocked": true,
+    "canonical": {
+      "state": "READY",
+      "goals_blocked": false,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933340481636500
+    }
+  },
+  "live_loc": "NEED_OPERATOR",
+  "live_blocked": true,
+  "pass": true
+}

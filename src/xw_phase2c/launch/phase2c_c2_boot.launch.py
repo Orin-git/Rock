@@ -1,8 +1,9 @@
-"""Phase2C-C2 BOOT cascade — NOT in production robot.launch.py.
+"""Phase2C-C2 BOOT cascade — also wired into production robot.launch.py (C4B).
 
 Starts reloc_poc (allow_amcl_handoff:=true) + boot_localizer + charger_prior.
-Ensure Nav2/AMCL/map/scan are up; for isolation set nav_session
-phase2c_disable_blind_seed:=true.
+Production uses robot.launch.py phase2c_localization_enabled master switch.
+For isolation set nav_session phase2c_localization_enabled:=true (or legacy
+phase2c_disable_blind_seed:=true).
 """
 
 from launch import LaunchDescription

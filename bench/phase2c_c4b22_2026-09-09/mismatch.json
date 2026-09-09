@@ -1,0 +1,71 @@
+{
+  "captured_wall": 1788929306.7089307,
+  "loc_status": 0,
+  "amcl": {
+    "x": -3.796878847772127,
+    "y": -1.2511788592670163,
+    "yaw": -3.0373728785801606,
+    "cov_xy": 0.06023268322031834,
+    "cov_yaw": 0.0037787099186076083,
+    "stamp": 1788928636.9919064,
+    "age_sec": 669.7170243263245
+  },
+  "map_odom": {
+    "ok": true,
+    "x": 0.36089995637053723,
+    "y": -0.9223810452227922,
+    "yaw": -3.0890821324443474,
+    "stamp": 1788929306.8209457,
+    "age_sec": 0.34771173600000005
+  },
+  "map_base": {
+    "ok": true,
+    "x": -3.7968788477721267,
+    "y": -1.2511788592670166,
+    "yaw": -3.0373728785801606,
+    "stamp": 1788929306.6806245,
+    "age_sec": 0.48827410800000004
+  },
+  "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+  "scan_stamp": 1788929306.5209455,
+  "scan_age_sec": 0.18798518180847168,
+  "scan_frame": "lidar_link",
+  "map_frame": "map",
+  "amcl_laser": {
+    "ok": true,
+    "implemented": true,
+    "status": "pass",
+    "reason": "ok",
+    "laser_score": 0.6035350503964008,
+    "matched_ratio": 0.7342342342342343,
+    "valid_beams": 222,
+    "mean_dist": 0.1780074773742272,
+    "runtime_sec": 0.0005556369997066213,
+    "min_laser_score": 0.38,
+    "pose": {
+      "x": -3.796878847772127,
+      "y": -1.2511788592670163,
+      "yaw": -3.0373728785801606
+    },
+    "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+  },
+  "threshold": 0.38,
+  "p3": {
+    "ok": true,
+    "result_code": 6,
+    "laser_score": 0.6333085894584656,
+    "visual_score": 0.16699999570846558,
+    "candidate": {
+      "x": -3.6532377552092954,
+      "y": -1.0523196490348963,
+      "yaw": -3.029071494026554
+    },
+    "delta_xy_m": 0.24531153451639107,
+    "delta_yaw_rad": 0.008301384553606628,
+    "apply_initial_pose": false,
+    "decision": "ACCEPT",
+    "reason": "best_cluster_margin_ok",
+    "keyframe_id": "kf_000015"
+  },
+  "case": "CONSISTENT"
+}

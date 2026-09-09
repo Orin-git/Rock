@@ -1,0 +1,74 @@
+{
+  "snap": {
+    "t": 1788938177.1297479,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "OPERATOR",
+      "busy": false,
+      "session_id": 3,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_map_mono": 13542.197770029,
+        "first_map_wall": 1788933712.9971178,
+        "first_scan_mono": 15530.548121121,
+        "first_scan_wall": 1788935701.3474681,
+        "amcl_lifecycle_active_mono": 15541.458719907,
+        "amcl_lifecycle_active_wall": 1788935712.259124,
+        "pre_ok_mono": 16619.034919779,
+        "pre_ok_wall": 1788936789.8342633,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 15541.474621644,
+        "p1_start_wall": 1788935712.273967,
+        "p2_start_mono": 15541.486510248,
+        "p2_start_wall": 1788935712.285856,
+        "initialpose_publish_mono": 16619.130902763,
+        "initialpose_publish_wall": 1788936789.9302523,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 15542.635949822,
+        "first_map_odom_wall": 1788935713.4352937,
+        "ready_mono": 16621.975657215,
+        "ready_wall": 1788936792.775003,
+        "p3_start_mono": 16348.384552458,
+        "p3_start_wall": 1788936519.1839006,
+        "operator_ready_mono": 16902.883537095,
+        "operator_ready_wall": 1788937073.682883
+      }
+    },
+    "loc": "",
+    "blocked": null,
+    "status": 1,
+    "amcl": null,
+    "owner": {
+      "t": 1788938175.8483953,
+      "owner": "none",
+      "session_id": 5,
+      "stamp": 1788937494.9201648,
+      "note": "lost_READY"
+    },
+    "nav_en": null
+  },
+  "last_good": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788937485.9088738,
+    "x": 1.523182824256167,
+    "y": -0.07302308594721939,
+    "yaw": -2.9779062439207307,
+    "covariance": [
+      0.04934883306544547,
+      0.04934883306544547,
+      0.020665304147312744
+    ],
+    "source": "amcl",
+    "quality": 0.907716913685765,
+    "laser_verified": true,
+    "laser_score_at_write": 0.5513441513994911,
+    "laser_matched_ratio": 0.7168949771689498,
+    "laser_valid_beams": 219,
+    "scan_stamp": 1788937485.7520387,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+    "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+  }
+}

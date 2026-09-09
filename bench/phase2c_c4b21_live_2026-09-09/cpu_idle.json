@@ -1,0 +1,39 @@
+{
+  "window_sec": 45.0,
+  "clk_tck": 100.0,
+  "note": "45s /proc window while session-4 NEED_OPERATOR idle; discarded leftover ros2 param set (0.31%) that collided on boot_localizer key",
+  "samples": [
+    {
+      "pid": 22596,
+      "key": "boot_localizer",
+      "cpu_pct": 2.22
+    },
+    {
+      "pid": 19712,
+      "key": "lost_recovery",
+      "cpu_pct": 3.38
+    },
+    {
+      "pid": 30077,
+      "key": "last_good_pose_writer",
+      "cpu_pct": 1.04
+    },
+    {
+      "pid": 31546,
+      "key": "global_reloc_poc",
+      "cpu_pct": 0.78
+    },
+    {
+      "pid": 19708,
+      "key": "charger_prior",
+      "cpu_pct": 1.98
+    }
+  ],
+  "by_key": {
+    "boot_localizer": 2.22,
+    "lost_recovery": 3.38,
+    "last_good_pose_writer": 1.04,
+    "global_reloc_poc": 0.78,
+    "charger_prior": 1.98
+  }
+}

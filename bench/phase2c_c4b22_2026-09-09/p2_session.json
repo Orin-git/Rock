@@ -1,0 +1,182 @@
+{
+  "file_written": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788929919.9600494,
+    "x": -3.788028325087068,
+    "y": -1.22650966859008,
+    "yaw": -3.0060088204183915,
+    "covariance": [
+      0.20831833771397995,
+      0.20831833771397995,
+      0.041055048103466225
+    ],
+    "source": "amcl",
+    "quality": 0.684329917777678,
+    "laser_verified": true,
+    "laser_score_at_write": 0.6408265942014939,
+    "laser_matched_ratio": 0.7727272727272727,
+    "laser_valid_beams": 220,
+    "scan_stamp": 1788929919.1960897,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose"
+  },
+  "laser_verified": true,
+  "snap0": {
+    "boot": "READY",
+    "path": "P2",
+    "busy": false,
+    "sid": 1,
+    "loc": "READY",
+    "blocked": false,
+    "loc_status": 0,
+    "amcl": {
+      "x": -3.788028325087068,
+      "y": -1.22650966859008,
+      "yaw": -3.0060088204183915,
+      "cov_xy": 0.20831833771397995,
+      "cov_yaw": 0.041055048103466225
+    },
+    "owner": {
+      "t": 1788929921.2426553,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788923761.8713043,
+      "note": "web_initialpose"
+    }
+  },
+  "nav_start": {
+    "ok": true,
+    "message": "NAVIGATING"
+  },
+  "snap_end": {
+    "boot": "READY",
+    "path": "P2",
+    "busy": false,
+    "sid": 2,
+    "loc": "READY",
+    "blocked": false,
+    "loc_status": 0,
+    "amcl": {
+      "x": -3.8268258578673913,
+      "y": -1.2216260743933256,
+      "yaw": -3.0183986823505125,
+      "cov_xy": 0.19918413861777523,
+      "cov_yaw": 0.05038132475034774
+    },
+    "owner": {
+      "t": 1788929938.148739,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788929938.1466184,
+      "note": "boot_READY"
+    }
+  },
+  "states": [
+    {
+      "t": 1788929921.23476,
+      "state": "READY",
+      "busy": false,
+      "sid": 1,
+      "path": "P2"
+    },
+    {
+      "t": 1788929924.4271836,
+      "state": "PRE_LOCALIZATION_READY",
+      "busy": true,
+      "sid": 2,
+      "path": ""
+    },
+    {
+      "t": 1788929935.1766586,
+      "state": "TRY_CHARGER",
+      "busy": true,
+      "sid": 2,
+      "path": ""
+    },
+    {
+      "t": 1788929935.1949196,
+      "state": "TRY_LAST_GOOD",
+      "busy": true,
+      "sid": 2,
+      "path": ""
+    },
+    {
+      "t": 1788929935.271193,
+      "state": "POST_SEED_AMCL_READY",
+      "busy": true,
+      "sid": 2,
+      "path": ""
+    },
+    {
+      "t": 1788929938.1476657,
+      "state": "READY",
+      "busy": true,
+      "sid": 2,
+      "path": "P2"
+    }
+  ],
+  "selected_path": "P2",
+  "final": "READY",
+  "p2_score": 0.62799145141247,
+  "p2_result": "READY",
+  "p2_reason": "ok",
+  "p3_ran": false,
+  "amcl_final": [
+    -3.8268258578673913,
+    -1.2216260743933256,
+    -3.0183986823505125
+  ],
+  "initialpose_count": 1,
+  "initialposes": [
+    {
+      "t": 1788929935.251382,
+      "x": -3.788028325087068,
+      "y": -1.22650966859008,
+      "yaw": -3.0060088204183915,
+      "frame": "map"
+    }
+  ],
+  "stages_brief": [
+    {
+      "stage": "START",
+      "result": "ok",
+      "reason": "nav_enable",
+      "score": null,
+      "candidate_pose": null,
+      "amcl_pose": null
+    },
+    {
+      "stage": "PRE_LOCALIZATION_READY",
+      "result": "ok",
+      "reason": "ok",
+      "score": null,
+      "candidate_pose": null,
+      "amcl_pose": null
+    },
+    {
+      "stage": "P1",
+      "result": "skip",
+      "reason": "charger_prior_unavailable",
+      "score": null,
+      "candidate_pose": null,
+      "amcl_pose": null
+    },
+    {
+      "stage": "P2",
+      "result": "READY",
+      "reason": "ok",
+      "score": 0.62799145141247,
+      "candidate_pose": {
+        "x": -3.788028325087068,
+        "y": -1.22650966859008,
+        "yaw": -3.0060088204183915
+      },
+      "amcl_pose": [
+        -3.8268258578673913,
+        -1.2216260743933256,
+        -3.0183986823505125
+      ]
+    }
+  ],
+  "pass": true
+}

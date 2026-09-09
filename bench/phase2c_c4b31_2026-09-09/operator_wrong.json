@@ -1,0 +1,229 @@
+{
+  "pose": {
+    "x": 12.0,
+    "y": 9.0,
+    "yaw": 0.0
+  },
+  "expect_ready": false,
+  "snap0": {
+    "t": 1788933548.1778576,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "OPERATOR",
+      "busy": false,
+      "session_id": 1,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_scan_mono": 12827.662516986,
+        "first_scan_wall": 1788932998.4618692,
+        "first_map_mono": 12838.815731635,
+        "first_map_wall": 1788933009.6150787,
+        "amcl_lifecycle_active_mono": 12838.883719508,
+        "amcl_lifecycle_active_wall": 1788933009.683912,
+        "pre_ok_mono": 12838.884815617,
+        "pre_ok_wall": 1788933009.6841612,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 12838.903786921,
+        "p1_start_wall": 1788933009.703132,
+        "p2_start_mono": 12838.987289771,
+        "p2_start_wall": 1788933009.7866359,
+        "initialpose_publish_mono": 12839.710356564,
+        "initialpose_publish_wall": 1788933010.5097058,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 12840.057635596,
+        "first_map_odom_wall": 1788933010.8569818,
+        "ready_mono": 12842.73482319,
+        "ready_wall": 1788933013.5341668,
+        "operator_ready_mono": 13169.682216499,
+        "operator_ready_wall": 1788933340.4815633
+      }
+    },
+    "loc": "NEED_OPERATOR",
+    "blocked": true,
+    "status": 0,
+    "amcl": {
+      "x": -2.4638647779050364,
+      "y": -1.2012350280616877,
+      "yaw": 0.05339184541310714,
+      "cov_xy": 0.12386471729117109,
+      "cov_yaw": 0.00705064885152048,
+      "t": 1788933547.7577283
+    },
+    "owner": {
+      "t": 1788933546.9608295,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788933485.0121322,
+      "note": "lost_UNKNOWN"
+    },
+    "canonical": {
+      "t": 1788933546.9604504,
+      "state": "NEED_OPERATOR",
+      "goals_blocked": true,
+      "source": "lost",
+      "incident_id": 2,
+      "generation": 1788933485013954167
+    },
+    "nav_en": true
+  },
+  "web": {
+    "http": 200,
+    "body": {
+      "ok": true,
+      "topic": "/initialpose",
+      "initialpose_owner": "operator",
+      "x": 12.0,
+      "y": 9.0,
+      "yaw": 0.0,
+      "frame_id": "map"
+    }
+  },
+  "saw_verifying": true,
+  "saw_owner_operator": true,
+  "operator_result": {
+    "final": "NEED_OPERATOR",
+    "selected_path": "OPERATOR",
+    "source": "operator",
+    "stages": [
+      {
+        "stage": "OPERATOR",
+        "t_mono": 13169.675964482,
+        "attempt": 1,
+        "result": "READY",
+        "reason": "operator_post_seed",
+        "amcl": {
+          "amcl_pose": [
+            -2.768852404353951,
+            -1.1944924361368858,
+            -0.0298003227636179
+          ],
+          "cov_xy": 0.1595127929827763,
+          "cov_yaw": 0.0046953630603597625,
+          "loc_status": 0,
+          "tf_ok": true,
+          "near_candidate": true,
+          "latched_pose_used": false,
+          "far_latched_rejected": 0,
+          "tf_ok_after_sec": 0.3088589729995874,
+          "status_0_after_sec": 0.1035545180002373,
+          "stable_for_sec": 2.570232912999927,
+          "gates_ok": true,
+          "amcl_convergence_sec": 2.8790971350008476,
+          "ready": true
+        },
+        "candidate_pose": {
+          "x": -2.7906230749797114,
+          "y": -1.1895375632125855,
+          "yaw": -0.03290769929587808
+        }
+      },
+      {
+        "stage": "OPERATOR",
+        "t_mono": 13389.546387976,
+        "attempt": 1,
+        "result": "AMCL_FAIL",
+        "reason": "operator_pose_not_stable",
+        "amcl": {
+          "amcl_pose": [
+            11.164432628523626,
+            8.760907962056452,
+            -0.032359968334592815
+          ],
+          "cov_xy": 0.023281209823984017,
+          "cov_yaw": 0.0045608388806239915,
+          "loc_status": 3,
+          "tf_ok": true,
+          "near_candidate": true,
+          "latched_pose_used": false,
+          "far_latched_rejected": 0,
+          "tf_ok_after_sec": 0.30664954699932423,
+          "status_0_after_sec": 0.10292421200028912,
+          "stable_for_sec": 0.0,
+          "gates_ok": false,
+          "amcl_convergence_sec": 12.028020825999192,
+          "ready": false
+        },
+        "candidate_pose": {
+          "x": 12.0,
+          "y": 9.0,
+          "yaw": 0.0
+        }
+      }
+    ],
+    "amcl": {
+      "amcl_pose": [
+        11.164432628523626,
+        8.760907962056452,
+        -0.032359968334592815
+      ],
+      "cov_xy": 0.023281209823984017,
+      "cov_yaw": 0.0045608388806239915,
+      "loc_status": 3,
+      "tf_ok": true,
+      "near_candidate": true,
+      "latched_pose_used": false,
+      "far_latched_rejected": 0,
+      "tf_ok_after_sec": 0.30664954699932423,
+      "status_0_after_sec": 0.10292421200028912,
+      "stable_for_sec": 0.0,
+      "gates_ok": false,
+      "amcl_convergence_sec": 12.028020825999192,
+      "ready": false
+    },
+    "candidate_pose": {
+      "x": 12.0,
+      "y": 9.0,
+      "yaw": 0.0
+    },
+    "far_latched_rejected": 0
+  },
+  "far_latched_rejected": 0,
+  "loc": "NEED_OPERATOR",
+  "blocked": true,
+  "initialpose_count": 1,
+  "canonical_tail": [
+    {
+      "t": 1788933546.9604504,
+      "state": "NEED_OPERATOR",
+      "goals_blocked": true,
+      "source": "lost",
+      "incident_id": 2,
+      "generation": 1788933485013954167
+    },
+    {
+      "t": 1788933548.3229914,
+      "state": "VERIFYING_OPERATOR_POSE",
+      "goals_blocked": true,
+      "source": "boot_operator",
+      "incident_id": 1,
+      "generation": 1788933548316954715
+    },
+    {
+      "t": 1788933560.3662102,
+      "state": "NEED_OPERATOR",
+      "goals_blocked": true,
+      "source": "boot",
+      "incident_id": 1,
+      "generation": 1788933560364997746
+    }
+  ],
+  "owners_tail": [
+    {
+      "t": 1788933546.9608295,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788933485.0121322,
+      "note": "lost_UNKNOWN"
+    },
+    {
+      "t": 1788933548.2839754,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788933548.2787502,
+      "note": "web_initialpose"
+    }
+  ],
+  "pass": true
+}

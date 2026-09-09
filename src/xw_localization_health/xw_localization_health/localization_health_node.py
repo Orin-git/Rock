@@ -5,6 +5,10 @@
 
 AMCL only republishes after motion (update_min_*). While odom is nearly static
 since the last amcl_pose, that pose is still treated as usable (avoids idle→1).
+A stopped robot is still judged: a live scan that fails the frozen 0.38 laser
+gate at the current pose is status 3, without waiting for motion.
+A live scan that fails the frozen 0.38 laser gate at that pose is not normal,
+even if the robot has not moved. That check is low-rate and does not spin.
 
 Phase1: detection is always active (incl. FOLLOW). Execution of spin/reinit is
 gated by /xw/localization/recovery_enable so follow is never preempted by
@@ -20,12 +24,15 @@ import rclpy
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from nav_msgs.msg import OccupancyGrid
 from rclpy.callback_groups import ReentrantCallbackGroup
+from sensor_msgs.msg import LaserScan
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool, Int8
 from std_srvs.srv import Empty
 from tf2_ros import Buffer, TransformException, TransformListener
 
+from xw_global_reloc.laser_verify import DistanceField, score_scan_at_pose
 from xw_interfaces.msg import RobotEvent
 
 
@@ -61,6 +68,11 @@ class LocalizationHealthNode(Node):
         self.declare_parameter('self_heal_spin_sec', 4.0)
         self.declare_parameter('publish_hz', 2.0)
         self.declare_parameter('enable_self_heal', True)
+        # Stopped robots still get a laser-vs-map check. Threshold stays 0.38.
+        self.declare_parameter('laser_check_period_sec', 2.0)
+        self.declare_parameter('min_laser_score', 0.38)
+        self.declare_parameter('min_valid_beams', 20)
+        self.declare_parameter('scan_fresh_sec', 1.5)
         # If true, heal during follow without supervisor gate (NOT recommended).
         self.declare_parameter('allow_self_heal_during_follow', False)
 
@@ -82,6 +94,13 @@ class LocalizationHealthNode(Node):
         self._heal_started: Optional[float] = None
         self._heal_phase = ''
         self._last_xy: Optional[tuple] = None
+        self._scan: Optional[LaserScan] = None
+        self._scan_mono: Optional[float] = None
+        self._field: Optional[DistanceField] = None
+        self._field_map_id: Optional[tuple] = None
+        self._laser_mismatch = False
+        self._laser_score: Optional[float] = None
+        self._last_laser_check = 0.0
 
         latch_in = QoSProfile(
             depth=1,
@@ -99,6 +118,7 @@ class LocalizationHealthNode(Node):
             PoseWithCovarianceStamped, 'amcl_pose', self._on_amcl, amcl_qos
         )
         self.create_subscription(OccupancyGrid, 'map', self._on_map, _MAP_QOS)
+        self.create_subscription(LaserScan, '/scan', self._on_scan, 10)
         self.create_subscription(Bool, '/xw/nav/enable', self._on_nav_en, latch_in)
         self.create_subscription(Bool, '/xw/follow/enable', self._on_follow_en, latch_in)
         self.create_subscription(
@@ -129,7 +149,7 @@ class LocalizationHealthNode(Node):
         self.create_timer(1.0 / max(hz, 0.5), self._tick, callback_group=self._cb)
         self.get_logger().info(
             'localization_health ready (detect always; heal gated by recovery_enable; '
-            'phase2c_recovery blocks spin+reinit)'
+            'phase2c_recovery blocks spin+reinit; idle laser mismatch → status 3)'
         )
 
     @property
@@ -147,6 +167,10 @@ class LocalizationHealthNode(Node):
 
     def _on_map(self, msg: OccupancyGrid) -> None:
         self._map = msg
+
+    def _on_scan(self, msg: LaserScan) -> None:
+        self._scan = msg
+        self._scan_mono = self._now()
 
     def _on_nav_en(self, msg: Bool) -> None:
         self._nav_en = bool(msg.data)
@@ -184,6 +208,8 @@ class LocalizationHealthNode(Node):
         self._heal_started = None
         self._heal_phase = ''
         self._raw_bad_since = None
+        self._laser_mismatch = False
+        self._laser_score = None
         self.get_logger().info('initialpose → clear status-3 latch')
 
     def _abort_heal_motion(self, reason: str) -> None:
@@ -294,11 +320,53 @@ class LocalizationHealthNode(Node):
         lim = float(self.get_parameter('pose_jump_m').value)
         return math.hypot(dx, dy) > lim
 
+    def _maybe_laser_check(self) -> None:
+        """Score the live scan at the current pose. No motion required."""
+        period = float(self.get_parameter('laser_check_period_sec').value)
+        now = self._now()
+        if now - self._last_laser_check < period:
+            return
+        self._last_laser_check = now
+        if self._amcl is None or self._map is None or self._scan is None or self._scan_mono is None:
+            return
+        if now - self._scan_mono > float(self.get_parameter('scan_fresh_sec').value):
+            return
+        try:
+            info = self._map.info
+            map_id = (int(info.width), int(info.height), float(info.resolution), float(info.origin.position.x), float(info.origin.position.y))
+            if self._field is None or self._field_map_id != map_id:
+                self._field = DistanceField(self._map)
+                self._field_map_id = map_id
+            p = self._amcl.pose.pose
+            yaw = self._yaw_from_quat(p.orientation)
+            scored = score_scan_at_pose(
+                self._field,
+                self._scan,
+                float(p.position.x),
+                float(p.position.y),
+                yaw,
+                min_valid_beams=int(self.get_parameter('min_valid_beams').value),
+                min_laser_score=float(self.get_parameter('min_laser_score').value),
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().warn(f'laser mismatch check failed: {exc}')
+            return
+        self._laser_score = float(scored.laser_score)
+        mismatch = (not bool(scored.accepted)) and str(scored.reason) != 'few_beams'
+        if mismatch and not self._laser_mismatch:
+            self.get_logger().warn(
+                f'laser/map mismatch while pose held '
+                f'score={scored.laser_score:.3f} beams={scored.valid_beams} reason={scored.reason}'
+            )
+        self._laser_mismatch = mismatch
+
     def _raw_code(self) -> int:
         """Immediate health without latch/heal. Always evaluated (incl. FOLLOW)."""
         if not self._tf_ok() or self._amcl is None or not self._amcl_fresh():
             return 1
         xy, yaw = self._cov_xy_yaw()
+        if self._laser_mismatch:
+            return 3
         if self._outside_map():
             return 3
         if self._pose_jump():
@@ -397,6 +465,7 @@ class LocalizationHealthNode(Node):
             if self._heal_started is not None or self._heal_phase:
                 self._abort_heal_motion('follow active → stop heal motion')
 
+        self._maybe_laser_check()
         raw = self._raw_code()
         now = self._now()
 

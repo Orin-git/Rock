@@ -1,0 +1,43 @@
+{
+  "window_sec": 45.0,
+  "clk_tck": 100.0,
+  "samples": [
+    {
+      "pid": 15201,
+      "key": "global_reloc_poc",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/xw_global_reloc/shar",
+      "cpu_pct": 0.69
+    },
+    {
+      "pid": 15203,
+      "key": "last_good_pose_writer",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/last_good_pose_writer --ros-args -r __node:=xw_last_good_pose_writer --params-file /tmp/launch_params_r65yqkjp ",
+      "cpu_pct": 1.0
+    },
+    {
+      "pid": 15205,
+      "key": "charger_prior",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/charger_prior_node --ros-args -r __node:=xw_charger_prior --params-file /tmp/launch_params_jhhiplhw ",
+      "cpu_pct": 1.56
+    },
+    {
+      "pid": 15207,
+      "key": "boot_localizer",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer --ros-args -r __node:=xw_boot_localizer --params-file /tmp/launch_params_3lynu6q3 ",
+      "cpu_pct": 2.2
+    },
+    {
+      "pid": 15209,
+      "key": "lost_recovery",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/lost_recovery --ros-args -r __node:=xw_lost_recovery --params-file /tmp/launch_params_i0hbknpm ",
+      "cpu_pct": 3.07
+    }
+  ],
+  "by_key": {
+    "global_reloc_poc": 0.69,
+    "last_good_pose_writer": 1.0,
+    "charger_prior": 1.56,
+    "boot_localizer": 2.2,
+    "lost_recovery": 3.07
+  }
+}

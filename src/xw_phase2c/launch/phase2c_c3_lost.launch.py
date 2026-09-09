@@ -1,10 +1,8 @@
-"""Phase2C-C3 LOST recovery — NOT in production robot.launch.py.
+"""Phase2C-C3 LOST recovery — also wired into production robot.launch.py (C4B).
 
-Starts reloc_poc (allow_amcl_handoff:=true) + xw_lost_recovery with
-phase2c_lost_recovery_enabled:=true.
-
-Also set supervisor phase2c_lost_recovery_enabled:=true (dev only) so heal
-arming is suppressed and IDLE cannot mid-cut Reloc ownership.
+Starts reloc_poc (allow_amcl_handoff:=true) + xw_lost_recovery.
+Production: set phase2c_localization_enabled:=true on robot.launch.py
+(supervisor + lost_recovery + boot share the master switch).
 """
 
 from launch import LaunchDescription

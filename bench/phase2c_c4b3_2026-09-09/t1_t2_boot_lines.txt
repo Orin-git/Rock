@@ -1,0 +1,4 @@
+[INFO] [1788930704.459452339] [xw_boot_localizer]: BOOT stage P1: {"attempt": 1, "result": "skip", "reason": "charger_prior_unavailable", "runtime_sec": 0.01992944900121074}
+[INFO] [1788930708.030904256] [xw_boot_localizer]: BOOT stage P2: {"attempt": 1, "result": "READY", "laser_score": 0.6268283575733147, "reason": "ok", "score": 0.6268283575733147, "runtime_sec": 0.0045553529998869635, "amcl": {"amcl_pose": [-3.8299277589710066, -1.2013080781604788, -3.008368549406337], "c
+[INFO] [1788930833.524912214] [xw_boot_localizer]: BOOT stage P2: {"attempt": 1, "result": "AMCL_FAIL", "laser_score": 0.6147863797250797, "reason": "ok", "score": 0.6147863797250797, "runtime_sec": 0.0013685309986612992, "amcl": {"amcl_pose": [-3.8299277589710066, -1.2013080781604788, -3.008368549406337]
+[INFO] [1788930861.852508174] [xw_boot_localizer]: BOOT done final=READY path=P3 t=40.7s

@@ -1,0 +1,13 @@
+{
+  "wrote": "/ros2_ws/bench/phase2c_c4b1_physical_2026-09-09/c4b1_report.json",
+  "pass_summary": {
+    "bringup": false,
+    "t1_cold_nav": false,
+    "t2_unmoved": false,
+    "t3_relocated": false,
+    "t4_charger": false,
+    "t5_lost_nav": true,
+    "t6_lost_unknown": true,
+    "t7_rollback": true
+  }
+}

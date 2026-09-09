@@ -1,0 +1,37 @@
+{
+  "candidate": {
+    "x": 0.3875452116750586,
+    "y": -0.3611611966539977,
+    "yaw": 0.013726291805442839,
+    "quality": 0.6006095992182747,
+    "hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25"
+  },
+  "exact": {
+    "ok": false,
+    "reason": "laser_gate",
+    "laser_score": 0.0874978051018688,
+    "matched_ratio": 0.28095238095238095,
+    "valid_beams": 210,
+    "mean_dist": 0.6885671343831788
+  },
+  "window_peak": {
+    "ok": false,
+    "reason": "laser_gate",
+    "laser_score": 0.12842890308801336,
+    "exact_laser_score": 0.0874978051018688,
+    "pose": {
+      "x": 0.08754521167505865,
+      "y": -0.1611611966539972,
+      "yaw": 0.36279214220430883
+    },
+    "seed_pose": {
+      "x": 0.3875452116750586,
+      "y": -0.3611611966539977,
+      "yaw": 0.013726291805442839
+    },
+    "refined": true
+  },
+  "pose_delta_to_seed_m": 0.0,
+  "threshold": 0.38,
+  "note": "diagnostic only; threshold and scorer unchanged"
+}

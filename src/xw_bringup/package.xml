@@ -23,6 +23,8 @@
   <exec_depend>xw_fall_session</exec_depend>
   <exec_depend>xw_perception</exec_depend>
   <exec_depend>xw_health</exec_depend>
+  <exec_depend>xw_phase2c</exec_depend>
+  <exec_depend>xw_global_reloc</exec_depend>
   <exec_depend>xw_web</exec_depend>
   <exec_depend>xw_description</exec_depend>
   <exec_depend>launch</exec_depend>

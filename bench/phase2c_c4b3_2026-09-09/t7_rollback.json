@@ -1,0 +1,24 @@
+{
+  "false_launch_arg": "phase2c_localization_enabled:=false",
+  "params_false": {
+    "xw_nav_session": false,
+    "xw_boot_localizer": false,
+    "xw_lost_recovery": false,
+    "xw_supervisor": false
+  },
+  "boot_log": "boot_localizer ready master=False",
+  "legacy_blind_seed": [
+    "1788931752.869 seeded /initialpose from charger (1.87,-0.06,yaw=-3.13)",
+    "1788931754.567",
+    "1788931758.687",
+    "1788931762.300"
+  ],
+  "restored_launch_arg": "phase2c_localization_enabled:=true",
+  "params_true_seen": [
+    "xw_nav_session",
+    "xw_boot_localizer",
+    "xw_lost_recovery"
+  ],
+  "script_default_restored": true,
+  "method": "systemd cannot set-environment without interactive auth; temporary start_robot_host.sh default flipped false then restored true, then launch restarted"
+}

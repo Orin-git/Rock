@@ -47,6 +47,8 @@ USE_POINTCLOUD="${USE_POINTCLOUD:-false}"
 USE_LEGACY_DEPTH_BRIDGE="${USE_LEGACY_DEPTH_BRIDGE:-true}"
 # Delay real lidar motor start after Web is up (inrush can brown-out SBC / drop SSH)
 XW_LIDAR_START_DELAY="${XW_LIDAR_START_DELAY:-30}"
+# Phase2C-C4B production master switch (true=BOOT+LOST; false=legacy blind seed rollback)
+PHASE2C_LOCALIZATION_ENABLED="${PHASE2C_LOCALIZATION_ENABLED:-true}"
 
 # Wait for Docker daemon
 for _ in $(seq 1 60); do
@@ -170,7 +172,7 @@ docker exec "$CONTAINER" bash -c '
 ' || true
 sleep 1
 
-echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB gesture=$USE_GESTURE pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT imu=$IMU_PORT ekf=$USE_EKF depth=$USE_DEPTH_CAM depth2=$USE_DEPTH_CAM_2)"
+echo "[start_robot_host] launching Gen2 inside $CONTAINER (sim_hw=$USE_SIM_HW sim_lidar=$USE_SIM_LIDAR web=$USE_WEB gesture=$USE_GESTURE pointcloud=$USE_POINTCLOUD lidar_delay=${XW_LIDAR_START_DELAY}s chassis=$CHASSIS_PORT imu=$IMU_PORT ekf=$USE_EKF depth=$USE_DEPTH_CAM depth2=$USE_DEPTH_CAM_2 phase2c=${PHASE2C_LOCALIZATION_ENABLED})"
 
 # Foreground so systemd tracks the process
 exec docker exec -i "$CONTAINER" bash -lc "
@@ -200,5 +202,6 @@ exec docker exec -i "$CONTAINER" bash -lc "
     use_foxglove:=${USE_FOXGLOVE} \
     enable_pointcloud:=${USE_POINTCLOUD} \
     use_legacy_depth_bridge:=${USE_LEGACY_DEPTH_BRIDGE} \
-    profile:=${PROFILE}
+    profile:=${PROFILE} \
+    phase2c_localization_enabled:=${PHASE2C_LOCALIZATION_ENABLED}
 "

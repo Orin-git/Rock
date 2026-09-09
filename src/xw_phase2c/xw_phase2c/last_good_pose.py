@@ -28,6 +28,12 @@ class LastGoodPose:
     covariance: list  # [xx, yy, yaw] preferred
     source: str = 'amcl'
     quality: float = 0.0
+    # Write-time persistence only. BOOT P2 must laser-verify again.
+    laser_verified: bool = False
+    laser_score_at_write: float = 0.0
+    laser_matched_ratio: float = 0.0
+    laser_valid_beams: int = 0
+    scan_stamp: float = 0.0
 
     def as_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -64,6 +70,33 @@ def compute_map_hash(maps_dir: Path | str, map_name: str) -> str:
     if not found:
         return ''
     return h.hexdigest()
+
+
+def map_hash_fingerprint(maps_dir: Path | str, map_name: str) -> Tuple[Any, ...]:
+    """Cheap identity of map files (mtime+size). Not a content hash."""
+    root = Path(maps_dir)
+    parts = []
+    for suffix in ('.yaml', '.pgm'):
+        p = root / f'{map_name}{suffix}'
+        if p.is_file():
+            st = p.stat()
+            parts.append((suffix, int(st.st_mtime_ns), int(st.st_size)))
+    return (str(map_name), tuple(parts))
+
+
+def compute_map_hash_cached(
+    maps_dir: Path | str,
+    map_name: str,
+    cache: Dict[str, Any],
+) -> str:
+    """Reuse SHA256 while yaml/pgm mtime+size are unchanged. Never hash every tick."""
+    fp = map_hash_fingerprint(maps_dir, map_name)
+    if cache.get('fp') == fp and cache.get('hash'):
+        return str(cache['hash'])
+    digest = compute_map_hash(maps_dir, map_name)
+    cache['fp'] = fp
+    cache['hash'] = digest
+    return digest
 
 
 def quality_from_cov(xx: float, yy: float, yaw: float, xy_good: float, yaw_good: float) -> float:
@@ -115,6 +148,11 @@ def read_last_good_pose(maps_dir: Path | str, map_name: str) -> Optional[LastGoo
             covariance=[float(cov[0]), float(cov[1]), float(cov[2])],
             source=str(raw.get('source') or 'amcl'),
             quality=float(raw.get('quality') or 0.0),
+            laser_verified=bool(raw.get('laser_verified') or False),
+            laser_score_at_write=float(raw.get('laser_score_at_write') or 0.0),
+            laser_matched_ratio=float(raw.get('laser_matched_ratio') or 0.0),
+            laser_valid_beams=int(raw.get('laser_valid_beams') or 0),
+            scan_stamp=float(raw.get('scan_stamp') or 0.0),
         )
     except (KeyError, TypeError, ValueError, IndexError):
         return None

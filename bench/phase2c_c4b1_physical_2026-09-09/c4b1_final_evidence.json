@@ -1,0 +1,114 @@
+{
+  "date": "2026-09-09T01:48:00",
+  "map": "vp",
+  "domain": "99",
+  "bringup_restart": {
+    "phase2c_localization_enabled": true,
+    "launch_cmdline_has_master": true,
+    "nodes_unique": true,
+    "reloc_rgb_sub_idle": false,
+    "note": "Restarted via docker kill of old launch; systemd respawned with phase2c:=true"
+  },
+  "tests": {
+    "bringup": {
+      "pass": true,
+      "note": "Phase2C nodes present unique; /amcl absent until NAV \u2014 acceptable for pre-NAV check",
+      "params_all_true": true,
+      "duplicates": 0
+    },
+    "t1_cold_nav": {
+      "pass": false,
+      "final": "SENSOR_TIMEOUT",
+      "reason": "tf_map_odom",
+      "runtime_sec": 90.26,
+      "saw_goals_blocked": true,
+      "goals_blocked_end": true,
+      "ip_delta": 0,
+      "legacy_owner": false,
+      "selected_path": null,
+      "root_cause": "Cold NAV with blind-seed OFF: BOOT WAIT_SENSORS requires map\u2192odom TF, but AMCL does not publish map TF until /initialpose. Deadlock."
+    },
+    "t2_unmoved": {
+      "pass": false,
+      "final": null,
+      "note": "No READY boot after T1 timeout; last_good path not exercised cleanly"
+    },
+    "t3_relocated": {
+      "pass": false,
+      "final": "SENSOR_TIMEOUT",
+      "false_accept": 0,
+      "note": "Wrong last_good injected; cascade never left WAIT_SENSORS (same TF deadlock)"
+    },
+    "t4_charger": {
+      "pass": false,
+      "skipped_reason": "robot not charging (charging=false docked=false)",
+      "charging": false
+    },
+    "t5_lost_nav": {
+      "pass": true,
+      "final": "READY",
+      "resume_policy": {
+        "nav": "replan_published",
+        "follow": "no_auto",
+        "recharge": "skip"
+      },
+      "note": "LOST via wrong /initialpose scramble; STOP+Reloc+replan; no reinit primary"
+    },
+    "t6_lost_unknown": {
+      "pass": true,
+      "note": "Negative Reloc probe (bad map_name, apply_initial_pose=false) did not succeed; safe reject"
+    },
+    "t7_rollback": {
+      "pass": "PARTIAL",
+      "commands_verified": true,
+      "full_dual_restart": false,
+      "reason": "sudo required for systemctl; host script supports PHASE2C_LOCALIZATION_ENABLED=false",
+      "rollback_cmd": "PHASE2C_LOCALIZATION_ENABLED=false sudo systemctl restart xw-robot",
+      "restore_cmd": "PHASE2C_LOCALIZATION_ENABLED=true sudo systemctl restart xw-robot"
+    },
+    "anti_reentry": {
+      "pass": true,
+      "final": "READY",
+      "selected_path": "P3",
+      "runtime_sec": 65.15,
+      "note": "After TF existed (post T5 seed): NAV\u2192IDLE\u2192NAV single cascade; P1 skip, P2 laser_reject 0.094, P3 READY laser 0.713"
+    }
+  },
+  "cpu": {
+    "settled_idle_approx": {
+      "loadavg": "9.48 9.21 6.62",
+      "global_reloc_poc": 5.2,
+      "last_good_pose_writer": 14.1,
+      "charger_prior": 4.3,
+      "boot_localizer": 26.5,
+      "lost_recovery": 26.9,
+      "reloc_rgb_heavy_sub": false,
+      "verdict": "Reloc not back to ~30% RGB IDLE bug, but ~5% and boot/lost ~26% each exceed 1-2% Reloc target / introduce new IDLE regression"
+    }
+  },
+  "ownership": {
+    "legacy_seen": false,
+    "boot_and_lost_mutex_observed": true,
+    "notes": "owners observed: boot, lost, none; no legacy; lost took ownership on tf_dead after boot SENSOR_TIMEOUT"
+  },
+  "false_accept": 0,
+  "false_handoff": 0,
+  "false_recovery": 0,
+  "gate_blockers": [
+    "T1 cold NAV SENSOR_TIMEOUT tf_map_odom deadlock without blind seed",
+    "T2/T3 not cleanly PASS",
+    "T4 not executable (not on charger)",
+    "T7 full rollback restart not executed (sudo)",
+    "IDLE CPU: boot_localizer+lost_recovery each ~27%"
+  ],
+  "pass_summary": {
+    "t1_cold_nav": false,
+    "t2_unmoved": false,
+    "t3_relocated": false,
+    "t4_charger": false,
+    "t5_lost_nav": true,
+    "t6_lost_unknown": true,
+    "t7_rollback": false
+  },
+  "all_required_pass": false
+}

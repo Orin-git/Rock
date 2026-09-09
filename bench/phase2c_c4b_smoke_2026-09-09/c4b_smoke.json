@@ -1,0 +1,26 @@
+{
+  "mode": "offline",
+  "checks": {
+    "master_switch_in_launch": true,
+    "reloc_in_launch": true,
+    "boot_in_launch": true,
+    "lost_in_launch": true,
+    "last_good_in_launch": true,
+    "charger_prior_in_launch": true,
+    "handoff_allowed": true,
+    "no_dev_inject_prod": true,
+    "nav_gates_blind_seed": true,
+    "supervisor_boot_detail": true,
+    "boot_goals_blocked": true,
+    "boot_ownership": true,
+    "lost_ownership": true,
+    "lost_no_reinit": true,
+    "laser_thr_frozen": true,
+    "out_of_map_coverage_gate": true
+  },
+  "pass": true,
+  "rollback": "ros2 launch xw_bringup robot.launch.py phase2c_localization_enabled:=false",
+  "false_accept": 0,
+  "false_handoff": 0,
+  "false_recovery": 0
+}

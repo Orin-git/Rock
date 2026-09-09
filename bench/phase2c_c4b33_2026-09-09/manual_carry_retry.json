@@ -1,0 +1,82 @@
+{
+  "pose_A": {
+    "x": -3.994337181152926,
+    "y": -1.0782251538151457,
+    "yaw": 3.0716712881674635
+  },
+  "pre_laser": null,
+  "snap0": {
+    "t": 1788939833.0394897,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 4,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_map_mono": 13542.197770029,
+        "first_map_wall": 1788933712.9971178,
+        "first_scan_mono": 15530.548121121,
+        "first_scan_wall": 1788935701.3474681,
+        "amcl_lifecycle_active_mono": 15541.458719907,
+        "amcl_lifecycle_active_wall": 1788935712.259124,
+        "pre_ok_mono": 18447.763902167,
+        "pre_ok_wall": 1788938618.5632455,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 15541.474621644,
+        "p1_start_wall": 1788935712.273967,
+        "p2_start_mono": 15541.486510248,
+        "p2_start_wall": 1788935712.285856,
+        "initialpose_publish_mono": 18447.876253573,
+        "initialpose_publish_wall": 1788938618.6756012,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 15542.635949822,
+        "first_map_odom_wall": 1788935713.4352937,
+        "ready_mono": 18451.092859012,
+        "ready_wall": 1788938621.892204,
+        "p3_start_mono": 16348.384552458,
+        "p3_start_wall": 1788936519.1839006,
+        "operator_ready_mono": 16902.883537095,
+        "operator_ready_wall": 1788937073.682883
+      }
+    },
+    "loc": "READY",
+    "blocked": false,
+    "status": 1,
+    "amcl": null,
+    "owner": {
+      "t": 1788939826.315664,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788938336.456157,
+      "note": "web_initialpose"
+    },
+    "nav_en": false
+  },
+  "last_good": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788938640.9073315,
+    "x": -4.040337407112037,
+    "y": -1.1232836546119374,
+    "yaw": 3.068529733208362,
+    "covariance": [
+      0.1944919985191074,
+      0.1944919985191074,
+      0.005322611639725033
+    ],
+    "source": "amcl",
+    "quality": 0.7580934231535111,
+    "laser_verified": true,
+    "laser_score_at_write": 0.6162964699946814,
+    "laser_matched_ratio": 0.7339449541284404,
+    "laser_valid_beams": 218,
+    "scan_stamp": 1788938640.7503905,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+    "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+  },
+  "pass": false,
+  "reason": "live_scan_still_matches_A_or_no_scan"
+}

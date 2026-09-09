@@ -1,0 +1,15 @@
+Wait for service timed out
+[WARN] [1788919703.567633139] [xw_phase2c_c4b1_smoke]: timeout waiting unblock (30s)
+{
+  "wrote": "/ros2_ws/bench/phase2c_c4b1_retest_2026-09-09/c4b1_report.json",
+  "pass_summary": {
+    "bringup": true,
+    "t1_cold_nav": false,
+    "t2_unmoved": false,
+    "t3_relocated": false,
+    "t4_charger": false,
+    "t5_lost_nav": false,
+    "t6_lost_unknown": true,
+    "t7_rollback": true
+  }
+}

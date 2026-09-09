@@ -31,6 +31,7 @@ fi
 # Delay real lidar motor start so Web/SSH settle (lidar inrush can brown-out SBC)
 : "${XW_LIDAR_START_DELAY:=25}"
 export XW_LIDAR_START_DELAY
+: "${PHASE2C_LOCALIZATION_ENABLED:=true}"
 
 exec ros2 launch xw_bringup robot.launch.py \
   use_sim_hw:="${USE_SIM_HW}" \
@@ -51,4 +52,5 @@ exec ros2 launch xw_bringup robot.launch.py \
   use_web:="${USE_WEB}" \
   use_gesture:="${USE_GESTURE}" \
   use_foxglove:="${USE_FOXGLOVE}" \
-  profile:="${PROFILE}"
+  profile:="${PROFILE}" \
+  phase2c_localization_enabled:="${PHASE2C_LOCALIZATION_ENABLED}"

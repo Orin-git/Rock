@@ -1,0 +1,43 @@
+{
+  "snap": {
+    "t": 1788935636.1304238,
+    "boot": {
+      "state": "IDLE",
+      "map_name": "vp",
+      "selected_path": "",
+      "busy": false,
+      "session_id": 0,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {}
+    },
+    "loc": "",
+    "blocked": null,
+    "status": 1,
+    "amcl": null,
+    "owner": null,
+    "nav_en": null
+  },
+  "last_good": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788933428.6021047,
+    "x": -2.4638647779050364,
+    "y": -1.2012350280616877,
+    "yaw": 0.05339184541310714,
+    "covariance": [
+      0.12386471729117109,
+      0.12386471729117109,
+      0.00705064885152048
+    ],
+    "source": "amcl",
+    "quality": 0.8400813010881619,
+    "laser_verified": true,
+    "laser_score_at_write": 0.6940979200734033,
+    "laser_matched_ratio": 0.8444444444444444,
+    "laser_valid_beams": 225,
+    "scan_stamp": 1788933428.4400933,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+    "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+  }
+}

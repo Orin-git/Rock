@@ -1,0 +1,104 @@
+{
+  "label": "t1_cold_nav",
+  "started": {
+    "idle": {
+      "ok": true,
+      "message": "IDLE"
+    },
+    "nav": {
+      "ok": true,
+      "message": "NAVIGATING"
+    },
+    "last_good": {
+      "map_name": "vp",
+      "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+      "timestamp": 1788929957.4509563,
+      "x": -3.8268258578673913,
+      "y": -1.2216260743933256,
+      "yaw": -3.0183986823505125,
+      "covariance": [
+        0.19918413861777523,
+        0.19918413861777523,
+        0.05038132475034774
+      ],
+      "source": "amcl",
+      "quality": 0.6803689140581134,
+      "laser_verified": true,
+      "laser_score_at_write": 0.6727090526589247,
+      "laser_matched_ratio": 0.8045454545454546,
+      "laser_valid_beams": 220,
+      "scan_stamp": 1788929957.2657905,
+      "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+      "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml",
+      "mtime": 1788929957.4519045
+    }
+  },
+  "selected_path": "",
+  "final": "PRE_LOCALIZATION_READY",
+  "p1": {
+    "result": null,
+    "reason": null,
+    "score": null
+  },
+  "p2_result": null,
+  "p2_reason": null,
+  "p2_score": null,
+  "p2_amcl": {},
+  "p3_ran": false,
+  "p3_scores": [],
+  "stages": [],
+  "initialpose_count": 0,
+  "initialposes": [],
+  "milestones": {},
+  "cold_break": null,
+  "owners": {
+    "owners": [
+      "boot"
+    ],
+    "legacy_seen": false,
+    "allowed_only": true
+  },
+  "snap_end": {
+    "t": 1788930694.1890295,
+    "boot": {
+      "state": "PRE_LOCALIZATION_READY",
+      "map_name": "vp",
+      "selected_path": "",
+      "busy": true,
+      "session_id": 1,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_map_mono": 10477.031885236,
+        "first_map_wall": 1788930647.8312402
+      }
+    },
+    "loc": "BOOT_LOCALIZING",
+    "blocked": true,
+    "status": 1,
+    "amcl": null,
+    "power": {
+      "charging": false,
+      "docked": false,
+      "battery_percent": 81.0,
+      "current": 0.0
+    },
+    "owner": {
+      "t": 1788930692.9045494,
+      "owner": "boot",
+      "session_id": 1,
+      "stamp": 1788930692.8999968,
+      "note": "nav_enable"
+    },
+    "nav_en": true,
+    "follow_en": false,
+    "recharge_en": false,
+    "recovery": true,
+    "initialpose_count": 0
+  },
+  "elapsed_sec": 1.21,
+  "manual_initialpose": false,
+  "legacy_blind_seed": false,
+  "initialpose_before_map_odom": false,
+  "pass": false
+}

@@ -1,0 +1,349 @@
+{
+  "kind": "false_good",
+  "snap0": {
+    "t": 1788936949.0479493,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 3,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_map_mono": 13542.197770029,
+        "first_map_wall": 1788933712.9971178,
+        "first_scan_mono": 15530.548121121,
+        "first_scan_wall": 1788935701.3474681,
+        "amcl_lifecycle_active_mono": 15541.458719907,
+        "amcl_lifecycle_active_wall": 1788935712.259124,
+        "pre_ok_mono": 16619.034919779,
+        "pre_ok_wall": 1788936789.8342633,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 15541.474621644,
+        "p1_start_wall": 1788935712.273967,
+        "p2_start_mono": 15541.486510248,
+        "p2_start_wall": 1788935712.285856,
+        "initialpose_publish_mono": 16619.130902763,
+        "initialpose_publish_wall": 1788936789.9302523,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 15542.635949822,
+        "first_map_odom_wall": 1788935713.4352937,
+        "ready_mono": 16621.975657215,
+        "ready_wall": 1788936792.775003,
+        "p3_start_mono": 16348.384552458,
+        "p3_start_wall": 1788936519.1839006,
+        "operator_ready_mono": 16486.101601515,
+        "operator_ready_wall": 1788936656.9009461
+      }
+    },
+    "loc": "DEGRADED",
+    "blocked": false,
+    "status": 1,
+    "amcl": {
+      "x": -1.9583865130569686,
+      "y": -1.1273304915937539,
+      "yaw": -0.00777652057735547,
+      "cov_xy": 0.10841683343313627,
+      "cov_yaw": 0.007519046700550061,
+      "t": 1788936949.0478842
+    },
+    "owner": {
+      "t": 1788936948.0438693,
+      "owner": "none",
+      "session_id": 3,
+      "stamp": 1788936792.7757444,
+      "note": "boot_READY"
+    },
+    "nav_en": true
+  },
+  "last_good": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788936690.9152868,
+    "x": -2.258577839306482,
+    "y": -1.1363257889618574,
+    "yaw": 0.0846274539484595,
+    "covariance": [
+      0.10953975123081668,
+      0.10953975123081668,
+      0.001503055352114245
+    ],
+    "source": "amcl",
+    "quality": 0.8661474099596371,
+    "laser_verified": true,
+    "laser_score_at_write": 0.7547697111388784,
+    "laser_matched_ratio": 0.8622222222222222,
+    "laser_valid_beams": 225,
+    "scan_stamp": 1788936690.715909,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+    "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+  },
+  "induction": "localization_status=3 debounce while nav goal active",
+  "stimulus_pose": {
+    "x": 2.4,
+    "y": 0.8,
+    "yaw": 0.0
+  },
+  "amcl_after_stimulus": {
+    "x": 2.3956012119121946,
+    "y": 0.7986496287733166,
+    "yaw": -0.0032111663873005064,
+    "cov_xy": 0.2618164548875845,
+    "cov_yaw": 0.14522160194351905,
+    "t": 1788936951.0542815
+  },
+  "selected_recovery_path": "",
+  "r1_code": "R1_CURRENT_REJECT",
+  "r2_code": "R2_LAST_GOOD_REJECT",
+  "r3_code": "R3_VISUAL_UNKNOWN",
+  "R1_SKIP_REASON": null,
+  "laser_score": null,
+  "seed_count": 0,
+  "sequential_fallback_seed_count": 0,
+  "final": "UNKNOWN",
+  "reason": "status_3",
+  "total_sec": 24.707045518000086,
+  "timings": {
+    "lost_detect_mono": 16782.030753874,
+    "sensors_ready_mono": 16782.41532516,
+    "r1_done_mono": 16783.051441068,
+    "r2_done_mono": 16783.05653631,
+    "r3_done_mono": 16806.736844453
+  },
+  "resume_policy": {
+    "nav": "forbidden",
+    "follow": "forbidden",
+    "recharge": "forbidden",
+    "detail": "NEED_OPERATOR"
+  },
+  "stages": [
+    {
+      "code": "R1_CURRENT_REJECT",
+      "stage": "R1",
+      "reason": "laser_gate",
+      "R1_SKIP_REASON": null,
+      "laser_score": 0.07808525188249525,
+      "coverage_ok": false,
+      "seeded": false,
+      "handoff": null,
+      "ready": null,
+      "valid_beams": 211
+    },
+    {
+      "code": "R2_LAST_GOOD_REJECT",
+      "stage": "R2",
+      "reason": "laser_gate",
+      "R1_SKIP_REASON": null,
+      "laser_score": 0.2117830272106083,
+      "coverage_ok": false,
+      "seeded": false,
+      "handoff": null,
+      "ready": null,
+      "valid_beams": 226
+    },
+    {
+      "code": "R3_VISUAL_UNKNOWN",
+      "stage": "R3",
+      "reason": "no_survivor",
+      "R1_SKIP_REASON": null,
+      "laser_score": 0.0,
+      "coverage_ok": null,
+      "seeded": false,
+      "handoff": null,
+      "ready": false,
+      "valid_beams": null
+    }
+  ],
+  "lost_result": {
+    "final": "UNKNOWN",
+    "reason": "status_3",
+    "selected_recovery_path": "",
+    "r1_code": "R1_CURRENT_REJECT",
+    "r2_code": "R2_LAST_GOOD_REJECT",
+    "r3_code": "R3_VISUAL_UNKNOWN",
+    "R1_SKIP_REASON": null,
+    "laser_score": null,
+    "seed_count": 0,
+    "sequential_fallback_seed_count": 0,
+    "snapshot": {
+      "task_type": "navigate",
+      "nav_goal": {
+        "x": -1.3583865130569688,
+        "y": -1.1273304915937539,
+        "yaw": 0.0,
+        "frame": "map"
+      },
+      "follow_was_on": false,
+      "recharge_was_on": false,
+      "patrol_was_on": false,
+      "map_name": "vp",
+      "reason": "status_3",
+      "stamp": 1788936952.8308666
+    },
+    "stages": [
+      {
+        "code": "R1_CURRENT_REJECT",
+        "t_mono": 16783.040703406,
+        "stage": "R1",
+        "reason": "laser_gate",
+        "laser_score": 0.07808525188249525,
+        "valid_beams": 211,
+        "coverage_ok": false,
+        "seeded": false,
+        "pose": {
+          "x": 2.695601211912192,
+          "y": 0.4486496287733166,
+          "yaw": -0.09047762898701694
+        }
+      },
+      {
+        "code": "R2_LAST_GOOD_REJECT",
+        "t_mono": 16783.055395867,
+        "stage": "R2",
+        "reason": "laser_gate",
+        "laser_score": 0.2117830272106083,
+        "valid_beams": 226,
+        "coverage_ok": false,
+        "seeded": false,
+        "pose": {
+          "x": -2.258577839306482,
+          "y": -1.1363257889618574,
+          "yaw": 0.0846274539484595
+        },
+        "write_laser": 0.7547697111388784
+      },
+      {
+        "code": "R3_VISUAL_UNKNOWN",
+        "t_mono": 16806.73551384,
+        "stage": "R3",
+        "reason": "no_survivor",
+        "laser_score": 0.0,
+        "result_code": 1,
+        "seeded": false,
+        "reloc": {
+          "ok": false,
+          "result_code": 1,
+          "laser_score": 0.0,
+          "amcl_convergence_sec": 0.0,
+          "diagnostics_json": "{\"decision\": \"UNKNOWN\", \"reason\": \"no_survivor\", \"pipeline_mode\": \"visual_laser\", \"accept_policy\": \"pose_cluster_v1\", \"query_features\": 121, \"topk\": [{\"id\": \"kf_000028\", \"retrieval_rank\": 1, \"retrieval_score\": 0.1652892561983471, \"ratio_matches\": 20, \"visual_region\": \"room_wp5\", \"seed\": [-8.05968548069111, 3.094141038900275, 1.4986464876318495], \"refined\": [-7.409685480691117, 1.894141038900275, 1.3066602699124739], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.22082146462867097, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 209, \"matched_ratio\": 0.5023923444976076, \"mean_dist\": 0.5604601323105501, \"p90_dist\": 1.520417761802675, \"dx\": 0.6499999999999932, \"dy\": -1.2, \"dyaw\": -0.19198621771937563, \"refine_runtime\": 2.1793344159996195}, {\"id\": \"kf_000013\", \"retrieval_rank\": 2, \"retrieval_score\": 0.06611570247933884, \"ratio_matches\": 8, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.822721383127579, -1.0608652474552533, 2.4444921074444506], \"refined\": [-5.022721383127579, 0.13913475254474736, 2.863371127923087], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.26328205556212586, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.4484304932735426, \"mean_dist\": 0.4128810160964594, \"p90_dist\": 0.908302760124207, \"dx\": -1.2000000000000002, \"dy\": 1.2000000000000006, \"dyaw\": 0.4188790204786365, \"refine_runtime\": 2.2660509380002622}, {\"id\": \"kf_000015\", \"retrieval_rank\": 3, \"retrieval_score\": 0.06611570247933884, \"ratio_matches\": 8, \"visual_region\": \"corridor_wp2\", \"seed\": [-3.803237755209292, -1.1023196490348977, -2.7323655211875164], \"refined\": [-5.003237755209292, -0.10231964903489675, -3.0988846641063272], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.21555432975018982, \"laser_local_grid_margin\": 0.008224026221610864, \"valid_beams\": 224, \"matched_ratio\": 0.4107142857142857, \"mean_dist\": 0.4751720666951899, \"p90_dist\": 1.0825183272361758, \"dx\": -1.1999999999999997, \"dy\": 1.0000000000000009, \"dyaw\": -0.3665191429188108, \"refine_runtime\": 2.1037799390032887}, {\"id\": \"kf_000007\", \"retrieval_rank\": 4, \"retrieval_score\": 0.05785123966942149, \"ratio_matches\": 7, \"visual_region\": \"doorway_wp9\", \"seed\": [0.14492601607481603, -0.5379024281484402, 2.9115548231341846], \"refined\": [-0.855073983925184, 0.6620975718515603, 2.68466202037492], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.31786570326020525, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 206, \"matched_ratio\": 0.5339805825242718, \"mean_dist\": 0.4047242284399792, \"p90_dist\": 0.9518413543701172, \"dx\": -1.0, \"dy\": 1.2000000000000006, \"dyaw\": -0.2268928027592647, \"refine_runtime\": 2.0340956809995987}, {\"id\": \"kf_000010\", \"retrieval_rank\": 5, \"retrieval_score\": 0.05785123966942149, \"ratio_matches\": 7, \"visual_region\": \"doorway_wp9\", \"seed\": [-0.1564229152600345, -0.9351478359818606, -2.7246636264902917], \"refined\": [-0.25642291526003463, -1.7851478359818602, -2.113798388292281], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.12563825420748911, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 207, \"matched_ratio\": 0.41545893719806765, \"mean_dist\": 0.697591643942439, \"p90_dist\": 1.8275569200515747, \"dx\": -0.10000000000000014, \"dy\": -0.8499999999999996, \"dyaw\": 0.6108652381980106, \"refine_runtime\": 1.9587202920010895}, {\"id\": \"kf_000002\", \"retrieval_rank\": 6, \"retrieval_score\": 0.049586776859504134, \"ratio_matches\": 6, \"visual_region\": \"charger_room\", \"seed\": [1.6707164268315808, -0.21007775689309333, 1.9847876484446523], \"refined\": [2.8207164268315807, 0.8899222431069069, 2.4734798390030623], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.3203413304764777, \"laser_local_grid_margin\": 0.0003389003394171364, \"valid_beams\": 200, \"matched_ratio\": 0.495, \"mean_dist\": 0.3528457970172167, \"p90_dist\": 0.7042415618896484, \"dx\": 1.15, \"dy\": 1.1000000000000003, \"dyaw\": 0.48869219055841007, \"refine_runtime\": 2.015728135997051}, {\"id\": \"kf_000016\", \"retrieval_rank\": 7, \"retrieval_score\": 0.04132231404958678, \"ratio_matches\": 5, \"visual_region\": \"corridor_wp2\", \"seed\": [-4.252729600513347, -1.2766186710384289, -3.0868231676673523], \"refined\": [-5.302729600513348, -0.5766186710384278, 2.9171094591931404], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.2121151684517631, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 223, \"matched_ratio\": 0.4260089686098655, \"mean_dist\": 0.5020875519500719, \"p90_dist\": 1.0857474088668824, \"dx\": -1.0500000000000007, \"dy\": 0.7000000000000011, \"dyaw\": -0.27925268031909334, \"refine_runtime\": 2.108034871002019}, {\"id\": \"kf_000020\", \"retrieval_rank\": 8, \"retrieval_score\": 0.04132231404958678, \"ratio_matches\": 5, \"visual_region\": \"similar_corridor_wp3\", \"seed\": [-9.152724732358584, 0.9369008880389582, 2.669875402783762], \"refined\": [-10.352724732358583, 2.1369008880389586, 2.757141865383476], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.19106741457338686, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 225, \"matched_ratio\": 0.4266666666666667, \"mean_dist\": 0.5521857470936246, \"p90_dist\": 1.4273700475692748, \"dx\": -1.1999999999999993, \"dy\": 1.2000000000000004, \"dyaw\": 0.08726646259971371, \"refine_runtime\": 2.0794523420008773}, {\"id\": \"kf_000024\", \"retrieval_rank\": 9, \"retrieval_score\": 0.04132231404958678, \"ratio_matches\": 5, \"visual_region\": \"similar_corridor_wp3\", \"seed\": [-9.528365337070479, 0.6177585124297112, -2.4616307319359367], \"refined\": [-10.728365337070478, 1.7177585124297121, -2.6012570720954846], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.15012742103249938, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 225, \"matched_ratio\": 0.3333333333333333, \"mean_dist\": 0.5496177369025018, \"p90_dist\": 1.2205746889114377, \"dx\": -1.1999999999999993, \"dy\": 1.100000000000001, \"dyaw\": -0.1396263401595479, \"refine_runtime\": 2.1070746810000855}, {\"id\": \"kf_000034\", \"retrieval_rank\": 10, \"retrieval_score\": 0.04132231404958678, \"ratio_matches\": 5, \"visual_region\": \"open_wp6\", \"seed\": [-0.9951951945390825, 9.4686814478489, 0.45368198247813973], \"refined\": [0.1548048054609182, 10.618681447848898, 0.7678412478371189], \"laser_ok\": false, \"laser_reason\": \"laser_score_gate\", \"laser_score\": 0.12270923855224597, \"laser_local_grid_margin\": 0.0, \"valid_beams\": 196, \"matched_ratio\": 0.37755102040816324, \"mean_dist\": 0.674986341131889, \"p90_dist\": 1.5044708847999573, \"dx\": 1.1500000000000006, \"dy\": 1.1499999999999986, \"dyaw\": 0.31415926535897915, \"refine_runtime\": 2.334402542001044}], \"cluster_accept\": {\"status\": \"UNKNOWN\", \"reason\": \"no_survivor\", \"cluster_margin\": 0.0, \"cluster_count\": 0, \"best_cluster\": null, \"second_cluster\": null, \"survivor_count\": 0, \"rejected_count\": 10}, \"note\": \"Visual proposes; Laser absolute gates + SE(2) clusters decide.\"}"
+        },
+        "ready": false
+      }
+    ],
+    "resume_policy": {
+      "nav": "forbidden",
+      "follow": "forbidden",
+      "recharge": "forbidden",
+      "detail": "NEED_OPERATOR"
+    },
+    "timings": {
+      "lost_detect_mono": 16782.030753874,
+      "sensors_ready_mono": 16782.41532516,
+      "r1_done_mono": 16783.051441068,
+      "r2_done_mono": 16783.05653631,
+      "r3_done_mono": 16806.736844453
+    },
+    "total_sec": 24.707045518000086,
+    "session_id": 2,
+    "false_recovery_note": "cascade R1\u2192R2\u2192R3; laser gate before READY; no spin+reinit"
+  },
+  "snapshot": {
+    "task_type": "navigate",
+    "nav_goal": {
+      "x": -1.3583865130569688,
+      "y": -1.1273304915937539,
+      "yaw": 0.0,
+      "frame": "map"
+    },
+    "follow_was_on": false,
+    "recharge_was_on": false,
+    "patrol_was_on": false,
+    "map_name": "vp",
+    "reason": "status_3",
+    "stamp": 1788936952.8308666
+  },
+  "loc": "NEED_OPERATOR",
+  "blocked": true,
+  "saw_lost": true,
+  "saw_need_operator": true,
+  "initialpose_count": 1,
+  "initialposes": [
+    {
+      "t": 1788936950.9412498,
+      "x": 2.4,
+      "y": 0.8,
+      "yaw": 0.0,
+      "frame": "map"
+    }
+  ],
+  "owners": {
+    "owners": [
+      "lost",
+      "none"
+    ],
+    "legacy_seen": false,
+    "boot_and_lost": false
+  },
+  "cmd_motion_samples": [
+    {
+      "t": 1788936952.89728,
+      "lin": 0.0,
+      "ang": 0.4
+    },
+    {
+      "t": 1788936952.9512942,
+      "lin": 0.0,
+      "ang": 0.4
+    },
+    {
+      "t": 1788936952.9940197,
+      "lin": 0.0,
+      "ang": 0.4
+    },
+    {
+      "t": 1788936953.045555,
+      "lin": 0.0,
+      "ang": 0.4
+    },
+    {
+      "t": 1788936953.0974662,
+      "lin": 0.0,
+      "ang": 0.325
+    },
+    {
+      "t": 1788936953.1495972,
+      "lin": 0.0,
+      "ang": 0.25
+    },
+    {
+      "t": 1788936953.1923218,
+      "lin": 0.0,
+      "ang": 0.175
+    },
+    {
+      "t": 1788936953.2429311,
+      "lin": 0.0,
+      "ang": 0.09999999999999999
+    }
+  ],
+  "replan_count": 0,
+  "true_pose": {
+    "x": -1.9583865130569686,
+    "y": -1.1273304915937539,
+    "yaw": -0.00777652057735547,
+    "cov_xy": 0.10841683343313627,
+    "cov_yaw": 0.007519046700550061,
+    "t": 1788936949.0478842
+  },
+  "amcl_end": {
+    "x": 2.4991551897473108,
+    "y": 0.7505289429331456,
+    "yaw": -0.05692139311130902,
+    "cov_xy": 0.3532199894168162,
+    "cov_yaw": 0.14736933969417204,
+    "t": 1788936953.3644798
+  },
+  "r1_seeded": false,
+  "pass": true
+}

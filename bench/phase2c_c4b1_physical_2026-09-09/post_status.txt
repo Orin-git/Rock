@@ -1,0 +1,14 @@
+timestamp 2026-09-09T01:47:44+00:00
+loadavg 27.26 17.27 13.01 2/1155 6554
+   3006 27.1  3.7 global_reloc_po /usr/bin/python3 /ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/xw_global_reloc/share/xw_global_reloc/config/reloc_poc.yaml --params-file /tmp/launch_params_0r7xjvvb
+   3008 14.5  0.8 last_good_pose_ /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/last_good_pose_writer --ros-args -r __node:=xw_last_good_pose_writer --params-file /tmp/launch_params_r2fae_da
+   3010  3.3  0.8 charger_prior_n /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/charger_prior_node --ros-args -r __node:=xw_charger_prior --params-file /tmp/launch_params_1n78tkks
+   3012 28.4  2.0 boot_localizer  /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer --ros-args -r __node:=xw_boot_localizer --params-file /tmp/launch_params_qtiibetg
+   3014 27.8  0.8 lost_recovery   /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/lost_recovery --ros-args -r __node:=xw_lost_recovery --params-file /tmp/launch_params_suupt4t_
+---
+WARNING: topic [/scan] does not appear to be published yet
+Failed to create subscription: rcl node's context is invalid, at ./src/rcl/node.c:428
+    'phase2c_localization_enabled':
+        Phase2C production master switch. true=BOOT+LOST+no blind seed; false=legacy blind seed rollback (no rebuild)
+        (default: 'true')
+

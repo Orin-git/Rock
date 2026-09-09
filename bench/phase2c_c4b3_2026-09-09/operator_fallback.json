@@ -1,0 +1,132 @@
+{
+  "snap0": {
+    "t": 1788931468.7925792,
+    "boot": {},
+    "loc": "",
+    "blocked": true,
+    "status": null,
+    "amcl": {
+      "x": -2.8139105978505006,
+      "y": -1.2623247900596883,
+      "yaw": -0.0196402407316266,
+      "cov_xy": 0.038217881659998294,
+      "cov_yaw": 0.008013299255771768,
+      "t": 1788931468.7125924
+    },
+    "power": {},
+    "owner": null,
+    "nav_en": true,
+    "follow_en": false,
+    "recharge_en": null,
+    "recovery": false,
+    "initialpose_count": 0
+  },
+  "pose": {
+    "x": -2.8139105978505006,
+    "y": -1.2623247900596883,
+    "yaw": -0.0196402407316266
+  },
+  "web": {
+    "http": 200,
+    "body": {
+      "ok": true,
+      "topic": "/initialpose",
+      "initialpose_owner": "operator",
+      "x": -2.8139105978505006,
+      "y": -1.2623247900596883,
+      "yaw": -0.0196402407316266,
+      "frame_id": "map"
+    }
+  },
+  "saw_verifying": false,
+  "saw_owner_operator": true,
+  "snap_end": {
+    "t": 1788931499.7905624,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P3",
+      "busy": false,
+      "session_id": 2,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_map_mono": 10477.031885236,
+        "first_map_wall": 1788930647.8312402,
+        "first_scan_mono": 10522.190760322,
+        "first_scan_wall": 1788930692.990106,
+        "amcl_lifecycle_active_mono": 10533.225436001,
+        "amcl_lifecycle_active_wall": 1788930704.4094198,
+        "pre_ok_mono": 10650.664255937,
+        "pre_ok_wall": 1788930821.4635997,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 10533.619444257,
+        "p1_start_wall": 1788930704.4187925,
+        "p2_start_mono": 10533.662739066,
+        "p2_start_wall": 1788930704.4620845,
+        "initialpose_publish_mono": 10650.706286634,
+        "initialpose_publish_wall": 1788930821.5056386,
+        "initialpose_source": "reloc_p3",
+        "first_map_odom_mono": 10534.369702793,
+        "first_map_odom_wall": 1788930705.1690469,
+        "ready_mono": 10691.04142066,
+        "ready_wall": 1788930861.8407702,
+        "p3_start_mono": 10662.726136811,
+        "p3_start_wall": 1788930833.5254817
+      }
+    },
+    "loc": "NEED_OPERATOR",
+    "blocked": false,
+    "status": 0,
+    "amcl": {
+      "x": -2.8183093859385933,
+      "y": -1.2636751612864845,
+      "yaw": -0.02171019980632948,
+      "cov_xy": 0.261816454887531,
+      "cov_yaw": 0.06590208321949749,
+      "t": 1788931469.7895813
+    },
+    "power": {
+      "charging": false,
+      "docked": false,
+      "battery_percent": 80.0,
+      "current": 0.0
+    },
+    "owner": {
+      "t": 1788931469.8776796,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788931469.524448,
+      "note": "web_initialpose"
+    },
+    "nav_en": true,
+    "follow_en": false,
+    "recharge_en": false,
+    "recovery": false,
+    "initialpose_count": 1
+  },
+  "owners_tail": [
+    {
+      "t": 1788931469.3411748,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788930861.8426244,
+      "note": "boot_READY"
+    },
+    {
+      "t": 1788931469.5617826,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788931198.8164017,
+      "note": "lost_UNKNOWN"
+    },
+    {
+      "t": 1788931469.8776796,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788931469.524448,
+      "note": "web_initialpose"
+    }
+  ],
+  "pass": false
+}

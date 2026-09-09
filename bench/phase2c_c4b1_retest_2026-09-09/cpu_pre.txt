@@ -1,0 +1,6 @@
+   3006 23.4  2.6 global_reloc_po /usr/bin/python3 /ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/xw_global_reloc/share/xw_global_reloc/config/reloc_poc.yaml --params-file /tmp/launch_params_0r7xjvvb
+   3008 14.6  0.8 last_good_pose_ /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/last_good_pose_writer --ros-args -r __node:=xw_last_good_pose_writer --params-file /tmp/launch_params_r2fae_da
+   3010  3.1  0.8 charger_prior_n /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/charger_prior_node --ros-args -r __node:=xw_charger_prior --params-file /tmp/launch_params_1n78tkks
+   3012 28.5  2.0 boot_localizer  /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer --ros-args -r __node:=xw_boot_localizer --params-file /tmp/launch_params_qtiibetg
+   3014 28.2  0.8 lost_recovery   /usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/lost_recovery --ros-args -r __node:=xw_lost_recovery --params-file /tmp/launch_params_suupt4t_
+ 01:57:22 up 56 min,  0 users,  load average: 7.04, 11.99, 12.70

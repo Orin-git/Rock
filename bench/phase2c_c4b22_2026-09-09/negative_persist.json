@@ -1,0 +1,38 @@
+{
+  "false_pose": {
+    "x": 0.3875452116750586,
+    "y": -0.3611611966539977,
+    "yaw": 0.013726291805442839
+  },
+  "false_laser": {
+    "ok": false,
+    "implemented": true,
+    "status": "reject",
+    "reason": "laser_gate",
+    "laser_score": 0.012846899276156286,
+    "matched_ratio": 0.13131313131313133,
+    "valid_beams": 198,
+    "mean_dist": 0.9021659208969637,
+    "runtime_sec": 0.00045384400073089637,
+    "min_laser_score": 0.38,
+    "pose": {
+      "x": 0.3875452116750586,
+      "y": -0.3611611966539977,
+      "yaw": 0.013726291805442839
+    },
+    "note": "SOFT_PRIOR_VERIFY \u2014 proposal only until AMCL READY window"
+  },
+  "would_overwrite": false,
+  "kept_laser_verified": true,
+  "kept_pose": {
+    "x": -3.8268258578673913,
+    "y": -1.2216260743933256,
+    "yaw": -3.0183986823505125
+  },
+  "file_unchanged_by_false_pose": true,
+  "write_pose_live_score": 0.6511510153123552,
+  "window_score": 0.6511510153123552,
+  "window_ok": true,
+  "threshold": 0.38,
+  "pass": true
+}

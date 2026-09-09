@@ -1,0 +1,5 @@
+C4B3.3 Test 1 setup.
+Need READY at physical A, current AMCL = A, laser_verified last_good = A.
+Do not send /initialpose unless the robot is already NEED_OPERATOR and the Web pose is the true A.
+Stop the robot. Leave it still until this file disappears or PLACE_A_CONFIRMED is created.
+Alignment gate: XY <= 0.45 m and last_good.laser_verified=true.

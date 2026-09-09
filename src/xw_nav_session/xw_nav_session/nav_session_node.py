@@ -53,8 +53,10 @@ class NavSessionNode(Node):
         self.declare_parameter('nav2_params', '')
         self.declare_parameter('nav2_launch_pkg', 'xw_nav_session')
         self.declare_parameter('use_nav2', True)
-        # Phase2C-C2: when true, skip blind charger /initialpose seed so boot_localizer
-        # owns P1→P2→P3. Default false — production behavior unchanged.
+        # Phase2C-C4B production master switch. When true: skip legacy blind
+        # charger /initialpose seed so BOOT/LOST own automatic seeding.
+        self.declare_parameter('phase2c_localization_enabled', False)
+        # Legacy C2 isolation flag (still honored). Prefer master switch in prod.
         self.declare_parameter('phase2c_disable_blind_seed', False)
 
         self._cb = ReentrantCallbackGroup()
@@ -130,6 +132,12 @@ class NavSessionNode(Node):
         )
 
         self.get_logger().info('nav session ready')
+
+    def _phase2c_blind_seed_disabled(self) -> bool:
+        """Production Phase2C ON → never blind-seed /initialpose."""
+        return bool(self.get_parameter('phase2c_localization_enabled').value) or bool(
+            self.get_parameter('phase2c_disable_blind_seed').value
+        )
 
     def _params_file(self) -> str:
         configured = str(self.get_parameter('nav2_params').value or '').strip()
@@ -300,8 +308,8 @@ class NavSessionNode(Node):
         # Seed /initialpose immediately (and once more after 1.5 s): planner and
         # global_costmap activation block until map→base TF exists, which AMCL only
         # publishes once it has received /initialpose.
-        # Phase2C-C2: optional disable for BOOT cascade isolation (default keeps seed).
-        if map_name and not bool(self.get_parameter('phase2c_disable_blind_seed').value):
+        # Phase2C: master switch / disable flag skips blind charger seed (kept for rollback).
+        if map_name and not self._phase2c_blind_seed_disabled():
             try:
                 self._seed_initial_pose(map_name)
             except Exception:  # noqa: BLE001
@@ -311,9 +319,9 @@ class NavSessionNode(Node):
                 self._seed_initial_pose(map_name)
             except Exception:  # noqa: BLE001
                 pass
-        elif map_name and bool(self.get_parameter('phase2c_disable_blind_seed').value):
+        elif map_name and self._phase2c_blind_seed_disabled():
             self.get_logger().warn(
-                'phase2c_disable_blind_seed=true — skipping blind charger seed '
+                'phase2c_localization_enabled — skipping legacy blind charger seed '
                 '(BOOT cascade / operator must provide /initialpose)'
             )
         if not self._ensure_nav2_active(deadline_sec=120.0, map_name=map_name):
@@ -323,7 +331,14 @@ class NavSessionNode(Node):
         return True
 
     def _seed_initial_pose(self, map_name: str) -> None:
-        """Publish /initialpose from charger waypoint (or first WP) so AMCL can localize."""
+        """Publish /initialpose from charger waypoint (or first WP) — LEGACY ONLY.
+
+        Kept for rollback when phase2c_localization_enabled=false. Never call
+        when Phase2C production path is ON (gated by _phase2c_blind_seed_disabled).
+        """
+        if self._phase2c_blind_seed_disabled():
+            self.get_logger().warn('refusing blind seed while phase2c_localization_enabled')
+            return
         x = 0.0
         y = 0.0
         yaw = 0.0
@@ -451,7 +466,7 @@ class NavSessionNode(Node):
             # consumes an initial pose). Once the stack is active we stop
             # seeding for good so a manual /initialpose is never clobbered.
             if not nav_ok and name and time.monotonic() - last_seed >= 2.0:
-                if not bool(self.get_parameter('phase2c_disable_blind_seed').value):
+                if not self._phase2c_blind_seed_disabled():
                     self._seed_initial_pose(name)
                     last_seed = time.monotonic()
                     seeded = True
@@ -486,7 +501,7 @@ class NavSessionNode(Node):
                 time.sleep(0.5)
                 self._nav2_manage(ManageLifecycleNodes.Request.STARTUP, timeout_sec=75.0)
                 # Re-seed after STARTUP — AMCL may have been reset.
-                if name and not bool(self.get_parameter('phase2c_disable_blind_seed').value):
+                if name and not self._phase2c_blind_seed_disabled():
                     time.sleep(0.5)
                     self._seed_initial_pose(name)
                     seeded = True

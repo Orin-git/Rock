@@ -1,0 +1,131 @@
+{
+  "snap0": {
+    "boot": null,
+    "path": null,
+    "busy": null,
+    "sid": null,
+    "loc": "",
+    "blocked": null,
+    "loc_status": 0,
+    "amcl": {
+      "x": 0.3875452116750586,
+      "y": -0.3611611966539977,
+      "yaw": 0.013726291805442839,
+      "cov_xy": 0.2386306175656969,
+      "cov_yaw": 0.07064603731430559
+    },
+    "owner": {
+      "t": 1788923919.1441946,
+      "owner": "operator",
+      "session_id": 0,
+      "stamp": 1788923761.8713043,
+      "note": "web_initialpose"
+    }
+  },
+  "file_before": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788923907.7027273,
+    "x": 0.3875452116750586,
+    "y": -0.3611611966539977,
+    "yaw": 0.013726291805442839,
+    "quality": 0.6006095992182747
+  },
+  "file_written": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788923907.7027273,
+    "x": 0.3875452116750586,
+    "y": -0.3611611966539977,
+    "yaw": 0.013726291805442839,
+    "covariance": [
+      0.2386306175656969,
+      0.2386306175656969,
+      0.07064603731430559
+    ],
+    "source": "amcl",
+    "quality": 0.6006095992182747,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose"
+  },
+  "amcl_at_write": {
+    "x": 0.3875452116750586,
+    "y": -0.3611611966539977,
+    "yaw": 0.013726291805442839,
+    "cov_xy": 0.2386306175656969,
+    "cov_yaw": 0.07064603731430559
+  },
+  "pose_delta_m": 0.0,
+  "writer_ok": true,
+  "nav_start": {
+    "ok": true,
+    "message": "NAVIGATING"
+  },
+  "snap_end": {
+    "boot": "UNKNOWN",
+    "path": "NONE",
+    "busy": false,
+    "sid": 4,
+    "loc": "NEED_OPERATOR",
+    "blocked": true,
+    "loc_status": 1,
+    "amcl": {
+      "x": 0.3875452116750586,
+      "y": -0.3611611966539977,
+      "yaw": 0.013726291805442839,
+      "cov_xy": 0.2386306175656969,
+      "cov_yaw": 0.07064603731430559
+    },
+    "owner": {
+      "t": 1788923928.68469,
+      "owner": "none",
+      "session_id": 4,
+      "stamp": 1788923928.6829197,
+      "note": "boot_UNKNOWN"
+    }
+  },
+  "states": [
+    {
+      "t": 1788923921.7521935,
+      "state": "READY",
+      "busy": false,
+      "sid": 3,
+      "path": "OPERATOR"
+    },
+    {
+      "t": 1788923922.9058123,
+      "state": "PRE_LOCALIZATION_READY",
+      "busy": true,
+      "sid": 4,
+      "path": ""
+    },
+    {
+      "t": 1788923923.2234824,
+      "state": "TRY_CHARGER",
+      "busy": true,
+      "sid": 4,
+      "path": ""
+    },
+    {
+      "t": 1788923923.237487,
+      "state": "TRY_LAST_GOOD",
+      "busy": true,
+      "sid": 4,
+      "path": ""
+    },
+    {
+      "t": 1788923923.2622557,
+      "state": "TRY_VISUAL_LASER",
+      "busy": true,
+      "sid": 4,
+      "path": ""
+    },
+    {
+      "t": 1788923928.6798728,
+      "state": "UNKNOWN",
+      "busy": true,
+      "sid": 4,
+      "path": ""
+    }
+  ],
+  "pass": false
+}
