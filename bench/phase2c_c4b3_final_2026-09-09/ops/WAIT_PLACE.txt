@@ -1,0 +1,23 @@
+Phase2C-C4B3 FINAL SMOKE — need a physical placement before the next trial.
+
+Test 1 Cold NAV already ran after a clean production restart.
+Result: FAIL / SAFE stop
+  P1 skip charger_prior_unavailable
+  P2 laser_reject 0.157 (threshold 0.38) no seed
+  P3 UNKNOWN twice, no /initialpose
+  final NEED_OPERATOR, goals_blocked=true
+  legacy owner: not seen
+  last_good not overwritten
+
+Robot is not on the charger. Live scan does not match verified last_good:
+  x=1.908  y=-0.343  yaw=-3.123  write laser=0.624
+
+Do one of these, then touch the marker. Do NOT send /initialpose.
+
+A) Put the robot back at that last_good pose, stop it, then:
+   touch /home/radxa/ros2_ws/bench/phase2c_c4b3_final_2026-09-09/ops/PLACE_AT_LAST_GOOD
+
+B) Put the robot on the real charger with charging evidence, then:
+   touch /home/radxa/ros2_ws/bench/phase2c_c4b3_final_2026-09-09/ops/PLACE_ON_CHARGER
+
+No parameter changes. No Phase2D.

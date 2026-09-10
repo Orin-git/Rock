@@ -1,0 +1,85 @@
+{
+  "window_sec": 40.0,
+  "clk_tck": 100.0,
+  "samples": [
+    {
+      "pid": 4795,
+      "key": "global_reloc_poc",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_global_reloc/lib/xw_global_reloc/global_reloc_poc --ros-args -r __node:=xw_global_reloc_poc --params-file /ros2_ws/install/xw_global_reloc/shar",
+      "cpu_pct": 0.75
+    },
+    {
+      "pid": 4797,
+      "key": "last_good_pose_writer",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/last_good_pose_writer --ros-args -r __node:=xw_last_good_pose_writer --params-file /tmp/launch_params_t779_y00 ",
+      "cpu_pct": 1.02
+    },
+    {
+      "pid": 4799,
+      "key": "charger_prior",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/charger_prior_node --ros-args -r __node:=xw_charger_prior --params-file /tmp/launch_params_t0yuv4rc ",
+      "cpu_pct": 1.73
+    },
+    {
+      "pid": 4801,
+      "key": "boot_localizer",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/boot_localizer --ros-args -r __node:=xw_boot_localizer --params-file /tmp/launch_params_598yrb77 ",
+      "cpu_pct": 2.45
+    },
+    {
+      "pid": 4811,
+      "key": "lost_recovery",
+      "cmd": "/usr/bin/python3 /ros2_ws/install/xw_phase2c/lib/xw_phase2c/lost_recovery --ros-args -r __node:=xw_lost_recovery --params-file /tmp/launch_params_oxdpvqj5 ",
+      "cpu_pct": 3.75
+    }
+  ],
+  "by_key": {
+    "global_reloc_poc": 0.75,
+    "last_good_pose_writer": 1.02,
+    "charger_prior": 1.73,
+    "boot_localizer": 2.45,
+    "lost_recovery": 3.75
+  },
+  "snap": {
+    "t": 1788945619.6105468,
+    "boot": {
+      "state": "UNKNOWN",
+      "map_name": "vp",
+      "selected_path": "NONE",
+      "busy": false,
+      "session_id": 1,
+      "master": true,
+      "goals_latched": true,
+      "milestones": {
+        "first_map_mono": 553.832214728,
+        "first_map_wall": 1788945405.645601,
+        "first_scan_mono": 590.683349583,
+        "first_scan_wall": 1788945442.4967396,
+        "amcl_lifecycle_active_mono": 602.400908771,
+        "amcl_lifecycle_active_wall": 1788945454.2150996,
+        "pre_ok_mono": 602.401919415,
+        "pre_ok_wall": 1788945454.2153046,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 602.418826199,
+        "p1_start_wall": 1788945454.2322145,
+        "p2_start_mono": 602.43261909,
+        "p2_start_wall": 1788945454.2460046,
+        "p3_start_mono": 603.045177844,
+        "p3_start_wall": 1788945454.8585618
+      }
+    },
+    "loc": "NEED_OPERATOR",
+    "blocked": true,
+    "status": 1,
+    "amcl": null,
+    "owner": {
+      "t": 1788945578.2924833,
+      "owner": "none",
+      "session_id": 1,
+      "stamp": 1788945531.7151186,
+      "note": "boot_UNKNOWN"
+    },
+    "nav_en": true
+  },
+  "pass": true
+}

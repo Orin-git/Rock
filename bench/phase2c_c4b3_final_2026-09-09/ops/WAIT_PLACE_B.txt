@@ -1,0 +1,15 @@
+Phase2C-C4B3 FINAL SMOKE — next physical step is Test 3 Relocated.
+
+Point A is already laser_verified last_good. Leave it on disk.
+  x=0.448  y=-0.042  yaw=-0.218  write laser=0.529
+
+Carry the robot to a clearly different place B.
+Do NOT send /initialpose.
+Stop it, then:
+  touch /home/radxa/ros2_ws/bench/phase2c_c4b3_final_2026-09-09/ops/PLACE_B_DONE
+
+After that the smoke will start a new NAV session and expect:
+  old last_good REJECT
+  P3 Visual+Laser
+  READY or SAFE_UNKNOWN
+  no false accept of pose A

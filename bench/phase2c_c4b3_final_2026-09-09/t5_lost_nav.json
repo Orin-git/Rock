@@ -1,0 +1,292 @@
+{
+  "snap0": {
+    "t": 1788947148.4638023,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 2,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_scan_mono": 452.86875077,
+        "first_scan_wall": 1788946958.729146,
+        "first_map_mono": 463.635080155,
+        "first_map_wall": 1788946969.495474,
+        "amcl_lifecycle_active_mono": 463.734132361,
+        "amcl_lifecycle_active_wall": 1788946969.5952175,
+        "pre_ok_mono": 496.572221902,
+        "pre_ok_wall": 1788947002.4326112,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 463.747554577,
+        "p1_start_wall": 1788946969.6079457,
+        "p2_start_mono": 463.757205167,
+        "p2_start_wall": 1788946969.6175976,
+        "initialpose_publish_mono": 496.631275403,
+        "initialpose_publish_wall": 1788947002.4916682,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 464.746130322,
+        "first_map_odom_wall": 1788946970.6065197,
+        "ready_mono": 499.559233261,
+        "ready_wall": 1788947005.4196267
+      }
+    },
+    "loc": "",
+    "blocked": null,
+    "status": 0,
+    "amcl": {
+      "x": 0.4477039380152502,
+      "y": -0.04167165751135166,
+      "yaw": -0.21832542219970583,
+      "cov_xy": 0.05885827325138702,
+      "cov_yaw": 0.0008489399985479775,
+      "t": 1788947147.2657883
+    },
+    "owner": {
+      "t": 1788947147.3715646,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788947005.4229581,
+      "note": "boot_READY"
+    },
+    "nav_en": null
+  },
+  "goal": {
+    "x": 1.0477039380152502,
+    "y": -0.04167165751135166,
+    "yaw": -0.21832542219970583
+  },
+  "lost_result": {
+    "final": "READY",
+    "reason": "status_3",
+    "selected_recovery_path": "R1",
+    "r1_code": "R1_CURRENT_ACCEPT",
+    "r2_code": "",
+    "r3_code": "",
+    "R1_SKIP_REASON": null,
+    "laser_score": 0.5175779851371313,
+    "seed_count": 1,
+    "sequential_fallback_seed_count": 0,
+    "snapshot": {
+      "task_type": "navigate",
+      "nav_goal": {
+        "x": 1.0477039380152502,
+        "y": -0.04167165751135166,
+        "yaw": 0.0,
+        "frame": "map"
+      },
+      "follow_was_on": false,
+      "recharge_was_on": false,
+      "patrol_was_on": false,
+      "map_name": "vp",
+      "reason": "status_3",
+      "stamp": 1788947154.2398577
+    },
+    "stages": [
+      {
+        "code": "R1_CURRENT_ACCEPT",
+        "t_mono": 656.005408742,
+        "stage": "R1",
+        "reason": "laser_accept",
+        "laser_score": 0.5175779851371313,
+        "valid_beams": 216,
+        "coverage_ok": true,
+        "seeded": true,
+        "handoff": "READY",
+        "pose": {
+          "x": 0.8002656685764933,
+          "y": -0.05968467555793162,
+          "yaw": 0.09976836781544444
+        },
+        "amcl": {
+          "phase": "POST_SEED_AMCL_READY",
+          "cov_xy": 0.11244016775689156,
+          "cov_yaw": 0.0005270008226172648,
+          "tf_ok": true,
+          "loc_status": 0,
+          "near_candidate": true,
+          "latched_pose_used": false,
+          "far_latched_rejected": 0,
+          "stable_for_sec": 2.588345540999967,
+          "gates_ok": true,
+          "amcl_convergence_sec": 7.393552891000013,
+          "ready": true,
+          "laser_score": 0.5175779851371313,
+          "seed_count": 1
+        },
+        "ready": true
+      }
+    ],
+    "resume_policy": {
+      "nav": "replan_published",
+      "follow": "no_auto",
+      "recharge": "skip"
+    },
+    "timings": {
+      "lost_detect_mono": 648.378994215,
+      "sensors_ready_mono": 648.587660044,
+      "r1_done_mono": 656.007836343,
+      "replan_mono": 656.210203184
+    },
+    "total_sec": 7.831711230999986,
+    "session_id": 4,
+    "false_recovery_note": "cascade R1\u2192R2\u2192R3; laser gate before READY; no spin+reinit"
+  },
+  "saw_lost": true,
+  "loc_states": [
+    {
+      "t": 1788947154.251682,
+      "loc": "LOST",
+      "blocked": false
+    },
+    {
+      "t": 1788947154.2549613,
+      "loc": "LOST",
+      "blocked": true
+    },
+    {
+      "t": 1788947154.3002214,
+      "loc": "RECOVERING",
+      "blocked": true
+    },
+    {
+      "t": 1788947161.8737688,
+      "loc": "READY",
+      "blocked": true
+    },
+    {
+      "t": 1788947162.0821662,
+      "loc": "READY",
+      "blocked": false
+    }
+  ],
+  "initialpose_count": 1,
+  "initialposes": [
+    {
+      "t": 1788947154.4725525,
+      "x": 0.8002656685764933,
+      "y": -0.05968467555793162,
+      "yaw": 0.09976836781544444,
+      "frame": "map"
+    }
+  ],
+  "owners": {
+    "owners": [
+      "lost",
+      "none"
+    ],
+    "legacy_seen": false
+  },
+  "motion_count": 69,
+  "amcl_end": {
+    "x": 0.6841027873712829,
+    "y": -0.04087379581240036,
+    "yaw": 0.10771532678022888,
+    "cov_xy": 0.11244016775689156,
+    "cov_yaw": 0.0005270008226172648,
+    "t": 1788947161.5930567
+  },
+  "loc": "READY",
+  "blocked": false,
+  "nav_en": true,
+  "follow_en": false,
+  "recharge_en": false,
+  "snap_end": {
+    "t": 1788947163.3106143,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 2,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_scan_mono": 452.86875077,
+        "first_scan_wall": 1788946958.729146,
+        "first_map_mono": 463.635080155,
+        "first_map_wall": 1788946969.495474,
+        "amcl_lifecycle_active_mono": 463.734132361,
+        "amcl_lifecycle_active_wall": 1788946969.5952175,
+        "pre_ok_mono": 496.572221902,
+        "pre_ok_wall": 1788947002.4326112,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 463.747554577,
+        "p1_start_wall": 1788946969.6079457,
+        "p2_start_mono": 463.757205167,
+        "p2_start_wall": 1788946969.6175976,
+        "initialpose_publish_mono": 496.631275403,
+        "initialpose_publish_wall": 1788947002.4916682,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 464.746130322,
+        "first_map_odom_wall": 1788946970.6065197,
+        "ready_mono": 499.559233261,
+        "ready_wall": 1788947005.4196267
+      }
+    },
+    "loc": "READY",
+    "blocked": false,
+    "status": 0,
+    "amcl": {
+      "x": 0.6841027873712829,
+      "y": -0.04087379581240036,
+      "yaw": 0.10771532678022888,
+      "cov_xy": 0.11244016775689156,
+      "cov_yaw": 0.0005270008226172648,
+      "t": 1788947161.5930567
+    },
+    "owner": {
+      "t": 1788947162.0765057,
+      "owner": "none",
+      "session_id": 4,
+      "stamp": 1788947162.075504,
+      "note": "lost_READY"
+    },
+    "nav_en": true
+  },
+  "r1_laser": 0.5175779851371313,
+  "r2_laser": null,
+  "r3_laser": null,
+  "r1_seeded": true,
+  "r2_seeded": false,
+  "r3_seeded": false,
+  "r3_reason": null,
+  "selected_recovery_path": "R1",
+  "r1_code": "R1_CURRENT_ACCEPT",
+  "r2_code": "",
+  "r3_code": "",
+  "R1_SKIP_REASON": null,
+  "laser_score": 0.5175779851371313,
+  "seed_count": 1,
+  "sequential_fallback_seed_count": 0,
+  "final": "READY",
+  "reason": "status_3",
+  "total_sec": 7.831711230999986,
+  "timings": {
+    "lost_detect_mono": 648.378994215,
+    "sensors_ready_mono": 648.587660044,
+    "r1_done_mono": 656.007836343,
+    "replan_mono": 656.210203184
+  },
+  "resume_policy": {
+    "nav": "replan_published",
+    "follow": "no_auto",
+    "recharge": "skip"
+  },
+  "stages": [
+    {
+      "code": "R1_CURRENT_ACCEPT",
+      "stage": "R1",
+      "reason": "laser_accept",
+      "R1_SKIP_REASON": null,
+      "laser_score": 0.5175779851371313,
+      "coverage_ok": true,
+      "seeded": true,
+      "handoff": "READY",
+      "ready": true,
+      "valid_beams": 216
+    }
+  ],
+  "pass": true
+}

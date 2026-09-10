@@ -1,0 +1,377 @@
+{
+  "file_before": {
+    "map_name": "vp",
+    "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+    "timestamp": 1788946978.3056474,
+    "x": -0.1012143809848358,
+    "y": 0.07440630492736719,
+    "yaw": -2.9864020138555123,
+    "covariance": [
+      0.14310335928949178,
+      0.14310335928949178,
+      0.023458359537895677
+    ],
+    "source": "amcl",
+    "quality": 0.7907425935919767,
+    "laser_verified": true,
+    "laser_score_at_write": 0.5154731020063352,
+    "laser_matched_ratio": 0.7096774193548387,
+    "laser_valid_beams": 217,
+    "scan_stamp": 1788946977.7193518,
+    "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+    "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+  },
+  "snap0": {
+    "t": 1788946989.112304,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 1,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_scan_mono": 452.86875077,
+        "first_scan_wall": 1788946958.729146,
+        "first_map_mono": 463.635080155,
+        "first_map_wall": 1788946969.495474,
+        "amcl_lifecycle_active_mono": 463.734132361,
+        "amcl_lifecycle_active_wall": 1788946969.5952175,
+        "pre_ok_mono": 463.734962171,
+        "pre_ok_wall": 1788946969.595353,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 463.747554577,
+        "p1_start_wall": 1788946969.6079457,
+        "p2_start_mono": 463.757205167,
+        "p2_start_wall": 1788946969.6175976,
+        "initialpose_publish_mono": 464.428404619,
+        "initialpose_publish_wall": 1788946970.288799,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 464.746130322,
+        "first_map_odom_wall": 1788946970.6065197,
+        "ready_mono": 467.447231495,
+        "ready_wall": 1788946973.3076344
+      }
+    },
+    "loc": "",
+    "blocked": null,
+    "status": null,
+    "amcl": {
+      "x": -0.1012143809848358,
+      "y": 0.07440630492736719,
+      "yaw": -2.9864020138555123,
+      "cov_xy": 0.14310335928949178,
+      "cov_yaw": 0.023458359537895677,
+      "t": 1788946988.0945356
+    },
+    "owner": {
+      "t": 1788946986.5592034,
+      "owner": "none",
+      "session_id": 1,
+      "stamp": 1788946973.3095505,
+      "note": "boot_READY"
+    },
+    "nav_en": null
+  },
+  "label": "t2_unmoved_p2",
+  "started": {
+    "idle": {
+      "ok": true,
+      "message": "IDLE"
+    },
+    "nav": {
+      "ok": true,
+      "message": "NAVIGATING"
+    },
+    "last_good": {
+      "map_name": "vp",
+      "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+      "timestamp": 1788946990.0691288,
+      "x": -0.1012143809848358,
+      "y": 0.07440630492736719,
+      "yaw": -2.9864020138555123,
+      "covariance": [
+        0.14310335928949178,
+        0.14310335928949178,
+        0.023458359537895677
+      ],
+      "source": "amcl",
+      "quality": 0.7907425935919767,
+      "laser_verified": true,
+      "laser_score_at_write": 0.5255559242370516,
+      "laser_matched_ratio": 0.7136363636363636,
+      "laser_valid_beams": 220,
+      "scan_stamp": 1788946989.7002718,
+      "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose",
+      "path": "/ros2_ws/maps/vp/state/last_good_pose.yaml"
+    }
+  },
+  "selected_path": "P2",
+  "final": "READY",
+  "p1": {
+    "result": "skip",
+    "reason": "charger_prior_unavailable",
+    "score": null
+  },
+  "p2_result": "READY",
+  "p2_reason": "ok",
+  "p2_score": 0.5143812776775646,
+  "p2_amcl": {
+    "amcl_pose": [
+      -0.09886887677851065,
+      0.07381641177385746,
+      -2.986941735772662
+    ],
+    "cov_xy": 0.24705678047399046,
+    "cov_yaw": 0.14403611266305888,
+    "loc_status": 0,
+    "tf_ok": true,
+    "near_candidate": true,
+    "latched_pose_used": false,
+    "far_latched_rejected": 0,
+    "tf_ok_after_sec": 0.31610664199996563,
+    "status_0_after_sec": 0.21274544099998138,
+    "stable_for_sec": 2.5239988309999717,
+    "gates_ok": true,
+    "amcl_convergence_sec": 2.8401113069999724,
+    "ready": true
+  },
+  "p3_ran": false,
+  "p3": [],
+  "sequential_fallback_seed_count": 0,
+  "initialpose_count": 1,
+  "initialposes": [
+    {
+      "t": 1788947002.4922364,
+      "x": -0.1012143809848358,
+      "y": 0.07440630492736719,
+      "yaw": -2.9864020138555123,
+      "frame": "map"
+    }
+  ],
+  "initialpose_before_map_odom": true,
+  "map_odom_before_seed": false,
+  "milestones": {
+    "first_scan_mono": 452.86875077,
+    "first_scan_wall": 1788946958.729146,
+    "first_map_mono": 463.635080155,
+    "first_map_wall": 1788946969.495474,
+    "amcl_lifecycle_active_mono": 463.734132361,
+    "amcl_lifecycle_active_wall": 1788946969.5952175,
+    "pre_ok_mono": 496.572221902,
+    "pre_ok_wall": 1788947002.4326112,
+    "map_odom_before_seed": false,
+    "p1_start_mono": 463.747554577,
+    "p1_start_wall": 1788946969.6079457,
+    "p2_start_mono": 463.757205167,
+    "p2_start_wall": 1788946969.6175976,
+    "initialpose_publish_mono": 496.631275403,
+    "initialpose_publish_wall": 1788947002.4916682,
+    "initialpose_source": "P2",
+    "first_map_odom_mono": 464.746130322,
+    "first_map_odom_wall": 1788946970.6065197,
+    "ready_mono": 499.559233261,
+    "ready_wall": 1788947005.4196267
+  },
+  "cold_break": {
+    "map_odom_required_in_pre": false,
+    "initialpose_publish_mono": 496.631275403,
+    "first_map_odom_mono": 464.746130322
+  },
+  "owners": {
+    "owners": [
+      "boot",
+      "none"
+    ],
+    "legacy_seen": false
+  },
+  "snap_end": {
+    "t": 1788947006.6739705,
+    "boot": {
+      "state": "READY",
+      "map_name": "vp",
+      "selected_path": "P2",
+      "busy": false,
+      "session_id": 2,
+      "master": true,
+      "goals_latched": false,
+      "milestones": {
+        "first_scan_mono": 452.86875077,
+        "first_scan_wall": 1788946958.729146,
+        "first_map_mono": 463.635080155,
+        "first_map_wall": 1788946969.495474,
+        "amcl_lifecycle_active_mono": 463.734132361,
+        "amcl_lifecycle_active_wall": 1788946969.5952175,
+        "pre_ok_mono": 496.572221902,
+        "pre_ok_wall": 1788947002.4326112,
+        "map_odom_before_seed": false,
+        "p1_start_mono": 463.747554577,
+        "p1_start_wall": 1788946969.6079457,
+        "p2_start_mono": 463.757205167,
+        "p2_start_wall": 1788946969.6175976,
+        "initialpose_publish_mono": 496.631275403,
+        "initialpose_publish_wall": 1788947002.4916682,
+        "initialpose_source": "P2",
+        "first_map_odom_mono": 464.746130322,
+        "first_map_odom_wall": 1788946970.6065197,
+        "ready_mono": 499.559233261,
+        "ready_wall": 1788947005.4196267
+      }
+    },
+    "loc": "READY",
+    "blocked": false,
+    "status": 0,
+    "amcl": {
+      "x": -0.09886887677851065,
+      "y": 0.07381641177385746,
+      "yaw": -2.986941735772662,
+      "cov_xy": 0.24705678047399046,
+      "cov_yaw": 0.14403611266305888,
+      "t": 1788947002.5336573
+    },
+    "owner": {
+      "t": 1788947005.4239507,
+      "owner": "none",
+      "session_id": 2,
+      "stamp": 1788947005.4229581,
+      "note": "boot_READY"
+    },
+    "nav_en": true
+  },
+  "power": {
+    "charging": false,
+    "docked": false
+  },
+  "elapsed_sec": 14.86,
+  "legacy_blind_seed": false,
+  "boot_result": {
+    "final": "READY",
+    "selected_path": "P2",
+    "stages": [
+      {
+        "stage": "START",
+        "t_mono": 485.945583913,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "nav_enable",
+        "session_id": 2
+      },
+      {
+        "stage": "PRE_LOCALIZATION_READY",
+        "t_mono": 496.572230652,
+        "attempt": 1,
+        "result": "ok",
+        "reason": "ok",
+        "runtime_sec": 10.553904458000034,
+        "map_odom_required": false,
+        "map_odom_before_seed": false
+      },
+      {
+        "stage": "P1",
+        "t_mono": 496.582948747,
+        "attempt": 1,
+        "result": "skip",
+        "reason": "charger_prior_unavailable",
+        "runtime_sec": 0.009407900999974572
+      },
+      {
+        "stage": "P2_ACCEPTED",
+        "t_mono": 496.664428082,
+        "attempt": 1,
+        "result": "accepted",
+        "laser_score": 0.5143812776775646,
+        "reason": "laser_accept",
+        "score": 0.5143812776775646,
+        "candidate_pose": {
+          "x": -0.1012143809848358,
+          "y": 0.07440630492736719,
+          "yaw": -2.9864020138555123
+        }
+      },
+      {
+        "stage": "P2",
+        "t_mono": 499.518996436,
+        "attempt": 1,
+        "result": "READY",
+        "laser_score": 0.5143812776775646,
+        "reason": "ok",
+        "score": 0.5143812776775646,
+        "runtime_sec": 0.00044100900004195864,
+        "amcl": {
+          "amcl_pose": [
+            -0.09886887677851065,
+            0.07381641177385746,
+            -2.986941735772662
+          ],
+          "cov_xy": 0.24705678047399046,
+          "cov_yaw": 0.14403611266305888,
+          "loc_status": 0,
+          "tf_ok": true,
+          "near_candidate": true,
+          "latched_pose_used": false,
+          "far_latched_rejected": 0,
+          "tf_ok_after_sec": 0.31610664199996563,
+          "status_0_after_sec": 0.21274544099998138,
+          "stable_for_sec": 2.5239988309999717,
+          "gates_ok": true,
+          "amcl_convergence_sec": 2.8401113069999724,
+          "ready": true
+        },
+        "candidate_pose": {
+          "x": -0.1012143809848358,
+          "y": 0.07440630492736719,
+          "yaw": -2.9864020138555123
+        },
+        "amcl_pose": [
+          -0.09886887677851065,
+          0.07381641177385746,
+          -2.986941735772662
+        ],
+        "candidate_rejected": false,
+        "handoff_failed": false
+      }
+    ],
+    "total_boot_localization_sec": 13.618180483000003,
+    "amcl_pose": [
+      -0.09886887677851065,
+      0.07381641177385746,
+      -2.986941735772662
+    ],
+    "map_name": "vp",
+    "session_id": 2,
+    "note": "READY requires post-seed AMCL+cov+TF+status0+stable_window; never latch-clear alone",
+    "false_accept_policy": "FA is a wrong candidate reaching AMCL READY; sequential P2 handoff-fail then P3 is not FH",
+    "sequential_fallback_seed_count": 0,
+    "milestones": {
+      "first_scan_mono": 452.86875077,
+      "first_scan_wall": 1788946958.729146,
+      "first_map_mono": 463.635080155,
+      "first_map_wall": 1788946969.495474,
+      "amcl_lifecycle_active_mono": 463.734132361,
+      "amcl_lifecycle_active_wall": 1788946969.5952175,
+      "pre_ok_mono": 496.572221902,
+      "pre_ok_wall": 1788947002.4326112,
+      "map_odom_before_seed": false,
+      "p1_start_mono": 463.747554577,
+      "p1_start_wall": 1788946969.6079457,
+      "p2_start_mono": 463.757205167,
+      "p2_start_wall": 1788946969.6175976,
+      "initialpose_publish_mono": 496.631275403,
+      "initialpose_publish_wall": 1788947002.4916682,
+      "initialpose_source": "P2",
+      "first_map_odom_mono": 464.746130322,
+      "first_map_odom_wall": 1788946970.6065197,
+      "ready_mono": 499.559233261,
+      "ready_wall": 1788947005.4196267
+    },
+    "cold_break": {
+      "map_odom_required_in_pre": false,
+      "initialpose_publish_mono": 496.631275403,
+      "first_map_odom_mono": 464.746130322
+    }
+  },
+  "loc": "READY",
+  "blocked": false,
+  "pass": true
+}

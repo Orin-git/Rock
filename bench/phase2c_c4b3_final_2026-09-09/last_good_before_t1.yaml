@@ -1,0 +1,18 @@
+map_name: vp
+map_hash: 56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25
+timestamp: 1788946709.4638004
+x: -0.06509508579269695
+y: 0.014521537051186433
+yaw: -2.9975188400715855
+covariance:
+- 0.029369975744078035
+- 0.029369975744078035
+- 0.0008566787987354722
+source: amcl
+quality: 0.9633853430291296
+laser_verified: true
+laser_score_at_write: 0.49757264949421826
+laser_matched_ratio: 0.6844444444444444
+laser_valid_beams: 225
+scan_stamp: 1788946709.1865535
+note: "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose"

@@ -15,7 +15,7 @@ static_tf_node_name: camera_front_up_optical_static
 robot_frame: camera_front_up_link
 vendor_frame: ascamera_hp60c_camera_link_0
 
-usb_bus_no: 4
+usb_bus_no: 5
 usb_path: "1"
 color_pcl: false
 pub_tfTree: true
