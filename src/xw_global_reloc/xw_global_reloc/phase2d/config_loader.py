@@ -104,6 +104,19 @@ _DEFAULTS: Dict[str, Any] = {
         'micro_max_goals': 6,
         'max_planning_rounds': 2,
         'max_session_sec': 1800,
+        'full_max_planning_rounds': 12,
+        'full_max_total_goals': 120,
+        'full_max_session_sec': 7200,
+    },
+    'build_completion': {
+        'target_spatial_coverage_ratio': 0.80,
+        'min_useful_yaw_bins_per_cell': 2,
+        'min_yaw_completeness_ratio': 0.70,
+        'max_unresolved_nav_fail_ratio': 0.10,
+        'nav_fail_sessions_to_unreachable': 3,
+        'require_near_structure': True,
+        'structure_proximity_m': 3.0,
+        'micro_may_claim_full_complete': False,
     },
 }
 

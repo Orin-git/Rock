@@ -1,0 +1,53 @@
+keyframe_id: kf_000015
+timestamp: 1788771968.6168287
+stamp_rgb: 1788771968.307511
+stamp_depth: 1788771968.307511
+pair_dt_sec: 0.0
+map_pose:
+  x: -3.803237755209292
+  y: -1.1023196490348977
+  yaw: -2.7323655211875164
+camera_pose:
+  x: -4.033512339108006
+  y: -1.2021926484405154
+  yaw: 1.98001978599207
+  extrinsic_status: EXTRINSIC_UNCALIBRATED
+camera_info:
+  width: 640
+  height: 480
+  k:
+  - 595.9639892578125
+  - 0.0
+  - 348.6986999511719
+  - 0.0
+  - 596.2553100585938
+  - 234.91893005371094
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  frame_id: ascamera_hp60c_color_0
+retrieval_ready: true
+geometry_ready: false
+quality:
+  orb_features: 1000
+  orb_with_valid_depth: 0
+  orb_depth_coverage_ratio: 0.0
+  depth_valid_ratio: 0.007483723958333333
+  pair_dt_sec: 0.0
+  amcl_cov_xy: 0.06698889912683903
+  amcl_cov_yaw: 0.006493201658879679
+  reasons:
+  - depth_or_orb_coverage
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+region_id: corridor_wp2
+region_class: corridor
+location_id: corridor_wp2_A
+yaw_rel_rad: 0.4
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+scan_ref: scan.npz

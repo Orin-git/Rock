@@ -1,4 +1,4 @@
-"""Coverage model: read-only Active (legacy 37) + Candidate inventory."""
+"""Coverage model: read-only Active (versioned pointer) + Candidate inventory."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from xw_global_reloc.phase2d.spatial import (
     yaw_bin_index,
     yaw_delta_deg,
 )
+from xw_global_reloc.phase2d.version_store import resolve_active_root
 
 
 @dataclass
@@ -104,9 +105,17 @@ class CoverageModel:
         slot.appearance_count = len(slot.active_ids) + len(slot.candidate_ids)
 
     def load_legacy_active(self, *, load_descriptors: bool = False) -> int:
-        """Read-only scan of production keyframes; does not modify meta.yaml."""
-        paths = legacy_production_paths(self.cfg)
-        kf_root = paths['keyframes']
+        """Read-only scan of Active keyframes (prefer current_active_version)."""
+        maps_dir = Path(str(self.cfg.get('maps_dir') or '/ros2_ws/maps'))
+        map_name = str(self.cfg.get('map_name') or 'vp')
+        active_root, version, source = resolve_active_root(maps_dir, map_name)
+        if source != 'missing' and (active_root / 'keyframes').is_dir():
+            kf_root = active_root / 'keyframes'
+            source_tag = str(version or 'active')
+        else:
+            paths = legacy_production_paths(self.cfg)
+            kf_root = paths['keyframes']
+            source_tag = 'legacy_seed'
         n = 0
         if not kf_root.is_dir():
             return 0
@@ -139,7 +148,7 @@ class CoverageModel:
                 yaw_bin=yb,
                 descriptors_path=kdir / 'descriptors.npy',
                 timestamp=float(meta.get('timestamp') or 0.0),
-                source='legacy_seed',
+                source=source_tag,
             )
             self.add_frame(ref, cache_desc=load_descriptors)
             n += 1

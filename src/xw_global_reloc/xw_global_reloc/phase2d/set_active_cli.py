@@ -5,13 +5,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 from xw_global_reloc.phase2d.version_store import (
@@ -23,23 +21,35 @@ from xw_global_reloc.phase2d.version_store import (
 
 
 def _call_reload(timeout: float) -> dict:
-    rclpy.init()
+    """Call /xw/visual_db/reload without breaking an already-running rclpy context.
+
+    When invoked from inside xw_visual_db_build (or any live node), Context is
+    already initialized — never call rclpy.init()/shutdown() in that case.
+    """
+    owned_context = False
+    if not rclpy.ok():
+        rclpy.init()
+        owned_context = True
     node = Node('visual_db_set_active_cli')
-    cli = node.create_client(Trigger, '/xw/visual_db/reload')
-    if not cli.wait_for_service(timeout_sec=timeout):
-        node.destroy_node()
-        rclpy.shutdown()
-        return {'status': 'RELOAD_SERVICE_UNAVAILABLE'}
-    fut = cli.call_async(Trigger.Request())
-    rclpy.spin_until_future_complete(node, fut, timeout_sec=timeout)
-    node.destroy_node()
-    rclpy.shutdown()
-    if fut.result() is None:
-        return {'status': 'RELOAD_CALL_FAILED'}
     try:
-        return json.loads(fut.result().message or '{}')
-    except json.JSONDecodeError:
-        return {'status': 'RELOAD_BAD_RESPONSE', 'raw': fut.result().message}
+        cli = node.create_client(Trigger, '/xw/visual_db/reload')
+        if not cli.wait_for_service(timeout_sec=timeout):
+            return {'status': 'RELOAD_SERVICE_UNAVAILABLE'}
+        fut = cli.call_async(Trigger.Request())
+        rclpy.spin_until_future_complete(node, fut, timeout_sec=timeout)
+        if fut.result() is None:
+            return {'status': 'RELOAD_CALL_FAILED'}
+        try:
+            return json.loads(fut.result().message or '{}')
+        except json.JSONDecodeError:
+            return {'status': 'RELOAD_BAD_RESPONSE', 'raw': fut.result().message}
+    finally:
+        try:
+            node.destroy_node()
+        except Exception:  # noqa: BLE001
+            pass
+        if owned_context and rclpy.ok():
+            rclpy.shutdown()
 
 
 def set_active_version(
@@ -74,20 +84,34 @@ def set_active_version(
     if not reload:
         return out
 
-    reload_res = _call_reload(timeout)
-    out['reload'] = reload_res
-    st = str(reload_res.get('status') or '')
-    if st != 'RELOAD_OK':
-        # Transactional rollback of pointer
+    try:
+        reload_res = _call_reload(timeout)
+    except Exception as exc:  # noqa: BLE001
+        # Pointer already switched — restore previous Active on any reload path error.
+        reload_res = {'status': 'RELOAD_EXCEPTION', 'error': str(exc)}
         if old:
             try:
                 atomic_set_pointer(vroot, old)
                 out['pointer_restored'] = old
-                # Best-effort reload old
+            except Exception as restore_exc:  # noqa: BLE001
+                out['pointer_restore_error'] = str(restore_exc)
+        out['reload'] = reload_res
+        out['status'] = 'RELOAD_EXCEPTION'
+        out['active_version_after'] = read_pointer_version(vroot)
+        return out
+
+    out['reload'] = reload_res
+    st = str(reload_res.get('status') or '')
+    if st != 'RELOAD_OK':
+        if old:
+            try:
+                atomic_set_pointer(vroot, old)
+                out['pointer_restored'] = old
                 out['restore_reload'] = _call_reload(timeout)
             except Exception as exc:  # noqa: BLE001
                 out['pointer_restore_error'] = str(exc)
         out['status'] = st or 'RELOAD_FAILED'
+        out['active_version_after'] = read_pointer_version(vroot)
         return out
     out['status'] = 'OK'
     return out

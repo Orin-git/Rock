@@ -1,0 +1,276 @@
+{
+  "build_session_id": "build_20260910_064222_f22e9b",
+  "mode": "AUTO_BUILD",
+  "state": "FAILED",
+  "start_time": 1789022542.3134642,
+  "end_time": 1789023729.1046505,
+  "planned_goals": 12,
+  "reached_goals": 7,
+  "nav_failed": 5,
+  "accepted_candidates": 7,
+  "duplicate_skips": 0,
+  "covered_skips": 0,
+  "image_rejects": 0,
+  "laser_rejects": 0,
+  "pose_rejects": 0,
+  "quota_skips": 0,
+  "other_skips": 0,
+  "coverage_before": {
+    "active_frames": 48,
+    "candidate_frames": 12,
+    "occupied_spatial_cells": 14,
+    "active_occupied_cells": 14,
+    "candidate_occupied_cells": 6,
+    "yaw_bins": 8,
+    "active_yaw_bin_occupancy": 31,
+    "active_yaw_coverage_ratio": 0.2767857142857143,
+    "cell_size_m": 1.0,
+    "candidate_new_cells": 0,
+    "candidate_new_yaw_bins": 1,
+    "duplicate_skips": 0,
+    "novelty_captures": 0,
+    "quota_skips": 0,
+    "covered_skips": 0,
+    "captures": 0
+  },
+  "coverage_after": {
+    "active_frames": 48,
+    "candidate_frames": 19,
+    "occupied_spatial_cells": 18,
+    "active_occupied_cells": 14,
+    "candidate_occupied_cells": 10,
+    "yaw_bins": 8,
+    "active_yaw_bin_occupancy": 31,
+    "active_yaw_coverage_ratio": 0.2767857142857143,
+    "cell_size_m": 1.0,
+    "candidate_new_cells": 4,
+    "candidate_new_yaw_bins": 6,
+    "duplicate_skips": 0,
+    "novelty_captures": 0,
+    "quota_skips": 0,
+    "covered_skips": 0,
+    "captures": 0
+  },
+  "current_goal": {
+    "x": -8.5,
+    "y": -1.5,
+    "yaw": 1.9634954084936207,
+    "spatial_cell": "cell_-9_-2",
+    "yaw_bin": 2,
+    "reason": "missing_cell"
+  },
+  "goals": [
+    {
+      "x": -7.5,
+      "y": -1.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-8_-2",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav": "REACHED",
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -7.5,
+      "y": -1.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-8_-2",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav": "NAV_FAILED"
+    },
+    {
+      "x": -0.17499999999999716,
+      "y": -1.125,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-1_-2",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav": "NAV_FAILED"
+    },
+    {
+      "x": -0.17499999999999716,
+      "y": -1.125,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-1_-2",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav": "REACHED",
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -9.5,
+      "y": -0.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-10_-1",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav": "NAV_FAILED"
+    },
+    {
+      "x": -9.5,
+      "y": -0.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-10_-1",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav": "REACHED",
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -7.174999999999997,
+      "y": -2.125,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-8_-3",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav": "REACHED",
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -7.174999999999997,
+      "y": -2.125,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-8_-3",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav": "REACHED",
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -9.5,
+      "y": -1.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-10_-2",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav": "NAV_FAILED"
+    },
+    {
+      "x": -9.5,
+      "y": -1.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-10_-2",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav": "REACHED",
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -8.5,
+      "y": -1.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-9_-2",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav": "REACHED",
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -8.5,
+      "y": -1.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-9_-2",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav": "NAV_FAILED"
+    }
+  ],
+  "message": "Context.init() must only be called once",
+  "dry_run": false,
+  "simulate_nav": false,
+  "patrol_mode": "micro",
+  "build_kind": "AUTO_BUILD",
+  "targets": {},
+  "old_version": "vp_visual_v1.1",
+  "new_version": "vp_visual_v1.2",
+  "validation": {
+    "pass": true,
+    "verified": 7,
+    "rejected": 0,
+    "false_accept": 0,
+    "Hit@1": 0.75,
+    "Hit@3": 0.8125,
+    "Hit@5": 0.8125,
+    "confusion": 0,
+    "gate": {
+      "false_accept_0": true,
+      "map_hash_match": true,
+      "legacy_regression_ok": true,
+      "coverage_increase": true,
+      "verified_nonempty": true,
+      "batch_dedup": true,
+      "loo": true,
+      "confusion": true
+    },
+    "error": null,
+    "aborted": null,
+    "coverage_before": {
+      "frames": 48,
+      "cells": 14,
+      "yaw_occupancy": 31,
+      "yaw_coverage_ratio": 0.2767857142857143,
+      "cell_ids": [
+        "cell_-10_0",
+        "cell_-1_-1",
+        "cell_-1_9",
+        "cell_-2_-2",
+        "cell_-3_-2",
+        "cell_-4_-1",
+        "cell_-4_-2",
+        "cell_-5_-2",
+        "cell_-6_-2",
+        "cell_-7_-2",
+        "cell_-9_3",
+        "cell_0_-1",
+        "cell_1_-1",
+        "cell_1_0"
+      ]
+    },
+    "coverage_projected": {
+      "cells": 18,
+      "yaw_occupancy": 37,
+      "frames": 55
+    }
+  },
+  "promote": {
+    "built": "/ros2_ws/maps/vp/visual/versions/vp_visual_v1.2",
+    "validate": "OK",
+    "ok": true,
+    "previous_unchanged": true,
+    "promoted_count": 7,
+    "promoted_ids": [
+      {
+        "cand": "cand_20260910_064259_579454",
+        "kf": "kf_000049"
+      },
+      {
+        "cand": "cand_20260910_064351_631011",
+        "kf": "kf_000050"
+      },
+      {
+        "cand": "cand_20260910_064453_693023",
+        "kf": "kf_000051"
+      },
+      {
+        "cand": "cand_20260910_064516_716843",
+        "kf": "kf_000052"
+      },
+      {
+        "cand": "cand_20260910_064526_726510",
+        "kf": "kf_000053"
+      },
+      {
+        "cand": "cand_20260910_064601_761446",
+        "kf": "kf_000054"
+      },
+      {
+        "cand": "cand_20260910_064611_771885",
+        "kf": "kf_000055"
+      }
+    ],
+    "previous_version": "vp_visual_v1.1",
+    "new_version": "vp_visual_v1.2"
+  },
+  "map_name": "vp"
+}

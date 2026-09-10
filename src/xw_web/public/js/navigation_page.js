@@ -505,25 +505,42 @@ function wireNavigation(ctx) {
     return i >= 0 ? `v${s.slice(i + 2)}` : s;
   }
 
+  function pctText(ratio, digits = 1) {
+    if (ratio == null || !Number.isFinite(Number(ratio))) return '—';
+    return `${(Number(ratio) * 100).toFixed(digits)}%`;
+  }
+
+  function setBar(el, ratio, target) {
+    if (!el) return;
+    const bar = el.parentElement;
+    const r = Math.max(0, Math.min(1, Number(ratio) || 0));
+    el.style.width = `${(r * 100).toFixed(1)}%`;
+    if (bar) {
+      bar.classList.toggle('is-ok', target != null && r >= Number(target));
+      bar.classList.toggle('is-low', target != null && r < Number(target) * 0.5);
+    }
+  }
+
+  function setText(id, text) {
+    const el = $(id);
+    if (el) el.textContent = text;
+  }
+
   async function refreshVisualDbUi() {
     const metaMap = $('vdbMapName');
     if (!metaMap) return;
     const name = currentMapName() || 'vp';
     const info = await fetchVisualDbInfo(name);
     const st = (info && info.build) || (await fetchVisualDbStatus()) || {};
-    metaMap.textContent = (info && info.map_name) || name;
-    const activeEl = $('vdbActive');
-    if (activeEl) activeEl.textContent = (info && (info.active_version_short || info.active_version)) || '—';
-    const fr = $('vdbFrames');
-    if (fr) fr.textContent = info && info.frames != null ? String(info.frames) : '—';
-    const cells = $('vdbCells');
-    if (cells) cells.textContent = info && info.cells != null ? String(info.cells) : '—';
-    const yaw = $('vdbYaw');
-    if (yaw) yaw.textContent = info && info.yaw_occupancy != null ? String(info.yaw_occupancy) : '—';
+    const ui = (info && info.ui) || {};
+    const comp = (info && info.completion) || st.completion_summary || {};
+    const counts = (comp && comp.counts) || {};
 
-    const statusEl = $('visualDbStatus');
-    const stopBtn = $('stopVisualDbBuild');
-    const startBtn = $('startVisualDbBuild');
+    metaMap.textContent = (info && info.map_name) || name;
+    setText('vdbActive', (info && (info.active_version_short || info.active_version)) || '—');
+    setText('vdbFrames', info && info.frames != null ? String(info.frames) : '—');
+    setText('vdbCells', info && info.cells != null ? String(info.cells) : '—');
+
     const state = String(st.state || 'IDLE');
     const running = [
       'PRECHECK',
@@ -535,52 +552,265 @@ function wireNavigation(ctx) {
       'RELOADING',
       'PAUSED',
     ].includes(state);
-    if (stopBtn) stopBtn.hidden = !running;
-    if (startBtn) startBtn.disabled = running;
 
-    if (!statusEl) return;
-    if (state === 'IDLE' && !(info && info.build && info.build.build_session_id)) {
-      statusEl.hidden = true;
-      statusEl.textContent = '';
-      return;
+    const mapComplete = !!(ui.map_complete || comp.map_complete_claim_allowed);
+    const hasDb = ui.has_visual_db != null ? !!ui.has_visual_db : !!(info && info.frames);
+    const phaseKey =
+      ui.build_phase_key ||
+      (running
+        ? 'building'
+        : state === 'NEED_OPERATOR'
+          ? 'need_operator'
+          : mapComplete
+            ? 'complete'
+            : hasDb
+              ? 'partial'
+              : 'incomplete');
+    const phaseLabel =
+      ui.build_phase ||
+      ({
+        building: '建库中',
+        need_operator: '需要人工处理',
+        complete: '建库完成',
+        partial: '部分完成/可继续补全',
+        incomplete: '未完成',
+      }[phaseKey] || '未完成');
+
+    // Full-map complete label ONLY when map_complete=true (never from micro COMPLETE alone)
+    const phaseChip = $('vdbBuildPhaseChip');
+    if (phaseChip) phaseChip.dataset.phase = phaseKey;
+    setText(
+      'vdbBuildPhase',
+      mapComplete && phaseKey === 'complete'
+        ? '建库完成'
+        : ({
+            building: '建库中',
+            need_operator: '需人工',
+            complete: '建库完成',
+            partial: '可继续补全',
+            incomplete: '未完成',
+          }[phaseKey] || phaseLabel),
+    );
+
+    const sysState =
+      ui.system_state ||
+      (running ? 'BUILDING' : mapComplete ? 'COMPLETE' : 'READY');
+    setText('vdbSysState', sysState);
+
+    const last = ui.last_task || {};
+    let taskLabel = last.state || (state !== 'IDLE' ? state : '—');
+    if (taskLabel === 'IDLE') taskLabel = '—';
+    if (String(taskLabel).startsWith('FAILED') || taskLabel === 'ABORTED') {
+      setText('vdbTaskState', `${taskLabel}`);
+    } else if (
+      taskLabel === 'COMPLETE' &&
+      String(last.patrol_mode || st.patrol_mode || '') === 'micro' &&
+      !mapComplete
+    ) {
+      setText('vdbTaskState', 'COMPLETE(micro)');
+    } else {
+      setText('vdbTaskState', taskLabel);
     }
-    statusEl.hidden = false;
+
+    const spatial = ui.spatial || {};
+    const yaw = ui.yaw || {};
+    const gaps = ui.gaps || {};
+    const gate = ui.gate || {};
+    const targets = ui.targets || {};
+    const spatialRatio =
+      spatial.ratio != null ? spatial.ratio : comp.spatial_coverage_ratio;
+    const yawRatio =
+      yaw.ratio != null ? yaw.ratio : comp.yaw_completeness_ratio;
+    const covered =
+      spatial.covered != null
+        ? spatial.covered
+        : comp.covered_eligible != null
+          ? comp.covered_eligible
+          : counts.covered;
+    const eligible =
+      spatial.eligible != null
+        ? spatial.eligible
+        : (comp.eligible && comp.eligible.eligible_visual_cells) != null
+          ? comp.eligible.eligible_visual_cells
+          : counts.eligible;
+    const yawOkN =
+      yaw.sufficient != null
+        ? yaw.sufficient
+        : comp.yaw_sufficient != null
+          ? comp.yaw_sufficient
+          : counts.yaw_sufficient;
+    const targetSpatial = targets.spatial_coverage_ratio != null ? targets.spatial_coverage_ratio : 0.8;
+    const targetYaw = targets.yaw_completeness_ratio != null ? targets.yaw_completeness_ratio : 0.7;
+    const maxNavFail =
+      targets.max_unresolved_nav_fail_ratio != null
+        ? targets.max_unresolved_nav_fail_ratio
+        : 0.1;
+
+    const metrics = $('vdbMetrics');
+    if (metrics) metrics.hidden = false;
+
+    setText('vdbSpatialPct', pctText(spatialRatio));
+    setText(
+      'vdbSpatialDetail',
+      `${covered != null ? covered : '—'}/${eligible != null ? eligible : '—'}`,
+    );
+    setBar($('vdbSpatialBar'), spatialRatio, targetSpatial);
+
+    setText('vdbYawPct', pctText(yawRatio));
+    setText(
+      'vdbYawDetail',
+      `${yawOkN != null ? yawOkN : '—'}/${covered != null ? covered : '—'}`,
+    );
+    setBar($('vdbYawBar'), yawRatio, targetYaw);
+
+    setText(
+      'vdbGapUnvisited',
+      gaps.unvisited != null ? String(gaps.unvisited) : counts.unvisited != null ? String(counts.unvisited) : '—',
+    );
+    setText(
+      'vdbGapYaw',
+      gaps.yaw_insufficient != null
+        ? String(gaps.yaw_insufficient)
+        : counts.yaw_insufficient != null
+          ? String(counts.yaw_insufficient)
+          : '—',
+    );
+    setText(
+      'vdbGapNav',
+      gaps.nav_failed_retryable != null
+        ? String(gaps.nav_failed_retryable)
+        : counts.nav_failed_retryable != null
+          ? String(counts.nav_failed_retryable)
+          : '—',
+    );
+    setText(
+      'vdbGapUnreach',
+      gaps.unreachable != null
+        ? String(gaps.unreachable)
+        : counts.unreachable != null
+          ? String(counts.unreachable)
+          : '—',
+    );
+
+    const spatialOk = !!(gate.spatial_ok || (spatialRatio != null && spatialRatio >= targetSpatial));
+    const yawOkGate = !!(gate.yaw_ok || (yawRatio != null && yawRatio >= targetYaw));
+    const navRatio =
+      comp.unresolved_nav_fail_ratio != null ? Number(comp.unresolved_nav_fail_ratio) : null;
+    const navOk = !!(gate.nav_ok || (navRatio != null && navRatio <= maxNavFail));
+
+    const gateSpatial = $('vdbGateSpatial');
+    const gateYaw = $('vdbGateYaw');
+    const gateNav = $('vdbGateNav');
+    if (gateSpatial) {
+      gateSpatial.dataset.ok = spatialOk ? '1' : '0';
+      gateSpatial.textContent = '空间';
+      gateSpatial.title = `空间 ≥${pctText(targetSpatial, 0)}`;
+    }
+    if (gateYaw) {
+      gateYaw.dataset.ok = yawOkGate ? '1' : '0';
+      gateYaw.textContent = 'Yaw';
+      gateYaw.title = `Yaw ≥${pctText(targetYaw, 0)}`;
+    }
+    if (gateNav) {
+      gateNav.dataset.ok = navOk ? '1' : '0';
+      gateNav.textContent = 'Nav';
+      gateNav.title = `Nav失败 ≤${pctText(maxNavFail, 0)}`;
+    }
+    const syncFull = (id, ok, label) => {
+      const el = $(id);
+      if (!el) return;
+      el.dataset.ok = ok ? '1' : '0';
+      el.textContent = label;
+    };
+    syncFull('vdbGateSpatialFull', spatialOk, `空间 ≥${pctText(targetSpatial, 0)}`);
+    syncFull('vdbGateYawFull', yawOkGate, `Yaw ≥${pctText(targetYaw, 0)}`);
+    syncFull('vdbGateNavFull', navOk, `Nav失败 ≤${pctText(maxNavFail, 0)}`);
+
+    // Button semantics: only one primary path visible
+    const stopBtn = $('stopVisualDbBuild');
+    const startBtn = $('startVisualDbBuild');
+    const resumeBtn = $('resumeVisualDbBuild');
+    const reoptBtn = $('reoptVisualDbBuild');
+    if (stopBtn) stopBtn.hidden = !running;
+
+    const primary = running
+      ? 'stop'
+      : ui.primary_action || (mapComplete ? 'reoptimize' : hasDb ? 'resume' : 'start');
+    if (startBtn) {
+      startBtn.hidden = primary !== 'start';
+      startBtn.disabled = running;
+    }
+    if (resumeBtn) {
+      resumeBtn.hidden = primary !== 'resume';
+      resumeBtn.disabled = running;
+      if (primary === 'resume') resumeBtn.classList.remove('secondary');
+      else resumeBtn.classList.add('secondary');
+    }
+    if (reoptBtn) {
+      reoptBtn.hidden = primary !== 'reoptimize';
+      reoptBtn.disabled = running;
+    }
+
+    // Status line lives in collapsed details — keep short
+    const statusEl = $('visualDbStatus');
+    if (!statusEl) return;
+    const lines = [];
     const prog = st.progress || {};
     const val = st.validation || {};
-    const lines = [];
-    if (['PATROLLING', 'COLLECTING', 'PLANNING', 'PRECHECK', 'PAUSED'].includes(state)) {
-      lines.push(`状态：${state}`);
-      lines.push(`导航：${prog.nav || `${prog.reached || 0} / ${prog.planned || 0}`}`);
-      lines.push(`Candidates：${prog.accepted != null ? prog.accepted : (st.accepted_candidates || 0)}`);
-      if (prog.new_cells != null) lines.push(`新增Cells：${prog.new_cells}`);
-      if (prog.new_yaw != null) lines.push(`新增Yaw：${prog.new_yaw}`);
-    } else if (state === 'VALIDATING') {
-      lines.push('状态：VALIDATING');
-      lines.push(`Verified：${val.verified != null ? val.verified : '…'}`);
-      lines.push(`Rejected：${val.rejected != null ? val.rejected : '…'}`);
-      lines.push(`FA：${val.false_accept != null ? val.false_accept : '…'}`);
-    } else if (['PROMOTING', 'RELOADING'].includes(state)) {
-      lines.push(`状态：${state}`);
-      lines.push(`目标版本：${shortVer(st.new_version)}`);
+    if (running) {
+      lines.push(`进行中：${state}`);
+      if (['PATROLLING', 'COLLECTING', 'PLANNING', 'PRECHECK', 'PAUSED'].includes(state)) {
+        lines.push(`导航 ${prog.nav || `${prog.reached || 0}/${prog.planned || 0}`} · Cand ${prog.accepted != null ? prog.accepted : st.accepted_candidates || 0}`);
+      } else if (state === 'VALIDATING') {
+        lines.push(`Verified ${val.verified != null ? val.verified : '…'} · FA ${val.false_accept != null ? val.false_accept : '…'}`);
+      } else if (['PROMOTING', 'RELOADING'].includes(state)) {
+        lines.push(`→ ${shortVer(st.new_version)}`);
+      }
+    } else if (last.message || String(taskLabel).startsWith('FAILED') || taskLabel === 'ABORTED') {
+      lines.push(`最近任务：${taskLabel}`);
+      if (last.message || st.message) lines.push(`失败原因：${last.message || st.message}`);
+      if (last.stop_reason && last.stop_reason !== last.message) lines.push(`结束原因：${last.stop_reason}`);
     } else if (state === 'COMPLETE') {
-      const before = st.coverage_before || {};
-      const after = st.coverage_after || val.coverage_after || {};
-      lines.push('建库完成');
-      lines.push(`旧版本：${shortVer(st.old_version)}`);
-      lines.push(`新版本：${shortVer(st.new_version)}`);
-      lines.push(`Frames：${before.frames ?? before.keyframe_count ?? '—'} → ${after.frames ?? '—'}`);
-      lines.push(`Cells：${before.cells ?? before.occupied_cells ?? '—'} → ${after.cells ?? after.occupied_cells ?? '—'}`);
-      lines.push(`Yaw：${before.yaw_occupancy ?? '—'} → ${after.yaw_occupancy ?? '—'}`);
-      lines.push(`FA：${val.false_accept != null ? val.false_accept : 0}`);
-      lines.push(`当前Production：${shortVer(st.new_version)}`);
-    } else if (state.startsWith('FAILED') || state === 'ABORTED' || state === 'NEED_OPERATOR') {
-      lines.push(`状态：${state}`);
-      if (st.message) lines.push(String(st.message));
-    } else if (st.message) {
-      lines.push(`状态：${state}`);
-      lines.push(String(st.message));
+      lines.push(
+        mapComplete
+          ? '最近任务 COMPLETE · 全图完成'
+          : `最近任务 COMPLETE · ${st.stop_reason || st.patrol_mode || '非全图'}`,
+      );
+    } else if (mapComplete) {
+      lines.push('已达 Coverage Gate');
+    } else if (hasDb) {
+      lines.push('未达全图完成，可继续补全');
+    } else {
+      lines.push('尚无视觉库，请先建立');
     }
+    statusEl.hidden = lines.length === 0;
     statusEl.textContent = lines.join('\n');
+
+    // Hint on toggle when last task failed (details stay collapsed by default)
+    const toggle = $('vdbToggleDetails');
+    if (toggle) {
+      if (vdbDetailsOpen()) {
+        toggle.textContent = '收起';
+        toggle.setAttribute('aria-expanded', 'true');
+      } else {
+        const failed = String(taskLabel).startsWith('FAILED') || taskLabel === 'ABORTED';
+        toggle.textContent = failed ? '详情!' : '详情';
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.title = failed
+          ? `最近任务失败：${last.message || taskLabel}`
+          : '展开建库详情';
+      }
+    }
+
+    if (ui.overlay_palette && typeof window !== 'undefined') {
+      window.__vdbOverlayPalette = ui.overlay_palette;
+      window.__vdbCellStatus = ui.cell_status || null;
+    }
+  }
+
+  function vdbDetailsOpen() {
+    const d = $('vdbDetails');
+    return !!(d && !d.hasAttribute('hidden'));
   }
 
   function syncToolButtons(mode) {
@@ -1224,7 +1454,20 @@ function wireNavigation(ctx) {
   };
 
   const startVdbBtn = $('startVisualDbBuild');
+  const resumeVdbBtn = $('resumeVisualDbBuild');
+  const reoptVdbBtn = $('reoptVisualDbBuild');
   const stopVdbBtn = $('stopVisualDbBuild');
+  const toggleVdbBtn = $('vdbToggleDetails');
+  const vdbDetails = $('vdbDetails');
+  if (toggleVdbBtn && vdbDetails) {
+    toggleVdbBtn.onclick = () => {
+      const open = vdbDetails.hasAttribute('hidden');
+      if (open) vdbDetails.removeAttribute('hidden');
+      else vdbDetails.setAttribute('hidden', '');
+      toggleVdbBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggleVdbBtn.textContent = open ? '收起' : '详情';
+    };
+  }
   if (startVdbBtn) {
     startVdbBtn.onclick = async () => {
       const j = await startVisualDbBuild({ mode: 'AUTO_BUILD', patrol_mode: 'micro' });
@@ -1234,6 +1477,30 @@ function wireNavigation(ctx) {
         refreshVisualDbUi();
       } else {
         flash(j.message || '建库启动失败', 'err');
+      }
+    };
+  }
+  if (resumeVdbBtn) {
+    resumeVdbBtn.onclick = async () => {
+      const j = await startVisualDbBuild({ mode: 'RESUME_BUILD', patrol_mode: 'full' });
+      pushLog(j.ok ? '<< 继续自动补全已启动（仅缺口）' : `!! ${j.message || 'resume failed'}`);
+      if (j.ok) {
+        if (stopVdbBtn) stopVdbBtn.hidden = false;
+        refreshVisualDbUi();
+      } else {
+        flash(j.message || '续建启动失败', 'err');
+      }
+    };
+  }
+  if (reoptVdbBtn) {
+    reoptVdbBtn.onclick = async () => {
+      const j = await startVisualDbBuild({ mode: 'RESUME_BUILD', patrol_mode: 'full' });
+      pushLog(j.ok ? '<< 重新优化视觉库已启动' : `!! ${j.message || 'reoptimize failed'}`);
+      if (j.ok) {
+        if (stopVdbBtn) stopVdbBtn.hidden = false;
+        refreshVisualDbUi();
+      } else {
+        flash(j.message || '重新优化启动失败', 'err');
       }
     };
   }

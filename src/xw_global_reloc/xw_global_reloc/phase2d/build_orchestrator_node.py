@@ -36,6 +36,13 @@ from xw_global_reloc.phase2d.candidate_writer import CandidateWriter
 from xw_global_reloc.phase2d.config_loader import load_phase2d_config, production_visual_root
 from xw_global_reloc.phase2d.coverage_model import build_coverage_model
 from xw_global_reloc.phase2d.coverage_report import build_coverage_dict, write_coverage_report
+from xw_global_reloc.phase2d.build_completion import (
+    evaluate_coverage_completion,
+    format_completion_status_text,
+    remaining_gap_cells,
+    update_nav_fail_history,
+    load_nav_fail_history,
+)
 from xw_global_reloc.phase2d.patrol_planner import PatrolGoal, plan_patrol_goals
 from xw_global_reloc.phase2d.version_store import (
     next_visual_version,
@@ -51,7 +58,7 @@ _LATCH = QoSProfile(
     depth=1,
 )
 
-PRODUCTION_BUILD_MODES = frozenset({'AUTO_BUILD', 'TARGETED_BUILD'})
+PRODUCTION_BUILD_MODES = frozenset({'AUTO_BUILD', 'TARGETED_BUILD', 'RESUME_BUILD'})
 CANDIDATE_ONLY_MODES = frozenset({'micro', 'partial', 'full'})
 
 STATES = (
@@ -138,6 +145,10 @@ class BuildSession:
     validation: Dict[str, Any] = field(default_factory=dict)
     promote: Dict[str, Any] = field(default_factory=dict)
     map_name: str = ''
+    completion: Dict[str, Any] = field(default_factory=dict)
+    stop_reason: str = ''
+    map_complete: bool = False
+    resume: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -301,6 +312,21 @@ class VisualDbBuildOrchestrator(Node):
                 'old_version_short': short_version_label(self._session.old_version),
                 'new_version_short': short_version_label(self._session.new_version),
             }
+            comp = self._session.completion or {}
+            d['completion_summary'] = {
+                'eligible': (comp.get('eligible') or {}).get('eligible_visual_cells'),
+                'covered': comp.get('covered_eligible'),
+                'spatial_coverage_ratio': comp.get('spatial_coverage_ratio'),
+                'yaw_sufficient': comp.get('yaw_sufficient'),
+                'yaw_insufficient': comp.get('yaw_insufficient'),
+                'nav_failed_retryable': comp.get('nav_failed_retryable'),
+                'unreachable': comp.get('unreachable'),
+                'gate_pass': comp.get('gate_pass'),
+                'map_complete_claim_allowed': comp.get('map_complete_claim_allowed'),
+                'map_complete': self._session.map_complete,
+                'stop_reason': self._session.stop_reason,
+                'status_text': comp.get('status_text') or '',
+            }
             return d
 
     def _on_status_svc(self, request, response):  # noqa: ANN001, ARG002
@@ -343,16 +369,34 @@ class VisualDbBuildOrchestrator(Node):
         targets: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         mode_u = str(mode or 'micro').strip()
-        if mode_u.upper() in PRODUCTION_BUILD_MODES:
-            build_kind = mode_u.upper()
+        mode_up = mode_u.upper()
+        resume = False
+        if mode_up in ('RESUME_BUILD', 'RESUME', 'CONTINUE'):
+            build_kind = 'RESUME_BUILD'
+            pmode = str(patrol_mode or 'full')
+            resume = True
+        elif mode_up in ('FULL_AUTO_BUILD', 'FULL_BUILD'):
+            build_kind = 'AUTO_BUILD'
+            pmode = 'full'
+        elif mode_up in PRODUCTION_BUILD_MODES:
+            build_kind = mode_up
             pmode = str(patrol_mode or self._cfg.get('auto_build', {}).get('patrol_mode_default') or 'micro')
+            if build_kind == 'RESUME_BUILD':
+                resume = True
+                pmode = str(patrol_mode or 'full')
         elif mode_u in CANDIDATE_ONLY_MODES:
             build_kind = 'CANDIDATE_ONLY'
             pmode = mode_u
         else:
             # Unknown → treat as AUTO_BUILD with given patrol_mode if present
-            build_kind = 'AUTO_BUILD' if mode_u.upper() == 'AUTO_BUILD' else 'CANDIDATE_ONLY'
+            build_kind = 'AUTO_BUILD' if mode_up == 'AUTO_BUILD' else 'CANDIDATE_ONLY'
             pmode = str(patrol_mode or mode_u or 'micro')
+
+        pmode_l = str(pmode).lower()
+        if pmode_l in ('full_auto_build', 'full_build'):
+            pmode_l = 'full'
+        if pmode_l not in ('micro', 'partial', 'full'):
+            pmode_l = 'micro'
 
         with self._lock:
             if self._worker and self._worker.is_alive():
@@ -371,12 +415,13 @@ class VisualDbBuildOrchestrator(Node):
                 start_time=time.time(),
                 dry_run=dry_run,
                 simulate_nav=simulate_nav,
-                patrol_mode=pmode,
+                patrol_mode=pmode_l,
                 build_kind=build_kind,
                 targets=dict(targets or {}),
                 old_version=str(active_ver or ''),
                 new_version=nxt,
                 map_name=self._map_name,
+                resume=resume or build_kind == 'RESUME_BUILD',
             )
             self._stop.clear()
             self._critical = False
@@ -538,8 +583,22 @@ class VisualDbBuildOrchestrator(Node):
 
             patrol_cfg = dict(self._cfg.get('patrol') or {})
             auto_cfg = dict(self._cfg.get('auto_build') or {})
-            max_rounds = int(auto_cfg.get('max_planning_rounds') or patrol_cfg.get('max_planning_rounds', 2))
-            max_session = float(auto_cfg.get('max_session_sec') or patrol_cfg.get('max_session_sec', 1800))
+            pmode = str(self._session.patrol_mode or 'micro')
+            is_full = pmode == 'full' or self._session.resume
+            if is_full:
+                max_rounds = int(auto_cfg.get('full_max_planning_rounds') or 12)
+                max_session = float(auto_cfg.get('full_max_session_sec') or 7200)
+                # Per-round goal budget still uses patrol.max_total_goals
+                patrol_cfg = dict(patrol_cfg)
+                patrol_cfg['max_total_goals'] = int(
+                    auto_cfg.get('full_max_goals_per_round')
+                    or patrol_cfg.get('max_total_goals', 40)
+                )
+                session_goal_cap = int(auto_cfg.get('full_max_total_goals') or 120)
+            else:
+                max_rounds = int(auto_cfg.get('max_planning_rounds') or patrol_cfg.get('max_planning_rounds', 2))
+                max_session = float(auto_cfg.get('max_session_sec') or patrol_cfg.get('max_session_sec', 1800))
+                session_goal_cap = int(patrol_cfg.get('max_total_goals', 40)) * max_rounds
             max_cand = int(self._cfg.get('candidate_limits', {}).get('max_per_build_session', 500))
             if self._session.build_kind in PRODUCTION_BUILD_MODES:
                 # Micro one-click default: small goal budget
@@ -549,27 +608,87 @@ class VisualDbBuildOrchestrator(Node):
                         auto_cfg.get('micro_max_goals') or patrol_cfg.get('micro_max_goals', 6)
                     )
 
+            vroot = production_visual_root(self._cfg)
+            stop_reason = ''
             total_planned = 0
             for round_i in range(max_rounds):
                 if self._stop.is_set():
+                    stop_reason = 'user_stop'
                     break
                 if time.time() - self._session.start_time > max_session:
+                    stop_reason = 'session_timeout'
                     break
                 if self._session.accepted_candidates >= max_cand:
+                    stop_reason = 'candidate_session_quota'
+                    break
+                if total_planned >= session_goal_cap:
+                    stop_reason = 'max_total_goals'
                     break
 
                 self._set_state('PLANNING', f'round={round_i+1}')
                 model = build_coverage_model(self._cfg, load_descriptors=False)
+                hist = load_nav_fail_history(vroot)
+                session_fail_ids = {
+                    str(g.get('spatial_cell'))
+                    for g in self._session.goals
+                    if g.get('nav') == 'NAV_FAILED'
+                }
+                completion = evaluate_coverage_completion(
+                    model,
+                    map_yaml,
+                    self._cfg,
+                    seed_xy=seed,
+                    nav_fail_history=hist,
+                    session_nav_failed_cells=session_fail_ids,
+                    patrol_mode=pmode,
+                    build_kind=self._session.build_kind,
+                )
+                comp_dict = completion.as_dict()
+                comp_dict['status_text'] = format_completion_status_text(completion, mode=pmode)
+                self._session.completion = comp_dict
+                self._session.map_complete = bool(completion.map_complete_claim_allowed)
+                self._publish_status()
+
+                # FULL / RESUME: stop patrol early when Coverage Gate met
+                if is_full and completion.gate_pass:
+                    stop_reason = (
+                        'coverage_gate_pass'
+                        if completion.map_complete_claim_allowed
+                        else 'coverage_gate_pass_micro_blocked'
+                    )
+                    break
+
+                only_cells = None
+                exclude_cells = set(completion.unreachable)
+                if self._session.resume or is_full:
+                    gaps = remaining_gap_cells(completion)
+                    only_cells = gaps if gaps else set()
+                    if not gaps:
+                        stop_reason = 'no_actionable_gaps'
+                        break
+
+                # Temporary cfg override for this round's max goals
+                round_cfg = dict(self._cfg)
+                round_cfg['patrol'] = patrol_cfg
                 goals = plan_patrol_goals(
                     model,
                     map_yaml=map_yaml,
-                    cfg=self._cfg,
-                    mode=self._session.patrol_mode,
+                    cfg=round_cfg,
+                    mode=pmode,
                     seed_xy=seed,
                     should_stop=self._stop.is_set,
+                    only_cells=only_cells,
+                    exclude_cells=exclude_cells,
                 )
                 # TARGETED_BUILD: filter to requested cells/waypoints when provided
                 goals = self._apply_targets(goals)
+                # Session goal cap
+                remain_cap = max(0, session_goal_cap - total_planned)
+                if remain_cap <= 0:
+                    stop_reason = 'max_total_goals'
+                    break
+                if len(goals) > remain_cap:
+                    goals = goals[:remain_cap]
                 seen = {(g['spatial_cell'], g['yaw_bin']) for g in self._session.goals}
                 fresh = [g for g in goals if (g.spatial_cell, g.yaw_bin) not in seen]
                 if not fresh:
@@ -579,23 +698,28 @@ class VisualDbBuildOrchestrator(Node):
                         self._persist_session()
                         return
                     if round_i == 0 and self._session.build_kind == 'CANDIDATE_ONLY':
+                        self._session.stop_reason = 'no_goals'
                         self._set_state('COMPLETE', 'no_goals')
                         self._session.end_time = time.time()
                         self._persist_session()
                         return
+                    stop_reason = stop_reason or 'planner_no_new_goals'
                     break
                 self._session.planned_goals += len(fresh)
                 total_planned += len(fresh)
 
                 for g in fresh:
                     if self._stop.is_set():
+                        stop_reason = 'user_stop'
                         break
                     if time.time() - self._session.start_time > max_session:
+                        stop_reason = 'session_timeout'
                         break
                     while not self._stop.is_set() and self._should_pause():
                         self._set_state('PAUSED', 'waiting_localization_ready')
                         time.sleep(0.5)
                     if self._stop.is_set():
+                        stop_reason = 'user_stop'
                         break
                     if (self._phase2c_state or self._phase2c_loc) == 'NEED_OPERATOR':
                         self._set_state('NEED_OPERATOR', 'phase2c_NEED_OPERATOR')
@@ -606,18 +730,24 @@ class VisualDbBuildOrchestrator(Node):
                     self._session.current_goal = g.as_dict()
                     self._session.goals.append(g.as_dict())
                     self._set_state('PATROLLING', f'nav {g.spatial_cell} yaw_bin={g.yaw_bin}')
-                    nav_ok = self._navigate_to(g)
+                    nav_ok, nav_code = self._navigate_to(g)
+                    self._session.goals[-1]['nav_result_code'] = nav_code
+                    self._session.goals[-1]['nav_retryable'] = True
                     if not nav_ok:
                         self._session.nav_failed += 1
                         self._session.goals[-1]['nav'] = 'NAV_FAILED'
+                        self._session.goals[-1]['future_resume_candidate'] = True
+                        self._session.goals[-1]['permanent_unreachable'] = False
                         self._publish_status()
                         continue
                     self._session.reached_goals += 1
                     self._session.goals[-1]['nav'] = 'REACHED'
+                    self._session.goals[-1]['future_resume_candidate'] = False
 
                     settle = float(patrol_cfg.get('settle_sec', 1.0))
                     self._wait_settle(settle)
                     if self._stop.is_set():
+                        stop_reason = 'user_stop'
                         break
 
                     self._set_state('COLLECTING', f'capture {g.spatial_cell}')
@@ -631,9 +761,46 @@ class VisualDbBuildOrchestrator(Node):
                     self._publish_status()
 
                 if self._stop.is_set():
+                    stop_reason = stop_reason or 'user_stop'
                     break
 
-            # Coverage after patrol
+                # After each FULL round: recompute coverage; continue if gaps remain
+                if is_full and not stop_reason:
+                    continue
+                if not is_full:
+                    # micro/partial: fixed rounds only
+                    pass
+
+            if not stop_reason:
+                if pmode == 'micro':
+                    stop_reason = 'micro_budget_exhausted'
+                elif total_planned >= session_goal_cap:
+                    stop_reason = 'max_total_goals'
+                else:
+                    stop_reason = 'planning_rounds_exhausted'
+
+            # Persist nav-fail history (retryable vs unreachable)
+            try:
+                hist = update_nav_fail_history(vroot, self._session.goals)
+                # Mark permanent unreachable on goals when threshold hit
+                thr = int((self._cfg.get('build_completion') or {}).get('nav_fail_sessions_to_unreachable', 3))
+                for g in self._session.goals:
+                    if g.get('nav') != 'NAV_FAILED':
+                        continue
+                    cell = str(g.get('spatial_cell') or '')
+                    n = int(hist.get(cell, 0))
+                    if n >= thr:
+                        g['permanent_unreachable'] = True
+                        g['nav_retryable'] = False
+                        g['future_resume_candidate'] = False
+                    else:
+                        g['permanent_unreachable'] = False
+                        g['nav_retryable'] = True
+                        g['future_resume_candidate'] = True
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warn(f'nav_fail_history update failed: {exc}')
+
+            # Coverage after patrol + completion gate snapshot
             try:
                 model = build_coverage_model(self._cfg, load_descriptors=False)
                 self._session.coverage_after = build_coverage_dict(model)['summary']
@@ -642,8 +809,32 @@ class VisualDbBuildOrchestrator(Node):
                     production_visual_root(self._cfg) / 'candidate' / 'reports',
                     model=model,
                 )
+                hist = load_nav_fail_history(vroot)
+                session_fail_ids = {
+                    str(g.get('spatial_cell'))
+                    for g in self._session.goals
+                    if g.get('nav') == 'NAV_FAILED'
+                }
+                completion = evaluate_coverage_completion(
+                    model,
+                    map_yaml,
+                    self._cfg,
+                    seed_xy=seed,
+                    nav_fail_history=hist,
+                    session_nav_failed_cells=session_fail_ids,
+                    patrol_mode=pmode,
+                    build_kind=self._session.build_kind,
+                )
+                comp_dict = completion.as_dict()
+                comp_dict['status_text'] = format_completion_status_text(completion, mode=pmode)
+                self._session.completion = comp_dict
+                self._session.map_complete = bool(completion.map_complete_claim_allowed)
+                if completion.map_complete_claim_allowed:
+                    stop_reason = 'coverage_gate_pass'
             except Exception as exc:  # noqa: BLE001
                 self.get_logger().warn(f'coverage report failed: {exc}')
+
+            self._session.stop_reason = stop_reason
 
             if self._stop.is_set() and self._session.state not in _STOP_PROTECTED | {'NEED_OPERATOR'}:
                 self._set_state('ABORTED', 'stopped')
@@ -651,15 +842,26 @@ class VisualDbBuildOrchestrator(Node):
                 self._persist_session()
                 return
 
-            # AUTO_BUILD / TARGETED_BUILD → validate + promote
+            # AUTO_BUILD / TARGETED_BUILD / RESUME_BUILD → validate + promote
             if self._session.build_kind in PRODUCTION_BUILD_MODES and self._session.state not in (
                 'FAILED',
                 'ABORTED',
                 'NEED_OPERATOR',
             ):
-                self._run_validate_promote()
+                if int(self._session.accepted_candidates or 0) <= 0:
+                    # Nothing new to promote — still a successful session end with coverage report
+                    label = (
+                        'map_complete'
+                        if self._session.map_complete
+                        else f'session_done:{self._session.stop_reason or "no_new_candidates"}'
+                    )
+                    self._set_state('COMPLETE', label)
+                else:
+                    self._run_validate_promote()
             elif self._session.state not in _STOP_PROTECTED | {'NEED_OPERATOR'}:
-                self._set_state('COMPLETE', f'planned={total_planned}')
+                # Candidate-only COMPLETE = session finished; map_complete only if gate allows
+                label = 'map_complete' if self._session.map_complete else f'session_done:{stop_reason}'
+                self._set_state('COMPLETE', label)
 
             self._session.end_time = time.time()
             self._persist_session()
@@ -864,7 +1066,11 @@ class VisualDbBuildOrchestrator(Node):
 
             self._set_state(
                 'COMPLETE',
-                f'build_done {short_version_label(active_ver)}→{short_version_label(new_ver)}',
+                (
+                    f'build_done {short_version_label(active_ver)}→{short_version_label(new_ver)}'
+                    f' stop={self._session.stop_reason or "ok"}'
+                    f' map_complete={self._session.map_complete}'
+                ),
             )
         finally:
             self._critical = False
@@ -909,14 +1115,14 @@ class VisualDbBuildOrchestrator(Node):
                         return
             time.sleep(0.1)
 
-    def _navigate_to(self, goal: PatrolGoal) -> bool:
+    def _navigate_to(self, goal: PatrolGoal) -> Tuple[bool, str]:
         assert self._session
         if self._session.simulate_nav or bool(self._cfg.get('patrol', {}).get('simulate_nav', False)):
             time.sleep(0.05)
-            return True
+            return True, 'SIMULATED'
         if not self._nav_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error('navigate_to_pose unavailable')
-            return False
+            return False, 'NAV2_UNAVAILABLE'
         pose = PoseStamped()
         pose.header.frame_id = 'map'
         pose.header.stamp = self.get_clock().now().to_msg()
@@ -929,13 +1135,13 @@ class VisualDbBuildOrchestrator(Node):
         deadline = time.monotonic() + 10.0
         while time.monotonic() < deadline and not send_fut.done():
             if self._stop.is_set():
-                return False
+                return False, 'ABORTED'
             time.sleep(0.05)
         if not send_fut.done():
-            return False
+            return False, 'SEND_TIMEOUT'
         gh = send_fut.result()
         if gh is None or not gh.accepted:
-            return False
+            return False, 'GOAL_REJECTED'
         self._nav_goal_handle = gh
         result_fut = gh.get_result_async()
         timeout = float(self._cfg.get('patrol', {}).get('nav_timeout_sec', 120.0))
@@ -947,21 +1153,25 @@ class VisualDbBuildOrchestrator(Node):
                 except Exception:  # noqa: BLE001
                     pass
                 self._nav_goal_handle = None
-                return False
+                return False, 'CANCELLED'
             if time.monotonic() - t0 > timeout:
                 try:
                     gh.cancel_goal_async()
                 except Exception:  # noqa: BLE001
                     pass
                 self._nav_goal_handle = None
-                return False
+                return False, 'TIMEOUT'
             time.sleep(0.1)
         self._nav_goal_handle = None
         try:
             wrap = result_fut.result()
-            return wrap is not None and int(getattr(wrap, 'status', 0)) == 4
-        except Exception:  # noqa: BLE001
-            return False
+            status = int(getattr(wrap, 'status', 0)) if wrap is not None else 0
+            # GoalStatus.STATUS_SUCCEEDED == 4
+            if status == 4:
+                return True, f'SUCCEEDED:{status}'
+            return False, f'NAV2_STATUS:{status}'
+        except Exception as exc:  # noqa: BLE001
+            return False, f'ERROR:{exc}'
 
     def _capture_at_goal(self, goal: PatrolGoal) -> str:
         assert self._session

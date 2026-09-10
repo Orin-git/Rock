@@ -137,11 +137,15 @@ def plan_patrol_goals(
     mode: str = 'micro',
     seed_xy: Optional[Tuple[float, float]] = None,
     should_stop: Optional[Callable[[], bool]] = None,
+    only_cells: Optional[Set[Tuple[int, int]]] = None,
+    exclude_cells: Optional[Set[Tuple[int, int]]] = None,
 ) -> List[PatrolGoal]:
     """Generate NavigateToPose goals in known free space from coverage gaps.
 
     should_stop: optional zero-arg callable; when truthy, abort planning early
     so user stop can interrupt long dense-coverage loops.
+    only_cells: if set, only plan these spatial cells (resume / gap fill).
+    exclude_cells: permanently skip (e.g. UNREACHABLE).
     """
     patrol = dict(cfg.get('patrol') or {})
     cov = dict(cfg.get('coverage') or {})
@@ -153,6 +157,7 @@ def plan_patrol_goals(
     kernel = int(patrol.get('free_kernel_cells', 2))
     near_m = float(patrol.get('prefer_near_existing_m', 8.0))
     micro_max = int(patrol.get('micro_max_goals', 6))
+    min_yaw_useful = int((cfg.get('build_completion') or {}).get('min_useful_yaw_bins_per_cell', 2))
 
     def _stopped() -> bool:
         return bool(should_stop()) if callable(should_stop) else False
@@ -161,6 +166,7 @@ def plan_patrol_goals(
         max_total = min(max_total, micro_max)
     elif mode == 'partial':
         max_total = min(max_total, max(12, micro_max * 3))
+    # full: keep max_total_goals as session/round budget (orchestrator loops)
 
     if _stopped():
         return []
@@ -173,6 +179,8 @@ def plan_patrol_goals(
 
     covered = _covered_cells(model)
     h, w = free_safe.shape
+    only = only_cells
+    excl = exclude_cells or set()
 
     # Enumerate free coverage-cells
     candidates: List[Tuple[float, int, int, float, float]] = []
@@ -188,6 +196,10 @@ def plan_patrol_goals(
             if not _is_clear_goal(x, y, free_safe, info):
                 continue
             cx, cy = int(math.floor(x / cell_size)), int(math.floor(y / cell_size))
+            if (cx, cy) in excl:
+                continue
+            if only is not None and (cx, cy) not in only:
+                continue
             # Prefer cell centers that are free
             ccx, ccy = _cell_center(cx, cy, cell_size)
             if _is_clear_goal(ccx, ccy, free_safe, info):
@@ -205,8 +217,12 @@ def plan_patrol_goals(
                 cell = spatial_cell_id(x, y, cell_size)
                 have = _yaw_bins_for_cell(model, cell)
                 miss_n = yaw_bins - len(have)
-                if miss_n <= 0:
-                    continue
+                if miss_n <= 0 or len(have) >= min_yaw_useful:
+                    # already has enough useful yaw unless only_cells forces revisit
+                    if only is None:
+                        continue
+                    if len(have) >= min_yaw_useful:
+                        continue
                 score = 50.0 + miss_n
             if seed_xy is not None:
                 score -= 0.05 * math.hypot(x - seed_xy[0], y - seed_xy[1])

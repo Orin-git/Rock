@@ -119,6 +119,23 @@ phase2d_v1:
     micro_max_goals: 6
     max_planning_rounds: 2
     max_session_sec: 1800
+    # FULL_AUTO_BUILD resource caps (hard stop; never infinite)
+    full_max_planning_rounds: 12
+    full_max_total_goals: 120
+    full_max_session_sec: 7200
+
+  # Phase2D-C2.1 coverage completion gate (not photo-count based)
+  build_completion:
+    target_spatial_coverage_ratio: 0.80
+    min_useful_yaw_bins_per_cell: 2
+    min_yaw_completeness_ratio: 0.70
+    max_unresolved_nav_fail_ratio: 0.10
+    nav_fail_sessions_to_unreachable: 3
+    # PGM free space often includes empty exterior; require proximity to walls
+    require_near_structure: true
+    structure_proximity_m: 3.0
+    # micro is a link test — never advertise full-map complete
+    micro_may_claim_full_complete: false
 
   stats:
     reject_reasons:

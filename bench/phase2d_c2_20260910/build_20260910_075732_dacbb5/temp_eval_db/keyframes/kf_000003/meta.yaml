@@ -1,0 +1,52 @@
+keyframe_id: kf_000003
+timestamp: 1788771899.4679368
+stamp_rgb: 1788771899.1209774
+stamp_depth: 1788771899.1209774
+pair_dt_sec: 0.0
+map_pose:
+  x: 1.714512800201392
+  y: -0.20602657074652395
+  yaw: 2.3206056490988787
+camera_pose:
+  x: 1.5434564932492683
+  y: -0.02234004469765774
+  yaw: 0.7498056490988788
+  extrinsic_status: EXTRINSIC_UNCALIBRATED
+camera_info:
+  width: 640
+  height: 480
+  k:
+  - 595.9639892578125
+  - 0.0
+  - 348.6986999511719
+  - 0.0
+  - 596.2553100585938
+  - 234.91893005371094
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  frame_id: ascamera_hp60c_color_0
+retrieval_ready: true
+geometry_ready: true
+quality:
+  orb_features: 1000
+  orb_with_valid_depth: 349
+  orb_depth_coverage_ratio: 0.349
+  depth_valid_ratio: 0.18660807291666667
+  pair_dt_sec: 0.0
+  amcl_cov_xy: 0.0344190610416911
+  amcl_cov_yaw: 0.006211801692978676
+  reasons: []
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+region_id: charger_room
+region_class: room
+location_id: charger_room_A
+yaw_rel_rad: 0.4
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+scan_ref: scan.npz

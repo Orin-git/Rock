@@ -72,20 +72,65 @@
           </div>
         </div>
       </div>
-      <p class="nav-toolbar-hint muted" id="sessionHint">选地图 → 进导航。定位正常则直接前往，失败才需确认初位姿</p>
-      <div class="nav-vdb-strip" id="visualDbStrip" aria-label="视觉定位库">
-        <div class="nav-vdb-meta" id="visualDbMeta">
-          <span>当前地图：<b id="vdbMapName">—</b></span>
-          <span>当前Active：<b id="vdbActive">—</b></span>
-          <span>关键帧：<b id="vdbFrames">—</b></span>
-          <span>覆盖Cells：<b id="vdbCells">—</b></span>
-          <span>Yaw Coverage：<b id="vdbYaw">—</b></span>
+      <p class="nav-toolbar-hint muted" id="sessionHint" hidden>选地图 → 进导航。定位正常则直接前往，失败才需确认初位姿</p>
+      <div class="nav-vdb-strip" id="visualDbStrip" aria-label="视觉定位库"
+           data-overlay-covered="green"
+           data-overlay-yaw-insufficient="yellow"
+           data-overlay-unvisited="gray"
+           data-overlay-nav-failed="red"
+           data-overlay-unreachable="dark-gray">
+        <div class="nav-vdb-row" id="vdbSummaryRow">
+          <div class="nav-vdb-meta" id="visualDbMeta">
+            <span class="nav-vdb-id"><b id="vdbMapName">—</b>/<b id="vdbActive">—</b></span>
+            <span><b id="vdbFrames">—</b>帧</span>
+            <span><b id="vdbCells">—</b>格</span>
+          </div>
+          <span class="nav-vdb-chip" id="vdbBuildPhaseChip" data-phase="incomplete"><b id="vdbBuildPhase">—</b></span>
+          <div class="nav-vdb-inline" id="vdbMetrics">
+            <span class="nav-vdb-inline-item" title="空间覆盖">
+              空间 <b id="vdbSpatialPct">—</b>
+              <span class="nav-vdb-bar nav-vdb-bar-sm" aria-hidden="true"><i id="vdbSpatialBar" style="width:0%"></i></span>
+              <span class="muted" id="vdbSpatialDetail">—/—</span>
+            </span>
+            <span class="nav-vdb-inline-item" title="朝向充分">
+              朝向 <b id="vdbYawPct">—</b>
+              <span class="nav-vdb-bar nav-vdb-bar-sm" aria-hidden="true"><i id="vdbYawBar" style="width:0%"></i></span>
+              <span class="muted" id="vdbYawDetail">—/—</span>
+            </span>
+            <span class="nav-vdb-gate-sm" id="vdbGate" title="完成标准">
+              <span class="nav-vdb-gate-item" id="vdbGateSpatial">空间</span>
+              <span class="nav-vdb-gate-item" id="vdbGateYaw">Yaw</span>
+              <span class="nav-vdb-gate-item" id="vdbGateNav">Nav</span>
+            </span>
+          </div>
+          <div class="nav-vdb-actions">
+            <button type="button" id="startVisualDbBuild" title="从零建立视觉定位库">自动建立</button>
+            <button type="button" id="resumeVisualDbBuild" hidden title="仅补剩余缺口">继续补全</button>
+            <button type="button" class="secondary" id="reoptVisualDbBuild" hidden title="在已完成库上重新优化">重新优化</button>
+            <button type="button" class="secondary" id="stopVisualDbBuild" hidden title="停止建库">停止</button>
+            <button type="button" class="secondary nav-vdb-toggle" id="vdbToggleDetails" aria-expanded="false" title="展开建库详情">详情</button>
+          </div>
         </div>
-        <div class="nav-vdb-actions">
-          <button type="button" id="startVisualDbBuild" title="一键自动建立视觉定位库">自动建立视觉定位库</button>
-          <button type="button" class="secondary" id="stopVisualDbBuild" hidden title="停止建库">停止</button>
+        <div class="nav-vdb-details" id="vdbDetails" hidden>
+          <div class="nav-vdb-sys" id="vdbSysRow">
+            <span>系统 <b id="vdbSysState">—</b></span>
+            <span>最近任务 <b id="vdbTaskState">—</b></span>
+          </div>
+          <div class="nav-vdb-gaps" id="vdbGaps">
+            <span>未访问 <b id="vdbGapUnvisited">—</b></span>
+            <span>朝向不足 <b id="vdbGapYaw">—</b></span>
+            <span>导航失败待重试 <b id="vdbGapNav">—</b></span>
+            <span>不可达 <b id="vdbGapUnreach">—</b></span>
+          </div>
+          <div class="nav-vdb-gate" id="vdbGateFull">
+            <span class="nav-vdb-gate-title">完成标准</span>
+            <span class="nav-vdb-gate-item" id="vdbGateSpatialFull">空间 ≥80%</span>
+            <span class="nav-vdb-gate-item" id="vdbGateYawFull">Yaw ≥70%</span>
+            <span class="nav-vdb-gate-item" id="vdbGateNavFull">Nav失败 ≤10%</span>
+          </div>
+          <p class="nav-vdb-status muted" id="visualDbStatus" hidden></p>
         </div>
-        <p class="nav-vdb-status muted" id="visualDbStatus" hidden></p>
+        <script type="application/json" id="vdbOverlayPalette">{"COVERED":"green","YAW_INSUFFICIENT":"yellow","UNVISITED":"gray","NAV_FAILED":"red","UNREACHABLE":"dark-gray"}</script>
       </div>
       <div class="nav-flash" id="navFlash" hidden></div>
     </section>

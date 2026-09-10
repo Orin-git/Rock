@@ -1277,6 +1277,12 @@ class BridgeNode(Node):
             )
             from xw_global_reloc.phase2d.c1_validate_promote import coverage_snapshot_from_db
             from xw_global_reloc.phase2d.config_loader import load_phase2d_config
+            from xw_global_reloc.phase2d.coverage_model import build_coverage_model
+            from xw_global_reloc.phase2d.build_completion import (
+                evaluate_coverage_completion,
+                format_completion_status_text,
+                load_nav_fail_history,
+            )
 
             vroot = visual_root(maps_dir, name)
             active_root, version, source = resolve_active_root(maps_dir, name)
@@ -1287,8 +1293,181 @@ class BridgeNode(Node):
             cov = {}
             if source != 'missing' and (active_root / 'manifest.yaml').is_file():
                 cov = coverage_snapshot_from_db(active_root, cfg)
+            completion = {}
+            try:
+                map_yaml = maps_dir / f'{name}.yaml'
+                if map_yaml.is_file():
+                    model = build_coverage_model(cfg, load_descriptors=False)
+                    hist = load_nav_fail_history(vroot)
+                    comp = evaluate_coverage_completion(
+                        model,
+                        map_yaml,
+                        cfg,
+                        nav_fail_history=hist,
+                        patrol_mode='full',
+                        build_kind='AUTO_BUILD',
+                    )
+                    completion = comp.as_dict()
+                    completion['status_text'] = format_completion_status_text(comp, mode='full')
+            except Exception as exc:  # noqa: BLE001
+                completion = {'error': str(exc)}
             with self._lock:
                 build = dict(self._visual_db_build_status or {'state': 'IDLE'})
+
+            # Web-only UI projection (does not change Phase2D algorithms)
+            bc = dict(cfg.get('build_completion') or {})
+            target_spatial = float(bc.get('target_spatial_coverage_ratio', 0.80))
+            target_yaw = float(bc.get('min_yaw_completeness_ratio', 0.70))
+            max_nav_fail = float(bc.get('max_unresolved_nav_fail_ratio', 0.10))
+            elig = (completion.get('eligible') or {}) if isinstance(completion, dict) else {}
+            counts = (completion.get('counts') or {}) if isinstance(completion, dict) else {}
+            spatial_ratio = completion.get('spatial_coverage_ratio') if isinstance(completion, dict) else None
+            yaw_ratio = completion.get('yaw_completeness_ratio') if isinstance(completion, dict) else None
+            nav_fail_ratio = completion.get('unresolved_nav_fail_ratio') if isinstance(completion, dict) else None
+            map_complete = bool(
+                isinstance(completion, dict) and completion.get('map_complete_claim_allowed')
+            )
+            frames_n = int(cov.get('frames') or 0) if cov else 0
+            has_db = frames_n > 0 or bool(version)
+            build_state = str(build.get('state') or 'IDLE')
+            running_states = {
+                'PRECHECK',
+                'PLANNING',
+                'PATROLLING',
+                'COLLECTING',
+                'VALIDATING',
+                'PROMOTING',
+                'RELOADING',
+                'PAUSED',
+            }
+            building = build_state in running_states
+            need_op = build_state == 'NEED_OPERATOR'
+            if building:
+                build_phase = '建库中'
+                build_phase_key = 'building'
+                sys_state = 'BUILDING'
+            elif need_op:
+                build_phase = '需要人工处理'
+                build_phase_key = 'need_operator'
+                sys_state = 'READY'
+            elif map_complete:
+                build_phase = '建库完成'
+                build_phase_key = 'complete'
+                sys_state = 'COMPLETE'
+            elif has_db and spatial_ratio is not None and float(spatial_ratio) > 0:
+                build_phase = '部分完成/可继续补全'
+                build_phase_key = 'partial'
+                sys_state = 'READY'
+            else:
+                build_phase = '未完成'
+                build_phase_key = 'incomplete'
+                sys_state = 'READY'
+
+            # Last task is historical — never promote old FAILED into current system fault
+            last_task_state = build_state if build_state != 'IDLE' else '—'
+            last_task_msg = ''
+            if build_state in (
+                'FAILED',
+                'FAILED_VALIDATION',
+                'FAILED_PROMOTE',
+                'FAILED_RELOAD',
+                'ABORTED',
+                'NEED_OPERATOR',
+            ):
+                last_task_msg = str(build.get('message') or build.get('stop_reason') or '')
+            elif build_state == 'COMPLETE':
+                last_task_msg = str(build.get('stop_reason') or '')
+                # micro COMPLETE must not look like full-map done
+                if build.get('map_complete') or (
+                    isinstance(build.get('completion'), dict)
+                    and build['completion'].get('map_complete_claim_allowed')
+                ):
+                    pass
+                elif str(build.get('patrol_mode') or '') == 'micro':
+                    last_task_msg = (last_task_msg + ' · micro会话结束，非全图完成').strip(' ·')
+
+            spatial_ok = (
+                spatial_ratio is not None and float(spatial_ratio) >= target_spatial
+            )
+            yaw_ok = yaw_ratio is not None and float(yaw_ratio) >= target_yaw
+            nav_ok = nav_fail_ratio is not None and float(nav_fail_ratio) <= max_nav_fail
+
+            ui = {
+                'build_phase': build_phase,
+                'build_phase_key': build_phase_key,
+                'system_state': sys_state,
+                'last_task': {
+                    'state': last_task_state,
+                    'message': last_task_msg,
+                    'stop_reason': build.get('stop_reason') or '',
+                    'patrol_mode': build.get('patrol_mode') or '',
+                    'build_session_id': build.get('build_session_id') or '',
+                    'map_complete': bool(build.get('map_complete')),
+                },
+                'has_visual_db': has_db,
+                'map_complete': map_complete,
+                'primary_action': (
+                    'stop'
+                    if building
+                    else (
+                        'reoptimize'
+                        if map_complete
+                        else ('resume' if has_db else 'start')
+                    )
+                ),
+                'targets': {
+                    'spatial_coverage_ratio': target_spatial,
+                    'yaw_completeness_ratio': target_yaw,
+                    'max_unresolved_nav_fail_ratio': max_nav_fail,
+                },
+                'spatial': {
+                    'ratio': spatial_ratio,
+                    'covered': completion.get('covered_eligible')
+                    if isinstance(completion, dict)
+                    else counts.get('covered'),
+                    'eligible': elig.get('eligible_visual_cells')
+                    or counts.get('eligible'),
+                    'target': target_spatial,
+                    'ok': spatial_ok,
+                },
+                'yaw': {
+                    'ratio': yaw_ratio,
+                    'sufficient': completion.get('yaw_sufficient')
+                    if isinstance(completion, dict)
+                    else counts.get('yaw_sufficient'),
+                    'covered': completion.get('covered_eligible')
+                    if isinstance(completion, dict)
+                    else counts.get('covered'),
+                    'insufficient': completion.get('yaw_insufficient')
+                    if isinstance(completion, dict)
+                    else counts.get('yaw_insufficient'),
+                    'target': target_yaw,
+                    'ok': yaw_ok,
+                },
+                'gaps': {
+                    'unvisited': counts.get('unvisited'),
+                    'yaw_insufficient': counts.get('yaw_insufficient'),
+                    'nav_failed_retryable': counts.get('nav_failed_retryable'),
+                    'unreachable': counts.get('unreachable'),
+                },
+                'gate': {
+                    'spatial_ok': spatial_ok,
+                    'yaw_ok': yaw_ok,
+                    'nav_ok': nav_ok,
+                },
+                # Reserved for future map coverage overlay (not rendered this round)
+                'overlay_palette': {
+                    'COVERED': 'green',
+                    'YAW_INSUFFICIENT': 'yellow',
+                    'UNVISITED': 'gray',
+                    'NAV_FAILED': 'red',
+                    'UNREACHABLE': 'dark-gray',
+                },
+                'cell_status': (completion.get('cell_status') or {})
+                if isinstance(completion, dict)
+                else {},
+            }
+
             return {
                 'ok': True,
                 'map_name': name,
@@ -1300,7 +1479,9 @@ class BridgeNode(Node):
                 'cells': cov.get('cells'),
                 'yaw_occupancy': cov.get('yaw_occupancy'),
                 'coverage': cov,
+                'completion': completion,
                 'build': build,
+                'ui': ui,
             }
         except Exception as exc:  # noqa: BLE001
             return {'ok': False, 'message': str(exc), 'map_name': name}

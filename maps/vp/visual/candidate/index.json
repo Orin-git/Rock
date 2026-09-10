@@ -214,5 +214,545 @@
     "source": "auto_patrol",
     "timestamp": 1789017263.3817222,
     "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260910_064259_579454",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.274219589276315,
+      "y": -1.5291302197662504,
+      "yaw": 0.1644081978834948
+    },
+    "spatial_cell": "cell_-8_-2",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5022505877538963,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789022579.4534338,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_064351_631011",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -0.07654121675457295,
+      "y": -0.9861275865529976,
+      "yaw": 1.7568427229709518
+    },
+    "spatial_cell": "cell_-1_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5978490262519933,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789022631.0114825,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260910_064453_693023",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -9.393308823837062,
+      "y": -0.7923224274659736,
+      "yaw": 1.7416328208915348
+    },
+    "spatial_cell": "cell_-10_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6276338482918562,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789022693.0220885,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_064516_716843",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.39713273358365,
+      "y": -1.8917720869286685,
+      "yaw": 0.1671702127863057
+    },
+    "spatial_cell": "cell_-8_-2",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.4363521822338135,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789022716.843362,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260910_064526_726510",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.319686134181396,
+      "y": -1.8608463516161817,
+      "yaw": 1.7513806626613293
+    },
+    "spatial_cell": "cell_-8_-2",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5950637554524709,
+    "orb_features": 991,
+    "source": "auto_patrol",
+    "timestamp": 1789022726.5032,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_064601_761446",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -9.325904646448837,
+      "y": -1.8512688635365857,
+      "yaw": 1.7958919909731401
+    },
+    "spatial_cell": "cell_-10_-2",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5915765002886996,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789022761.4459498,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_064611_771885",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -8.820694860340195,
+      "y": -1.587296165472217,
+      "yaw": 0.2461475067696711
+    },
+    "spatial_cell": "cell_-9_-2",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6709508696656504,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789022771.8858185,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_075811_091528",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -10.381413008916867,
+      "y": -0.8144645137586192,
+      "yaw": 0.6052270124470475
+    },
+    "spatial_cell": "cell_-11_-1",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6849209054792272,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027091.5192237,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_075820_100482",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -10.409943111875764,
+      "y": -0.8329966321094646,
+      "yaw": 1.7599412790383246
+    },
+    "spatial_cell": "cell_-11_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6242914320881439,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027100.4825718,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_075839_119037",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -8.840216052773481,
+      "y": -0.5817536356619745,
+      "yaw": 0.3331419676892995
+    },
+    "spatial_cell": "cell_-9_-1",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6292681391849074,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027119.0372965,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_075847_127961",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -8.861648360366363,
+      "y": -0.5231626588936829,
+      "yaw": 1.7406242483719312
+    },
+    "spatial_cell": "cell_-9_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.48538183611021757,
+    "orb_features": 984,
+    "source": "auto_patrol",
+    "timestamp": 1789027127.9612148,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_075902_142698",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.82705039129611,
+      "y": -0.45367208932712116,
+      "yaw": 0.23793625733424562
+    },
+    "spatial_cell": "cell_-8_-1",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.46378805066025497,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027142.695839,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_080005_205948",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -2.6518539667737033,
+      "y": -0.20418091935928487,
+      "yaw": 1.7807312214673434
+    },
+    "spatial_cell": "cell_-3_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6037915431608201,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027205.9468136,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_080022_222434",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -1.7771225813086564,
+      "y": -0.2958567117612427,
+      "yaw": 0.22881014898628688
+    },
+    "spatial_cell": "cell_-2_-1",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6724581204039017,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027222.4347897,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_080032_232872",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -1.7540612880042141,
+      "y": -0.27266945929836667,
+      "yaw": 1.7406014650476964
+    },
+    "spatial_cell": "cell_-2_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6442950504732721,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027232.8726554,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_080103_263082",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 2.313705044889676,
+      "y": -0.22878759834283138,
+      "yaw": 0.4018079299355767
+    },
+    "spatial_cell": "cell_2_-1",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6201129115284665,
+    "orb_features": 969,
+    "source": "auto_patrol",
+    "timestamp": 1789027263.0827165,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_080114_274486",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 2.324097920606464,
+      "y": -0.21440679325660686,
+      "yaw": 1.7390795770975653
+    },
+    "spatial_cell": "cell_2_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5676801304110916,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027274.4857998,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_080937_777906",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -0.676082762445416,
+      "y": 0.45327659067337756,
+      "yaw": 0.5050370308069794
+    },
+    "spatial_cell": "cell_-1_0",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6001050381850705,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027777.905989,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_081121_881518",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 0.21485837412515177,
+      "y": 0.5673417169194385,
+      "yaw": 0.20565021544597348
+    },
+    "spatial_cell": "cell_0_0",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5613288107056578,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027881.5162807,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_081132_892425",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 0.19339533847645884,
+      "y": 0.6078670205094769,
+      "yaw": 1.7723278798845639
+    },
+    "spatial_cell": "cell_0_0",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6345397314325222,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027892.4252167,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_081150_910799",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 2.1806031469245686,
+      "y": 0.41681694432398037,
+      "yaw": 0.14047521417578465
+    },
+    "spatial_cell": "cell_2_0",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.4848489020606598,
+    "orb_features": 886,
+    "source": "auto_patrol",
+    "timestamp": 1789027910.7997246,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_081201_921046",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 2.2519730704280447,
+      "y": 0.49040229592226015,
+      "yaw": 1.6529425249321732
+    },
+    "spatial_cell": "cell_2_0",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5306216801940853,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789027921.0441325,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_081353_033238",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -9.513424014122213,
+      "y": 3.125242118838513,
+      "yaw": 0.574865385195739
+    },
+    "spatial_cell": "cell_-10_3",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5431427202486797,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789028033.2387652,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_081427_067918",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -9.492783180938025,
+      "y": 3.1571290777427565,
+      "yaw": 1.6328467990015991
+    },
+    "spatial_cell": "cell_-10_3",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5704513405744448,
+    "orb_features": 568,
+    "source": "auto_patrol",
+    "timestamp": 1789028067.9175303,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_081446_086742",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.801110846788469,
+      "y": 3.409874193955056,
+      "yaw": 0.302930576607149
+    },
+    "spatial_cell": "cell_-8_3",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5406489995668443,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789028086.7424572,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_081457_097548",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.817734089520786,
+      "y": 3.52904070064359,
+      "yaw": 1.7110841431421182
+    },
+    "spatial_cell": "cell_-8_3",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.6315309273064857,
+    "orb_features": 631,
+    "source": "auto_patrol",
+    "timestamp": 1789028097.5480983,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_081849_329366",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -1.7885348727703991,
+      "y": 0.3628915963567083,
+      "yaw": 0.5021726725125748
+    },
+    "spatial_cell": "cell_-2_0",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5441935482942017,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789028329.366803,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_082032_432429",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 0.29089905861328486,
+      "y": 1.2436859195198922,
+      "yaw": 0.6021669761489538
+    },
+    "spatial_cell": "cell_0_1",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.47206859863454864,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789028432.429041,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260910_082041_441982",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": 0.2684298789045034,
+      "y": 1.2473709324572368,
+      "yaw": 1.6424074334638197
+    },
+    "spatial_cell": "cell_0_1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.5986299980277858,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789028441.9820752,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260910_082524_724448",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.763641167205966,
+      "y": 4.217888571777538,
+      "yaw": 0.5886387713044837
+    },
+    "spatial_cell": "cell_-8_4",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f",
+    "laser_score": 0.49467933707367734,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1789028724.448063,
+    "capture_reason": "CAPTURE_NEW_CELL"
   }
 ]
