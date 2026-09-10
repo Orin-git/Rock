@@ -1,0 +1,46 @@
+keyframe_id: cand_20260910_050849_929251
+lifecycle: CANDIDATE
+map_name: vp
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+camera_id: front_up
+x: -0.29031918565902715
+y: -0.9573112364728051
+yaw: 0.07276956895837082
+timestamp: 1789016929.2508454
+laser_verified: true
+laser_score: 0.6179276706290916
+laser_matched_ratio: 0.7678571428571429
+laser_valid_beams: 224
+scan_stamp: 1789016929.0978777
+amcl_cov_xy: 0.02071558227873055
+amcl_cov_yaw: 0.0024924960711743406
+localization_status: 0
+phase2c_state: READY
+image_quality:
+  sharpness: 120.06767896345984
+  brightness: 118.68945638020833
+  underexposure_ratio: 0.004560546875
+  overexposure_ratio: 9.765625e-06
+  orb_features: 1000
+  occlusion_ratio: null
+  reasons: []
+source: auto_patrol
+build_session_id: build_20260910_050723_e9eea4
+spatial_cell: cell_-1_-1
+yaw_bin: 0
+appearance_id: null
+possible_new_appearance: false
+capture_decision:
+  reason: CAPTURE_NEW_YAW
+  nearest_keyframe_id: kf_000012
+  nearest_distance_m: 0.041328342675214416
+  nearest_yaw_delta_deg: 118.24632460706503
+  visual_difference: null
+  possible_new_appearance: false
+validation:
+  status: VERIFIED
+  phase: Phase2D-C1
+version_promoted_to: vp_visual_v1.1
+retrieval_ready: true
+scan_ref: scan.npz
+promoted_as: kf_000043

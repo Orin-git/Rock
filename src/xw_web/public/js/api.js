@@ -908,6 +908,68 @@ export async function cancelNav() {
   }
 }
 
+/** Visual DB Active summary → /api/visual_db/info */
+export async function fetchVisualDbInfo(mapName = '') {
+  try {
+    const q = mapName ? `?map_name=${encodeURIComponent(mapName)}` : '';
+    const r = await fetch(`${apiBase()}/api/visual_db/info${q}`, { cache: 'no-store' });
+    return await r.json();
+  } catch (_) {
+    return { ok: false };
+  }
+}
+
+/** Visual DB build status latch → /api/visual_db/status */
+export async function fetchVisualDbStatus() {
+  try {
+    const r = await fetch(`${apiBase()}/api/visual_db/status`, { cache: 'no-store' });
+    return await r.json();
+  } catch (_) {
+    return { ok: false, state: 'IDLE' };
+  }
+}
+
+/** One-click AUTO_BUILD → /api/visual_db/build */
+export async function startVisualDbBuild({
+  mode = 'AUTO_BUILD',
+  patrol_mode = 'micro',
+  dry_run = false,
+  simulate_nav = false,
+  targets = null,
+} = {}) {
+  try {
+    const body = { action: 'start', mode, patrol_mode, dry_run, simulate_nav };
+    if (targets && typeof targets === 'object') body.targets = targets;
+    const r = await fetch(`${apiBase()}/api/visual_db/build`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    emitTask(j.ok ? '视觉定位库建库已启动' : `建库启动失败 · ${zhMessage(j.message) || ''}`, { force: true });
+    return j;
+  } catch (_) {
+    emitTask('建库启动失败', { force: true });
+    return { ok: false };
+  }
+}
+
+export async function stopVisualDbBuild() {
+  try {
+    const r = await fetch(`${apiBase()}/api/visual_db/stop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    const j = await r.json();
+    emitTask(j.ok ? '视觉定位库建库已停止' : `停止失败 · ${zhMessage(j.message) || ''}`, { force: true });
+    return j;
+  } catch (_) {
+    emitTask('停止建库失败', { force: true });
+    return { ok: false };
+  }
+}
+
 /** Sensor hub presence (lidar / depth / placeholders). */
 export async function fetchSensorHub() {
   try {

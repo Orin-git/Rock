@@ -3,8 +3,10 @@
 
 0 good | 1 not ready | 2 drift (self-heal) | 3 needs intervention (latched until OK)
 
-AMCL only republishes after motion (update_min_*). While odom is nearly static
-since the last amcl_pose, that pose is still treated as usable (avoids idle→1).
+AMCL only republishes after motion (update_min_*). While NAV/FOLLOW/recovery is
+armed, this node periodically calls request_nomotion_update so amcl_pose stays
+live even when the robot is stopped. While odom is nearly static since the last
+amcl_pose, that pose is still treated as usable (avoids idle→1).
 A stopped robot is still judged: a live scan that fails the frozen 0.38 laser
 gate at the current pose is status 3, without waiting for motion.
 A live scan that fails the frozen 0.38 laser gate at that pose is not normal,
@@ -75,6 +77,10 @@ class LocalizationHealthNode(Node):
         self.declare_parameter('scan_fresh_sec', 1.5)
         # If true, heal during follow without supervisor gate (NOT recommended).
         self.declare_parameter('allow_self_heal_during_follow', False)
+        # While NAV/FOLLOW/recovery is armed, force AMCL laser updates even when
+        # the robot is static (Nav2 otherwise only publishes after update_min_*).
+        self.declare_parameter('amcl_force_update_enable', True)
+        self.declare_parameter('amcl_force_update_period_sec', 1.0)
 
         self._cb = ReentrantCallbackGroup()
         self._tf = Buffer()
@@ -101,6 +107,8 @@ class LocalizationHealthNode(Node):
         self._laser_mismatch = False
         self._laser_score: Optional[float] = None
         self._last_laser_check = 0.0
+        self._last_force_update = 0.0
+        self._force_update_inflight = False
 
         latch_in = QoSProfile(
             depth=1,
@@ -144,12 +152,16 @@ class LocalizationHealthNode(Node):
         self._reinit = self.create_client(
             Empty, 'reinitialize_global_localization', callback_group=self._cb
         )
+        self._nomotion = self.create_client(
+            Empty, 'request_nomotion_update', callback_group=self._cb
+        )
 
         hz = float(self.get_parameter('publish_hz').value)
         self.create_timer(1.0 / max(hz, 0.5), self._tick, callback_group=self._cb)
         self.get_logger().info(
             'localization_health ready (detect always; heal gated by recovery_enable; '
-            'phase2c_recovery blocks spin+reinit; idle laser mismatch → status 3)'
+            'phase2c_recovery blocks spin+reinit; idle laser mismatch → status 3; '
+            'nav-mode forces AMCL nomotion updates)'
         )
 
     @property
@@ -320,6 +332,45 @@ class LocalizationHealthNode(Node):
         lim = float(self.get_parameter('pose_jump_m').value)
         return math.hypot(dx, dy) > lim
 
+    def _maybe_force_amcl_update(self) -> None:
+        """Keep amcl_pose live while NAV/FOLLOW/recovery is armed.
+
+        Nav2 AMCL only republishes after update_min_* motion. Sitting still at a
+        waypoint otherwise leaves status=1 (stale pose) for minutes even when the
+        laser/map overlay looks fine. Periodic request_nomotion_update forces a
+        laser update without global reinit.
+        """
+        if not bool(self.get_parameter('amcl_force_update_enable').value):
+            return
+        if not self._nav_mode:
+            return
+        if self._amcl is None:
+            return
+        period = float(self.get_parameter('amcl_force_update_period_sec').value)
+        period = max(0.2, period)
+        now = self._now()
+        if now - self._last_force_update < period:
+            return
+        # Skip if a fresh amcl_pose already arrived within the period.
+        if self._amcl_mono is not None and (now - self._amcl_mono) < period:
+            return
+        if self._force_update_inflight:
+            return
+        if not self._nomotion.service_is_ready():
+            return
+        self._last_force_update = now
+        self._force_update_inflight = True
+        fut = self._nomotion.call_async(Empty.Request())
+
+        def _done(f) -> None:  # noqa: ANN001
+            self._force_update_inflight = False
+            try:
+                f.result()
+            except Exception as exc:  # noqa: BLE001
+                self.get_logger().warn(f'request_nomotion_update failed: {exc}')
+
+        fut.add_done_callback(_done)
+
     def _maybe_laser_check(self) -> None:
         """Score the live scan at the current pose. No motion required."""
         period = float(self.get_parameter('laser_check_period_sec').value)
@@ -465,6 +516,7 @@ class LocalizationHealthNode(Node):
             if self._heal_started is not None or self._heal_phase:
                 self._abort_heal_motion('follow active → stop heal motion')
 
+        self._maybe_force_amcl_update()
         self._maybe_laser_check()
         raw = self._raw_code()
         now = self._now()

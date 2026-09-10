@@ -1,0 +1,136 @@
+# Phase2D-A2 capture gates — Candidate-only. Does not touch Active/P3 DB.
+# Laser threshold frozen at 0.38 (shared laser_verify). Do not retune here
+# without an explicit Phase2C safety-regression decision.
+
+phase2d_v1:
+  maps_dir: "/ros2_ws/maps"
+  map_name: "vp"
+  camera_id: "front_up"
+  rgb_topic: "/camera/front_up/color/image_raw"
+  camera_info_topic: "/camera/front_up/color/camera_info"
+  scan_topic: "/scan"
+  map_topic: "/map"
+  amcl_topic: "amcl_pose"
+  odom_topic: "/odom"
+  localization_status_topic: "/xw/localization_status"
+  phase2c_state_topic: "/xw/localization/phase2c_state"
+  phase2c_loc_state_topic: "/xw/localization/phase2c_loc_state"
+  follow_enable_topic: "/xw/follow/enable"
+  map_name_topic: "/xw/nav/map_name"
+
+  candidate_root: ""   # default: <maps_dir>/<map_name>/visual/candidate
+  # Absolute forbid: never write under visual/keyframes (Active production)
+
+  pose_gate:
+    require_localization_status_0: true
+    require_phase2c_ready: true
+    allowed_phase2c_states: ["READY"]
+    blocked_phase2c_states:
+      - BOOT_LOCALIZING
+      - LOST
+      - RECOVERING
+      - NEED_OPERATOR
+      - VERIFYING_OPERATOR_POSE
+      - DEGRADED
+      - UNKNOWN
+    block_if_follow_active: true
+    block_if_legacy_freeze_active: true
+    max_amcl_cov_xy: 0.6
+    max_amcl_cov_yaw: 0.35
+    max_map_base_age_sec: 1.5
+    max_map_odom_age_sec: 1.5
+    max_scan_age_sec: 1.0
+    max_speed_mps: 0.20
+    max_yaw_rate: 0.35
+    require_finite_pose: true
+    require_map_name: true
+    require_map_hash: true
+
+  laser_gate:
+    # MUST match shared laser_verify / Phase2C frozen gate.
+    min_laser_score: 0.38
+    min_valid_beams: 20
+    match_dist_m: 0.25
+    beam_stride: 6
+    # matched_ratio gate is enforced inside laser_verify:
+    # matched_ratio >= min_laser_score * 0.8
+
+  image_gate:
+    min_sharpness: 40.0          # Laplacian variance
+    brightness_min: 25.0         # mean 0..255
+    brightness_max: 230.0
+    max_underexposure_ratio: 0.45
+    max_overexposure_ratio: 0.35
+    underexpose_thresh: 20
+    overexpose_thresh: 235
+    min_orb_features: 80
+    expected_min_width: 160
+    expected_min_height: 120
+    # occlusion_ratio reserved; V1 leaves null
+
+  orb:
+    n_features: 1000
+
+  capture:
+    source_default: "manual_test"
+    jpeg_quality: 90
+    save_scan: true
+    arm_timeout_sec: 5.0
+    rgb_request_topic: "/xw/reloc/rgb_request"
+    min_translation_m: 0.75
+    min_yaw_deg: 35.0
+    min_visual_diff: 0.30
+
+  coverage:
+    cell_size_m: 1.0
+    yaw_bins: 8
+    neighbor_cell_radius: 1
+
+  dedup:
+    max_xy_m: 0.35
+    max_yaw_deg: 15.0
+    # visual_difference <= this → DUPLICATE (higher = more different)
+    max_visual_diff_for_duplicate: 0.25
+
+  candidate_limits:
+    max_per_cell_yaw: 5
+    max_per_build_session: 500
+
+  patrol:
+    max_yaw_targets_per_cell: 2
+    max_total_goals: 40
+    max_planning_rounds: 2
+    max_session_sec: 1800
+    goal_clearance_m: 0.45
+    free_kernel_cells: 2          # static-map free neighborhood radius (cells @ map res)
+    cell_sample_stride: 1         # sample every N coverage cells
+    prefer_near_existing_m: 8.0   # bias goals near existing Active coverage
+    settle_sec: 1.0
+    capture_retry: 1
+    nav_timeout_sec: 120.0
+    micro_max_goals: 6
+    mode_default: micro           # micro | partial | full
+    use_nav2_action: true         # NavigateToPose directly (reuse Nav2)
+    simulate_nav: false           # offline/unit tests
+
+  # Phase2D-C2 one-click production build
+  auto_build:
+    patrol_mode_default: micro
+    micro_max_goals: 6
+    max_planning_rounds: 2
+    max_session_sec: 1800
+
+  stats:
+    reject_reasons:
+      - rejected_pose
+      - rejected_laser
+      - rejected_blur
+      - rejected_dark
+      - rejected_overexposed
+      - rejected_low_features
+      - rejected_invalid_frame
+      - skip_duplicate
+      - skip_covered
+      - skip_cell_yaw_quota
+      - skip_session_quota
+      - capture_visual_novelty

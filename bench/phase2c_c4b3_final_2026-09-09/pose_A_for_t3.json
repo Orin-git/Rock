@@ -1,0 +1,21 @@
+{
+  "map_name": "vp",
+  "map_hash": "56072c066c085e3719879e4c0a6b8f5b84793be233ed4784d3ed8c56dbfe3e25",
+  "timestamp": 1789002467.6975455,
+  "x": 0.8509209472653503,
+  "y": 0.1476550016170079,
+  "yaw": -2.8704334944331147,
+  "covariance": [
+    0.020542394267967286,
+    0.020542394267967286,
+    0.0007715597647517863
+  ],
+  "source": "amcl",
+  "quality": 0.9741146312548363,
+  "laser_verified": true,
+  "laser_score_at_write": 0.5140887567877801,
+  "laser_matched_ratio": 0.6622807017543859,
+  "laser_valid_beams": 228,
+  "scan_stamp": 1789002467.460937,
+  "note": "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose"
+}

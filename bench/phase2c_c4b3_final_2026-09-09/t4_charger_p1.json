@@ -1,0 +1,6 @@
+{
+  "pass": false,
+  "reason": "not_charging_no_dock_evidence",
+  "note": "checked before T3 relocate; charging=false docked=false; blind seed not used; will retry if docked later",
+  "deferred_retry": true
+}

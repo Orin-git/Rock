@@ -21,7 +21,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, Image, LaserScan
 from std_msgs.msg import Bool, Int8
-from std_srvs.srv import Empty
+from std_srvs.srv import Empty, Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from xw_global_reloc.acceptance import decide, evaluate_candidate
@@ -39,6 +39,10 @@ from xw_global_reloc.pose_cluster_accept import (
 )
 from xw_global_reloc.retrieval import retrieve_topk
 from xw_global_reloc.transforms import Pose2D, compose_candidate_base_pose, se3_from_xyz_rpy
+from xw_global_reloc.phase2d.version_store import (
+    load_visual_db_from_root,
+    resolve_active_root,
+)
 
 try:
     from xw_interfaces.srv import Relocalize
@@ -171,6 +175,12 @@ class GlobalRelocPoc(Node):
         self._tf: Optional[Buffer] = None
         self._tf_listener = None
         self._active = False
+        self._reloc_in_progress = False
+        self._db_version = ''
+        self._db_source = ''
+        self._db_path: Optional[Path] = None
+        self._db_hash = ''
+        self._cur_hash = ''
 
         self._rgb_req = self.create_publisher(Bool, '/xw/reloc/rgb_request', _LATCH)
         self._initialpose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
@@ -190,10 +200,20 @@ class GlobalRelocPoc(Node):
         self._loc_sub = self.create_subscription(Int8, '/xw/localization_status', self._on_loc, _LATCH)
 
         self.create_service(Relocalize, '/xw/relocalize', self._on_relocalize, callback_group=self._cb)
+        self.create_service(
+            Trigger, '/xw/visual_db/reload', self._on_reload_db, callback_group=self._cb
+        )
         self._load_db()
         # Ensure idle release on startup.
         self._request_rgb(False)
         allow = bool(self.get_parameter('allow_amcl_handoff').value)
+        self.get_logger().info(
+            f'Visual DB Active Version: {self._db_version or "unknown"} '
+            f'source={self._db_source} Loaded: {len(self._keyframes)} keyframes '
+            f'DB Root: {self._db_path}'
+        )
+        if self._db_source == 'fallback_legacy':
+            self.get_logger().warn('VISUAL_DB_FALLBACK_LEGACY — current_active_version missing')
         self.get_logger().info(
             f'reloc PoC ready db_kfs={len(self._keyframes)} '
             f'allow_amcl_handoff={allow} (IDLE: no RGB/Depth/Scan/map/amcl/TF)'
@@ -203,52 +223,111 @@ class GlobalRelocPoc(Node):
         maps_dir = Path(str(self.get_parameter('maps_dir').value))
         map_name = str(self.get_parameter('map_name').value)
         db = str(self.get_parameter('db_root').value).strip()
-        return Path(db) if db else (maps_dir / map_name / 'visual')
+        root, version, source = resolve_active_root(maps_dir, map_name, db_root_override=db)
+        self._db_version = version
+        self._db_source = source
+        self._db_path = root
+        return root
 
     def _load_db(self) -> None:
+        """Initial load into empty node state (startup only)."""
         root = self._db_root()
-        man = root / 'manifest.yaml'
-        if not man.is_file():
-            self.get_logger().warn(f'no manifest at {man}')
+        loaded = load_visual_db_from_root(root)
+        if loaded.error:
+            self.get_logger().warn(f'Visual DB load failed: {loaded.error} root={root}')
+            self._keyframes = []
+            self._kf_by_id = {}
+            self._db_hash = ''
             return
-        manifest = yaml.safe_load(man.read_text(encoding='utf-8')) or {}
         maps_dir = Path(str(self.get_parameter('maps_dir').value))
         map_name = str(self.get_parameter('map_name').value)
         try:
             yaml_p, pgm_p = resolve_map_files(maps_dir, map_name)
-            cur = map_pair_hash(yaml_p, pgm_p)
+            self._cur_hash = map_pair_hash(yaml_p, pgm_p)
         except FileNotFoundError:
-            cur = ''
-        self._db_hash = str(manifest.get('map_hash') or '')
-        self._cur_hash = cur
-        idx_path = root / 'descriptors' / 'index.json'
-        if not idx_path.is_file():
-            return
-        idx = json.loads(idx_path.read_text(encoding='utf-8'))
-        for item in idx:
-            kid = item['id']
-            kdir = root / 'keyframes' / kid
-            desc_p = kdir / 'descriptors.npy'
-            kp_p = kdir / 'keypoints.npy'
-            meta_p = kdir / 'meta.yaml'
-            if not (desc_p.is_file() and kp_p.is_file() and meta_p.is_file()):
-                continue
-            desc = np.load(str(desc_p))
-            kps = unpack_keypoints(np.load(str(kp_p)))
-            meta = yaml.safe_load(meta_p.read_text(encoding='utf-8')) or {}
-            depth = cv2.imread(str(kdir / 'depth.png'), cv2.IMREAD_UNCHANGED)
-            entry = {
-                'id': kid,
-                'descriptors': desc,
-                'keypoints': kps,
-                'meta': meta,
-                'depth': depth,
-                'retrieval_ready': bool(meta.get('retrieval_ready', True)),
-                'geometry_ready': bool(meta.get('geometry_ready', depth is not None)),
-                'dir': kdir,
-            }
-            self._keyframes.append(entry)
-            self._kf_by_id[kid] = entry
+            self._cur_hash = ''
+        self._db_hash = loaded.db_hash
+        self._db_version = loaded.version or self._db_version
+        self._keyframes = loaded.keyframes
+        self._kf_by_id = loaded.kf_by_id
+        # Never retain candidate ids
+        self._keyframes = [k for k in self._keyframes if not str(k.get('id', '')).startswith('cand_')]
+        self._kf_by_id = {k['id']: k for k in self._keyframes}
+
+    def _on_reload_db(self, request, response):  # noqa: ANN001, ARG002
+        """Safe Active DB reload: load into temp → validate → atomic swap."""
+        t0 = time.monotonic()
+        old_version = self._db_version
+        old_count = len(self._keyframes)
+        payload: Dict[str, Any] = {
+            'old_version': old_version,
+            'requested_version': None,
+            'active_version_after': old_version,
+            'loaded_keyframe_count': old_count,
+            'elapsed_ms': 0,
+        }
+        if self._reloc_in_progress or self._active:
+            payload['status'] = 'BUSY_REJECTED'
+            payload['elapsed_ms'] = int((time.monotonic() - t0) * 1000)
+            response.success = False
+            response.message = json.dumps(payload, separators=(',', ':'))
+            return response
+
+        maps_dir = Path(str(self.get_parameter('maps_dir').value))
+        map_name = str(self.get_parameter('map_name').value)
+        db = str(self.get_parameter('db_root').value).strip()
+        root, version, source = resolve_active_root(maps_dir, map_name, db_root_override=db)
+        payload['requested_version'] = version
+        if source == 'missing':
+            payload['status'] = 'VERSION_NOT_FOUND'
+            payload['elapsed_ms'] = int((time.monotonic() - t0) * 1000)
+            response.success = False
+            response.message = json.dumps(payload, separators=(',', ':'))
+            return response
+
+        loaded = load_visual_db_from_root(root)
+        if loaded.error:
+            payload['status'] = loaded.error
+            payload['elapsed_ms'] = int((time.monotonic() - t0) * 1000)
+            response.success = False
+            response.message = json.dumps(payload, separators=(',', ':'))
+            return response
+
+        try:
+            yaml_p, pgm_p = resolve_map_files(maps_dir, map_name)
+            cur_hash = map_pair_hash(yaml_p, pgm_p)
+        except FileNotFoundError:
+            cur_hash = ''
+        if loaded.db_hash and cur_hash and loaded.db_hash != cur_hash:
+            payload['status'] = 'MAP_HASH_MISMATCH'
+            payload['db_hash'] = loaded.db_hash
+            payload['cur_hash'] = cur_hash
+            payload['elapsed_ms'] = int((time.monotonic() - t0) * 1000)
+            response.success = False
+            response.message = json.dumps(payload, separators=(',', ':'))
+            return response
+
+        # Atomic in-memory swap only after full successful load
+        self._keyframes = [k for k in loaded.keyframes if not str(k.get('id', '')).startswith('cand_')]
+        self._kf_by_id = {k['id']: k for k in self._keyframes}
+        self._db_hash = loaded.db_hash
+        self._cur_hash = cur_hash
+        self._db_version = loaded.version or version
+        self._db_source = source
+        self._db_path = root
+
+        payload['status'] = 'RELOAD_OK'
+        payload['active_version_after'] = self._db_version
+        payload['loaded_keyframe_count'] = len(self._keyframes)
+        payload['db_root'] = str(root)
+        payload['elapsed_ms'] = int((time.monotonic() - t0) * 1000)
+        self.get_logger().info(
+            f'Visual DB reload OK version={self._db_version} kfs={len(self._keyframes)} '
+            f'root={root} ({payload["elapsed_ms"]} ms)'
+        )
+        response.success = True
+        response.message = json.dumps(payload, separators=(',', ':'))
+        return response
 
     def _on_rgb(self, msg: Image) -> None:
         if self._rgb_want:
@@ -668,6 +747,14 @@ class GlobalRelocPoc(Node):
     def _on_relocalize(self, req, res):
         timings: Dict[str, float] = {}
         t_all = time.monotonic()
+        self._reloc_in_progress = True
+        try:
+            return self._on_relocalize_impl(req, res, timings, t_all)
+        finally:
+            self._reloc_in_progress = False
+            self._release_idle()
+
+    def _on_relocalize_impl(self, req, res, timings: Dict[str, float], t_all: float):
         apply_pose = bool(req.apply_initial_pose)
         allow_handoff = bool(self.get_parameter('allow_amcl_handoff').value)
         # Phase2B: apply only when dev/explicit allow_amcl_handoff=true.

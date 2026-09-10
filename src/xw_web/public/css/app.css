@@ -1903,6 +1903,45 @@ main.beautify-page {
   opacity: 0.68;
 }
 
+.nav-vdb-strip {
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.85rem;
+}
+.nav-vdb-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.85rem;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: rgba(0, 0, 0, 0.72);
+}
+.nav-vdb-meta b {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.88);
+}
+.nav-vdb-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.nav-vdb-actions > button {
+  min-height: 1.95rem;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.78rem;
+}
+.nav-vdb-status {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
 .nav-page-head {
   display: flex;
   flex-direction: row;

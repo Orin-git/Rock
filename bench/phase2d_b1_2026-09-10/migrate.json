@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "message": "already_migrated",
+  "visual_root": "/ros2_ws/maps/vp/visual",
+  "legacy_seed": "/ros2_ws/maps/vp/visual/legacy_seed",
+  "active_version": "vp_visual_v1.0",
+  "pointer": "/ros2_ws/maps/vp/visual/current_active_version",
+  "equivalence_ok": true,
+  "pre_keyframe_count": 37,
+  "post_keyframe_count": 37,
+  "pre_index_sha256": "445b27cdc0fd424664c58d550c403dae8b62fc84e8a595a1860e1d8096284eb7",
+  "post_index_sha256": "445b27cdc0fd424664c58d550c403dae8b62fc84e8a595a1860e1d8096284eb7"
+}

@@ -45,6 +45,20 @@
         </div>
       </div>
       <p class="nav-toolbar-hint muted" id="sessionHint">选地图 → 进导航。定位正常则直接前往，失败才需确认初位姿</p>
+      <div class="nav-vdb-strip" id="visualDbStrip" aria-label="视觉定位库">
+        <div class="nav-vdb-meta" id="visualDbMeta">
+          <span>当前地图：<b id="vdbMapName">—</b></span>
+          <span>当前Active：<b id="vdbActive">—</b></span>
+          <span>关键帧：<b id="vdbFrames">—</b></span>
+          <span>覆盖Cells：<b id="vdbCells">—</b></span>
+          <span>Yaw Coverage：<b id="vdbYaw">—</b></span>
+        </div>
+        <div class="nav-vdb-actions">
+          <button type="button" id="startVisualDbBuild" title="一键自动建立视觉定位库">自动建立视觉定位库</button>
+          <button type="button" class="secondary" id="stopVisualDbBuild" hidden title="停止建库">停止</button>
+        </div>
+        <p class="nav-vdb-status muted" id="visualDbStatus" hidden></p>
+      </div>
       <div class="nav-flash" id="navFlash" hidden></div>
     </section>
 

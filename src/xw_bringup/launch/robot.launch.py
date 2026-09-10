@@ -250,8 +250,8 @@ def generate_launch_description() -> LaunchDescription:
                 'coast_hold_s': 1.5,
                 'lost_timeout_s': 3.0,
                 'search_timeout_s': 15.0,
-                # Phase1 AB: legacy_freeze (default) | continuous
-                'follow_localization_mode': 'legacy_freeze',
+                # AMCL must keep updating during follow (no update_min freeze).
+                'follow_localization_mode': 'continuous',
             }],
             output='screen',
         ),
@@ -409,7 +409,8 @@ def generate_launch_description() -> LaunchDescription:
                     phase2c_localization_enabled, value_type=bool
                 ),
                 'status2_lost_sec': 6.0,
-                'status3_debounce_sec': 0.5,
+                'status3_debounce_sec': 3.0,
+                'pose_jump_debounce_sec': 3.0,
                 'p3_max_attempts': 2,
                 'p3_cooldown_sec': 30.0,
                 'auto_resume_nav': True,

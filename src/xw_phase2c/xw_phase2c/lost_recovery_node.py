@@ -83,7 +83,11 @@ class LostRecoveryNode(Node):
         # Default FALSE — production unchanged unless master/legacy flag ON.
         self.declare_parameter('phase2c_lost_recovery_enabled', False)
         self.declare_parameter('status2_lost_sec', 6.0)
-        self.declare_parameter('status3_debounce_sec', 0.5)
+        # Must exceed typical ~2s AMCL self-pullback. 0.5s was false-triggering
+        # global R1/R2/R3 on brief laser/cov transients. Tick is 1 Hz so the
+        # effective wait is ~ceil(this) seconds before LOST.
+        self.declare_parameter('status3_debounce_sec', 3.0)
+        self.declare_parameter('pose_jump_debounce_sec', 3.0)
         self.declare_parameter('tf_dead_sec', 2.0)
         self.declare_parameter('ready_stable_sec', 2.5)
         self.declare_parameter('ready_cov_xy', 0.80)
@@ -117,6 +121,7 @@ class LostRecoveryNode(Node):
         self._session_id = 0
         self._status2_since: Optional[float] = None
         self._status3_since: Optional[float] = None
+        self._jump_since: Optional[float] = None
         self._unknown_until = 0.0
         self._ready_guard_until = 0.0
         self._snapshot: Optional[TaskSnapshot] = None
@@ -239,6 +244,8 @@ class LostRecoveryNode(Node):
         ):
             self._status2_since = None
             self._status3_since = None
+            self._jump_since = None
+            self._jump_flag = False
 
     def _emit_canonical(self, state: str, goals_blocked: bool, source: str) -> None:
         if self._external_hold and not source.startswith('lost_stop'):
@@ -793,10 +800,14 @@ class LostRecoveryNode(Node):
         if not (self._nav_en or self._follow_en or self._recharge_en or self._mode in (2, 3)):
             self._status2_since = None
             self._status3_since = None
+            self._jump_since = None
+            self._jump_flag = False
             return None
 
         now = self._mono()
         # IDLE path: health/status events only. TF is checked inside active recovery.
+        # No SUSPECT state machine: sustained anomaly past debounce → LOST.
+        # Brief AMCL pullback that clears status before debounce must NOT start R1–R3.
 
         if self._loc_status == 3:
             if self._status3_since is None:
@@ -814,11 +825,19 @@ class LostRecoveryNode(Node):
             return None
         self._status2_since = None
 
-        if getattr(self, '_jump_flag', False):
-            self._jump_flag = False
-            return 'pose_jump'
+        if self._jump_flag:
+            if self._jump_since is None:
+                self._jump_since = now
+            elif now - self._jump_since >= float(self.get_parameter('pose_jump_debounce_sec').value):
+                self._jump_flag = False
+                self._jump_since = None
+                return 'pose_jump'
+            return None
+        self._jump_since = None
 
         if self._loc_status == 0:
+            self._jump_flag = False
+            self._jump_since = None
             if self._logical == Phase2CLocState.DEGRADED:
                 self._set_logical(Phase2CLocState.READY)
             return None

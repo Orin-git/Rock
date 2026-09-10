@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "tag": "same_pose_same_view",
+      "reason": "SKIP_DUPLICATE",
+      "should": false,
+      "cell": "cell_1_-1",
+      "yaw_bin": 2,
+      "vdiff": 0.0,
+      "nearest": "kf_000002"
+    },
+    {
+      "tag": "rotate_45",
+      "reason": "CAPTURE_NEW_YAW",
+      "should": true,
+      "cell": "cell_1_-1",
+      "yaw_bin": 3,
+      "vdiff": null,
+      "nearest": "kf_000002"
+    },
+    {
+      "tag": "new_cell",
+      "reason": "CAPTURE_NEW_CELL",
+      "should": true,
+      "cell": "cell_13_11",
+      "yaw_bin": 2,
+      "vdiff": null,
+      "nearest": "kf_000037"
+    },
+    {
+      "tag": "repeat_new_cell",
+      "reason": "SKIP_DUPLICATE",
+      "should": false,
+      "cell": "cell_13_11",
+      "yaw_bin": 2,
+      "vdiff": 0.0,
+      "nearest": "sim_new_cell"
+    }
+  ],
+  "legacy": {
+    "manifest": "ced28edc60c8530c3265865e9683dabd8b3067e8bce9b4d7fa0e3fe89bfbf19a",
+    "index": "445b27cdc0fd424664c58d550c403dae8b62fc84e8a595a1860e1d8096284eb7",
+    "kf_count": 37
+  }
+}

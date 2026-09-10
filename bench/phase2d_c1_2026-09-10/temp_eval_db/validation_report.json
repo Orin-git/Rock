@@ -1,0 +1,12 @@
+{
+  "status": "LEGACY_BASELINE",
+  "keyframe_count": 37,
+  "source": "phase2a_phase2c_existing_production",
+  "false_accept_count": 0,
+  "promoted_by_phase2d": false,
+  "historical_evidence": [
+    "PHASE2A_LASER_SCORE_RUNTIME_VALIDATION_REPORT_2026-09-07.md",
+    "PHASE2C_FINAL_USABILITY_AUDIT_2026-09-10.md"
+  ],
+  "note": "Not re-run in Phase2D-B1; packaged existing production DB."
+}

@@ -104,9 +104,9 @@ class FollowSessionNode(Node):
         self.declare_parameter('search_yaw_rate', 0.25)
         self.declare_parameter('use_nav2_follow', False)
         self.declare_parameter('follow_bt_xml', '')
-        # Phase1 AB: legacy_freeze (update_min 100) vs continuous (AMCL keeps updating).
-        # Default legacy_freeze for safe rollback until continuous is validated.
-        self.declare_parameter('follow_localization_mode', 'legacy_freeze')
+        # continuous: AMCL keeps laser updates during follow (required).
+        # legacy_freeze kept only as an explicit opt-in; never the default.
+        self.declare_parameter('follow_localization_mode', 'continuous')
         self.declare_parameter('exit_nomotion_timeout_sec', 2.0)
         self.declare_parameter('exit_cov_xy_ok', 0.8)
         self.declare_parameter('exit_cov_yaw_ok', 0.35)
@@ -205,62 +205,47 @@ class FollowSessionNode(Node):
         )
 
     def _loc_mode(self) -> str:
-        raw = str(self.get_parameter('follow_localization_mode').value or 'legacy_freeze').strip()
-        return raw if raw in ('legacy_freeze', 'continuous') else 'legacy_freeze'
+        raw = str(self.get_parameter('follow_localization_mode').value or 'continuous').strip()
+        return raw if raw in ('legacy_freeze', 'continuous') else 'continuous'
 
     def _on_amcl_pose(self, msg: PoseWithCovarianceStamped) -> None:
         self._last_amcl = msg
         self._last_amcl_mono = time.monotonic()
 
     def _freeze_amcl(self, freeze: bool) -> None:
-        """legacy_freeze only: raise update_min_* so AMCL stops laser updates.
+        """Never freeze AMCL. Kept as restore-only helper for leftover legacy_freeze state.
 
-        continuous mode must never call this with freeze=True (Phase1 AB flag).
+        Raising update_min_* pauses laser updates and leaves amcl_pose stale for minutes;
+        that is forbidden — localization must keep updating whenever the stack is up.
         """
-        if self._loc_mode() != 'legacy_freeze':
+        if freeze:
+            self.get_logger().warn(
+                'AMCL freeze requested but ignored (follow_localization_mode must keep AMCL live)'
+            )
             return
         if not self._amcl_set_params.service_is_ready():
             return
         try:
-            if freeze:
-                if self._amcl_get_params.service_is_ready() and self._amcl_saved is None:
-                    req = GetParameters.Request()
-                    req.names = ['update_min_d', 'update_min_a']
-                    fut = self._amcl_get_params.call_async(req)
-                    # best-effort; don't block follow arm
-                    deadline = time.monotonic() + 0.4
-                    while time.monotonic() < deadline and not fut.done():
-                        time.sleep(0.02)
-                    if fut.done() and fut.result() is not None:
-                        vals = fut.result().values
-                        if len(vals) >= 2:
-                            self._amcl_saved = {
-                                'update_min_d': float(vals[0].double_value),
-                                'update_min_a': float(vals[1].double_value),
-                            }
-                req = SetParameters.Request()
-                req.parameters = [
-                    Parameter('update_min_d', Parameter.Type.DOUBLE, 100.0).to_parameter_msg(),
-                    Parameter('update_min_a', Parameter.Type.DOUBLE, 100.0).to_parameter_msg(),
-                ]
-                self._amcl_set_params.call_async(req)
-                self.get_logger().info('AMCL updates frozen for visual follow (legacy_freeze)')
-            else:
-                d = 0.25
-                a = 0.2
-                if self._amcl_saved:
-                    d = float(self._amcl_saved.get('update_min_d', d))
-                    a = float(self._amcl_saved.get('update_min_a', a))
-                    self._amcl_saved = None
-                req = SetParameters.Request()
-                req.parameters = [
-                    Parameter('update_min_d', Parameter.Type.DOUBLE, d).to_parameter_msg(),
-                    Parameter('update_min_a', Parameter.Type.DOUBLE, a).to_parameter_msg(),
-                ]
-                self._amcl_set_params.call_async(req)
-                self.get_logger().info(f'AMCL updates restored (d={d:.2f} a={a:.2f})')
+            d = 0.10
+            a = 0.10
+            if self._amcl_saved:
+                d = float(self._amcl_saved.get('update_min_d', d))
+                a = float(self._amcl_saved.get('update_min_a', a))
+                self._amcl_saved = None
+            # Guard: never leave a stuck freeze (update_min≈100) in place.
+            if d >= 10.0:
+                d = 0.10
+            if a >= 10.0:
+                a = 0.10
+            req = SetParameters.Request()
+            req.parameters = [
+                Parameter('update_min_d', Parameter.Type.DOUBLE, d).to_parameter_msg(),
+                Parameter('update_min_a', Parameter.Type.DOUBLE, a).to_parameter_msg(),
+            ]
+            self._amcl_set_params.call_async(req)
+            self.get_logger().info(f'AMCL updates restored (d={d:.2f} a={a:.2f})')
         except Exception as exc:  # noqa: BLE001
-            self.get_logger().warn(f'AMCL freeze/restore failed: {exc}')
+            self.get_logger().warn(f'AMCL restore failed: {exc}')
 
     def _exit_localization_handshake(self) -> bool:
         """Stop → request_nomotion_update → wait AMCL → check covariance.
@@ -431,9 +416,7 @@ class FollowSessionNode(Node):
             self._smooth_lin = 0.0
             self._smooth_ang = 0.0
             self._nav_cancel_pub.publish(Bool(data=True))
-            # legacy_freeze only; continuous keeps AMCL updating during follow.
-            if not self._use_nav2() and self._loc_mode() == 'legacy_freeze':
-                self._freeze_amcl(True)
+            # AMCL stays live during follow (freeze path is a no-op).
             self._emit_progress('follow_start', source)
             self.get_logger().info(
                 f'follow active ({source}; loc={self._loc_mode()})'

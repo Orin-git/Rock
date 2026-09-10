@@ -1,0 +1,13 @@
+{
+  "pass": true,
+  "version": "vp_visual_v1.0",
+  "kfs": 37,
+  "cases": [
+    "A_OK",
+    "B_HASH",
+    "C_INDEX",
+    "D_BUSY",
+    "ROLLBACK",
+    "ISOLATION"
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "build_session_id": "build_offline_micro_20260910_023121",
+  "mode": "micro",
+  "state": "COMPLETE",
+  "source": "auto_patrol_offline_plan",
+  "planned_goals": [
+    {
+      "x": -5.5,
+      "y": -1.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-6_-2",
+      "yaw_bin": 0,
+      "reason": "missing_cell"
+    },
+    {
+      "x": -5.5,
+      "y": -1.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-6_-2",
+      "yaw_bin": 2,
+      "reason": "missing_cell"
+    },
+    {
+      "x": -2.174999999999997,
+      "y": -1.125,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-3_-2",
+      "yaw_bin": 0,
+      "reason": "missing_cell"
+    },
+    {
+      "x": -2.174999999999997,
+      "y": -1.125,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-3_-2",
+      "yaw_bin": 2,
+      "reason": "missing_cell"
+    },
+    {
+      "x": -0.17499999999999716,
+      "y": -1.125,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-1_-2",
+      "yaw_bin": 0,
+      "reason": "missing_cell"
+    },
+    {
+      "x": -0.17499999999999716,
+      "y": -1.125,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-1_-2",
+      "yaw_bin": 2,
+      "reason": "missing_cell"
+    }
+  ],
+  "partial_goal_count": 18,
+  "coverage_before": {
+    "active_frames": 37,
+    "candidate_frames": 0,
+    "occupied_spatial_cells": 9,
+    "active_occupied_cells": 9,
+    "candidate_occupied_cells": 0,
+    "yaw_bins": 8,
+    "active_yaw_bin_occupancy": 21,
+    "active_yaw_coverage_ratio": 0.2916666666666667,
+    "cell_size_m": 1.0,
+    "candidate_new_cells": 0,
+    "candidate_new_yaw_bins": 0,
+    "duplicate_skips": 0,
+    "novelty_captures": 0,
+    "quota_skips": 0,
+    "covered_skips": 0,
+    "captures": 0
+  },
+  "candidate_count_before": 0,
+  "note": "Nav2/Capture not executed (bringup offline). Planner+isolation validated."
+}

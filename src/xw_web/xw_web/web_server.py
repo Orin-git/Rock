@@ -1072,6 +1072,11 @@ class BridgeNode(Node):
         )
         self._patrol_pub = self.create_publisher(String, '/xw/nav/patrol_cmd', 10)
         self._nav_cancel_pub = self.create_publisher(Bool, '/xw/nav/cancel', 10)
+        self._visual_db_build_pub = self.create_publisher(String, '/xw/visual_db/build', 10)
+        self._visual_db_build_status: Dict[str, Any] = {'state': 'IDLE'}
+        self.create_subscription(
+            String, '/xw/visual_db/build_status', self._on_visual_db_build_status, _LATCHED_BOOL_QOS
+        )
         self._set_mode = self.create_client(SetMode, '/xw/supervisor/set_mode')
         self._set_run_mode = self.create_client(SetRunMode, '/xw/supervisor/set_run_mode')
         self._map_mgr = self.create_client(MapManage, '/xw/map/manage')
@@ -1197,6 +1202,108 @@ class BridgeNode(Node):
             return
         with self._lock:
             self._explore.update(parsed)
+
+    def _on_visual_db_build_status(self, msg: String) -> None:
+        raw = (msg.data or '').strip()
+        if not raw:
+            return
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return
+        if not isinstance(parsed, dict):
+            return
+        with self._lock:
+            self._visual_db_build_status = parsed
+
+    def visual_db_build_status(self) -> Dict[str, Any]:
+        with self._lock:
+            st = dict(self._visual_db_build_status or {'state': 'IDLE'})
+        st['ok'] = True
+        return st
+
+    def publish_visual_db_build(
+        self,
+        action: str = 'start',
+        mode: str = 'AUTO_BUILD',
+        dry_run: bool = False,
+        simulate_nav: bool = False,
+        patrol_mode: str = 'micro',
+        targets: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        payload = {
+            'action': action or 'start',
+            'mode': mode or 'AUTO_BUILD',
+            'patrol_mode': patrol_mode or 'micro',
+            'dry_run': bool(dry_run),
+            'simulate_nav': bool(simulate_nav),
+            'command_id': f'vdb-build-{int(time.time() * 1000)}',
+        }
+        if isinstance(targets, dict) and targets:
+            payload['targets'] = targets
+        msg = String()
+        msg.data = json.dumps(payload, ensure_ascii=False)
+        self._visual_db_build_pub.publish(msg)
+        act = str(action or 'start')
+        if act in ('stop', 'abort', 'cancel'):
+            self._push_task('视觉定位库建库已停止')
+        else:
+            self._push_task(f'视觉定位库建库已启动 ({payload["mode"]})')
+        with self._lock:
+            st = dict(self._visual_db_build_status or {})
+        return {
+            'ok': True,
+            'topic': '/xw/visual_db/build',
+            **payload,
+            'state': st.get('state', 'IDLE'),
+            'job_id': st.get('build_session_id'),
+        }
+
+    def visual_db_info(self, map_name: str = '') -> Dict[str, Any]:
+        """Read Active Visual DB summary from disk for Web UI."""
+        name = (map_name or '').strip() or 'vp'
+        maps_dir = Path(os.environ.get('XW_MAPS_DIR') or '/ros2_ws/maps')
+        # Prefer package maps under workspace if present
+        for cand in (Path('/ros2_ws/maps'), Path('/home/radxa/ros2_ws/maps'), maps_dir):
+            if (cand / name / 'visual').is_dir():
+                maps_dir = cand
+                break
+        try:
+            from xw_global_reloc.phase2d.version_store import (
+                read_pointer_version,
+                resolve_active_root,
+                short_version_label,
+                visual_root,
+            )
+            from xw_global_reloc.phase2d.c1_validate_promote import coverage_snapshot_from_db
+            from xw_global_reloc.phase2d.config_loader import load_phase2d_config
+
+            vroot = visual_root(maps_dir, name)
+            active_root, version, source = resolve_active_root(maps_dir, name)
+            ptr = read_pointer_version(vroot)
+            cfg = load_phase2d_config()
+            cfg['maps_dir'] = str(maps_dir)
+            cfg['map_name'] = name
+            cov = {}
+            if source != 'missing' and (active_root / 'manifest.yaml').is_file():
+                cov = coverage_snapshot_from_db(active_root, cfg)
+            with self._lock:
+                build = dict(self._visual_db_build_status or {'state': 'IDLE'})
+            return {
+                'ok': True,
+                'map_name': name,
+                'active_version': version,
+                'active_version_short': short_version_label(version or ''),
+                'pointer': ptr,
+                'source': source,
+                'frames': cov.get('frames'),
+                'cells': cov.get('cells'),
+                'yaw_occupancy': cov.get('yaw_occupancy'),
+                'coverage': cov,
+                'build': build,
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {'ok': False, 'message': str(exc), 'map_name': name}
 
     def pointcloud_status(self) -> Dict[str, Any]:
         with self._lock:
@@ -2416,6 +2523,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
             return self._json(200, self.bridge.explore_status())
+        if path == '/api/visual_db/status':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            return self._json(200, self.bridge.visual_db_build_status())
+        if path == '/api/visual_db/info':
+            if not self.bridge:
+                return self._json(503, {'ok': False, 'message': 'bridge offline'})
+            qs = parse_qs(urlparse(self.path).query)
+            map_name = (qs.get('map_name') or [''])[0]
+            return self._json(200, self.bridge.visual_db_info(map_name))
         if path == '/api/sensors':
             if not self.bridge:
                 return self._json(503, {'ok': False, 'message': 'bridge offline'})
@@ -2507,6 +2624,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
             )
         if path == '/api/nav/cancel':
             return self._json(200, self.bridge.cancel_nav())
+        if path == '/api/visual_db/build':
+            return self._json(
+                200,
+                self.bridge.publish_visual_db_build(
+                    str(data.get('action') or 'start'),
+                    str(data.get('mode') or 'AUTO_BUILD'),
+                    bool(data.get('dry_run', False)),
+                    bool(data.get('simulate_nav', False)),
+                    str(data.get('patrol_mode') or data.get('scope') or 'micro'),
+                    data.get('targets') if isinstance(data.get('targets'), dict) else None,
+                ),
+            )
+        if path == '/api/visual_db/stop':
+            return self._json(
+                200,
+                self.bridge.publish_visual_db_build(action='stop'),
+            )
         if path == '/api/set_mode':
             payload = data.get('payload') if isinstance(data.get('payload'), dict) else {}
             return self._json(

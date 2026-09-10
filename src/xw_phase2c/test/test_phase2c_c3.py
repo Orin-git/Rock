@@ -159,6 +159,16 @@ class TestSingleRecoveryOwner(unittest.TestCase):
         self.assertIn('post_ready_guard', text)
         self.assertIn('p3_max_attempts', text)
 
+    def test_status3_debounce_covers_amcl_transient(self) -> None:
+        """~2s AMCL self-pullback must not instantly escalate to global LOST."""
+        text = (_SRC / 'xw_phase2c' / 'lost_recovery_node.py').read_text(encoding='utf-8')
+        self.assertIn("declare_parameter('status3_debounce_sec', 3.0)", text)
+        self.assertIn("declare_parameter('pose_jump_debounce_sec', 3.0)", text)
+        self.assertNotIn("declare_parameter('status3_debounce_sec', 0.5)", text)
+        launch = _read('xw_bringup/launch/robot.launch.py')
+        self.assertIn("'status3_debounce_sec': 3.0", launch)
+        self.assertIn("'pose_jump_debounce_sec': 3.0", launch)
+
     def test_ready_not_latch_only(self) -> None:
         text = (_SRC / 'xw_phase2c' / 'lost_recovery_node.py').read_text(encoding='utf-8')
         self.assertIn('_amcl_ready_stable', text)
