@@ -7,11 +7,12 @@ Eligible = known-free + clearance + connected + (optional) near structure.
 from __future__ import annotations
 
 import json
+import logging
 import math
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import cv2
 import numpy as np
@@ -29,6 +30,8 @@ from xw_global_reloc.phase2d.patrol_planner import (
 from xw_global_reloc.phase2d.spatial import parse_spatial_cell
 
 Cell = Tuple[int, int]
+
+LOGGER = logging.getLogger(__name__)
 
 # Gap / cell classification labels (V1)
 COVERED = 'COVERED'
@@ -57,6 +60,11 @@ class EligibleArea:
     unreachable: Set[Cell] = field(default_factory=set)
     unknown_cells: Set[Cell] = field(default_factory=set)
     structure_excluded: Set[Cell] = field(default_factory=set)
+    # Audit trail for the connectivity flood. `unreachable` is an irreversible
+    # lock (the orchestrator passes it as exclude_cells forever), so how it was
+    # derived must be inspectable after the fact.
+    seed_resolution: Dict[str, Any] = field(default_factory=dict)
+    connectivity: Dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -68,6 +76,8 @@ class EligibleArea:
             'excluded_unreachable': self.excluded_unreachable,
             'excluded_structure': self.excluded_structure,
             'eligible_cell_ids': sorted(f'cell_{x}_{y}' for x, y in self.eligible),
+            'seed_resolution': dict(self.seed_resolution),
+            'connectivity': dict(self.connectivity),
         }
 
 
@@ -102,6 +112,11 @@ class CoverageCompletion:
                 'excluded_clearance': self.eligible.excluded_clearance,
                 'excluded_unreachable': self.eligible.excluded_unreachable,
                 'excluded_structure': self.eligible.excluded_structure,
+                # Hand-written subset of EligibleArea.as_dict() — new audit
+                # fields must be repeated here or they never reach the
+                # orchestrator, which persists exactly this dict.
+                'seed_resolution': dict(self.eligible.seed_resolution),
+                'connectivity': dict(self.eligible.connectivity),
             },
             'covered_eligible': len(self.covered_eligible),
             'spatial_coverage_ratio': self.spatial_coverage_ratio,
@@ -125,6 +140,188 @@ class CoverageCompletion:
 
 def _completion_cfg(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return dict(cfg.get('build_completion') or {})
+
+
+# ---------------------------------------------------------------------------
+# Connectivity helpers. Pure functions — no map, no config — so the seed and
+# flood logic can be unit-tested directly.
+# ---------------------------------------------------------------------------
+
+# Single source of truth for adjacency: the flood and the component pass must
+# agree, or "largest component" could name a region the flood treats
+# differently and the audit would lie.
+_NEIGHBORS8: Tuple[Tuple[int, int], ...] = tuple(
+    (dx, dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1) if (dx, dy) != (0, 0)
+)
+
+
+def _connected_components(candidates: Set[Cell]) -> List[Set[Cell]]:
+    """8-neighbour connected components, in a deterministic total order.
+
+    Ordered by size descending, ties broken by the component's smallest cell,
+    so the result never depends on set iteration order or PYTHONHASHSEED.
+    Iterative on purpose: a 400-cell snake corridor would blow the recursion
+    limit, which would be a new failure class of its own.
+    """
+    unseen = set(candidates)
+    comps: List[Set[Cell]] = []
+    while unseen:
+        start = min(unseen)
+        comp: Set[Cell] = {start}
+        stack = [start]
+        while stack:
+            cx, cy = stack.pop()
+            for dx, dy in _NEIGHBORS8:
+                n = (cx + dx, cy + dy)
+                if n in unseen and n not in comp:
+                    comp.add(n)
+                    stack.append(n)
+        unseen -= comp
+        comps.append(comp)
+    comps.sort(key=lambda c: (-len(c), min(c)))
+    return comps
+
+
+def _nearest_candidate(cell: Cell, candidates: Set[Cell]) -> Optional[Cell]:
+    """Nearest candidate by integer squared cell distance; None when empty.
+
+    Geometric proximity in cell-index space, NOT path distance: the nearest
+    candidate can sit on the far side of a wall. Ties are broken by (x, y) so
+    the answer never depends on set iteration order — without that, this is
+    just next(iter(set)) wearing a disguise.
+    """
+    if not candidates:
+        return None
+    cx, cy = int(cell[0]), int(cell[1])
+    return min(
+        candidates,
+        key=lambda c: ((c[0] - cx) ** 2 + (c[1] - cy) ** 2, c[0], c[1]),
+    )
+
+
+def _largest_component_anchor(candidates: Set[Cell]) -> Optional[Cell]:
+    """Smallest cell of the largest connected component — the no-evidence anchor.
+
+    Used only when there is no positional evidence at all. Deliberately NOT
+    min(candidates): that is a pure lexicographic extreme with zero
+    connectivity content, and a map-edge orphan pocket (small x, small y) would
+    win it every time — deterministically condemning the whole map.
+    """
+    comps = _connected_components(candidates)
+    return min(comps[0]) if comps else None
+
+
+def _flood(candidates: Set[Cell], seeds: Iterable[Cell]) -> Set[Cell]:
+    """8-neighbour BFS over `candidates` starting from `seeds`.
+
+    Non-candidate seeds are filtered AT ENQUEUE. The previous version enqueued
+    them and dropped them at pop — which is precisely how an entire map could
+    collapse to UNREACHABLE without leaving a single trace in the output.
+    """
+    reachable: Set[Cell] = set()
+    q: deque = deque()
+    for s in seeds:
+        if s in candidates and s not in reachable:
+            reachable.add(s)
+            q.append(s)
+    while q:
+        cx, cy = q.popleft()
+        for dx, dy in _NEIGHBORS8:
+            n = (cx + dx, cy + dy)
+            if n in candidates and n not in reachable:
+                reachable.add(n)
+                q.append(n)
+    return reachable
+
+
+def _resolve_seeds(
+    candidates: Set[Cell],
+    seed_cells: Optional[Set[Cell]],
+    seed_xy: Optional[Tuple[float, float]],
+    cell_size: float,
+) -> Tuple[List[Cell], Dict[str, Any]]:
+    """Turn whatever evidence the caller has into candidate seeds, plus an audit.
+
+    Priority chain — seed_cells, then seed_xy, then a geometric anchor. NOT a
+    union: `eligible` must be a function of the database and the map, never of
+    where the robot happens to be parked, or the coverage denominator (and the
+    gate built on it) would move with the parking spot.
+
+    Neutrality rule: as soon as ANY requested seed is a candidate, the result is
+    exactly the old expression [c for c in requested if c in candidates].
+    Snapping is a repair for the no-usable-seed case ONLY — snapping
+    unconditionally would widen `eligible` into regions nothing actually
+    reaches, weakening the irreversible `unreachable` lock.
+    """
+    audit: Dict[str, Any] = {
+        'seed_source': 'none',
+        'seeds': [],
+        'requested': [],
+        'dropped_non_candidate': [],
+        'snapped_from': [],
+        'notes': [],
+        'seed_unresolved': False,
+    }
+    if not candidates:
+        audit['seed_unresolved'] = True
+        audit['notes'].append('no_candidates')
+        return [], audit
+
+    requested: List[Cell] = []
+    source = ''
+    if seed_cells:
+        requested = sorted(set(seed_cells))
+        source = 'seed_cells'
+    elif seed_xy is not None:
+        sx, sy = float(seed_xy[0]), float(seed_xy[1])
+        requested = [(int(math.floor(sx / cell_size)), int(math.floor(sy / cell_size)))]
+        source = 'seed_xy'
+    audit['requested'] = [[int(x), int(y)] for x, y in requested]
+
+    if not requested:
+        anchor = _largest_component_anchor(candidates)
+        seeds = [anchor] if anchor is not None else []
+        audit.update(
+            seed_source='anchor',
+            seeds=[[int(x), int(y)] for x, y in seeds],
+            notes=['no_seed_evidence'],
+        )
+        return seeds, audit
+
+    valid = sorted(c for c in requested if c in candidates)
+    if valid:
+        # Production branch: identical to the pre-fix seed set, by construction.
+        # (Keep `c` whole here: unpacking `for x, y in requested` would rebind
+        # `x` to the coordinate and the membership test would silently pass.)
+        audit.update(
+            seed_source=source,
+            seeds=[[int(c[0]), int(c[1])] for c in valid],
+            dropped_non_candidate=[
+                [int(c[0]), int(c[1])] for c in requested if c not in candidates
+            ],
+        )
+        return valid, audit
+
+    # No requested seed is drivable. Snap each onto the map instead of dropping
+    # it — the old code silently produced an empty flood here, and the entire
+    # candidate set came back as UNREACHABLE (irreversible: exclude_cells).
+    snapped: List[Cell] = []
+    for c in requested:
+        t = _nearest_candidate(c, candidates)
+        if t is None:
+            continue
+        if t not in snapped:
+            snapped.append(t)
+        if t != c:
+            audit['snapped_from'].append(
+                {'from': [int(c[0]), int(c[1])], 'to': [int(t[0]), int(t[1])]}
+            )
+    audit.update(
+        seed_source=f'{source}_snapped',
+        seeds=[[int(x), int(y)] for x, y in snapped],
+        notes=['seed_map_contradiction'],
+    )
+    return snapped, audit
 
 
 def compute_eligible_area(
@@ -201,41 +398,74 @@ def compute_eligible_area(
     structure_excluded = clear_cells - structure_ok
     candidates = set(structure_ok)
 
-    # Connectivity: 8-neighbour on candidate cells from seed
-    seeds: List[Cell] = []
-    if seed_cells:
-        seeds = [c for c in seed_cells if c in candidates] or list(seed_cells)[:1]
-    if not seeds and seed_xy is not None:
-        sx, sy = float(seed_xy[0]), float(seed_xy[1])
-        seeds = [(int(math.floor(sx / cell_size)), int(math.floor(sy / cell_size)))]
-    if not seeds and candidates:
-        # fallback: centroid of clear cells near map origin of free_safe flood
-        seeds = [next(iter(candidates))]
+    # Connectivity: 8-neighbour flood from resolved seeds. A seed must never be
+    # dropped silently — an empty flood condemns every candidate to
+    # UNREACHABLE, which the orchestrator then passes as exclude_cells forever.
+    seeds, seed_audit = _resolve_seeds(candidates, seed_cells, seed_xy, cell_size)
+    reachable = _flood(candidates, seeds)
+    flood_unknown = False
 
-    reachable: Set[Cell] = set()
-    if seeds:
-        q: deque = deque()
-        seen: Set[Cell] = set()
-        for s in seeds:
-            if s not in seen:
-                seen.add(s)
-                q.append(s)
-        while q:
-            cx, cy = q.popleft()
-            if (cx, cy) not in candidates:
-                continue
-            reachable.add((cx, cy))
-            for dx in (-1, 0, 1):
-                for dy in (-1, 0, 1):
-                    if dx == 0 and dy == 0:
-                        continue
-                    n = (cx + dx, cy + dy)
-                    if n in candidates and n not in seen:
-                        seen.add(n)
-                        q.append(n)
+    if candidates and not reachable:
+        # _resolve_seeds guarantees a candidate seed whenever candidates is
+        # non-empty, so this is unreachable by construction. If it ever fires,
+        # the resolver or the flood is broken — and condemning every cell is
+        # irreversible. Keep the session alive, but make the fault LOUD rather
+        # than plausible.
+        LOGGER.error(
+            'seed resolution produced an empty flood over %d candidates '
+            '(seed_source=%s); falling back to the largest component',
+            len(candidates), seed_audit.get('seed_source'),
+        )
+        seed_audit['notes'].append('INTERNAL_seed_resolution_failed')
+        seed_audit['internal_error'] = True
+        anchor = _largest_component_anchor(candidates)
+        seeds = [anchor] if anchor is not None else []
+        seed_audit['seed_source'] = 'anchor_recovery'
+        seed_audit['seeds'] = [[int(x), int(y)] for x, y in seeds]
+        reachable = _flood(candidates, seeds)
+
+        if not reachable:
+            # The recovery flood failed too, so reachability is UNKNOWN, not
+            # empty. `unreachable` is an irreversible exclude-lock, and the safe
+            # answer to "I cannot tell" is to condemn NOTHING: the evidence-based
+            # ledger closes bad cells on three nav failures, whereas geometry
+            # guessing here would silently kill the whole map forever.
+            LOGGER.error(
+                'recovery flood over %d candidates is still empty; treating '
+                'reachability as UNKNOWN and excluding nothing', len(candidates),
+            )
+            seed_audit['notes'].append('INTERNAL_flood_unavailable')
+            seed_audit['connectivity_unknown'] = True
+            flood_unknown = True
+            reachable = set(candidates)
 
     unreachable = candidates - reachable
     eligible = reachable
+
+    # Audit. The component pass is only paid for when something came back
+    # unreachable; otherwise "the flood covered every candidate" already
+    # implies a single component.
+    connectivity: Dict[str, Any]
+    if unreachable or flood_unknown:
+        comps = _connected_components(candidates)
+        connectivity = {
+            'component_count': len(comps),
+            'component_sizes': [len(c) for c in comps[:10]],
+            'largest_component_size': len(comps[0]) if comps else 0,
+            'unreachable_component_sizes': [
+                len(c) for c in comps if not (c & reachable)
+            ],
+        }
+        if flood_unknown:
+            # Real components, but no claim about which ones are reachable.
+            connectivity['reachability_unknown'] = True
+    else:
+        connectivity = {
+            'component_count': 1 if candidates else 0,
+            'component_sizes': [len(candidates)] if candidates else [],
+            'largest_component_size': len(candidates),
+            'unreachable_component_sizes': [],
+        }
 
     return EligibleArea(
         cell_size_m=cell_size,
@@ -251,6 +481,8 @@ def compute_eligible_area(
         unreachable=unreachable,
         unknown_cells=unknown_cells,
         structure_excluded=structure_excluded,
+        seed_resolution=seed_audit,
+        connectivity=connectivity,
     )
 
 
@@ -478,6 +710,12 @@ def evaluate_coverage_completion(
         gate_reasons.append(
             f'nav_fail_ratio={unresolved_ratio:.3f}>max={max_nav_fail:.3f}'
         )
+    if not eligible.eligible:
+        # Without this the report reads "you covered 0 of a real target" when
+        # the truth is "there is no target at all".
+        gate_reasons.append(
+            'eligible_cells=0 (no candidates: check map/structure config)'
+        )
 
     coverage_gate = (spatial_ok and yaw_ok_gate and nav_ok) or exhausted
     if exhausted and not (spatial_ok and yaw_ok_gate and nav_ok):
@@ -512,8 +750,16 @@ def evaluate_coverage_completion(
     for c in unreachable:
         status[f'cell_{c[0]}_{c[1]}'] = UNREACHABLE
 
+    # Covered cells that are neither eligible nor unreachable — i.e. the DB and
+    # the map disagree (clearance / structure / unknown). `covered_eligible`
+    # alone drops these from every count and from `status`, so a non-zero value
+    # here is the only alarm that the two have drifted apart.
+    covered_outside_eligible = covered - eligible.eligible - unreachable
+
     counts = {
         'eligible': len(eligible.eligible),
+        'candidate_cells': len(eligible.eligible) + len(eligible.unreachable),
+        'covered_outside_eligible': len(covered_outside_eligible),
         'covered': len(covered_eligible),
         'under_covered': len(under_covered),
         'unvisited': len(unvisited - nav_retry),

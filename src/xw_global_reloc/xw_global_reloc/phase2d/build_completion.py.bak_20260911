@@ -1,0 +1,585 @@
+"""Eligible visual coverage + Full-Build completion gate (Phase2D-C2.1).
+
+Does NOT treat raw free-space pixel count as the build target.
+Eligible = known-free + clearance + connected + (optional) near structure.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+from collections import deque
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import cv2
+import numpy as np
+import yaml
+
+from xw_global_reloc.phase2d.coverage_model import CoverageModel
+from xw_global_reloc.phase2d.patrol_planner import (
+    _cell_center,
+    _is_clear_goal,
+    erode_free,
+    load_free_mask,
+    map_to_world,
+    world_to_map,
+)
+from xw_global_reloc.phase2d.spatial import parse_spatial_cell
+
+Cell = Tuple[int, int]
+
+# Gap / cell classification labels (V1)
+COVERED = 'COVERED'
+UNDER_COVERED = 'UNDER_COVERED'
+UNVISITED = 'UNVISITED'
+NAV_FAILED = 'NAV_FAILED'
+NAV_FAILED_RETRYABLE = 'NAV_FAILED_RETRYABLE'
+UNREACHABLE = 'UNREACHABLE'
+UNSAFE_CLEARANCE = 'UNSAFE_CLEARANCE'
+UNKNOWN_MAP = 'UNKNOWN_MAP'
+YAW_INSUFFICIENT = 'YAW_INSUFFICIENT'
+
+
+@dataclass
+class EligibleArea:
+    cell_size_m: float
+    total_free_cells: int
+    eligible_visual_cells: int
+    excluded_unknown: int
+    excluded_clearance: int
+    excluded_unreachable: int
+    excluded_structure: int
+    eligible: Set[Cell] = field(default_factory=set)
+    free_cells: Set[Cell] = field(default_factory=set)
+    clearance_fail: Set[Cell] = field(default_factory=set)
+    unreachable: Set[Cell] = field(default_factory=set)
+    unknown_cells: Set[Cell] = field(default_factory=set)
+    structure_excluded: Set[Cell] = field(default_factory=set)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            'cell_size_m': self.cell_size_m,
+            'total_free_cells': self.total_free_cells,
+            'eligible_visual_cells': self.eligible_visual_cells,
+            'excluded_unknown': self.excluded_unknown,
+            'excluded_clearance': self.excluded_clearance,
+            'excluded_unreachable': self.excluded_unreachable,
+            'excluded_structure': self.excluded_structure,
+            'eligible_cell_ids': sorted(f'cell_{x}_{y}' for x, y in self.eligible),
+        }
+
+
+@dataclass
+class CoverageCompletion:
+    eligible: EligibleArea
+    covered_cells: Set[Cell]
+    covered_eligible: Set[Cell]
+    under_covered: Set[Cell]
+    unvisited: Set[Cell]
+    yaw_sufficient: Set[Cell]
+    yaw_insufficient: Set[Cell]
+    nav_failed_retryable: Set[Cell]
+    unreachable: Set[Cell]
+    unsafe_clearance: Set[Cell]
+    unknown_map: Set[Cell]
+    spatial_coverage_ratio: float
+    yaw_completeness_ratio: float
+    unresolved_nav_fail_ratio: float
+    gate_pass: bool
+    gate_reasons: List[str]
+    map_complete_claim_allowed: bool
+    cell_status: Dict[str, str] = field(default_factory=dict)
+    counts: Dict[str, int] = field(default_factory=dict)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            'eligible': {
+                'total_free_cells': self.eligible.total_free_cells,
+                'eligible_visual_cells': self.eligible.eligible_visual_cells,
+                'excluded_unknown': self.eligible.excluded_unknown,
+                'excluded_clearance': self.eligible.excluded_clearance,
+                'excluded_unreachable': self.eligible.excluded_unreachable,
+                'excluded_structure': self.eligible.excluded_structure,
+            },
+            'covered_eligible': len(self.covered_eligible),
+            'spatial_coverage_ratio': self.spatial_coverage_ratio,
+            'yaw_sufficient': len(self.yaw_sufficient),
+            'yaw_insufficient': len(self.yaw_insufficient),
+            'yaw_completeness_ratio': self.yaw_completeness_ratio,
+            'unvisited': len(self.unvisited),
+            'under_covered': len(self.under_covered),
+            'nav_failed_retryable': len(self.nav_failed_retryable),
+            'unreachable': len(self.unreachable),
+            'unsafe_clearance': len(self.unsafe_clearance),
+            'unknown_map': len(self.unknown_map),
+            'unresolved_nav_fail_ratio': self.unresolved_nav_fail_ratio,
+            'gate_pass': self.gate_pass,
+            'gate_reasons': list(self.gate_reasons),
+            'map_complete_claim_allowed': self.map_complete_claim_allowed,
+            'counts': dict(self.counts),
+            'cell_status': dict(self.cell_status),
+        }
+
+
+def _completion_cfg(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    return dict(cfg.get('build_completion') or {})
+
+
+def compute_eligible_area(
+    map_yaml: Path,
+    cfg: Dict[str, Any],
+    *,
+    seed_xy: Optional[Tuple[float, float]] = None,
+    seed_cells: Optional[Set[Cell]] = None,
+) -> EligibleArea:
+    """Compute eligible 1 m visual cells from the 2D occupancy map."""
+    cov = dict(cfg.get('coverage') or {})
+    patrol = dict(cfg.get('patrol') or {})
+    bc = _completion_cfg(cfg)
+    cell_size = float(cov.get('cell_size_m', 1.0))
+    clearance = float(patrol.get('goal_clearance_m', 0.45))
+    kernel = int(patrol.get('free_kernel_cells', 2))
+    structure_m = float(bc.get('structure_proximity_m', 3.0))
+    use_structure = bool(bc.get('require_near_structure', True))
+
+    free, info = load_free_mask(map_yaml)
+    res = float(info['resolution'])
+    k_clear = max(kernel, int(math.ceil(clearance / max(res, 1e-3))))
+    free_safe = erode_free(free, k_clear)
+
+    meta = yaml.safe_load(map_yaml.read_text(encoding='utf-8')) or {}
+    img = map_yaml.parent / meta['image']
+    pgm = cv2.imread(str(img), cv2.IMREAD_UNCHANGED)
+    if pgm is None:
+        raise FileNotFoundError(img)
+    if pgm.ndim == 3:
+        pgm = cv2.cvtColor(pgm, cv2.COLOR_BGR2GRAY)
+    img_u8 = np.flipud(np.asarray(pgm, dtype=np.uint8))
+    negate = int(meta.get('negate', 0))
+    occ_t = float(meta.get('occupied_thresh', 0.65))
+    free_t = float(meta.get('free_thresh', 0.25))
+    pix = img_u8.astype(np.float64)
+    occ = (pix / 255.0) if negate else ((255.0 - pix) / 255.0)
+    free_raw = occ < free_t
+    occupied = occ > occ_t
+    unknown = ~(free_raw | occupied)
+    dist_to_occ = cv2.distanceTransform((~occupied).astype(np.uint8), cv2.DIST_L2, 5) * res
+
+    h, w = free.shape
+    stride = max(1, int(cell_size / max(res, 1e-3)))
+
+    free_cells: Set[Cell] = set()
+    clear_cells: Set[Cell] = set()
+    clearance_fail: Set[Cell] = set()
+    unknown_cells: Set[Cell] = set()
+    structure_ok: Set[Cell] = set()
+
+    # Dense pass: mark free / unknown cells from any pixel
+    for iy in range(0, h, stride):
+        for ix in range(0, w, stride):
+            x, y = map_to_world(ix, iy, info)
+            cx, cy = int(math.floor(x / cell_size)), int(math.floor(y / cell_size))
+            ccx, ccy = _cell_center(cx, cy, cell_size)
+            mix, miy = world_to_map(ccx, ccy, info)
+            if mix < 0 or miy < 0 or mix >= w or miy >= h:
+                continue
+            if unknown[miy, mix] and not free_raw[miy, mix] and not occupied[miy, mix]:
+                unknown_cells.add((cx, cy))
+                continue
+            if free_raw[miy, mix]:
+                free_cells.add((cx, cy))
+            if _is_clear_goal(ccx, ccy, free_safe, info):
+                clear_cells.add((cx, cy))
+                if (not use_structure) or float(dist_to_occ[miy, mix]) <= structure_m:
+                    structure_ok.add((cx, cy))
+            elif free_raw[miy, mix]:
+                clearance_fail.add((cx, cy))
+
+    clearance_fail -= clear_cells
+    structure_excluded = clear_cells - structure_ok
+    candidates = set(structure_ok)
+
+    # Connectivity: 8-neighbour on candidate cells from seed
+    seeds: List[Cell] = []
+    if seed_cells:
+        seeds = [c for c in seed_cells if c in candidates] or list(seed_cells)[:1]
+    if not seeds and seed_xy is not None:
+        sx, sy = float(seed_xy[0]), float(seed_xy[1])
+        seeds = [(int(math.floor(sx / cell_size)), int(math.floor(sy / cell_size)))]
+    if not seeds and candidates:
+        # fallback: centroid of clear cells near map origin of free_safe flood
+        seeds = [next(iter(candidates))]
+
+    reachable: Set[Cell] = set()
+    if seeds:
+        q: deque = deque()
+        seen: Set[Cell] = set()
+        for s in seeds:
+            if s not in seen:
+                seen.add(s)
+                q.append(s)
+        while q:
+            cx, cy = q.popleft()
+            if (cx, cy) not in candidates:
+                continue
+            reachable.add((cx, cy))
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    if dx == 0 and dy == 0:
+                        continue
+                    n = (cx + dx, cy + dy)
+                    if n in candidates and n not in seen:
+                        seen.add(n)
+                        q.append(n)
+
+    unreachable = candidates - reachable
+    eligible = reachable
+
+    return EligibleArea(
+        cell_size_m=cell_size,
+        total_free_cells=len(free_cells),
+        eligible_visual_cells=len(eligible),
+        excluded_unknown=len(unknown_cells - free_cells),
+        excluded_clearance=len(clearance_fail),
+        excluded_unreachable=len(unreachable),
+        excluded_structure=len(structure_excluded),
+        eligible=eligible,
+        free_cells=free_cells,
+        clearance_fail=clearance_fail,
+        unreachable=unreachable,
+        unknown_cells=unknown_cells,
+        structure_excluded=structure_excluded,
+    )
+
+
+def _active_covered_and_yaw(
+    model: CoverageModel,
+) -> Tuple[Set[Cell], Dict[Cell, Set[int]]]:
+    covered: Set[Cell] = set()
+    yaw: Dict[Cell, Set[int]] = {}
+    for s in model.cell_summaries():
+        if s.active_count <= 0 and s.candidate_count <= 0:
+            continue
+        # Spatial coverage counts Active OR Candidate (resume must see pending)
+        cell = (s.cell_x, s.cell_y)
+        if s.active_count > 0 or s.candidate_count > 0:
+            covered.add(cell)
+            bins = set(s.covered_yaw_bins)
+            yaw[cell] = bins
+    return covered, yaw
+
+
+def load_nav_fail_history(visual_root: Path) -> Dict[str, int]:
+    """Persist counts of independent build sessions that nav-failed a cell."""
+    path = visual_root / 'state' / 'nav_fail_history.json'
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding='utf-8')) or {}
+        return {str(k): int(v) for k, v in (data.get('cells') or {}).items()}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+# Failures owned by our own safety interlock / operator / the Nav2 server's
+# absence. They say nothing about the cell. Never accumulate toward UNREACHABLE.
+NON_ATTRIBUTABLE_FAILURE_CODES = frozenset({
+    'CANCELLED',
+    'ABORTED',
+    'INTERLOCK_PAUSED',
+    'NAV2_UNAVAILABLE',
+})
+# Decided by the goal itself before any motion; meaningful even when instant.
+PREFLIGHT_FAILURE_CODES = frozenset({'GOAL_REJECTED'})
+# Codes that only blame the cell once navigation actually ran for a while.
+CELL_ATTRIBUTABLE_FAILURE_CODES = frozenset({'TIMEOUT', 'SEND_TIMEOUT'})
+
+# Measured on the 2026-09-10 session: every bogus abort (NAV2_STATUS:6 caused by
+# a goal fired into a momentary localization "clear" window) finished in
+# 0.16-0.95 s, while every real attempt — 34 succeeded, 20 interlock-cancelled —
+# ran >= 5 s. Nav2 cannot plan, drive and give up in under a second.
+MIN_NAV_ATTEMPT_SEC = 2.0
+
+
+def is_cell_attributable_failure(code: Any, elapsed_sec: Any = None) -> bool:
+    """True when a nav_result_code blames the cell rather than the moment.
+
+    Unknown / missing codes return False on purpose: the UNREACHABLE tally is
+    an irreversible lock (excluded from gaps forever), so an ambiguous record
+    must leave the cell retryable instead of condemning it.
+
+    elapsed_sec: how long the navigation attempt actually ran. A NAV2_STATUS:*
+    abort below MIN_NAV_ATTEMPT_SEC is a preamble failure (bad start pose),
+    not evidence that the cell cannot be driven to. When elapsed_sec is None
+    the duration is unknown, and the cell is left retryable.
+    """
+    c = str(code or '')
+    if not c or c in NON_ATTRIBUTABLE_FAILURE_CODES:
+        return False
+    if c in PREFLIGHT_FAILURE_CODES:
+        return True
+    if not (c in CELL_ATTRIBUTABLE_FAILURE_CODES or c.startswith('NAV2_STATUS:')
+            or c.startswith('ERROR:')):
+        return False
+    if elapsed_sec is None:
+        return False
+    try:
+        return float(elapsed_sec) >= MIN_NAV_ATTEMPT_SEC
+    except (TypeError, ValueError):
+        return False
+
+
+def update_nav_fail_history(
+    visual_root: Path,
+    session_goals: List[Dict[str, Any]],
+) -> Dict[str, int]:
+    """Increment per-cell fail count when a cell had NAV_FAILED and never REACHED in session.
+
+    A NAV_FAILED row only counts when its nav_result_code is attributable to the
+    cell (see is_cell_attributable_failure). Interlock cancellations are retried
+    in-session and must not ratchet a reachable cell toward permanent UNREACHABLE.
+    """
+    hist = load_nav_fail_history(visual_root)
+    failed: Set[str] = set()
+    reached: Set[str] = set()
+    for g in session_goals or []:
+        cell = str(g.get('spatial_cell') or '')
+        if not cell:
+            continue
+        nav = str(g.get('nav') or '')
+        if nav == 'NAV_FAILED':
+            if is_cell_attributable_failure(
+                g.get('nav_result_code'), g.get('nav_elapsed_sec')
+            ):
+                failed.add(cell)
+        elif nav == 'REACHED':
+            reached.add(cell)
+    only_fail = failed - reached
+    for cell in only_fail:
+        hist[cell] = int(hist.get(cell, 0)) + 1
+    # Clear history when reached successfully
+    for cell in reached:
+        if cell in hist:
+            del hist[cell]
+    path = visual_root / 'state' / 'nav_fail_history.json'
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps({'cells': hist}, indent=2, sort_keys=True) + '\n',
+        encoding='utf-8',
+    )
+    return hist
+
+
+def evaluate_coverage_completion(
+    model: CoverageModel,
+    map_yaml: Path,
+    cfg: Dict[str, Any],
+    *,
+    seed_xy: Optional[Tuple[float, float]] = None,
+    nav_fail_history: Optional[Dict[str, int]] = None,
+    session_nav_failed_cells: Optional[Set[str]] = None,
+    patrol_mode: str = 'full',
+    build_kind: str = 'AUTO_BUILD',
+) -> CoverageCompletion:
+    """Evaluate spatial/yaw coverage against configurable completion gate."""
+    bc = _completion_cfg(cfg)
+    target_spatial = float(bc.get('target_spatial_coverage_ratio', 0.80))
+    min_yaw = int(bc.get('min_useful_yaw_bins_per_cell', 2))
+    max_nav_fail = float(bc.get('max_unresolved_nav_fail_ratio', 0.10))
+    fail_to_unreachable = int(bc.get('nav_fail_sessions_to_unreachable', 3))
+    micro_can_claim = bool(bc.get('micro_may_claim_full_complete', False))
+
+    covered, yaw_map = _active_covered_and_yaw(model)
+    eligible = compute_eligible_area(
+        map_yaml,
+        cfg,
+        seed_xy=seed_xy,
+        seed_cells=covered or None,
+    )
+
+    hist = nav_fail_history or {}
+    session_fails = session_nav_failed_cells or set()
+
+    covered_eligible = covered & eligible.eligible
+    unvisited = eligible.eligible - covered
+    under_covered: Set[Cell] = set()
+    yaw_ok: Set[Cell] = set()
+    yaw_bad: Set[Cell] = set()
+
+    for cell in covered_eligible:
+        bins = yaw_map.get(cell) or set()
+        if len(bins) >= min_yaw:
+            yaw_ok.add(cell)
+        else:
+            yaw_bad.add(cell)
+            under_covered.add(cell)
+
+    nav_retry: Set[Cell] = set()
+    unreachable: Set[Cell] = set(eligible.unreachable)
+    for cell_id, n in hist.items():
+        try:
+            cx, cy = parse_spatial_cell(cell_id)
+        except ValueError:
+            continue
+        c = (cx, cy)
+        if c not in eligible.eligible and c not in eligible.unreachable:
+            continue
+        if int(n) >= fail_to_unreachable:
+            unreachable.add(c)
+            unvisited.discard(c)
+        elif cell_id in session_fails or int(n) > 0:
+            if c in unvisited or c in covered_eligible:
+                nav_retry.add(c)
+
+    # Session fails that never reached → retryable (not permanent)
+    for cell_id in session_fails:
+        try:
+            cx, cy = parse_spatial_cell(cell_id)
+        except ValueError:
+            continue
+        c = (cx, cy)
+        if c in unreachable:
+            continue
+        if c not in eligible.eligible:
+            continue
+        # Spatially covered cells keep COVERED / YAW_INSUFFICIENT — do not
+        # re-label the whole cell NAV_FAILED just because one yaw goal failed.
+        if c in covered_eligible:
+            continue
+        nav_retry.add(c)
+
+    n_elig = max(len(eligible.eligible), 1)
+    spatial_ratio = float(len(covered_eligible)) / float(n_elig)
+    yaw_ratio = float(len(yaw_ok)) / float(max(len(covered_eligible), 1)) if covered_eligible else 0.0
+    unresolved = len(nav_retry)
+    unresolved_ratio = float(unresolved) / float(n_elig)
+
+    remaining_actionable = unvisited | under_covered | nav_retry
+    # Exhaustion: no actionable gaps left (all remaining are unreachable/unsafe/unknown)
+    exhausted = len(remaining_actionable - unreachable) == 0 and len(eligible.eligible) > 0
+
+    gate_reasons: List[str] = []
+    spatial_ok = spatial_ratio >= target_spatial
+    yaw_ok_gate = True
+    if covered_eligible:
+        # Among covered cells, enough share have useful yaw
+        yaw_ok_gate = yaw_ratio >= float(bc.get('min_yaw_completeness_ratio', 0.70))
+    nav_ok = unresolved_ratio <= max_nav_fail
+
+    if not spatial_ok:
+        gate_reasons.append(
+            f'spatial={spatial_ratio:.3f}<target={target_spatial:.3f}'
+        )
+    if not yaw_ok_gate:
+        gate_reasons.append(f'yaw_completeness={yaw_ratio:.3f}')
+    if not nav_ok:
+        gate_reasons.append(
+            f'nav_fail_ratio={unresolved_ratio:.3f}>max={max_nav_fail:.3f}'
+        )
+
+    coverage_gate = (spatial_ok and yaw_ok_gate and nav_ok) or exhausted
+    if exhausted and not (spatial_ok and yaw_ok_gate and nav_ok):
+        gate_reasons.append('exhausted_actionable_gaps')
+
+    mode = str(patrol_mode or '').lower()
+    claim_ok = bool(coverage_gate)
+    if mode == 'micro' and not micro_can_claim:
+        claim_ok = False
+        gate_reasons.append('micro_mode_cannot_claim_full_map_complete')
+
+    # Cell status map (eligible + known exclusions of interest)
+    status: Dict[str, str] = {}
+    for c in eligible.eligible:
+        cid = f'cell_{c[0]}_{c[1]}'
+        if c in unreachable:
+            status[cid] = UNREACHABLE
+        elif c in nav_retry and c not in covered_eligible:
+            status[cid] = NAV_FAILED_RETRYABLE
+        elif c in yaw_bad:
+            status[cid] = YAW_INSUFFICIENT
+        elif c in under_covered:
+            status[cid] = UNDER_COVERED
+        elif c in covered_eligible:
+            status[cid] = COVERED
+        else:
+            status[cid] = UNVISITED
+    for c in eligible.clearance_fail:
+        status.setdefault(f'cell_{c[0]}_{c[1]}', UNSAFE_CLEARANCE)
+    for c in eligible.unknown_cells:
+        status.setdefault(f'cell_{c[0]}_{c[1]}', UNKNOWN_MAP)
+    for c in unreachable:
+        status[f'cell_{c[0]}_{c[1]}'] = UNREACHABLE
+
+    counts = {
+        'eligible': len(eligible.eligible),
+        'covered': len(covered_eligible),
+        'under_covered': len(under_covered),
+        'unvisited': len(unvisited - nav_retry),
+        'nav_failed_retryable': len(nav_retry),
+        'unreachable': len(unreachable),
+        'yaw_sufficient': len(yaw_ok),
+        'yaw_insufficient': len(yaw_bad),
+        'unsafe_clearance': len(eligible.clearance_fail),
+        'unknown_map': len(eligible.unknown_cells - eligible.free_cells),
+    }
+
+    return CoverageCompletion(
+        eligible=eligible,
+        covered_cells=covered,
+        covered_eligible=covered_eligible,
+        under_covered=under_covered,
+        unvisited=unvisited,
+        yaw_sufficient=yaw_ok,
+        yaw_insufficient=yaw_bad,
+        nav_failed_retryable=nav_retry,
+        unreachable=unreachable,
+        unsafe_clearance=eligible.clearance_fail,
+        unknown_map=eligible.unknown_cells,
+        spatial_coverage_ratio=spatial_ratio,
+        yaw_completeness_ratio=yaw_ratio,
+        unresolved_nav_fail_ratio=unresolved_ratio,
+        gate_pass=bool(coverage_gate),
+        gate_reasons=gate_reasons,
+        map_complete_claim_allowed=claim_ok,
+        cell_status=status,
+        counts=counts,
+    )
+
+
+def remaining_gap_cells(completion: CoverageCompletion) -> Set[Cell]:
+    """Cells resume/full build should still plan for."""
+    out: Set[Cell] = set()
+    out |= completion.unvisited
+    out |= completion.under_covered
+    out |= completion.yaw_insufficient
+    out |= completion.nav_failed_retryable
+    out -= completion.unreachable
+    return out
+
+
+def format_completion_status_text(completion: CoverageCompletion, *, mode: str = '') -> str:
+    c = completion.counts
+    lines = [
+        '视觉地图建库',
+        f"Eligible区域：{c.get('eligible', 0)}",
+        f"已覆盖：{c.get('covered', 0)}",
+        f"空间覆盖率：{completion.spatial_coverage_ratio * 100:.1f}%",
+        '',
+        f"朝向充分：{c.get('yaw_sufficient', 0)}",
+        f"待补朝向：{c.get('yaw_insufficient', 0)}",
+        '',
+        f"导航失败：{c.get('nav_failed_retryable', 0)}",
+        f"不可达：{c.get('unreachable', 0)}",
+        '',
+    ]
+    if completion.map_complete_claim_allowed:
+        lines.append('状态：【视觉定位库建库完成】')
+    else:
+        reason = '；'.join(completion.gate_reasons[:3]) if completion.gate_reasons else '未达Coverage Gate'
+        if str(mode).lower() == 'micro':
+            lines.append('状态：【尚未完成】（micro测试模式，不可宣称全图建完）')
+        else:
+            lines.append(f'状态：【尚未完成】{reason}')
+    return '\n'.join(lines)

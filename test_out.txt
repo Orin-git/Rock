@@ -1,0 +1,91 @@
+seed resolution produced an empty flood over 403 candidates (seed_source=seed_cells); falling back to the largest component
+recovery flood over 403 candidates is still empty; treating reachability as UNKNOWN and excluding nothing
+=== A. connectivity helpers ===
+  [PASS] components of empty set: got=[] want=[]
+  [PASS] single cell -> one component: got=[{(2, 3)}] want=[{(2, 3)}]
+  [PASS] diagonal counts as adjacent: got=1 want=1
+  [PASS] gap of one cell splits: got=2 want=2
+  [PASS] min(MINI) is the orphan: got=(-13, -6) want=(-13, -6)
+  [PASS] anchor avoids the orphan: got=(0, 0) want=(0, 0)
+  [PASS] flood from min(MINI) finds only the orphan: got={(-13, -6)} want={(-13, -6)}
+  [PASS] flood from the anchor finds the corridor: got=5 want=5
+  [PASS] component order: largest first: got=[5, 1] want=[5, 1]
+  [PASS] empty candidates -> no anchor: got=None want=None
+  [PASS] nearest: equidistant breaks by (x, y): got=(-1, 0) want=(-1, 0)
+  [PASS] nearest: the production pose cell -2,2 -> -1,2: got=(-1, 2) want=(-1, 2)
+  [PASS] nearest: empty -> None: got=None want=None
+  [PASS] flood with no seeds: got=set() want=set()
+  [PASS] flood ignores a non-candidate seed: got=set() want=set()
+  [PASS] flood seed order is irrelevant: got={(4, 0), (0, 0), (2, 0), (-13, -6), (3, 0), (1, 0)} want={(4, 0), (0, 0), (2, 0), (3, 0), (-13, -6), (1, 0)}
+
+=== A2. determinism under input reordering (50 shuffles) ===
+  [PASS] 50 shuffled input orders give identical results: got=True want=True
+
+=== B. _resolve_seeds policy ===
+  [PASS] all seeds candidates -> seeds kept: got=[(0, 0), (3, 0)] want=[(0, 0), (3, 0)]
+  [PASS]   seed_source: got='seed_cells' want='seed_cells'
+  [PASS]   nothing dropped: got=[] want=[]
+  [PASS]   nothing snapped: got=[] want=[]
+  [PASS] mixed: seeds == legacy filtered set: got=[(0, 0), (3, 0)] want=[(0, 0), (3, 0)]
+  [PASS] mixed: flood == legacy flood: got={(4, 0), (0, 0), (2, 0), (3, 0), (1, 0)} want={(4, 0), (0, 0), (2, 0), (3, 0), (1, 0)}
+  [PASS] mixed: the off-map seed is recorded, not hidden: got=[[99, 99]] want=[[99, 99]]
+  [PASS] no candidate seed -> snapped (the empty-DB case): got=[(0, 0)] want=[(0, 0)]
+  [PASS]   seed_source marked: got='seed_cells_snapped' want='seed_cells_snapped'
+  [PASS]   snap recorded as from/to: got=[{'from': [-2, 2], 'to': [0, 0]}] want=[{'from': [-2, 2], 'to': [0, 0]}]
+  [PASS]   contradiction noted: got=True want=True
+  [PASS] pose path: cell (-3, 2) snaps to a candidate: got=1 want=1
+  [PASS]   every snapped seed is a candidate: got=True want=True
+  [PASS]   source says seed_xy_snapped: got='seed_xy_snapped' want='seed_xy_snapped'
+  [PASS] no evidence at all -> largest-component anchor: got=[(0, 0)] want=[(0, 0)]
+  [PASS]   marked no_seed_evidence: got=['no_seed_evidence'] want=['no_seed_evidence']
+  [PASS] empty candidates -> no seeds, no exception: got=[] want=[]
+  [PASS]   seed_unresolved flag: got=True want=True
+  [PASS]   note: got=['no_candidates'] want=['no_candidates']
+  [PASS] a valid non-largest seed is still honoured: got=[(-13, -6)] want=[(-13, -6)]
+  [PASS]   flood from it is the orphan alone: got={(-13, -6)} want={(-13, -6)}
+  [PASS] pose near the orphan does not join the seed set: got=[(0, 0)] want=[(0, 0)]
+  [PASS]   so the orphan stays unreachable: got={(-13, -6)} want={(-13, -6)}
+
+=== C. the defect, in executable form ===
+  [PASS] OLD: pose seed is not a candidate: got=[(-3, 2)] want=[(-3, 2)]
+  [PASS] OLD: flood collapses to nothing: got=set() want=set()
+  [PASS] OLD: the whole map becomes unreachable: got={(4, 0), (0, 0), (1, 0), (-13, -6), (2, 0), (3, 0)} want={(4, 0), (0, 0), (1, 0), (-13, -6), (2, 0), (3, 0)}
+  [PASS] NEW: the flood reaches the corridor: got=1 want=1
+  [PASS] NEW: only the genuine orphan stays unreachable: got={(-13, -6)} want={(-13, -6)}
+
+=== D. PYTHONHASHSEED independence ===
+  [PASS] identical results under PYTHONHASHSEED 0/1/2: got=1 want=1
+       PYTHONHASHSEED=0 -> 3eeae0daf219d926
+       PYTHONHASHSEED=1 -> 3eeae0daf219d926
+       PYTHONHASHSEED=2 -> 3eeae0daf219d926
+
+=== E. real map / DB fixtures ===
+  fixtures: covered cells = 32
+  production: eligible=402 unreachable=1 source=seed_cells
+  [SKIP] covered=32 != 30 — the DB has moved on, so freezing 402/1 would be wrong. Asserting the DB-independent invariant instead.
+  [PASS] invariant: every candidate is eligible or unreachable (403): got=403 want=403
+  measured: min(candidates)=(-24, -8)  anchor=(-24, -8)  agree=True
+  [PASS] anchor is one of the candidates: got=True want=True
+  [PASS] anchor lies in the largest component: got=True want=True
+  empty DB : eligible=402 unreachable=1 source=seed_xy_snapped snapped_from=[{'from': [-2, 2], 'to': [-1, 3]}]
+  [PASS] empty DB eligible == production eligible: got=402 want=402
+  [PASS] empty DB unreachable == production unreachable: got={(-13, -6)} want={(-13, -6)}
+  [PASS] empty DB snapped the pose cell: got='seed_xy_snapped' want='seed_xy_snapped'
+  [PASS] empty DB audit has no internal error: got=False want=False
+  empty DB completion: gaps=402 gate_pass=False claim=False
+  [PASS] an empty DB yields actionable gaps (was 0): got=True want=True
+  [PASS] an empty DB never claims completion: got=False want=False
+  [PASS] counts carry candidate_cells: got=403 want=403
+  [PASS] counts carry covered_outside_eligible: got=0 want=0
+  [PASS] as_dict exposes seed_resolution: got=True want=True
+  [PASS] as_dict exposes connectivity: got=True want=True
+  [PASS] as_dict round-trips through JSON: got=True want=True
+  [PASS] guard: internal_error is flagged: got=True want=True
+  [PASS] guard: resolver note recorded: got=True want=True
+  [PASS] guard: flood note recorded: got=True want=True
+  [PASS] guard: nothing is excluded on a broken flood: got=set() want=set()
+  [PASS] guard: every candidate stays eligible: got=403 want=403
+  [PASS] guard: reachability marked unknown: got=True want=True
+  [PASS] guard: real components still reported: got=2 want=2
+
+RESULT: ALL PASS

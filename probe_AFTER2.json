@@ -1,0 +1,106 @@
+{
+  "cell_size": 1.0,
+  "covered_cells": 32,
+  "facts": {
+    "candidates": 403,
+    "component_count": 2,
+    "component_sizes": [
+      402,
+      1
+    ],
+    "geometric_unreachable": [
+      [
+        -13,
+        -6
+      ]
+    ],
+    "largest_component_anchor[min(comps[0])]": [
+      -24,
+      -8
+    ],
+    "min_candidate": [
+      -24,
+      -8
+    ],
+    "min_in_largest_component": true,
+    "min_is_orphan_(-13,-6)": false,
+    "nearest_candidate_to_pose": [
+      -1,
+      3
+    ],
+    "pose_cell_in_clearance_fail": true,
+    "pose_cell_in_structure_excluded": false,
+    "pose_cell_is_candidate": false
+  },
+  "label": "AFTER2",
+  "map_yaml": "/ros2_ws/maps/vp.yaml",
+  "pose_cell": [
+    -2,
+    2
+  ],
+  "pose_xy": [
+    -1.5737449332173814,
+    2.479320081004552
+  ],
+  "runs": {
+    "empty_db_seed_xy": {
+      "eligible": 402,
+      "eligible_digest": "0bdf87467c3eb2c2",
+      "internal_error": "N/A(no field)",
+      "matches_geometric": true,
+      "seed_source": "seed_xy_snapped",
+      "snapped_from": [
+        {
+          "from": [
+            -2,
+            2
+          ],
+          "to": [
+            -1,
+            3
+          ]
+        }
+      ],
+      "unreachable_count": 1,
+      "unreachable_digest": "23379b95e3a271db",
+      "unreachable_sorted": [
+        [
+          -13,
+          -6
+        ]
+      ]
+    },
+    "no_seed_at_all": {
+      "eligible": 402,
+      "eligible_digest": "0bdf87467c3eb2c2",
+      "internal_error": "N/A(no field)",
+      "matches_geometric": true,
+      "seed_source": "anchor",
+      "snapped_from": [],
+      "unreachable_count": 1,
+      "unreachable_digest": "23379b95e3a271db",
+      "unreachable_sorted": [
+        [
+          -13,
+          -6
+        ]
+      ]
+    },
+    "production_seed_cells": {
+      "eligible": 402,
+      "eligible_digest": "0bdf87467c3eb2c2",
+      "internal_error": "N/A(no field)",
+      "matches_geometric": true,
+      "seed_source": "seed_cells",
+      "snapped_from": [],
+      "unreachable_count": 1,
+      "unreachable_digest": "23379b95e3a271db",
+      "unreachable_sorted": [
+        [
+          -13,
+          -6
+        ]
+      ]
+    }
+  }
+}

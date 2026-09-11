@@ -2,8 +2,26 @@
 """Phase2D-A2 capture node: on-demand Pose/Laser/Image gates → Candidate only.
 
 IDLE: cheap latched state subscriptions only (no /map /scan scoring).
-On /xw/visual_db/capture_candidate: arm heavy sensors briefly, run pipeline, disarm.
+On /xw/visual_db/capture_candidate: arm heavy sensors, run pipeline, disarm.
 Never writes production visual/keyframes. P3 unchanged.
+
+DISARM IS A STATE TOGGLE, NOT A TEARDOWN. Heavy subscriptions are created on the
+first arm and live for the node's lifetime. Destroying them from inside a capture
+callback raced the executor's own
+    spin_once -> handler -> take_from_wait_list -> _take_subscription -> "with sub.handle"
+and killed the process with
+    InvalidHandle: cannot use Destroyable because destruction was requested
+(observed 2026-09-10 08:25:36, traceback in log/phase2d_c2/capture.log, after
+~40 captures). rclpy does not synchronise entity destruction against a spinning
+executor, so "never destroy while spinning" is the only race-free lifetime. The
+alternative — remove_node / add_node around the teardown — cannot be used here
+because the teardown happens inside a callback of that very executor.
+
+The IDLE cost disarm used to buy is still bought, by other means:
+  - callbacks return early while `_armed` is False, so no payload is retained;
+  - the camera source is gated by /xw/reloc/rgb_request, which
+    xw_depth_topic_bridge honours (depth_topic_bridge.py:256), so no Image is
+    even published while disarmed.
 """
 
 from __future__ import annotations
@@ -130,13 +148,20 @@ class VisualDbCaptureNode(Node):
         self._map_sub = None
         self._rgb_sub = None
         self._armed = False
+        # A latched subscription only replays to a NEW subscription, so a map
+        # switch needs a fresh one. `_map_gen` retires the superseded
+        # subscription without destroying it (see module docstring).
+        self._map_gen = 0
+        self._map_stale = False
 
         self._cb_svc = ReentrantCallbackGroup()
         self._cb_state = MutuallyExclusiveCallbackGroup()
         # Heavy sensors must run while capture_once blocks in _wait_armed.
         self._cb_sensor = MutuallyExclusiveCallbackGroup()
 
-        # TF only while armed (TransformListener on /tf is expensive on Rockchip IDLE).
+        # TF: the listener is built on the first arm and then kept. It used to be
+        # rebuilt per arm so that /tf cost nothing at IDLE, but tearing one down
+        # races the executor exactly like any other entity (see module docstring).
         self._tf = Buffer(cache_time=rclpy.duration.Duration(seconds=10.0))
         self._tfl = None
         self._amcl_sub = None
@@ -221,9 +246,13 @@ class VisualDbCaptureNode(Node):
         self._follow = bool(msg.data)
 
     def _on_amcl(self, msg: PoseWithCovarianceStamped) -> None:
+        if not self._armed:
+            return
         self._amcl = msg
 
     def _on_odom(self, msg: Odometry) -> None:
+        if not self._armed:
+            return
         self._odom = msg
 
     def _on_map_name(self, msg: String) -> None:
@@ -234,6 +263,12 @@ class VisualDbCaptureNode(Node):
             self._writer = CandidateWriter(self._cfg)
             self._coverage = build_coverage_model(self._cfg, load_descriptors=False)
             self._refresh_map_hash()
+            # This used to refresh implicitly: every arm rebuilt `_map_sub`, so the
+            # latched /map of the NEW map was replayed. The subscription now
+            # outlives the arm, so the refresh must be asked for explicitly.
+            self._map_stale = True
+            self._map = None
+            self._field = None
 
     def _legacy_freeze_active(self) -> bool:
         mode = str(self.get_parameter('follow_localization_mode').value or 'continuous')
@@ -249,6 +284,11 @@ class VisualDbCaptureNode(Node):
     def _arm_heavy(self) -> None:
         if self._armed:
             return
+        # Accept payloads BEFORE the subscriptions exist: this runs on an executor
+        # thread and the other executor thread may deliver into them the instant
+        # they are created. Setting this afterwards would silently drop the first
+        # message of every arm.
+        self._armed = True
         self._scan = None
         self._rgb = None
         self._amcl = None
@@ -280,14 +320,22 @@ class VisualDbCaptureNode(Node):
                 10,
                 callback_group=self._cb_sensor,
             )
-        if self._map_sub is None:
+        if self._map_sub is None or self._map_stale:
+            # The map is latched, so it is replayed to a NEW subscription only.
+            # A map switch therefore needs a fresh one; the superseded
+            # subscription is retired via `_map_gen`, never destroyed. It stays
+            # alive but its callback returns immediately, so the stale replay it
+            # delivers cannot overwrite the current map.
+            self._map_gen += 1
+            gen = self._map_gen
             self._map_sub = self.create_subscription(
                 OccupancyGrid,
                 str(self._cfg.get('map_topic') or '/map'),
-                self._on_map,
+                lambda msg, g=gen: self._on_map(msg, g),
                 _MAP_QOS,
                 callback_group=self._cb_sensor,
             )
+            self._map_stale = False
         if self._rgb_sub is None:
             self._rgb_sub = self.create_subscription(
                 Image,
@@ -300,50 +348,38 @@ class VisualDbCaptureNode(Node):
             self._rgb_req.publish(Bool(data=True))
         except Exception:  # noqa: BLE001
             pass
-        self._armed = True
 
     def _disarm_heavy(self) -> None:
-        for attr in ('_scan_sub', '_rgb_sub', '_amcl_sub', '_odom_sub'):
-            sub = getattr(self, attr)
-            if sub is not None:
-                try:
-                    self.destroy_subscription(sub)
-                except Exception:  # noqa: BLE001
-                    pass
-                setattr(self, attr, None)
-        # Keep map subscription briefly? Drop to minimize IDLE CPU — rebuild field next time.
-        if self._map_sub is not None:
-            try:
-                self.destroy_subscription(self._map_sub)
-            except Exception:  # noqa: BLE001
-                pass
-            self._map_sub = None
-        if self._tfl is not None:
-            for attr in ('tf_sub_', 'tf_static_sub_', 'tf_sub', 'tf_static_sub'):
-                sub = getattr(self._tfl, attr, None)
-                if sub is not None:
-                    try:
-                        self.destroy_subscription(sub)
-                    except Exception:  # noqa: BLE001
-                        pass
-            self._tfl = None
+        # NO destroy_subscription here — see the module docstring. Tearing entities
+        # down from a capture callback races the executor and kills the process.
+        # Disarm therefore works purely by state: stop retaining payloads and
+        # switch the camera off at its source.
+        self._armed = False
         try:
             self._rgb_req.publish(Bool(data=False))
         except Exception:  # noqa: BLE001
             pass
-        self._armed = False
-        # Drop heavy payloads from IDLE memory path (field rebuild is capture-time cost).
+        # Drop heavy payloads from the IDLE memory path. `_map`/`_field` are
+        # deliberately NOT cleared: the map subscription now outlives the arm, so
+        # a latched replay would never come again and `_wait_armed` would wait for
+        # a field that can no longer arrive. Caching it also removes the
+        # per-capture DistanceField rebuild the old comment called a capture-time
+        # cost. A map switch is handled by `_map_stale` in `_on_map_name`.
         self._scan = None
         self._rgb = None
-        self._map = None
-        self._field = None
         self._amcl = None
         self._odom = None
 
     def _on_scan(self, msg: LaserScan) -> None:
+        if not self._armed:
+            return
         self._scan = msg
 
-    def _on_map(self, msg: OccupancyGrid) -> None:
+    def _on_map(self, msg: OccupancyGrid, gen: int = 0) -> None:
+        # `gen` retires a superseded subscription after a map switch: its latched
+        # replay must not overwrite the current map.
+        if gen != self._map_gen or not self._armed:
+            return
         self._map = msg
         try:
             self._field = DistanceField(msg)
@@ -352,6 +388,8 @@ class VisualDbCaptureNode(Node):
             self._field = None
 
     def _on_rgb(self, msg: Image) -> None:
+        if not self._armed:
+            return
         self._rgb = msg
 
     def _wait_armed(self, timeout: float) -> bool:

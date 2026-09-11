@@ -214,6 +214,10 @@ class VisualDbBuildOrchestrator(Node):
         self.create_subscription(String, '/xw/nav/map_name', self._on_map_name, _LATCH, callback_group=self._state_cb)
         self._amcl_sub = None
         self._odom_sub = None
+        # Motion subscriptions are created once and never destroyed. `_disarm`
+        # only stops retaining payloads, because destroying from the executor
+        # thread races the executor's own take (see _disarm_motion_subs).
+        self._motion_armed = False
 
         self.create_subscription(String, '/xw/visual_db/build', self._on_build_cmd, 10, callback_group=self._cb)
         self._status_pub = self.create_publisher(String, '/xw/visual_db/build_status', _LATCH)
@@ -265,9 +269,13 @@ class VisualDbBuildOrchestrator(Node):
             self._cfg['map_name'] = name
 
     def _on_amcl(self, msg: PoseWithCovarianceStamped) -> None:
+        if not self._motion_armed:
+            return
         self._amcl = msg
 
     def _on_odom(self, msg: Odometry) -> None:
+        if not self._motion_armed:
+            return
         self._odom = msg
 
     def _set_state(self, state: str, message: str = '') -> None:
@@ -286,56 +294,67 @@ class VisualDbBuildOrchestrator(Node):
 
     def status_dict(self) -> Dict[str, Any]:
         with self._lock:
-            if self._session is None:
-                return {'state': 'IDLE', 'build_session_id': None}
-            d = self._session.to_dict()
-            before = self._session.coverage_before or {}
-            after = self._session.coverage_after or {}
-            def _cells(d: Dict[str, Any]) -> int:
-                for k in ('cells', 'occupied_cells', 'occupied_spatial_cells', 'active_occupied_cells'):
-                    if d.get(k) is not None:
-                        return int(d[k])
-                return 0
+            return self._status_dict_locked()
 
-            def _yaw(d: Dict[str, Any]) -> int:
-                for k in ('yaw_occupancy', 'active_yaw_occupancy', 'candidate_new_yaw_bins'):
-                    if d.get(k) is not None and k != 'candidate_new_yaw_bins':
-                        return int(d[k])
-                return int(d.get('candidate_new_yaw_bins') or 0)
+    def _status_dict_locked(self) -> Dict[str, Any]:
+        """Build the status payload. The caller MUST already hold `self._lock`.
 
-            d['progress'] = {
-                'planned': self._session.planned_goals,
-                'reached': self._session.reached_goals,
-                'accepted': self._session.accepted_candidates,
-                'nav': f'{self._session.reached_goals} / {self._session.planned_goals}',
-                'new_cells': max(0, _cells(after) - _cells(before))
-                if after
-                else int(before.get('candidate_new_cells') or 0),
-                'new_yaw': max(0, _yaw(after) - _yaw(before))
-                if after and _yaw(before)
-                else int(before.get('candidate_new_yaw_bins') or after.get('candidate_new_yaw_bins') or 0),
-            }
-            d['ui'] = {
-                'map_name': self._session.map_name or self._map_name,
-                'old_version_short': short_version_label(self._session.old_version),
-                'new_version_short': short_version_label(self._session.new_version),
-            }
-            comp = self._session.completion or {}
-            d['completion_summary'] = {
-                'eligible': (comp.get('eligible') or {}).get('eligible_visual_cells'),
-                'covered': comp.get('covered_eligible'),
-                'spatial_coverage_ratio': comp.get('spatial_coverage_ratio'),
-                'yaw_sufficient': comp.get('yaw_sufficient'),
-                'yaw_insufficient': comp.get('yaw_insufficient'),
-                'nav_failed_retryable': comp.get('nav_failed_retryable'),
-                'unreachable': comp.get('unreachable'),
-                'gate_pass': comp.get('gate_pass'),
-                'map_complete_claim_allowed': comp.get('map_complete_claim_allowed'),
-                'map_complete': self._session.map_complete,
-                'stop_reason': self._session.stop_reason,
-                'status_text': comp.get('status_text') or '',
-            }
-            return d
+        `_lock` is a plain (non-reentrant) threading.Lock, so this must never
+        acquire it. start_build's build_busy branch calls this while already
+        holding the lock; when that branch called the public status_dict()
+        instead, the nested acquire self-deadlocked the whole node permanently
+        and every later command was silently ignored.
+        """
+        if self._session is None:
+            return {'state': 'IDLE', 'build_session_id': None}
+        d = self._session.to_dict()
+        before = self._session.coverage_before or {}
+        after = self._session.coverage_after or {}
+        def _cells(d: Dict[str, Any]) -> int:
+            for k in ('cells', 'occupied_cells', 'occupied_spatial_cells', 'active_occupied_cells'):
+                if d.get(k) is not None:
+                    return int(d[k])
+            return 0
+
+        def _yaw(d: Dict[str, Any]) -> int:
+            for k in ('yaw_occupancy', 'active_yaw_occupancy', 'candidate_new_yaw_bins'):
+                if d.get(k) is not None and k != 'candidate_new_yaw_bins':
+                    return int(d[k])
+            return int(d.get('candidate_new_yaw_bins') or 0)
+
+        d['progress'] = {
+            'planned': self._session.planned_goals,
+            'reached': self._session.reached_goals,
+            'accepted': self._session.accepted_candidates,
+            'nav': f'{self._session.reached_goals} / {self._session.planned_goals}',
+            'new_cells': max(0, _cells(after) - _cells(before))
+            if after
+            else int(before.get('candidate_new_cells') or 0),
+            'new_yaw': max(0, _yaw(after) - _yaw(before))
+            if after and _yaw(before)
+            else int(before.get('candidate_new_yaw_bins') or after.get('candidate_new_yaw_bins') or 0),
+        }
+        d['ui'] = {
+            'map_name': self._session.map_name or self._map_name,
+            'old_version_short': short_version_label(self._session.old_version),
+            'new_version_short': short_version_label(self._session.new_version),
+        }
+        comp = self._session.completion or {}
+        d['completion_summary'] = {
+            'eligible': (comp.get('eligible') or {}).get('eligible_visual_cells'),
+            'covered': comp.get('covered_eligible'),
+            'spatial_coverage_ratio': comp.get('spatial_coverage_ratio'),
+            'yaw_sufficient': comp.get('yaw_sufficient'),
+            'yaw_insufficient': comp.get('yaw_insufficient'),
+            'nav_failed_retryable': comp.get('nav_failed_retryable'),
+            'unreachable': comp.get('unreachable'),
+            'gate_pass': comp.get('gate_pass'),
+            'map_complete_claim_allowed': comp.get('map_complete_claim_allowed'),
+            'map_complete': self._session.map_complete,
+            'stop_reason': self._session.stop_reason,
+            'status_text': comp.get('status_text') or '',
+        }
+        return d
 
     def _on_status_svc(self, request, response):  # noqa: ANN001, ARG002
         response.success = True
@@ -408,7 +427,7 @@ class VisualDbBuildOrchestrator(Node):
 
         with self._lock:
             if self._worker and self._worker.is_alive():
-                return {'ok': False, 'message': 'build_busy', **self.status_dict()}
+                return {'ok': False, 'message': 'build_busy', **self._status_dict_locked()}
             sid = f'build_{time.strftime("%Y%m%d_%H%M%S")}_{uuid.uuid4().hex[:6]}'
             maps_dir = Path(str(self._cfg.get('maps_dir') or '/ros2_ws/maps'))
             _, active_ver, _ = resolve_active_root(maps_dir, self._map_name)
@@ -440,6 +459,11 @@ class VisualDbBuildOrchestrator(Node):
         return {'ok': True, **self.status_dict()}
 
     def _arm_motion_subs(self) -> None:
+        # Accept payloads BEFORE checking the subscriptions exist: this runs on
+        # the executor thread and the executor may deliver into them the moment
+        # they are created. Setting this afterwards would drop the first message
+        # of every arm.
+        self._motion_armed = True
         if self._amcl_sub is None:
             self._amcl_sub = self.create_subscription(
                 PoseWithCovarianceStamped, 'amcl_pose', self._on_amcl, 10, callback_group=self._state_cb
@@ -450,14 +474,12 @@ class VisualDbBuildOrchestrator(Node):
             )
 
     def _disarm_motion_subs(self) -> None:
-        for attr in ('_amcl_sub', '_odom_sub'):
-            sub = getattr(self, attr)
-            if sub is not None:
-                try:
-                    self.destroy_subscription(sub)
-                except Exception:  # noqa: BLE001
-                    pass
-                setattr(self, attr, None)
+        # NO destroy_subscription here. This is called from stop_build() on the
+        # executor thread (:500) and from the worker's `finally` (:982); tearing
+        # an entity down while the executor is taking from it is what killed
+        # capture_candidate_node (InvalidHandle) and lost_recovery_node twice.
+        # Disarm is therefore a state toggle: stop retaining, keep the entity.
+        self._motion_armed = False
         self._amcl = None
         self._odom = None
 
