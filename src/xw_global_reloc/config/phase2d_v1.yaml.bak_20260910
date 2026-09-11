@@ -112,8 +112,6 @@ phase2d_v1:
     mode_default: micro           # micro | partial | full
     use_nav2_action: true         # NavigateToPose directly (reuse Nav2)
     simulate_nav: false           # offline/unit tests
-    max_interlock_retries: 2      # per-goal retries after an interlock cancel
-    interlock_settle_sec: 3.0     # continuous un-paused window before retrying
 
   # Phase2D-C2 one-click production build
   auto_build:

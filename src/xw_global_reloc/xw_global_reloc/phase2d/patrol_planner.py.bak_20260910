@@ -139,7 +139,6 @@ def plan_patrol_goals(
     should_stop: Optional[Callable[[], bool]] = None,
     only_cells: Optional[Set[Tuple[int, int]]] = None,
     exclude_cells: Optional[Set[Tuple[int, int]]] = None,
-    exclude_pairs: Optional[Set[Tuple[str, int]]] = None,
 ) -> List[PatrolGoal]:
     """Generate NavigateToPose goals in known free space from coverage gaps.
 
@@ -147,10 +146,6 @@ def plan_patrol_goals(
     so user stop can interrupt long dense-coverage loops.
     only_cells: if set, only plan these spatial cells (resume / gap fill).
     exclude_cells: permanently skip (e.g. UNREACHABLE).
-    exclude_pairs: skip these (spatial_cell, yaw_bin) pairs. Session-scoped
-        already-attempted targets; keeps the per-round goal budget from being
-        consumed by cells this session already tried (which would otherwise
-        crowd out untouched gaps and starve the session).
     """
     patrol = dict(cfg.get('patrol') or {})
     cov = dict(cfg.get('coverage') or {})
@@ -186,7 +181,6 @@ def plan_patrol_goals(
     h, w = free_safe.shape
     only = only_cells
     excl = exclude_cells or set()
-    excl_pairs = exclude_pairs or set()
 
     # Enumerate free coverage-cells
     candidates: List[Tuple[float, int, int, float, float]] = []
@@ -258,15 +252,6 @@ def plan_patrol_goals(
             reason = 'missing_yaw'
             want_bins = [b for b in range(yaw_bins) if b not in have]
             if not want_bins:
-                continue
-
-        # Drop yaw bins this session already attempted for this cell; a cell
-        # with nothing new must not consume a candidate slot (it would also be
-        # re-visited from every other sampled pixel of the same cell).
-        if excl_pairs:
-            want_bins = [b for b in want_bins if (cell, int(b)) not in excl_pairs]
-            if not want_bins:
-                used_cells.add((cx, cy))
                 continue
 
         picked = 0

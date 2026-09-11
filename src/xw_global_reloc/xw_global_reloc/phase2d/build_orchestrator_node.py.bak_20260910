@@ -18,7 +18,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import rclpy
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Quaternion
@@ -37,7 +37,6 @@ from xw_global_reloc.phase2d.config_loader import load_phase2d_config, productio
 from xw_global_reloc.phase2d.coverage_model import build_coverage_model
 from xw_global_reloc.phase2d.coverage_report import build_coverage_dict, write_coverage_report
 from xw_global_reloc.phase2d.build_completion import (
-    MIN_NAV_ATTEMPT_SEC,
     evaluate_coverage_completion,
     format_completion_status_text,
     remaining_gap_cells,
@@ -80,13 +79,6 @@ STATES = (
     'ABORTED',
     'NEED_OPERATOR',
 )
-
-# nav_result_code values that mean "not now", never "this cell is unreachable".
-# INTERLOCK_PAUSED  = localization/safety interlock cancelled the in-flight goal
-# ABORTED           = operator stop
-# CANCELLED         = legacy code, kept so old session records stay excluded
-# Goals ending this way are requeued in-session and never billed as cell failures.
-_CANCEL_NAV_CODES = frozenset({'INTERLOCK_PAUSED', 'ABORTED', 'CANCELLED'})
 
 # Stop must not rewrite these mid-transaction / terminal states.
 _STOP_PROTECTED = frozenset(
@@ -675,20 +667,6 @@ class VisualDbBuildOrchestrator(Node):
                         stop_reason = 'no_actionable_gaps'
                         break
 
-                # (cell, yaw_bin) already attempted this session. Without this the
-                # proximity-scored planner refills the round budget with the cells
-                # that just failed, the freshness filter then drops all of them,
-                # and the session stops with hundreds of untouched gaps left.
-                session_attempted_pairs: Set[Tuple[str, int]] = set()
-                for _prev in self._session.goals:
-                    _pc = str(_prev.get('spatial_cell') or '')
-                    try:
-                        _pb = int(_prev.get('yaw_bin'))
-                    except (TypeError, ValueError):
-                        continue
-                    if _pc:
-                        session_attempted_pairs.add((_pc, _pb))
-
                 # Temporary cfg override for this round's max goals
                 round_cfg = dict(self._cfg)
                 round_cfg['patrol'] = patrol_cfg
@@ -701,7 +679,6 @@ class VisualDbBuildOrchestrator(Node):
                     should_stop=self._stop.is_set,
                     only_cells=only_cells,
                     exclude_cells=exclude_cells,
-                    exclude_pairs=session_attempted_pairs,
                 )
                 # TARGETED_BUILD: filter to requested cells/waypoints when provided
                 goals = self._apply_targets(goals)
@@ -726,33 +703,12 @@ class VisualDbBuildOrchestrator(Node):
                         self._session.end_time = time.time()
                         self._persist_session()
                         return
-                    # Planner returned nothing new. If gaps remain, the round
-                    # budget was starved rather than the map being done — say so
-                    # loudly instead of stopping silently again.
-                    actionable = set(only_cells or ()) - set(exclude_cells)
-                    if actionable:
-                        stop_reason = 'planner_starved'
-                        self._dump_planner_starved(
-                            vroot=vroot,
-                            round_i=round_i,
-                            goals=goals,
-                            seen=seen,
-                            actionable=actionable,
-                            exclude_cells=exclude_cells,
-                        )
-                    else:
-                        stop_reason = stop_reason or 'planner_no_new_goals'
+                    stop_reason = stop_reason or 'planner_no_new_goals'
                     break
                 self._session.planned_goals += len(fresh)
                 total_planned += len(fresh)
 
-                queue: List[PatrolGoal] = list(fresh)
-                interlock_retries: Dict[Tuple[str, int], int] = {}
-                max_interlock_retries = int(patrol_cfg.get('max_interlock_retries', 2))
-                interlock_settle_sec = float(patrol_cfg.get('interlock_settle_sec', 3.0))
-                settle_after_interlock = 0.0
-                while queue:
-                    g = queue.pop(0)
+                for g in fresh:
                     if self._stop.is_set():
                         stop_reason = 'user_stop'
                         break
@@ -765,14 +721,6 @@ class VisualDbBuildOrchestrator(Node):
                     if self._stop.is_set():
                         stop_reason = 'user_stop'
                         break
-                    # The flag just cleared, which is not the same as it being
-                    # stable. Hold off until it has stayed clear continuously.
-                    if settle_after_interlock > 0.0:
-                        self._await_stable_localization(settle_after_interlock)
-                        settle_after_interlock = 0.0
-                        if self._stop.is_set():
-                            stop_reason = 'user_stop'
-                            break
                     if (self._phase2c_state or self._phase2c_loc) == 'NEED_OPERATOR':
                         self._set_state('NEED_OPERATOR', 'phase2c_NEED_OPERATOR')
                         self._session.end_time = time.time()
@@ -782,59 +730,19 @@ class VisualDbBuildOrchestrator(Node):
                     self._session.current_goal = g.as_dict()
                     self._session.goals.append(g.as_dict())
                     self._set_state('PATROLLING', f'nav {g.spatial_cell} yaw_bin={g.yaw_bin}')
-                    t_nav0 = time.monotonic()
                     nav_ok, nav_code = self._navigate_to(g)
-                    nav_elapsed = time.monotonic() - t_nav0
-                    rec = self._session.goals[-1]
-                    rec['nav_result_code'] = nav_code
-                    # Duration is what separates a real navigation failure from a
-                    # goal fired into a momentary localization gap; the ledger
-                    # needs it to decide whether the CELL is at fault.
-                    rec['nav_elapsed_sec'] = round(nav_elapsed, 3)
-                    rec['nav_retryable'] = True
-                    # A NAV2_STATUS abort that finished before navigation could
-                    # have started is a bad start pose, not a verdict on the
-                    # cell. Treat it like an interlock, not like a failure.
-                    instant_abort = (
-                        not nav_ok
-                        and nav_elapsed < MIN_NAV_ATTEMPT_SEC
-                        and str(nav_code).startswith('NAV2_STATUS:')
-                    )
-                    if not nav_ok and (nav_code in _CANCEL_NAV_CODES or instant_abort):
-                        # Says nothing about the cell. Requeue at the tail so it
-                        # is retried once localization is back; never billed as a
-                        # failure, never written to the nav-fail ledger.
-                        key = (str(g.spatial_cell), int(g.yaw_bin))
-                        tries = interlock_retries.get(key, 0) + 1
-                        interlock_retries[key] = tries
-                        rec['nav'] = nav_code
-                        rec['future_resume_candidate'] = False
-                        rec['permanent_unreachable'] = False
-                        if instant_abort:
-                            rec['nav_note'] = 'instant_abort_bad_start_pose'
-                        retry = (
-                            nav_code != 'ABORTED'
-                            and tries <= max_interlock_retries
-                            and not self._stop.is_set()
-                        )
-                        rec['nav_requeued'] = retry
-                        if retry:
-                            queue.append(g)
-                        # Require a stable localization window before the retry,
-                        # whatever the next goal in the queue happens to be.
-                        settle_after_interlock = interlock_settle_sec
-                        self._publish_status()
-                        continue
+                    self._session.goals[-1]['nav_result_code'] = nav_code
+                    self._session.goals[-1]['nav_retryable'] = True
                     if not nav_ok:
                         self._session.nav_failed += 1
-                        rec['nav'] = 'NAV_FAILED'
-                        rec['future_resume_candidate'] = True
-                        rec['permanent_unreachable'] = False
+                        self._session.goals[-1]['nav'] = 'NAV_FAILED'
+                        self._session.goals[-1]['future_resume_candidate'] = True
+                        self._session.goals[-1]['permanent_unreachable'] = False
                         self._publish_status()
                         continue
                     self._session.reached_goals += 1
-                    rec['nav'] = 'REACHED'
-                    rec['future_resume_candidate'] = False
+                    self._session.goals[-1]['nav'] = 'REACHED'
+                    self._session.goals[-1]['future_resume_candidate'] = False
 
                     settle = float(patrol_cfg.get('settle_sec', 1.0))
                     self._wait_settle(settle)
@@ -1175,68 +1083,6 @@ class VisualDbBuildOrchestrator(Node):
             return True
         return False
 
-    def _await_stable_localization(self, settle_sec: float) -> None:
-        """Block until localization is un-paused continuously for settle_sec.
-
-        _should_pause() flickers. A goal fired into one of those momentary
-        "clear" windows is aborted by Nav2 within ~0.2 s (measured: 14/14 of the
-        NAV2_STATUS:6 aborts in the 2026-09-10 session ran 0.16-0.95 s, versus
-        >=5 s for all 54 real attempts). That instant abort is a bad start pose,
-        not a reachability verdict, so do not dispatch into a flicker.
-        """
-        if settle_sec <= 0.0:
-            return
-        ok_since: Optional[float] = None
-        while not self._stop.is_set():
-            if self._should_pause():
-                ok_since = None
-                self._set_state('PAUSED', 'interlock_settle')
-            else:
-                if ok_since is None:
-                    ok_since = time.monotonic()
-                elif time.monotonic() - ok_since >= settle_sec:
-                    return
-            time.sleep(0.3)
-
-    def _dump_planner_starved(
-        self,
-        *,
-        vroot: Path,
-        round_i: int,
-        goals: List[PatrolGoal],
-        seen: Set[Tuple[str, int]],
-        actionable: Set[Tuple[int, int]],
-        exclude_cells: Set[Tuple[int, int]],
-    ) -> None:
-        """Persist why a round stopped while actionable gaps remained."""
-        try:
-            path = vroot / 'state' / f'diag_planner_starved_{int(time.time())}.json'
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(
-                json.dumps(
-                    {
-                        'at': time.time(),
-                        'round': round_i,
-                        'session_id': self._session.build_session_id if self._session else None,
-                        'build_kind': self._session.build_kind if self._session else None,
-                        'planned_goals': [g.as_dict() for g in goals],
-                        'seen_pairs': sorted(f'{c}|{b}' for c, b in seen),
-                        'actionable_gap_cells': sorted(f'cell_{cx}_{cy}' for cx, cy in actionable),
-                        'exclude_cells': sorted(f'cell_{cx}_{cy}' for cx, cy in exclude_cells),
-                    },
-                    indent=2,
-                    sort_keys=True,
-                )
-                + '\n',
-                encoding='utf-8',
-            )
-            self.get_logger().error(
-                f'planner starved: {len(actionable)} actionable gaps left but no fresh goals; '
-                f'diag -> {path}'
-            )
-        except Exception:  # noqa: BLE001
-            self.get_logger().warn('planner_starved diagnostic dump failed')
-
     def _tally(self, code: str) -> None:
         assert self._session
         if code == 'ACCEPTED':
@@ -1301,22 +1147,13 @@ class VisualDbBuildOrchestrator(Node):
         timeout = float(self._cfg.get('patrol', {}).get('nav_timeout_sec', 120.0))
         t0 = time.monotonic()
         while not result_fut.done():
-            # Cancel cause decides the return code: the caller requeues interlock
-            # cancellations and never bills either of these as a cell failure.
-            if self._stop.is_set():
+            if self._stop.is_set() or self._should_pause():
                 try:
                     gh.cancel_goal_async()
                 except Exception:  # noqa: BLE001
                     pass
                 self._nav_goal_handle = None
-                return False, 'ABORTED'
-            if self._should_pause():
-                try:
-                    gh.cancel_goal_async()
-                except Exception:  # noqa: BLE001
-                    pass
-                self._nav_goal_handle = None
-                return False, 'INTERLOCK_PAUSED'
+                return False, 'CANCELLED'
             if time.monotonic() - t0 > timeout:
                 try:
                     gh.cancel_goal_async()

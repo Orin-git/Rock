@@ -283,64 +283,11 @@ def load_nav_fail_history(visual_root: Path) -> Dict[str, int]:
         return {}
 
 
-# Failures owned by our own safety interlock / operator / the Nav2 server's
-# absence. They say nothing about the cell. Never accumulate toward UNREACHABLE.
-NON_ATTRIBUTABLE_FAILURE_CODES = frozenset({
-    'CANCELLED',
-    'ABORTED',
-    'INTERLOCK_PAUSED',
-    'NAV2_UNAVAILABLE',
-})
-# Decided by the goal itself before any motion; meaningful even when instant.
-PREFLIGHT_FAILURE_CODES = frozenset({'GOAL_REJECTED'})
-# Codes that only blame the cell once navigation actually ran for a while.
-CELL_ATTRIBUTABLE_FAILURE_CODES = frozenset({'TIMEOUT', 'SEND_TIMEOUT'})
-
-# Measured on the 2026-09-10 session: every bogus abort (NAV2_STATUS:6 caused by
-# a goal fired into a momentary localization "clear" window) finished in
-# 0.16-0.95 s, while every real attempt — 34 succeeded, 20 interlock-cancelled —
-# ran >= 5 s. Nav2 cannot plan, drive and give up in under a second.
-MIN_NAV_ATTEMPT_SEC = 2.0
-
-
-def is_cell_attributable_failure(code: Any, elapsed_sec: Any = None) -> bool:
-    """True when a nav_result_code blames the cell rather than the moment.
-
-    Unknown / missing codes return False on purpose: the UNREACHABLE tally is
-    an irreversible lock (excluded from gaps forever), so an ambiguous record
-    must leave the cell retryable instead of condemning it.
-
-    elapsed_sec: how long the navigation attempt actually ran. A NAV2_STATUS:*
-    abort below MIN_NAV_ATTEMPT_SEC is a preamble failure (bad start pose),
-    not evidence that the cell cannot be driven to. When elapsed_sec is None
-    the duration is unknown, and the cell is left retryable.
-    """
-    c = str(code or '')
-    if not c or c in NON_ATTRIBUTABLE_FAILURE_CODES:
-        return False
-    if c in PREFLIGHT_FAILURE_CODES:
-        return True
-    if not (c in CELL_ATTRIBUTABLE_FAILURE_CODES or c.startswith('NAV2_STATUS:')
-            or c.startswith('ERROR:')):
-        return False
-    if elapsed_sec is None:
-        return False
-    try:
-        return float(elapsed_sec) >= MIN_NAV_ATTEMPT_SEC
-    except (TypeError, ValueError):
-        return False
-
-
 def update_nav_fail_history(
     visual_root: Path,
     session_goals: List[Dict[str, Any]],
 ) -> Dict[str, int]:
-    """Increment per-cell fail count when a cell had NAV_FAILED and never REACHED in session.
-
-    A NAV_FAILED row only counts when its nav_result_code is attributable to the
-    cell (see is_cell_attributable_failure). Interlock cancellations are retried
-    in-session and must not ratchet a reachable cell toward permanent UNREACHABLE.
-    """
+    """Increment per-cell fail count when a cell had NAV_FAILED and never REACHED in session."""
     hist = load_nav_fail_history(visual_root)
     failed: Set[str] = set()
     reached: Set[str] = set()
@@ -350,10 +297,7 @@ def update_nav_fail_history(
             continue
         nav = str(g.get('nav') or '')
         if nav == 'NAV_FAILED':
-            if is_cell_attributable_failure(
-                g.get('nav_result_code'), g.get('nav_elapsed_sec')
-            ):
-                failed.add(cell)
+            failed.add(cell)
         elif nav == 'REACHED':
             reached.add(cell)
     only_fail = failed - reached
