@@ -993,7 +993,9 @@ class GlobalRelocPoc(Node):
             cov_xy = float(self.get_parameter('handoff_cov_xy').value)
             cov_yaw = float(self.get_parameter('handoff_cov_yaw').value)
             pose_msg = PoseWithCovarianceStamped()
-            pose_msg.header.stamp = self.get_clock().now().to_msg()
+            # stamp 必须为零（= 最新可用）：EKF 以 20Hz 异步发 odom->base_link，
+            # 样本间隔 33-100ms，now() 永远在最新样本之后 -> tf2 外推失败、种子被静默拒绝。
+            pose_msg.header.stamp = rclpy.time.Time().to_msg()
             pose_msg.header.frame_id = 'map'
             pose_msg.pose.pose.position.x = best_ref_pose.x
             pose_msg.pose.pose.position.y = best_ref_pose.y

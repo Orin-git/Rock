@@ -649,7 +649,9 @@ class RechargeNode(Node):
             return
         x, y, yaw_wall = self._charger
         msg = PoseWithCovarianceStamped()
-        msg.header.stamp = self.get_clock().now().to_msg()
+        # stamp 必须为零（= 最新可用）：EKF 以 20Hz 异步发 odom->base_link，
+        # 样本间隔 33-100ms，now() 永远在最新样本之后 -> tf2 外推失败、种子被静默拒绝。
+        msg.header.stamp = rclpy.time.Time().to_msg()
         msg.header.frame_id = str(self._p('map_frame'))
         msg.pose.pose.position.x = x
         msg.pose.pose.position.y = y
