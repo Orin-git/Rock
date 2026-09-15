@@ -1,0 +1,33 @@
+schema_version: 3
+map_name: vp
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+pipeline: visual_laser
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+tiers:
+- retrieval_ready
+- geometry_ready
+note: Depth geometry optional; retrieval_ready independent of geometry_ready
+created: 1788772543.4354334
+map_yaml: /ros2_ws/maps/vp.yaml
+map_pgm: /ros2_ws/maps/vp.pgm
+version: vp_visual_v1.4
+created_at: 1789438777.8091831
+keyframe_count: 82
+lifecycle: ACTIVE
+source:
+  previous_version: vp_visual_v1.3
+  promoted_candidates:
+  - cand_20260915_015604_364905
+  - cand_20260915_015612_372864
+  - cand_20260915_015631_391803
+  - cand_20260915_015641_401801
+  phase: Phase2D-C2
+previous_version: vp_visual_v1.3
+validation_status: PASSED
+false_accept_count: 0
+camera_id_primary: front_up
+spatial_cells: 34
+yaw_coverage_ratio: 0.23529411764705882
+production_ready: true
+candidate_promoted_count: 4
+appearance_count: 82

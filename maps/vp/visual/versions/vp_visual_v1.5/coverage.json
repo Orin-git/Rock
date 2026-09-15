@@ -1,0 +1,56 @@
+{
+  "summary": {
+    "frames": 84,
+    "cells": 36,
+    "yaw_occupancy": 66,
+    "yaw_coverage_ratio": 0.22916666666666666,
+    "cell_ids": [
+      "cell_-10_-1",
+      "cell_-10_-2",
+      "cell_-10_0",
+      "cell_-10_3",
+      "cell_-11_-1",
+      "cell_-1_-1",
+      "cell_-1_0",
+      "cell_-1_5",
+      "cell_-1_6",
+      "cell_-1_9",
+      "cell_-2_-1",
+      "cell_-2_-2",
+      "cell_-2_0",
+      "cell_-3_-1",
+      "cell_-3_-2",
+      "cell_-4_-1",
+      "cell_-4_-2",
+      "cell_-5_-2",
+      "cell_-5_5",
+      "cell_-6_-2",
+      "cell_-7_-2",
+      "cell_-8_-1",
+      "cell_-8_-2",
+      "cell_-8_3",
+      "cell_-8_4",
+      "cell_-9_-1",
+      "cell_-9_-2",
+      "cell_-9_3",
+      "cell_0_-1",
+      "cell_0_0",
+      "cell_0_1",
+      "cell_0_6",
+      "cell_1_-1",
+      "cell_1_0",
+      "cell_2_-1",
+      "cell_2_0"
+    ]
+  },
+  "promoted": [
+    {
+      "candidate_id": "cand_20260915_045155_915331",
+      "active_id": "kf_000083"
+    },
+    {
+      "candidate_id": "cand_20260915_045248_968483",
+      "active_id": "kf_000084"
+    }
+  ]
+}

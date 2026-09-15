@@ -1,20 +1,20 @@
 {
-  "generated_at": 1789367318.7254462,
+  "generated_at": 1789448153.0054767,
   "map_name": "vp",
   "cell_size_m": 1.0,
   "yaw_bins": 8,
   "summary": {
-    "active_frames": 78,
-    "candidate_frames": 98,
-    "occupied_spatial_cells": 67,
-    "active_occupied_cells": 32,
-    "candidate_occupied_cells": 59,
+    "active_frames": 82,
+    "candidate_frames": 104,
+    "occupied_spatial_cells": 71,
+    "active_occupied_cells": 34,
+    "candidate_occupied_cells": 63,
     "yaw_bins": 8,
-    "active_yaw_bin_occupancy": 60,
-    "active_yaw_coverage_ratio": 0.234375,
+    "active_yaw_bin_occupancy": 64,
+    "active_yaw_coverage_ratio": 0.23529411764705882,
     "cell_size_m": 1.0,
-    "candidate_new_cells": 35,
-    "candidate_new_yaw_bins": 56,
+    "candidate_new_cells": 37,
+    "candidate_new_yaw_bins": 58,
     "duplicate_skips": 0,
     "novelty_captures": 0,
     "quota_skips": 0,
@@ -1775,6 +1775,51 @@
       "yaw_coverage_ratio": 0.125
     },
     {
+      "spatial_cell": "cell_-5_5",
+      "cell_x": -5,
+      "cell_y": 5,
+      "active_count": 0,
+      "candidate_count": 1,
+      "covered_yaw_bins": [
+        2
+      ],
+      "active_yaw_bins": [],
+      "candidate_yaw_bins": [
+        2
+      ],
+      "yaw_mask": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "active_yaw_mask": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidate_yaw_mask": [
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yaw_coverage_ratio": 0.125
+    },
+    {
       "spatial_cell": "cell_-4_-2",
       "cell_x": -4,
       "cell_y": -2,
@@ -2535,6 +2580,101 @@
       "yaw_coverage_ratio": 0.125
     },
     {
+      "spatial_cell": "cell_-1_5",
+      "cell_x": -1,
+      "cell_y": 5,
+      "active_count": 0,
+      "candidate_count": 1,
+      "covered_yaw_bins": [
+        0
+      ],
+      "active_yaw_bins": [],
+      "candidate_yaw_bins": [
+        0
+      ],
+      "yaw_mask": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "active_yaw_mask": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidate_yaw_mask": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yaw_coverage_ratio": 0.125
+    },
+    {
+      "spatial_cell": "cell_-1_6",
+      "cell_x": -1,
+      "cell_y": 6,
+      "active_count": 2,
+      "candidate_count": 2,
+      "covered_yaw_bins": [
+        0,
+        2
+      ],
+      "active_yaw_bins": [
+        0,
+        2
+      ],
+      "candidate_yaw_bins": [
+        0,
+        2
+      ],
+      "yaw_mask": [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "active_yaw_mask": [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidate_yaw_mask": [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yaw_coverage_ratio": 0.25
+    },
+    {
       "spatial_cell": "cell_-1_7",
       "cell_x": -1,
       "cell_y": 7,
@@ -2823,6 +2963,56 @@
       "spatial_cell": "cell_0_1",
       "cell_x": 0,
       "cell_y": 1,
+      "active_count": 2,
+      "candidate_count": 2,
+      "covered_yaw_bins": [
+        0,
+        2
+      ],
+      "active_yaw_bins": [
+        0,
+        2
+      ],
+      "candidate_yaw_bins": [
+        0,
+        2
+      ],
+      "yaw_mask": [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "active_yaw_mask": [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "candidate_yaw_mask": [
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "yaw_coverage_ratio": 0.25
+    },
+    {
+      "spatial_cell": "cell_0_6",
+      "cell_x": 0,
+      "cell_y": 6,
       "active_count": 2,
       "candidate_count": 2,
       "covered_yaw_bins": [

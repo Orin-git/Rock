@@ -73,6 +73,41 @@ _RC_UNKNOWN = 1
 _RC_AMCL_TIMEOUT = 3
 
 
+def _reloc_verdict(diag_json: Any) -> Dict[str, Any]:
+    """Extract the accept decision from a Relocalize diagnostics payload.
+
+    Single source of truth for "why did R3 say no". The payload has three
+    shapes observed in production:
+      {'decision','reason','cluster_accept', ...}   normal UNKNOWN/ACCEPT
+      {'error': 'empty_keyframe_db'}                no keyframes to search
+      {'db','cur'}                                  map-hash mismatch
+
+    Returns a dict with 'reason' (most specific available), 'decision', and
+    'cluster_accept' (the pose-cluster decision dict, possibly empty).
+    Never raises: a malformed payload degrades to an empty verdict rather than
+    taking down the recovery cascade.
+    """
+    out: Dict[str, Any] = {'reason': '', 'decision': '', 'cluster_accept': {}}
+    if not diag_json:
+        return out
+    try:
+        diag = json.loads(diag_json) if isinstance(diag_json, str) else diag_json
+    except (ValueError, TypeError):
+        return out
+    if not isinstance(diag, dict):
+        return out
+    ca = diag.get('cluster_accept')
+    if isinstance(ca, dict):
+        out['cluster_accept'] = ca
+    out['decision'] = str(diag.get('decision') or '')
+    # Prefer the cluster decision's own reason: it is the most specific claim
+    # about why the pose was refused, and echoing anything else here is exactly
+    # the bug this function exists to prevent.
+    reason = str(ca.get('reason') or '') if isinstance(ca, dict) else ''
+    out['reason'] = reason or str(diag.get('reason') or '') or str(diag.get('error') or '')
+    return out
+
+
 class LostRecoveryNode(Node):
     def __init__(self) -> None:
         super().__init__('xw_lost_recovery')
@@ -114,6 +149,12 @@ class LostRecoveryNode(Node):
         self.declare_parameter('auto_resume_nav', True)
         self.declare_parameter('auto_resume_follow', False)
         self.declare_parameter('auto_resume_recharge', True)
+        # NEED_OPERATOR 断言的是「定位无法自动重建」。这个断言可以被证伪，一旦
+        # 证伪它就是陈旧状态，必须能自己退出 —— 否则一次瞬时握手失败会被永久
+        # 固化。2026-09-14 实测：NEED_OPERATOR 闩住 12 小时，而期间
+        # loc_status 有 94.6% 的时间读 0，建库的 start 被无条件拒绝。
+        self.declare_parameter('need_operator_rearm_sec', 20.0)
+        self.declare_parameter('need_operator_rearm_max', 3)
 
         self._logical = Phase2CLocState.READY
         self._busy = False
@@ -124,6 +165,9 @@ class LostRecoveryNode(Node):
         self._jump_since: Optional[float] = None
         self._unknown_until = 0.0
         self._ready_guard_until = 0.0
+        # NEED_OPERATOR 自动解除用：连续稳定计时 + 连续失败次数（成功即清零）。
+        self._rearm_since = 0.0
+        self._rearm_count = 0
         self._snapshot: Optional[TaskSnapshot] = None
         self._last_goal: Optional[Dict[str, float]] = None
         self._patrol_active = False
@@ -481,7 +525,29 @@ class LostRecoveryNode(Node):
 
     def _stage_row(self, code: str, **kwargs: Any) -> Dict[str, Any]:
         row = {'code': code, 't_mono': self._mono(), **kwargs}
-        self.get_logger().info(f'LOST cascade {code}: {json.dumps(kwargs, default=str)[:280]}')
+        # Previously this logged a 280-char dump of the whole payload, which cut
+        # `cluster_accept` off the end and left the real verdict invisible -- you
+        # could read `reason=no_survivor` next to a cluster decision that said
+        # something else entirely. The verdict fields now go in front, untruncated;
+        # the preview is kept only for the long tail (topk, timings, reloc dump).
+        head = ' '.join(
+            f'{k}={kwargs[k]}' for k in ('reason', 'decision', 'laser_score', 'result_code')
+            if k in kwargs
+        )
+        ca = kwargs.get('cluster_accept')
+        ca_s = ''
+        if isinstance(ca, dict) and ca:
+            ca_s = (
+                f' cluster_accept={ca.get("status")}/{ca.get("reason")}'
+                f' margin={ca.get("cluster_margin")}'
+                f' bar={ca.get("single_cluster_min_score")}'
+                f' clusters={ca.get("cluster_count")}'
+                f' survivors={ca.get("survivor_count")}'
+            )
+        self.get_logger().info(
+            f'LOST cascade {code}: {head}{ca_s}'
+            f' | {json.dumps(kwargs, default=str)[:280]}'
+        )
         return row
 
     def _publish_seed(self, pose: Tuple[float, float, float], source: str) -> None:
@@ -729,6 +795,8 @@ class LostRecoveryNode(Node):
             return self._stage_row(
                 'R3_VISUAL_ACCEPT',
                 stage='R3',
+                decision=out.get('decision') or '',
+                cluster_accept=out.get('cluster_accept') or {},
                 laser_score=out.get('laser_score'),
                 seeded=True,
                 handoff='READY' if ready else 'HANDOFF_FAILED',
@@ -736,10 +804,16 @@ class LostRecoveryNode(Node):
                 amcl=amcl_diag,
                 ready=ready,
             )
+        ca = out.get('cluster_accept') or {}
         return self._stage_row(
             'R3_VISUAL_UNKNOWN',
             stage='R3',
-            reason=out.get('error') or 'no_survivor',
+            # 'no_survivor' is now a last resort: it only appears when the reloc
+            # node genuinely reported nothing, never as a stand-in for a real
+            # decision that failed to propagate.
+            reason=out.get('error') or str(ca.get('reason') or '') or 'no_survivor',
+            decision=out.get('decision') or '',
+            cluster_accept=ca,
             laser_score=out.get('laser_score'),
             result_code=code,
             seeded=False,
@@ -765,6 +839,42 @@ class LostRecoveryNode(Node):
         # Health already encodes out-of-map as status 3; no duplicate map sub required.
         return self._loc_status == 3
 
+    def _maybe_rearm_need_operator(self) -> None:
+        """定位恢复后解除陈旧的 NEED_OPERATOR。
+
+        NEED_OPERATOR 的含义是「没有人工介入就无法重建定位」。而 `loc_status == 0`
+        由健康节点给出时已经蕴含了 TF 正常 + AMCL 新鲜 + 协方差达标 + 激光与地图
+        吻合 + 在图内 + 无位姿跳变 —— 它直接证伪了上面那句话。
+
+        要求它**连续**成立而非瞬时采样，是为了让 0/3 抖动无法解除闩锁。
+        连续失败 `need_operator_rearm_max` 次后不再自动重试（此时自动恢复确实无效，
+        该由人来处理）。
+        """
+        if self._loc_status != 0:
+            self._rearm_since = 0.0
+            return
+        cap = int(self.get_parameter('need_operator_rearm_max').value)
+        if self._rearm_count >= cap:
+            return
+        now = self._mono()
+        if self._rearm_since <= 0.0:
+            self._rearm_since = now
+            return
+        held = now - self._rearm_since
+        if held < float(self.get_parameter('need_operator_rearm_sec').value):
+            return
+        self._rearm_since = 0.0
+        self._rearm_count += 1
+        # unknown_cooldown 是防 Reloc 风暴的；解除闩锁的意图正相反，清掉它，
+        # 否则紧接着的真 LOST 会被无谓推迟 60 s。
+        self._unknown_until = 0.0
+        self._status2_since = None
+        self._status3_since = None
+        self.get_logger().warn(
+            f'NEED_OPERATOR re-armed -> READY after loc_status==0 held '
+            f'{held:.1f}s (attempt {self._rearm_count}/{cap})')
+        self._set_logical(Phase2CLocState.READY)
+
     def _evaluate_lost_reason(self) -> Optional[str]:
         """Debounced LOST declare. None = not LOST."""
         if not self._enabled():
@@ -775,6 +885,13 @@ class LostRecoveryNode(Node):
         if self._boot_busy or self._logical == Phase2CLocState.BOOT_LOCALIZING:
             return None
         # BOOT failure latch is closed by operator pose, not a Reloc storm.
+        #
+        # NEED_OPERATOR 例外：它是**可证伪的断言**，不是纯闩锁。定位确实恢复后
+        # 必须能自己退出（见 _maybe_rearm_need_operator）。原来的写法让一次瞬时
+        # 握手失败变成永久锁死 —— 2026-09-14 建库被拒 12 小时就是这么来的。
+        # VERIFYING_OPERATOR_POSE 是真的在等人，保持闩锁。
+        if self._logical == Phase2CLocState.NEED_OPERATOR:
+            self._maybe_rearm_need_operator()
         if self._logical in (
             Phase2CLocState.NEED_OPERATOR,
             Phase2CLocState.VERIFYING_OPERATOR_POSE,
@@ -932,12 +1049,20 @@ class LostRecoveryNode(Node):
         if not fut.done() or fut.result() is None:
             return {'ok': False, 'result_code': -1, 'error': 'relocalize_timeout'}
         res = fut.result()
+        # The success path used to return no 'error' key at all, so _try_r3's
+        # `out.get('error') or 'no_survivor'` collapsed to the literal every single
+        # time and the real decision (e.g. lone_cluster_below_bar) never reached
+        # the operator. Carry the reloc node's own verdict through instead.
+        verdict = _reloc_verdict(res.diagnostics_json)
         return {
             'ok': bool(res.success),
             'result_code': int(res.result_code),
             'laser_score': float(res.laser_score),
             'amcl_convergence_sec': float(res.amcl_convergence_sec),
             'diagnostics_json': res.diagnostics_json,
+            'error': verdict['reason'],
+            'decision': verdict['decision'],
+            'cluster_accept': verdict['cluster_accept'],
         }
 
     def _amcl_ready_stable(self) -> Tuple[bool, Dict[str, Any]]:
@@ -1075,6 +1200,8 @@ class LostRecoveryNode(Node):
             resume_policy = {'nav': 'blocked', 'follow': 'no_auto', 'recharge': 'blocked'}
             if final == 'READY':
                 self._set_logical(Phase2CLocState.READY)
+                # 自动恢复确实有效 —— 连续失败计数清零，闩锁解除额度重置。
+                self._rearm_count = 0
                 resume_policy = self._resume_tasks(snap)
                 timings['replan_mono'] = self._mono()
                 self._ready_guard_until = self._mono() + float(

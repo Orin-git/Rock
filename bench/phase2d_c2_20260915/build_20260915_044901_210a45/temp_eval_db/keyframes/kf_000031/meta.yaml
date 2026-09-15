@@ -1,0 +1,53 @@
+keyframe_id: kf_000031
+timestamp: 1788772609.3786721
+stamp_rgb: 1788772607.9380875
+stamp_depth: 1788772607.4550686
+pair_dt_sec: 0.4830188751220703
+map_pose:
+  x: -8.04287475501877
+  y: 3.5553446301240967
+  yaw: 1.7704257456959192
+camera_pose:
+  x: -8.092649591894839
+  y: 3.801359803668252
+  yaw: 0.1996257456959192
+  extrinsic_status: EXTRINSIC_UNCALIBRATED
+camera_info:
+  width: 640
+  height: 480
+  k:
+  - 595.9639892578125
+  - 0.0
+  - 348.6986999511719
+  - 0.0
+  - 596.2553100585938
+  - 234.91893005371094
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  frame_id: ascamera_hp60c_color_0
+retrieval_ready: true
+geometry_ready: false
+quality:
+  orb_features: 525
+  orb_with_valid_depth: 407
+  orb_depth_coverage_ratio: 0.7752380952380953
+  depth_valid_ratio: 0.8733756510416667
+  pair_dt_sec: 0.4830188751220703
+  amcl_cov_xy: 0.01628431499986866
+  amcl_cov_yaw: 0.005706719153257819
+  reasons:
+  - pair_dt
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+region_id: room_wp5
+region_class: room
+location_id: room_wp5_B
+yaw_rel_rad: 0.25
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+scan_ref: scan.npz

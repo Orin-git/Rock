@@ -1,0 +1,51 @@
+==============================================================================
+R3 干跑 —— apply_initial_pose=False / allow_motion=False / 单次
+==============================================================================
+  [调用前] {"label": "BEFORE", "amcl": [-1.8329, 8.152, 145.49], "health": {"status": 0, "raw": 0, "laser_score": 0.6930463936316882, "beams": 220}, "initialpose_owner": "{\"owner\":\"none\",\"session_id\":3,\"stamp\":1789441735.7021813,\"note\":\"operator_ready\"}"}
+  （这就是「已知良好」的位姿：health 的 laser.score 应为高位）
+  [调用中] 已发出，等待应答（最多 240s；10 个候选×精配 2-7s/个）...
+
+------------------------------------------------------------------------------
+  耗时 = 25.3s
+  success        = True
+  result_code    = 6  (DRY_RUN_OK)
+  candidate_count= 10
+  visual_score   = 0.0080
+  laser_score    = 0.3961   ← 过闸门的那一个的分数
+  composite      = 0.2409
+  stage_timings  = {"sensor_ready": true, "sensor_arm_timeout_sec": 10.0, "sensor_fresh_sec": 1.0, "scan_wait_ms": 161.33335400081705, "rgb_request_to_first_rgb_ms": 3097.8687390015693, "sensor_ready_ms": 3098.0390769982478, "rgb": true, "scan": true, "camera_info": true, "map": true, "orb": 0.04698276400449686, "retrieval": 0.5500982320081675, "laser_total": 21.478164506013854, "total": 25.176232522004284}
+------------------------------------------------------------------------------
+  diagnostics 顶层键 = ['accept_policy', 'allow_amcl_handoff', 'apply_initial_pose', 'cluster_accept', 'cluster_margin', 'cluster_support', 'decision', 'handoff_cov_xy', 'handoff_cov_yaw', 'keyframe_id', 'laser_score', 'pipeline_mode', 'reason', 'refined', 'sensor_gate', 'topk', 'visual_rank']
+  decision = ACCEPT   reason = best_cluster_ok
+  pipeline_mode = visual_laser  accept_policy = pose_cluster_v1
+  cluster_accept = {"status": "ACCEPT", "reason": "best_cluster_ok", "cluster_margin": 0.39612746534315363, "cluster_count": 1, "best_cluster": {"cluster_id": 0, "center": [0.840899058613285, 2.0436859195198926, 0.5498070985891241], "best_laser_score": 0.39612746534315363, "median_laser_score": 0.39612746534315363, "support_count": 1, "member_ids": ["kf_000076"], "member_regions": ["cell_0_1"], "visual_ranks": [10], "pose_spread_xy_m": 0.0, "pose_spread_yaw_rad": 0.0}, "second_cluster": null, "survivor_count": 1, "rejected_count": 9}
+  sensor_gate = {"sensor_arm_timeout_sec": 10.0, "sensor_fresh_sec": 1.0, "scan_wait_ms": 161.33335400081705, "rgb_request_to_first_rgb_ms": 3097.8687390015693, "sensor_ready_ms": 3098.0390769982478, "sensor_ready": true, "rgb": true, "scan": true, "camera_info": true, "map": true}
+
+  topk 候选数 = 10
+    id           rank    retr ratioregion             laser beams  match  mean_d  hypot  dyaw°  reason
+    kf_000010       1  0.0130    13doorway_wp9       0.3173   219  0.530   0.401  0.626   34.0  laser_score_gate
+    kf_000003       2  0.0110    11charger_room      0.2653   220  0.518   0.488  0.854  -22.0  laser_score_gate
+    kf_000055       3  0.0110    11cell_-9_-2        0.1536   215  0.405   0.620  0.971  -23.0  laser_score_gate
+    kf_000011       4  0.0100    10doorway_wp9       0.3175   219  0.543   0.416  0.673   -4.0  laser_score_gate
+    kf_000037       5  0.0090     9open_wp6          0.2565   220  0.518   0.505  1.079  -24.0  laser_score_gate
+    kf_000025       6  0.0080     8similar_corrido   0.2286   221  0.543   0.579  1.031  -30.0  laser_score_gate
+    kf_000050       7  0.0080     8cell_-1_-1        0.2670   221  0.511   0.478  0.885    4.0  laser_score_gate
+    kf_000065       8  0.0080     8cell_2_-1         0.2331   220  0.473   0.507  1.331    4.0  laser_score_gate
+    kf_000075       9  0.0080     8cell_-2_0         0.3282   221  0.502   0.347  1.000   24.0  laser_score_gate
+    kf_000076      10  0.0080     8cell_0_1          0.3961   221  0.624   0.366  0.971   -3.0  ok
+    laser_score: max=0.3961 min=0.1536 中位=0.2670
+    位移 >1.0m（粗搜半径）的候选数 = 4/10  ← 这些是「真峰在窗外」的签名
+
+  [调用后] {"label": "AFTER", "amcl": [-1.8329, 8.152, 145.49], "health": {"status": 0, "raw": 0, "laser_score": 0.5246140024360695, "beams": 219}, "initialpose_owner": "{\"owner\":\"operator\",\"session_id\":0,\"stamp\":1789441806.675867,\"note\":\"web_initialpose\"}"}
+
+  ▶ 副作用自检（必须：位姿未变、owner 未变）
+    ΔAMCL 平移 = 0.0000 m  ✅ 未动
+    yaw 145.49° -> 145.49°
+    initialpose_owner 前='{"owner":"none","session_id":3,"stamp":1789441735.7021813,"note":"operator_ready"}' 后='{"owner":"operator","session_id":0,"stamp":1789441806.675867,"note":"web_initialpose"}'
+
+==============================================================================
+  ▶ 判据
+==============================================================================
+    **DRY_RUN_OK** —— R3 在【位姿正确】时能过闸门，过闸门的分数 0.3961
+    => R3 机器没坏。00:19/00:37 的 no_survivor 是【上游位姿错误】
+       的下游后果，改法应落在定位/级联，不在这套检索+精配上。

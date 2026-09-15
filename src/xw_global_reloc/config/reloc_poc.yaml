@@ -34,8 +34,14 @@ xw_global_reloc_poc:
     # Laser
     laser_beam_stride: 6
     laser_match_dist_m: 0.25
-    # Data-backed Phase2A score/runtime validation: FA=0 first; thr=0.38 ≥8/10 offline.
-    min_laser_score: 0.38
+    # R3 absolute laser gate. Raised 0.38 -> 0.45 on 2026-09-15.
+    # Basis: the wrong-place score band overlaps 0.38 (full-map sweep: 5 wrong
+    # cells passed at 0.38, 0 at 0.45), at a recall cost of 98.8% -> 97.6% of DB
+    # frames still passing at their own true pose.
+    # NOT a complete fix: per-scan wrong-place ceilings reach 0.6104 (kf_000017),
+    # so the cluster-margin check stays the primary defence and
+    # single_cluster_min_score closes the lone-cluster hole below.
+    min_laser_score: 0.45
     min_valid_beams: 20
     laser_coarse_xy_m: 1.0
     laser_coarse_yaw_deg: 30.0
@@ -53,6 +59,14 @@ xw_global_reloc_poc:
     cluster_xy_m: 0.25
     cluster_yaw_deg: 6.0
     cluster_min_score_margin: 0.03
+    # Lone-cluster absolute bar: with no second cluster the margin above is
+    # vacuous, so a single survivor must clear this on its own. Reproduced live
+    # on 2026-09-15 -- one wrong cluster at 0.3961 was ACCEPTed as
+    # best_cluster_ok, 6.67 m from the robot's true pose.
+    # Recall cost is real (0.55 keeps 64.6% of DB frames at their own pose);
+    # accepted deliberately, because this DB is sparse (yaw_coverage_ratio
+    # 0.235) and "two keyframes agreeing" is not reliably available yet.
+    single_cluster_min_score: 0.55
     # Acceptance
     min_top_margin: 0.05
     # Phase2B AMCL handoff READY gates (parameterized)

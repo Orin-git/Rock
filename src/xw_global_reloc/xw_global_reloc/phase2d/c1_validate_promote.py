@@ -689,11 +689,20 @@ def visual_laser_fa_validation(
                     absolute_reason=abs_reason,
                 )
             )
+        # single_cluster_min_score is passed EXPLICITLY as 0.0 (no lone-cluster
+        # bar) rather than inherited, so this harness keeps evaluating the
+        # loosest policy. That makes false_accept_count a conservative upper
+        # bound on the live node, which passes its own 0.55 bar: raising a
+        # threshold can only turn ACCEPT into UNKNOWN, never the reverse, so
+        # "0 FA here" implies "0 FA at the stricter production setting".
+        # Do NOT "fix" this to match the production value -- that would couple
+        # the attestation to a value the yaml can change independently.
         dec = decide_pose_clusters(
             members,
             cluster_xy_m=0.25,
             cluster_yaw_rad=math.radians(6.0),
             cluster_min_score_margin=0.03,
+            single_cluster_min_score=0.0,
         )
         decision = dec.status
         refined_pose = None

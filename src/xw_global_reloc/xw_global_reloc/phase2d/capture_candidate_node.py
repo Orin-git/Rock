@@ -246,8 +246,13 @@ class VisualDbCaptureNode(Node):
         self._follow = bool(msg.data)
 
     def _on_amcl(self, msg: PoseWithCovarianceStamped) -> None:
-        if not self._armed:
-            return
+        # Keep the newest pose even while disarmed. AMCL publishes only when its
+        # filter updates, which needs motion (`update_min_d`/`update_min_a`), so
+        # a robot parked on a capture point legitimately receives NO new
+        # /amcl_pose for minutes. Dropping poses while disarmed made every arm
+        # wait for a message that only motion could produce, so every capture
+        # timed out with `amcl=False`. Staleness is judged in
+        # `_build_pose_input`, by odom-verified stillness -- not by arrival.
         self._amcl = msg
 
     def _on_odom(self, msg: Odometry) -> None:
@@ -291,7 +296,7 @@ class VisualDbCaptureNode(Node):
         self._armed = True
         self._scan = None
         self._rgb = None
-        self._amcl = None
+        # `_amcl` is deliberately NOT cleared here -- see `_on_amcl`.
         self._odom = None
         # Keep map/field if already cached from prior arm (map is latched & expensive).
         if self._tfl is None:
@@ -367,7 +372,7 @@ class VisualDbCaptureNode(Node):
         # cost. A map switch is handled by `_map_stale` in `_on_map_name`.
         self._scan = None
         self._rgb = None
-        self._amcl = None
+        # `_amcl` is kept -- AMCL may not publish again until the robot moves.
         self._odom = None
 
     def _on_scan(self, msg: LaserScan) -> None:
@@ -427,6 +432,20 @@ class VisualDbCaptureNode(Node):
             t = self._odom.twist.twist
             speed = math.hypot(float(t.linear.x), float(t.linear.y))
             yaw_rate = float(t.angular.z)
+        map_base_age = self._tf_age('map', 'base_link')
+        map_odom_age = self._tf_age('map', 'odom')
+        # AMCL broadcasts map->odom only when its filter updates, which needs
+        # motion. A parked robot therefore keeps a VALID pose whose transform
+        # carries an ever-older timestamp, and the gate's age limits
+        # (max_map_base_age_sec = 1.5 s) rejected it as if the pose were stale.
+        # The age says when the transform was published, not whether the pose
+        # still describes where the robot is. Odom proves the robot has not
+        # moved, so the pose is current and the age is a false negative. Only
+        # verified stillness earns this exemption.
+        if (speed is not None and yaw_rate is not None
+                and abs(speed) < 0.02 and abs(yaw_rate) < 0.05):
+            map_base_age = 0.0
+            map_odom_age = 0.0
         scan_age = _stamp_age(self, self._scan.header.stamp) if self._scan is not None else None
         return PoseGateInput(
             localization_status=self._loc_status,
@@ -436,8 +455,8 @@ class VisualDbCaptureNode(Node):
             legacy_freeze_active=self._legacy_freeze_active(),
             amcl_cov_xy=cov_xy,
             amcl_cov_yaw=cov_yaw,
-            map_base_age_sec=self._tf_age('map', 'base_link'),
-            map_odom_age_sec=self._tf_age('map', 'odom'),
+            map_base_age_sec=map_base_age,
+            map_odom_age_sec=map_odom_age,
             scan_age_sec=scan_age,
             speed_mps=speed,
             yaw_rate=yaw_rate,

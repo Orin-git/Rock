@@ -75,6 +75,9 @@ class ClusterAcceptDecision:
     clusters: List[PoseCluster]
     survivors: List[ClusterMember]
     rejected: List[ClusterMember]
+    # Policy actually in force for the lone-cluster branch (0.0 = no bar).
+    # Trailing + defaulted so the existing positional constructions stay valid.
+    single_cluster_min_score: float = 0.0
 
 
 def absolute_gate_member(
@@ -235,7 +238,23 @@ def decide_pose_clusters(
     cluster_xy_m: float = 0.25,
     cluster_yaw_rad: float = math.radians(6.0),
     cluster_min_score_margin: float = 0.03,
+    single_cluster_min_score: float = 0.0,
 ) -> ClusterAcceptDecision:
+    """Decide ACCEPT/UNKNOWN over laser-gated candidates.
+
+    ``single_cluster_min_score`` guards the lone-cluster branch: with no second
+    cluster to compare against, the ambiguity margin is vacuous, so the single
+    survivor must clear an absolute bar on its own. 0.0 disables the bar.
+
+    The default is deliberately 0.0 (no bar) rather than a production value:
+    the offline FA-validation harness in ``phase2d/c1_validate_promote.py`` runs
+    with the loosest policy so that its ``false_accept_count`` is a conservative
+    upper bound on whatever the live node (which passes its own bar) accepts.
+    Raising thresholds can only turn ACCEPT into UNKNOWN, never the reverse, so
+    "0 FA at the loose setting" implies "0 FA at the strict one". Hard-coding a
+    production bar here would silently couple the two and could make the
+    attestation optimistic.
+    """
     survivors = [c for c in candidates if c.absolute_ok]
     rejected = [c for c in candidates if not c.absolute_ok]
     if not survivors:
@@ -248,6 +267,7 @@ def decide_pose_clusters(
             [],
             survivors,
             rejected,
+            single_cluster_min_score,
         )
     clusters = cluster_members(
         survivors,
@@ -267,6 +287,19 @@ def decide_pose_clusters(
             clusters,
             survivors,
             rejected,
+            single_cluster_min_score,
+        )
+    if second is None and best.best_laser_score < single_cluster_min_score:
+        return ClusterAcceptDecision(
+            'UNKNOWN',
+            'lone_cluster_below_bar',
+            best,
+            None,
+            0.0,
+            clusters,
+            survivors,
+            rejected,
+            single_cluster_min_score,
         )
     return ClusterAcceptDecision(
         'ACCEPT',
@@ -277,6 +310,7 @@ def decide_pose_clusters(
         clusters,
         survivors,
         rejected,
+        single_cluster_min_score,
     )
 
 
@@ -300,6 +334,9 @@ def decision_to_dict(dec: ClusterAcceptDecision) -> Dict[str, Any]:
         'status': dec.status,
         'reason': dec.reason,
         'cluster_margin': dec.cluster_margin,
+        # Echo the bar that was actually in force, so a log reader never has to
+        # guess whether a lone-cluster reject was scored against 0.0 or a real bar.
+        'single_cluster_min_score': dec.single_cluster_min_score,
         'cluster_count': len(dec.clusters),
         'best_cluster': None if dec.best_cluster is None else cluster_to_dict(dec.best_cluster),
         'second_cluster': None if dec.second_cluster is None else cluster_to_dict(dec.second_cluster),

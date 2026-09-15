@@ -1,9 +1,9 @@
 {
-  "accepted": 27,
-  "rejected_pose": 5,
+  "accepted": 6,
+  "rejected_pose": 1,
   "rejected_laser": 0,
-  "rejected_blur": 10,
-  "rejected_dark": 8,
+  "rejected_blur": 1,
+  "rejected_dark": 1,
   "rejected_overexposed": 0,
   "rejected_low_features": 0,
   "rejected_invalid_frame": 0,

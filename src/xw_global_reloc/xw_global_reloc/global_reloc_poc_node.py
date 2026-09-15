@@ -113,7 +113,10 @@ class GlobalRelocPoc(Node):
         self.declare_parameter('rgb_depth_max_dt_sec', 0.08)
         self.declare_parameter('laser_beam_stride', 6)
         self.declare_parameter('laser_match_dist_m', 0.25)
-        self.declare_parameter('min_laser_score', 0.38)
+        # Fallback is deliberately the *strict* value: the yaml is the source of
+        # truth, but if the key ever goes missing we must fail closed, not fall
+        # back to the old 0.38 that let a wrong pose through.
+        self.declare_parameter('min_laser_score', 0.45)
         self.declare_parameter('min_valid_beams', 20)
         self.declare_parameter('min_top_margin', 0.05)
         self.declare_parameter('pipeline_mode', 'visual_laser')  # visual_laser | rgbd_laser
@@ -132,6 +135,8 @@ class GlobalRelocPoc(Node):
         self.declare_parameter('cluster_xy_m', 0.25)
         self.declare_parameter('cluster_yaw_deg', 6.0)
         self.declare_parameter('cluster_min_score_margin', 0.03)
+        # Lone-cluster absolute bar (fail-closed fallback = production value).
+        self.declare_parameter('single_cluster_min_score', 0.55)
         # Phase2B AMCL handoff — default OFF (production-safe). Dev launch sets true.
         self.declare_parameter('allow_amcl_handoff', False)
         self.declare_parameter('amcl_timeout_sec', 12.0)
@@ -944,6 +949,9 @@ class GlobalRelocPoc(Node):
                 cluster_xy_m=float(self.get_parameter('cluster_xy_m').value),
                 cluster_yaw_rad=_math.radians(float(self.get_parameter('cluster_yaw_deg').value)),
                 cluster_min_score_margin=float(self.get_parameter('cluster_min_score_margin').value),
+                single_cluster_min_score=float(
+                    self.get_parameter('single_cluster_min_score').value
+                ),
             )
             cluster_dbg = decision_to_dict(dec)
             decision_status = dec.status

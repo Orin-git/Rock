@@ -128,6 +128,7 @@ class BuildSession:
     start_time: float = 0.0
     end_time: float = 0.0
     planned_goals: int = 0
+    attempted_goals: int = 0
     reached_goals: int = 0
     nav_failed: int = 0
     accepted_candidates: int = 0
@@ -193,6 +194,12 @@ class VisualDbBuildOrchestrator(Node):
         self._phase2c_state = ''
         self._phase2c_loc = ''
         self._goals_blocked = False
+        # Why the patrol loop is currently paused, and since when. Published in
+        # the status payload so an operator sees `pause: {reason: phase2c_NEED_OPERATOR,
+        # blocked_by: ...}` instead of the bare `message=waiting_localization_ready`,
+        # which is what made the 2026-09-14 stalls take 40 minutes to diagnose.
+        self._pause_since = 0.0
+        self._pause_reason = ''
         self._follow = False
         self._recharge = False
         self._explore = False
@@ -324,9 +331,10 @@ class VisualDbBuildOrchestrator(Node):
 
         d['progress'] = {
             'planned': self._session.planned_goals,
+            'attempted': self._session.attempted_goals,
             'reached': self._session.reached_goals,
             'accepted': self._session.accepted_candidates,
-            'nav': f'{self._session.reached_goals} / {self._session.planned_goals}',
+            'nav': f'{self._session.reached_goals} / {self._session.attempted_goals}',
             'new_cells': max(0, _cells(after) - _cells(before))
             if after
             else int(before.get('candidate_new_cells') or 0),
@@ -338,6 +346,22 @@ class VisualDbBuildOrchestrator(Node):
             'map_name': self._session.map_name or self._map_name,
             'old_version_short': short_version_label(self._session.old_version),
             'new_version_short': short_version_label(self._session.new_version),
+        }
+        # `message=waiting_localization_ready` alone is not actionable -- it does
+        # not say WHICH gate is shut or for how long. `_should_pause()` is a level:
+        # once `goals_blocked` latches true it never clears without an operator, so
+        # a pause with no reporter looks identical to a hang.
+        d['pause'] = {
+            'paused': self._pause_since > 0.0,
+            'reason': self._pause_reason,
+            'since': self._pause_since or None,
+            'age_sec': round(time.time() - self._pause_since, 1) if self._pause_since else None,
+            'blocked_by': {
+                'goals_blocked': bool(self._goals_blocked),
+                'phase2c_state': self._phase2c_state or None,
+                'phase2c_loc': self._phase2c_loc or None,
+                'loc_status': self._loc_status,
+            },
         }
         comp = self._session.completion or {}
         d['completion_summary'] = {
@@ -640,7 +664,13 @@ class VisualDbBuildOrchestrator(Node):
 
             vroot = production_visual_root(self._cfg)
             stop_reason = ''
-            total_planned = 0
+            # The session goal budget charges goals the session actually
+            # ATTEMPTED, not goals the planner proposed. The two diverge whenever
+            # a round ends early: un-attempted goals are re-planned as `fresh`
+            # next round (see `seen` below, built from `self._session.goals`),
+            # so charging for proposals counts them twice. Seen 2026-09-15 --
+            # 4 goals attempted, 120 charged.
+            total_attempted = 0
             for round_i in range(max_rounds):
                 if self._stop.is_set():
                     stop_reason = 'user_stop'
@@ -651,7 +681,7 @@ class VisualDbBuildOrchestrator(Node):
                 if self._session.accepted_candidates >= max_cand:
                     stop_reason = 'candidate_session_quota'
                     break
-                if total_planned >= session_goal_cap:
+                if total_attempted >= session_goal_cap:
                     stop_reason = 'max_total_goals'
                     break
 
@@ -728,7 +758,7 @@ class VisualDbBuildOrchestrator(Node):
                 # TARGETED_BUILD: filter to requested cells/waypoints when provided
                 goals = self._apply_targets(goals)
                 # Session goal cap
-                remain_cap = max(0, session_goal_cap - total_planned)
+                remain_cap = max(0, session_goal_cap - total_attempted)
                 if remain_cap <= 0:
                     stop_reason = 'max_total_goals'
                     break
@@ -766,9 +796,12 @@ class VisualDbBuildOrchestrator(Node):
                         stop_reason = stop_reason or 'planner_no_new_goals'
                     break
                 self._session.planned_goals += len(fresh)
-                total_planned += len(fresh)
 
                 queue: List[PatrolGoal] = list(fresh)
+                # Charged at the end of the round for however many goals actually
+                # got attempted. `self._session.goals` is appended just before
+                # navigation starts, so it counts attempts and nothing else.
+                exec_before = len(self._session.goals)
                 interlock_retries: Dict[Tuple[str, int], int] = {}
                 max_interlock_retries = int(patrol_cfg.get('max_interlock_retries', 2))
                 interlock_settle_sec = float(patrol_cfg.get('interlock_settle_sec', 3.0))
@@ -781,11 +814,50 @@ class VisualDbBuildOrchestrator(Node):
                     if time.time() - self._session.start_time > max_session:
                         stop_reason = 'session_timeout'
                         break
+                    # This loop used to have no exit. `_should_pause()` is a
+                    # LEVEL, not an edge, and NEED_OPERATOR arrives while
+                    # `goals_blocked` is still true -- so the loop could never be
+                    # left and the NEED_OPERATOR exit below was dead code. The
+                    # session then sat in PAUSED for tens of minutes with a live
+                    # worker and no way out but a manual stop (seen twice on
+                    # 2026-09-14). Only an operator can clear NEED_OPERATOR, so
+                    # wait a bounded grace period and then end the session.
+                    need_operator_grace = float(
+                        patrol_cfg.get('need_operator_grace_sec', 90.0))
+                    pause_since = 0.0
+                    pause_reason = ''
                     while not self._stop.is_set() and self._should_pause():
+                        phase2c_now = self._phase2c_state or self._phase2c_loc
+                        pause_reason = (
+                            f'phase2c_{phase2c_now}' if phase2c_now == 'NEED_OPERATOR'
+                            else 'goals_blocked' if self._goals_blocked
+                            else 'localization_not_ready')
                         self._set_state('PAUSED', 'waiting_localization_ready')
+                        if pause_since <= 0.0:
+                            pause_since = time.time()
+                        self._pause_since = pause_since
+                        self._pause_reason = pause_reason
+                        if time.time() - pause_since > need_operator_grace:
+                            stop_reason = ('need_operator'
+                                           if pause_reason == 'phase2c_NEED_OPERATOR'
+                                           else 'pause_timeout')
+                            self.get_logger().warn(
+                                f'pause persisted {need_operator_grace:.0f}s '
+                                f'({pause_reason}) -> ending session')
+                            break
+                        # A paused session must not outlive its budget either.
+                        if time.time() - self._session.start_time > max_session:
+                            stop_reason = 'session_timeout'
+                            break
                         time.sleep(0.5)
+                    if pause_since > 0.0:
+                        self._pause_since = 0.0
+                        self._pause_reason = ''
                     if self._stop.is_set():
                         stop_reason = 'user_stop'
+                        break
+                    if stop_reason in ('need_operator', 'pause_timeout',
+                                       'session_timeout'):
                         break
                     # The flag just cleared, which is not the same as it being
                     # stable. Hold off until it has stayed clear continuously.
@@ -797,9 +869,8 @@ class VisualDbBuildOrchestrator(Node):
                             break
                     if (self._phase2c_state or self._phase2c_loc) == 'NEED_OPERATOR':
                         self._set_state('NEED_OPERATOR', 'phase2c_NEED_OPERATOR')
-                        self._session.end_time = time.time()
-                        self._persist_session()
-                        return
+                        stop_reason = 'need_operator'
+                        break
 
                     self._session.current_goal = g.as_dict()
                     self._session.goals.append(g.as_dict())
@@ -874,6 +945,10 @@ class VisualDbBuildOrchestrator(Node):
                     self._tally(result_code)
                     self._publish_status()
 
+                executed = len(self._session.goals) - exec_before
+                total_attempted += executed
+                self._session.attempted_goals += executed
+
                 if self._stop.is_set():
                     stop_reason = stop_reason or 'user_stop'
                     break
@@ -884,11 +959,22 @@ class VisualDbBuildOrchestrator(Node):
                 if not is_full:
                     # micro/partial: fixed rounds only
                     pass
+                # The complement of the branch above. `stop_reason` is only ever
+                # set on a termination condition, so reaching the end of the round
+                # body with it set means the session is over. Without this the
+                # `for` just started another round: the pause escape breaks only
+                # the pause loop and then the queue loop, while its log line said
+                # "ending session" and nothing ended. Seen 2026-09-15 -- one
+                # need_operator round became three, spending the whole 120-goal
+                # budget on 4 attempted goals (and overwriting stop_reason with
+                # max_total_goals on the way out).
+                if stop_reason:
+                    break
 
             if not stop_reason:
                 if pmode == 'micro':
                     stop_reason = 'micro_budget_exhausted'
-                elif total_planned >= session_goal_cap:
+                elif total_attempted >= session_goal_cap:
                     stop_reason = 'max_total_goals'
                 else:
                     stop_reason = 'planning_rounds_exhausted'

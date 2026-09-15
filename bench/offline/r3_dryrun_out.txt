@@ -1,0 +1,50 @@
+==============================================================================
+R3 干跑 —— apply_initial_pose=False / allow_motion=False / 单次
+==============================================================================
+  [调用前] {"label": "BEFORE", "amcl": [-1.8329, 8.152, 145.49], "health": {"status": 0, "raw": 0, "laser_score": 0.6990710747380295, "beams": 219}, "initialpose_owner": "{\"owner\":\"none\",\"session_id\":6,\"stamp\":1789441313.2899241,\"note\":\"lost_UNKNOWN\"}"}
+  （这就是「已知良好」的位姿：health 的 laser.score 应为高位）
+  [调用中] 已发出，等待应答（最多 240s；10 个候选×精配 2-7s/个）...
+
+------------------------------------------------------------------------------
+  耗时 = 25.4s
+  success        = False
+  result_code    = 1  (UNKNOWN)
+  candidate_count= 10
+  visual_score   = 0.0000
+  laser_score    = 0.0000   ← 过闸门的那一个的分数
+  composite      = 0.0000
+  stage_timings  = {"sensor_ready": true, "sensor_arm_timeout_sec": 10.0, "sensor_fresh_sec": 1.0, "scan_wait_ms": 160.05465800117236, "rgb_request_to_first_rgb_ms": 3431.243947998155, "sensor_ready_ms": 3431.304615995032, "rgb": true, "scan": true, "camera_info": true, "map": true, "orb": 0.022875659007695504, "retrieval": 0.11045354000816587, "laser_total": 21.759883171020192, "total": 25.32701925400761}
+------------------------------------------------------------------------------
+  diagnostics 顶层键 = ['accept_policy', 'cluster_accept', 'decision', 'note', 'pipeline_mode', 'query_features', 'reason', 'topk']
+  decision = UNKNOWN   reason = no_survivor
+  pipeline_mode = visual_laser  accept_policy = pose_cluster_v1
+  cluster_accept = {"status": "UNKNOWN", "reason": "no_survivor", "cluster_margin": 0.0, "cluster_count": 0, "best_cluster": null, "second_cluster": null, "survivor_count": 0, "rejected_count": 10}
+
+  topk 候选数 = 10
+    id           rank    retr ratioregion             laser beams  match  mean_d  hypot  dyaw°  reason
+    kf_000047       1  0.0333     4cell_-2_-2        0.2592   220  0.495   0.477  0.890    5.0  laser_score_gate
+    kf_000004       2  0.0250     3charger_room      0.2547   220  0.477   0.466  1.177   31.0  laser_score_gate
+    kf_000009       3  0.0250     3doorway_wp9       0.3190   218  0.560   0.430  0.849   -7.0  laser_score_gate
+    kf_000048       4  0.0250     3cell_-2_-2        0.2612   220  0.500   0.478  0.922    6.0  laser_score_gate
+    kf_000056       5  0.0250     3cell_-11_-1       0.1140   220  0.341   0.666  1.414   28.0  laser_score_gate
+    kf_000003       6  0.0167     2charger_room      0.2463   219  0.493   0.500  0.901  -22.0  laser_score_gate
+    kf_000005       7  0.0167     2charger_room      0.2486   219  0.498   0.500  0.600  -30.0  laser_score_gate
+    kf_000007       8  0.0167     2doorway_wp9       0.3101   212  0.524   0.408  1.320   27.0  laser_score_gate
+    kf_000036       9  0.0167     2open_wp6          0.2776   219  0.534   0.480  1.209  -10.0  laser_score_gate
+    kf_000043      10  0.0167     2cell_-1_-1        0.1580   219  0.388   0.593  1.079  -23.0  laser_score_gate
+    laser_score: max=0.3190 min=0.1140 中位=0.2592
+    位移 >1.0m（粗搜半径）的候选数 = 5/10  ← 这些是「真峰在窗外」的签名
+
+  [调用后] {"label": "AFTER", "amcl": [-1.8329, 8.152, 145.49], "health": {"status": 0, "raw": 0, "laser_score": 0.6962827171308319, "beams": 220}, "initialpose_owner": "{\"owner\":\"none\",\"session_id\":6,\"stamp\":1789441313.2899241,\"note\":\"lost_UNKNOWN\"}"}
+
+  ▶ 副作用自检（必须：位姿未变、owner 未变）
+    ΔAMCL 平移 = 0.0000 m  ✅ 未动
+    yaw 145.49° -> 145.49°
+    initialpose_owner 前='{"owner":"none","session_id":6,"stamp":1789441313.2899241,"note":"lost_UNKNOWN"}' 后='{"owner":"none","session_id":6,"stamp":1789441313.2899241,"note":"lost_UNKNOWN"}'
+
+==============================================================================
+  ▶ 判据
+==============================================================================
+    **UNKNOWN/no_survivor（no_survivor）**
+    => 即便机器人【位姿已知正确】，R3 依然产出不了过闸门的候选。
+       病在 R3 自己身上（检索 or 精配窗），与位姿误差无关。

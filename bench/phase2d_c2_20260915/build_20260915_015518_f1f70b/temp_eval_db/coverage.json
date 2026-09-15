@@ -1,0 +1,136 @@
+{
+  "summary": {
+    "frames": 78,
+    "cells": 32,
+    "yaw_occupancy": 60,
+    "yaw_coverage_ratio": 0.234375,
+    "cell_ids": [
+      "cell_-10_-1",
+      "cell_-10_-2",
+      "cell_-10_0",
+      "cell_-10_3",
+      "cell_-11_-1",
+      "cell_-1_-1",
+      "cell_-1_0",
+      "cell_-1_9",
+      "cell_-2_-1",
+      "cell_-2_-2",
+      "cell_-2_0",
+      "cell_-3_-1",
+      "cell_-3_-2",
+      "cell_-4_-1",
+      "cell_-4_-2",
+      "cell_-5_-2",
+      "cell_-6_-2",
+      "cell_-7_-2",
+      "cell_-8_-1",
+      "cell_-8_-2",
+      "cell_-8_3",
+      "cell_-8_4",
+      "cell_-9_-1",
+      "cell_-9_-2",
+      "cell_-9_3",
+      "cell_0_-1",
+      "cell_0_0",
+      "cell_0_1",
+      "cell_1_-1",
+      "cell_1_0",
+      "cell_2_-1",
+      "cell_2_0"
+    ]
+  },
+  "promoted": [
+    {
+      "candidate_id": "cand_20260910_075811_091528",
+      "active_id": "kf_000056"
+    },
+    {
+      "candidate_id": "cand_20260910_075820_100482",
+      "active_id": "kf_000057"
+    },
+    {
+      "candidate_id": "cand_20260910_075839_119037",
+      "active_id": "kf_000058"
+    },
+    {
+      "candidate_id": "cand_20260910_075847_127961",
+      "active_id": "kf_000059"
+    },
+    {
+      "candidate_id": "cand_20260910_075902_142698",
+      "active_id": "kf_000060"
+    },
+    {
+      "candidate_id": "cand_20260910_080005_205948",
+      "active_id": "kf_000061"
+    },
+    {
+      "candidate_id": "cand_20260910_080022_222434",
+      "active_id": "kf_000062"
+    },
+    {
+      "candidate_id": "cand_20260910_080032_232872",
+      "active_id": "kf_000063"
+    },
+    {
+      "candidate_id": "cand_20260910_080103_263082",
+      "active_id": "kf_000064"
+    },
+    {
+      "candidate_id": "cand_20260910_080114_274486",
+      "active_id": "kf_000065"
+    },
+    {
+      "candidate_id": "cand_20260910_080937_777906",
+      "active_id": "kf_000066"
+    },
+    {
+      "candidate_id": "cand_20260910_081121_881518",
+      "active_id": "kf_000067"
+    },
+    {
+      "candidate_id": "cand_20260910_081132_892425",
+      "active_id": "kf_000068"
+    },
+    {
+      "candidate_id": "cand_20260910_081150_910799",
+      "active_id": "kf_000069"
+    },
+    {
+      "candidate_id": "cand_20260910_081201_921046",
+      "active_id": "kf_000070"
+    },
+    {
+      "candidate_id": "cand_20260910_081353_033238",
+      "active_id": "kf_000071"
+    },
+    {
+      "candidate_id": "cand_20260910_081427_067918",
+      "active_id": "kf_000072"
+    },
+    {
+      "candidate_id": "cand_20260910_081446_086742",
+      "active_id": "kf_000073"
+    },
+    {
+      "candidate_id": "cand_20260910_081457_097548",
+      "active_id": "kf_000074"
+    },
+    {
+      "candidate_id": "cand_20260910_081849_329366",
+      "active_id": "kf_000075"
+    },
+    {
+      "candidate_id": "cand_20260910_082032_432429",
+      "active_id": "kf_000076"
+    },
+    {
+      "candidate_id": "cand_20260910_082041_441982",
+      "active_id": "kf_000077"
+    },
+    {
+      "candidate_id": "cand_20260910_082524_724448",
+      "active_id": "kf_000078"
+    }
+  ]
+}

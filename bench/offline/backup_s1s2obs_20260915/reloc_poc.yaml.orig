@@ -1,0 +1,75 @@
+# Phase2A/B PoC defaults — AMCL handoff OFF unless launch sets allow_amcl_handoff.
+# Production robot.launch.py does not start this node.
+xw_global_reloc_poc:
+  ros__parameters:
+    maps_dir: "/ros2_ws/maps"
+    map_name: "vp"
+    visual_db_root: ""
+    force_visual: true
+    apply_initial_pose_default: false
+    allow_amcl_handoff: false
+    allow_motion_default: false
+    max_candidates: 10
+    # Keyframe spacing
+    kf_translation_m: 0.6
+    kf_yaw_rad: 0.35
+    kf_visual_diff: 0.35
+    # Localization health gates for DB builder
+    max_cov_xy: 0.5
+    max_cov_yaw: 0.25
+    max_tf_age_sec: 1.0
+    max_speed_mps: 0.15
+    max_yaw_rate: 0.25
+    min_depth_valid_ratio: 0.35
+    min_orb_features: 80
+    # Geometry
+    min_matches: 20
+    min_pnp_inliers: 12
+    min_inlier_ratio: 0.35
+    max_reprojection_error: 4.0
+    min_depth_consistency: 0.55
+    rgb_depth_max_dt_sec: 0.08
+    depth_scale_m: 0.001
+    pipeline_mode: "visual_laser"
+    # Laser
+    laser_beam_stride: 6
+    laser_match_dist_m: 0.25
+    # Data-backed Phase2A score/runtime validation: FA=0 first; thr=0.38 ≥8/10 offline.
+    min_laser_score: 0.38
+    min_valid_beams: 20
+    laser_coarse_xy_m: 1.0
+    laser_coarse_yaw_deg: 30.0
+    laser_coarse_xy_step: 0.10
+    laser_coarse_yaw_step_deg: 3.0
+    laser_fine_xy_m: 0.20
+    laser_fine_yaw_deg: 5.0
+    laser_fine_xy_step: 0.05
+    laser_fine_yaw_step_deg: 1.0
+    laser_min_margin: 0.03
+    laser_reject_local_grid_margin: false
+    laser_max_refine_trans_m: 1.2
+    laser_max_refine_yaw_deg: 35.0
+    # Pose-cluster acceptance (ambiguity only across distinct SE(2) places)
+    cluster_xy_m: 0.25
+    cluster_yaw_deg: 6.0
+    cluster_min_score_margin: 0.03
+    # Acceptance
+    min_top_margin: 0.05
+    # Phase2B AMCL handoff READY gates (parameterized)
+    amcl_timeout_sec: 12.0
+    amcl_ready_cov_xy: 0.80
+    amcl_ready_cov_yaw: 0.35
+    amcl_ready_stable_sec: 2.5
+    amcl_pose_fresh_sec: 2.0
+    amcl_tf_fresh_sec: 1.5
+    amcl_stable_xy_m: 0.12
+    amcl_stable_yaw_rad: 0.12
+    # /initialpose covariance from Visual+Laser PoC accuracy (Formal XY P95~0.27m)
+    handoff_cov_xy: 0.12
+    handoff_cov_yaw: 0.08
+    # Phase2B1 sensor arming (explicit ready gate; no fixed short sleep)
+    sensor_arm_timeout_sec: 10.0
+    sensor_fresh_sec: 1.0
+    # Extrinsic
+    extrinsic_source: "URDF"
+    extrinsic_status: "EXTRINSIC_UNCALIBRATED"

@@ -1,0 +1,52 @@
+keyframe_id: kf_000035
+timestamp: 1788772664.1402407
+stamp_rgb: 1788772663.7102125
+stamp_depth: 1788772663.7102125
+pair_dt_sec: 0.0
+map_pose:
+  x: -0.6025819542093194
+  y: 9.661359398194646
+  yaw: 0.03178470310328413
+camera_pose:
+  x: -0.3517087320880804
+  y: 9.669336015429257
+  yaw: -1.539015296896716
+  extrinsic_status: EXTRINSIC_UNCALIBRATED
+camera_info:
+  width: 640
+  height: 480
+  k:
+  - 595.9639892578125
+  - 0.0
+  - 348.6986999511719
+  - 0.0
+  - 596.2553100585938
+  - 234.91893005371094
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  frame_id: ascamera_hp60c_color_0
+retrieval_ready: true
+geometry_ready: true
+quality:
+  orb_features: 1000
+  orb_with_valid_depth: 748
+  orb_depth_coverage_ratio: 0.748
+  depth_valid_ratio: 0.6914615885416666
+  pair_dt_sec: 0.0
+  amcl_cov_xy: 0.015401725877749356
+  amcl_cov_yaw: 0.006016092521493171
+  reasons: []
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+region_id: open_wp6
+region_class: open
+location_id: open_wp6_B
+yaw_rel_rad: -0.25
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+scan_ref: scan.npz

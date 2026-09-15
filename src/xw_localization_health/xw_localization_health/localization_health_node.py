@@ -19,6 +19,7 @@ health motion — supervisor stops follow first, then arms recovery.
 
 from __future__ import annotations
 
+import json
 import math
 from typing import Optional
 
@@ -30,7 +31,7 @@ from sensor_msgs.msg import LaserScan
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import Bool, Int8
+from std_msgs.msg import Bool, Int8, String
 from std_srvs.srv import Empty
 from tf2_ros import Buffer, TransformException, TransformListener
 
@@ -107,6 +108,18 @@ class LocalizationHealthNode(Node):
         self._laser_mismatch = False
         self._laser_score: Optional[float] = None
         self._last_laser_check = 0.0
+        # 判决依据（R3 诊断用）。此前 _laser_score 是只写字段、全文件无读点，
+        # 「3 是活判决还是冻住的值」完全不可见 —— 2026-09-14 为此翻了 40 分钟
+        # python3_<pid>_<launch_ms>.log。
+        self._laser_eval_mono: Optional[float] = None
+        self._laser_beams = 0
+        self._laser_ratio = 0.0
+        self._laser_reason = ''
+        self._last_raw = 1
+        self._last_jump = False
+        self._g_tf_ok = False
+        self._g_amcl_fresh = False
+        self._g_outside = False
         self._last_force_update = 0.0
         self._force_update_inflight = False
 
@@ -146,6 +159,11 @@ class LocalizationHealthNode(Node):
             reliability=ReliabilityPolicy.RELIABLE,
         )
         self._status_pub = self.create_publisher(Int8, '/xw/localization_status', latch)
+        # 闩住的判决诊断。纯只读观测，不参与任何判定 —— 判 3 时能立刻看出
+        # 「分数多少 / 多少束 / 判决多少秒前算的」，而不是只能看到裸的状态码。
+        self._detail_pub = self.create_publisher(
+            String, '/xw/localization/health_detail', latch
+        )
         self._event_pub = self.create_publisher(RobotEvent, '/xw/event', 10)
         self._cmd_pub = self.create_publisher(Twist, '/xw/cmd/motion', 10)
 
@@ -222,6 +240,10 @@ class LocalizationHealthNode(Node):
         self._raw_bad_since = None
         self._laser_mismatch = False
         self._laser_score = None
+        # 旧位姿的判决作废：诊断里必须看出「还没按新位姿重新打分」，
+        # 而不是继续显示上一处点位的分数。
+        self._laser_eval_mono = None
+        self._laser_reason = ''
         self.get_logger().info('initialpose → clear status-3 latch')
 
     def _abort_heal_motion(self, reason: str) -> None:
@@ -403,6 +425,10 @@ class LocalizationHealthNode(Node):
             self.get_logger().warn(f'laser mismatch check failed: {exc}')
             return
         self._laser_score = float(scored.laser_score)
+        self._laser_eval_mono = self._now()
+        self._laser_beams = int(scored.valid_beams)
+        self._laser_ratio = float(scored.matched_ratio)
+        self._laser_reason = str(scored.reason)
         mismatch = (not bool(scored.accepted)) and str(scored.reason) != 'few_beams'
         if mismatch and not self._laser_mismatch:
             self.get_logger().warn(
@@ -413,14 +439,19 @@ class LocalizationHealthNode(Node):
 
     def _raw_code(self) -> int:
         """Immediate health without latch/heal. Always evaluated (incl. FOLLOW)."""
-        if not self._tf_ok() or self._amcl is None or not self._amcl_fresh():
+        self._g_tf_ok = self._tf_ok()
+        self._g_amcl_fresh = self._amcl_fresh()
+        if not self._g_tf_ok or self._amcl is None or not self._g_amcl_fresh:
             return 1
         xy, yaw = self._cov_xy_yaw()
         if self._laser_mismatch:
             return 3
-        if self._outside_map():
+        self._g_outside = self._outside_map()
+        if self._g_outside:
             return 3
-        if self._pose_jump():
+        # _pose_jump 会推进 _last_xy，只能在这里调一次；诊断读存下来的结果。
+        self._last_jump = self._pose_jump()
+        if self._last_jump:
             return 2
         if xy >= float(self.get_parameter('cov_xy_bad').value) or yaw >= float(
             self.get_parameter('cov_yaw_bad').value
@@ -509,7 +540,58 @@ class LocalizationHealthNode(Node):
         else:
             self._stop_motion()
 
+    def _publish_detail(self) -> None:
+        """把判决依据发到闩住话题。只读诊断，不影响任何判定。"""
+        now = self._now()
+        xy, yaw = self._cov_xy_yaw()
+        d = {
+            'stamp': round(now, 3),
+            'status': int(self._status),
+            'raw': int(self._last_raw),
+            'latched_3': bool(self._latched_3),
+            'laser': {
+                'mismatch': bool(self._laser_mismatch),
+                'score': self._laser_score,
+                'beams': int(self._laser_beams),
+                'matched_ratio': round(float(self._laser_ratio), 4),
+                'reason': self._laser_reason,
+                # None = 上一次位姿变更后还没重新打分；数值大 = 判决陈旧。
+                'verdict_age_sec': (
+                    None if self._laser_eval_mono is None
+                    else round(now - self._laser_eval_mono, 1)
+                ),
+            },
+            'cov': {'xy': round(xy, 4), 'yaw': round(yaw, 4)},
+            'ages': {
+                'scan_sec': (
+                    None if self._scan_mono is None
+                    else round(now - self._scan_mono, 1)
+                ),
+                'amcl_sec': (
+                    None if self._amcl_mono is None
+                    else round(now - self._amcl_mono, 1)
+                ),
+            },
+            'gates': {
+                'tf_ok': bool(self._g_tf_ok),
+                'amcl_fresh': bool(self._g_amcl_fresh),
+                'outside_map': bool(self._g_outside),
+                'pose_jump': bool(self._last_jump),
+            },
+            'map_id': self._field_map_id,
+        }
+        try:
+            self._detail_pub.publish(String(data=json.dumps(d, default=str)))
+        except Exception:  # noqa: BLE001 — 诊断绝不能让主循环挂掉
+            pass
+
     def _tick(self) -> None:
+        try:
+            self._tick_body()
+        finally:
+            self._publish_detail()
+
+    def _tick_body(self) -> None:
         # Detection always runs (FOLLOW included). Execution gated separately.
         if self._follow_en and not self._heal_execution_allowed():
             # Ensure we never leave a heal spin running under follow.
@@ -519,6 +601,7 @@ class LocalizationHealthNode(Node):
         self._maybe_force_amcl_update()
         self._maybe_laser_check()
         raw = self._raw_code()
+        self._last_raw = raw
         now = self._now()
 
         if raw == 0:
