@@ -114,6 +114,26 @@ phase2d_v1:
     simulate_nav: false           # offline/unit tests
     max_interlock_retries: 2      # per-goal retries after an interlock cancel
     interlock_settle_sec: 3.0     # continuous un-paused window before retrying
+    # How long `goals_blocked` must hold CONTINUOUSLY before it may cancel a nav
+    # goal that is already in flight. Dispatch was always debounced (see
+    # interlock_settle_sec above); cancelling an in-flight goal was not, and that
+    # asymmetry is the bug -- a flicker threw away a goal the robot was driving
+    # to. Set to 0.0 to restore cancel-on-any-flicker.
+    # NOTE: this covers ONLY the flickery half of `_should_pause()`. A real
+    # localization loss (phase2c LOST / RECOVERING / BOOT_LOCALIZING) is NOT
+    # debounced and still cancels immediately -- safety semantics unchanged.
+    interlock_cancel_debounce_sec: 1.5
+    # Stop reasons that forbid promoting THIS session's candidates into the
+    # production DB. Keyed on the session's stop_reason, not on its `state`:
+    # the 90 s pause grace used to `break` while the state was still PAUSED, and
+    # PAUSED was not in the promote guard's list -- so a session killed by a
+    # localization deadlock promoted anyway. On 2026-09-15 that produced
+    # vp_visual_v1.5 (two stop_reason=need_operator sessions, +2 keyframes over
+    # v1.4, manifest self-reporting PASSED / production_ready).
+    # These three are the same set the worker already treats as terminal in the
+    # pause loop. Relax (e.g. drop session_timeout, which is a budget stop rather
+    # than a fault) by editing this list -- no code change needed.
+    no_promote_stop_reasons: [need_operator, pause_timeout, session_timeout]
 
   # Phase2D-C2 one-click production build
   auto_build:

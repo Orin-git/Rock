@@ -88,6 +88,28 @@ STATES = (
 # Goals ending this way are requeued in-session and never billed as cell failures.
 _CANCEL_NAV_CODES = frozenset({'INTERLOCK_PAUSED', 'ABORTED', 'CANCELLED'})
 
+# Localization states that mean "the robot currently does not know where it is".
+# These are real state, not a flicker, so an in-flight goal is cancelled on them
+# immediately and with no debounce.
+#
+# `goals_blocked` is deliberately NOT in here. It is the flickery input (the
+# `_await_stable_localization` docstring measures 14/14 instant aborts firing
+# into momentary "clear" windows), and cancelling an almost-finished goal on a
+# sub-second flicker is what burned the 2026-09-15 session: 9 attempted, 7
+# cancelled, 2 reached. The union of both still means "pause" for DISPATCH.
+_HARD_PAUSE_STATES = frozenset({'LOST', 'RECOVERING', 'BOOT_LOCALIZING'})
+
+# Fallback for `patrol.no_promote_stop_reasons` -- the session endings that
+# forbid promoting this session's candidates into the production DB.
+#
+# Not invented here: this is exactly the triple the worker already treats as
+# terminal in the pause loop (`if stop_reason in ('need_operator',
+# 'pause_timeout', 'session_timeout'): break`), i.e. "this session is over, stop
+# trying". One notion of "ended badly" instead of two.
+_DEFAULT_NO_PROMOTE_STOP_REASONS = frozenset(
+    {'need_operator', 'pause_timeout', 'session_timeout'}
+)
+
 # Stop must not rewrite these mid-transaction / terminal states.
 _STOP_PROTECTED = frozenset(
     {
@@ -131,6 +153,12 @@ class BuildSession:
     attempted_goals: int = 0
     reached_goals: int = 0
     nav_failed: int = 0
+    # Goals thrown away because the interlock retry budget ran out. These used to
+    # vanish without a trace: the requeue branch ends in `continue`, so a session
+    # that attempted 9 goals and silently dropped 7 was indistinguishable from
+    # one that had simply planned fewer goals. Same class of defect as the
+    # promote guard -- a failure laundered into invisibility.
+    nav_dropped: int = 0
     accepted_candidates: int = 0
     duplicate_skips: int = 0
     covered_skips: int = 0
@@ -335,6 +363,7 @@ class VisualDbBuildOrchestrator(Node):
             'reached': self._session.reached_goals,
             'accepted': self._session.accepted_candidates,
             'nav': f'{self._session.reached_goals} / {self._session.attempted_goals}',
+            'nav_dropped': self._session.nav_dropped,
             'new_cells': max(0, _cells(after) - _cells(before))
             if after
             else int(before.get('candidate_new_cells') or 0),
@@ -841,9 +870,30 @@ class VisualDbBuildOrchestrator(Node):
                             stop_reason = ('need_operator'
                                            if pause_reason == 'phase2c_NEED_OPERATOR'
                                            else 'pause_timeout')
+                            # Write the terminal state HERE, before breaking out.
+                            #
+                            # This is the fix for the state/log contradiction: the
+                            # `if stop_reason in (...): break` further down runs
+                            # BEFORE the NEED_OPERATOR block, so that block was dead
+                            # code on this path and the session was left in PAUSED.
+                            # PAUSED is not in the promote guard's list, so a session
+                            # killed by this exact line went on to run validate and
+                            # promote a new version to production (2026-09-15:
+                            # v1.4 -> v1.5, +2 keyframes, self-reported PASSED).
+                            #
+                            # The guard is now keyed on stop_reason as well, so this
+                            # is defence in depth: the state and the log agree, and
+                            # the guard no longer depends on that being true.
+                            self._set_state(
+                                'NEED_OPERATOR'
+                                if pause_reason == 'phase2c_NEED_OPERATOR'
+                                else 'ABORTED',
+                                stop_reason,
+                            )
                             self.get_logger().warn(
                                 f'pause persisted {need_operator_grace:.0f}s '
-                                f'({pause_reason}) -> ending session')
+                                f'({pause_reason}) -> ending session '
+                                f'(stop_reason={stop_reason}, will not promote)')
                             break
                         # A paused session must not outlive its budget either.
                         if time.time() - self._session.start_time > max_session:
@@ -913,6 +963,13 @@ class VisualDbBuildOrchestrator(Node):
                         rec['nav_requeued'] = retry
                         if retry:
                             queue.append(g)
+                        else:
+                            # Budget exhausted: this goal is being thrown away.
+                            # Count it, because the `continue` below leaves no
+                            # other trace and a dropped goal is otherwise
+                            # indistinguishable from one that was never planned.
+                            self._session.nav_dropped += 1
+                            rec['nav_dropped'] = True
                         # Require a stable localization window before the retry,
                         # whatever the next goal in the queue happens to be.
                         settle_after_interlock = interlock_settle_sec
@@ -1043,12 +1100,28 @@ class VisualDbBuildOrchestrator(Node):
                 return
 
             # AUTO_BUILD / TARGETED_BUILD / RESUME_BUILD → validate + promote
-            if self._session.build_kind in PRODUCTION_BUILD_MODES and self._session.state not in (
-                'FAILED',
-                'ABORTED',
-                'NEED_OPERATOR',
-            ):
-                if int(self._session.accepted_candidates or 0) <= 0:
+            # The whole safety gate lives in _promote_decision(); see its
+            # docstring for why `state` alone was not enough.
+            promote_ok, promote_blocked_by = self._promote_decision()
+            # Log the verdict EITHER WAY, with the effective config. A gate that
+            # only speaks when it fires is indistinguishable from a gate that has
+            # been silently misconfigured; printing the effective set on every
+            # session makes a typo'd yaml entry visible immediately.
+            _is_prod = self._session.build_kind in PRODUCTION_BUILD_MODES
+            _n_cand = int(self._session.accepted_candidates or 0)
+            _gate_ctx = (
+                f"stop_reason={self._session.stop_reason!r}, "
+                f"accepted_candidates={_n_cand}, "
+                f"no_promote_stop_reasons={sorted(self._no_promote_set())}"
+                + ('' if _is_prod else f', build_kind={self._session.build_kind} (not promotable)')
+            )
+            if promote_blocked_by:
+                self.get_logger().warn(
+                    f'promote gate: BLOCKED by {promote_blocked_by} ({_gate_ctx})')
+            else:
+                self.get_logger().info(f'promote gate: ALLOWED ({_gate_ctx})')
+            if _is_prod and promote_ok:
+                if _n_cand <= 0:
                     # Nothing new to promote — still a successful session end with coverage report
                     label = (
                         'map_complete'
@@ -1088,6 +1161,70 @@ class VisualDbBuildOrchestrator(Node):
             goals = [g for g in goals if g.spatial_cell in cells]
         # rooms / waypoints reserved — planner already free-space based
         return goals
+
+    def _no_promote_set(self) -> Set[str]:
+        """Effective `patrol.no_promote_stop_reasons`: yaml value, else default.
+
+        Split out from `_promote_decision()` so the call site can LOG it. This
+        gate is a list of string literals in a yaml file, and a list of string
+        literals fails OPEN on a typo -- `need_operatorr` matches nothing, the
+        gate goes quiet, and the session promotes. Quiet is the one failure mode
+        this whole round exists to eliminate, so the effective set is printed
+        beside every verdict, blocked or allowed. A bad edit shows up in the log
+        on the very first promote instead of on the next incident.
+        """
+        return set(
+            self._cfg.get('patrol', {}).get('no_promote_stop_reasons')
+            or _DEFAULT_NO_PROMOTE_STOP_REASONS
+        )
+
+    def _promote_decision(self) -> Tuple[bool, str]:
+        """May this session promote to the production DB?
+
+        Returns `(allowed, reason_if_blocked)`. EVERY session that reaches the end
+        of the worker goes through here, so this one predicate is the entire
+        promote safety gate -- which is the point: it can be exercised offline
+        without a node, a robot, or a production database.
+
+        Two independent bars:
+
+        (a) `state` -- the historical bar. Kept because it is cheap and catches
+            most ways a session can die; but it is NOT sufficient.
+
+        (b) `stop_reason` -- the session's own account of how it ended, written
+            exactly once by the worker. This is the bar that actually holds,
+            because `state` is assigned from a dozen places and was provably
+            wrong on the path that mattered: a pause that hit
+            `need_operator_grace` used to `break` while the state was still
+            PAUSED, and PAUSED is not in (a). So a session killed by a
+            localization deadlock ran validate and promoted to production.
+            On 2026-09-15 that produced vp_visual_v1.5 -- two
+            `stop_reason=need_operator` sessions, +2 keyframes over v1.4, with a
+            manifest self-reporting validation_status PASSED / production_ready.
+
+        The default set is not invented here: it is exactly the triple the worker
+        already treats as terminal in the pause loop --
+        `if stop_reason in ('need_operator', 'pause_timeout', 'session_timeout'):
+        break` -- i.e. the session is over, stop trying. Reusing that set keeps
+        one notion of "this session ended badly" instead of two.
+
+        Trade-off, recorded so it is not mistaken for an oversight later:
+        `session_timeout` is a wall-clock budget stop (`max_session_sec`), not a
+        fault, so blocking it means a session that ran its full 30 minutes and
+        hit the cap promotes nothing even if its candidates are good. That is the
+        conservative side of the asymmetry -- a false promote poisons the
+        production DB and is hard to notice, a false block is visible in the log
+        (the blocking reason is printed) and costs one more session. Relax it
+        with a yaml edit, no code change: drop `session_timeout` from
+        `patrol.no_promote_stop_reasons`.
+        """
+        no_promote = self._no_promote_set()
+        sr = str(self._session.stop_reason or '')
+        if sr in no_promote:
+            return False, f'stop_reason:{sr}'
+        if self._session.state in ('FAILED', 'ABORTED', 'NEED_OPERATOR'):
+            return False, f'state:{self._session.state}'
+        return True, ''
 
     def _run_validate_promote(self) -> None:
         assert self._session is not None
@@ -1203,6 +1340,25 @@ class VisualDbBuildOrchestrator(Node):
                 self._set_state('FAILED_PROMOTE', f'target_exists:{new_ver}')
                 return
 
+            # Record who promoted this version and how the session was actually
+            # going at the time. This lands in the version's validation_report.json
+            # (c1_validate_promote.py:904 copies the dict straight through), so a
+            # future reader can ask "did a session that reached 2 of 9 goals
+            # produce this version?" without re-deriving it from scattered logs.
+            #
+            # NOT named `promote_gate`: c1_validate_promote.py:1256 already owns
+            # that key for the validator's own gate (false_accept_0, map_hash_match,
+            # legacy_regression_ok, coverage_increase, verified_nonempty), and it is
+            # read back at the top of this method.
+            report['promoted_by_session'] = {
+                'stop_reason': str(self._session.stop_reason or ''),
+                'attempted': self._session.attempted_goals,
+                'reached': self._session.reached_goals,
+                'nav_failed': self._session.nav_failed,
+                'nav_dropped': self._session.nav_dropped,
+                'accepted_candidates': self._session.accepted_candidates,
+            }
+
             built = build_promoted_version(
                 vroot=vroot,
                 active_root=active_root,
@@ -1275,9 +1431,19 @@ class VisualDbBuildOrchestrator(Node):
         finally:
             self._critical = False
 
-    def _should_pause(self) -> bool:
+    def _pause_hard_reason(self) -> str:
+        """The un-debounceable half of `_should_pause()`: real localization state.
+
+        Returns a non-empty reason when the robot genuinely does not know where
+        it is. Callers that cancel in-flight work must honour this immediately.
+        """
         st = self._phase2c_state or self._phase2c_loc
-        if st in ('LOST', 'RECOVERING', 'BOOT_LOCALIZING'):
+        if st in _HARD_PAUSE_STATES:
+            return f'phase2c_{st}'
+        return ''
+
+    def _should_pause(self) -> bool:
+        if self._pause_hard_reason():
             return True
         if self._goals_blocked:
             return True
@@ -1407,6 +1573,11 @@ class VisualDbBuildOrchestrator(Node):
         self._nav_goal_handle = gh
         result_fut = gh.get_result_async()
         timeout = float(self._cfg.get('patrol', {}).get('nav_timeout_sec', 120.0))
+        # How long `goals_blocked` must hold continuously before it may cancel an
+        # in-flight goal. 0.0 restores the old cancel-on-any-flicker behaviour.
+        cancel_debounce = float(
+            self._cfg.get('patrol', {}).get('interlock_cancel_debounce_sec', 1.5))
+        soft_since: Optional[float] = None
         t0 = time.monotonic()
         while not result_fut.done():
             # Cancel cause decides the return code: the caller requeues interlock
@@ -1418,7 +1589,22 @@ class VisualDbBuildOrchestrator(Node):
                     pass
                 self._nav_goal_handle = None
                 return False, 'ABORTED'
-            if self._should_pause():
+            # Tier 1 -- the robot genuinely does not know where it is: cancel now.
+            cancel_for = self._pause_hard_reason()
+            if not cancel_for and self._goals_blocked:
+                # Tier 2 -- `goals_blocked` on its own, which is the flickery one.
+                # The dispatch path already debounces this input
+                # (`interlock_settle_sec`); cancelling on it without the same
+                # treatment is the asymmetry that cost the 2026-09-15 session 7 of
+                # its 9 attempted goals. A flicker shorter than the debounce must
+                # not abort a goal that is nearly done.
+                if soft_since is None:
+                    soft_since = time.monotonic()
+                if time.monotonic() - soft_since >= cancel_debounce:
+                    cancel_for = 'goals_blocked'
+            else:
+                soft_since = None
+            if cancel_for:
                 try:
                     gh.cancel_goal_async()
                 except Exception:  # noqa: BLE001

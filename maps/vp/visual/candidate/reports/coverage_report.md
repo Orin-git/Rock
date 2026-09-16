@@ -6,13 +6,13 @@
 
 ## Totals
 
-- Active frames: **82**
+- Active frames: **84**
 - Candidate frames: **104**
 - Occupied spatial cells: **71**
-- Active occupied cells: **34**
-- Candidate-only new cells: **37**
-- Active yaw coverage ratio (over Active cells): **0.235**
-- Candidate new yaw bins (not in Active): **58**
+- Active occupied cells: **36**
+- Candidate-only new cells: **35**
+- Active yaw coverage ratio (over Active cells): **0.229**
+- Candidate new yaw bins (not in Active): **56**
 
 ## Capture / Dedup stats (this model session)
 
@@ -63,7 +63,7 @@
 | `cell_-5_-2` | 3 | 0 | `00001000` | [4] | [] |
 | `cell_-5_-1` | 0 | 2 | `00001010` | [] | [4, 6] |
 | `cell_-5_0` | 0 | 1 | `10000000` | [] | [0] |
-| `cell_-5_5` | 0 | 1 | `00100000` | [] | [2] |
+| `cell_-5_5` | 1 | 1 | `00100000` | [2] | [2] |
 | `cell_-4_-2` | 3 | 0 | `00011000` | [3, 4] | [] |
 | `cell_-4_-1` | 1 | 1 | `00001000` | [4] | [4] |
 | `cell_-4_0` | 0 | 1 | `10000000` | [] | [0] |
@@ -80,7 +80,7 @@
 | `cell_-2_10` | 0 | 2 | `10100000` | [] | [0, 2] |
 | `cell_-1_-1` | 5 | 3 | `10101100` | [0, 2, 4, 5] | [0, 2] |
 | `cell_-1_0` | 1 | 1 | `10000000` | [0] | [0] |
-| `cell_-1_5` | 0 | 1 | `10000000` | [] | [0] |
+| `cell_-1_5` | 1 | 1 | `10000000` | [0] | [0] |
 | `cell_-1_6` | 2 | 2 | `10100000` | [0, 2] | [0, 2] |
 | `cell_-1_7` | 0 | 1 | `10000000` | [] | [0] |
 | `cell_-1_8` | 0 | 2 | `10100000` | [] | [0, 2] |

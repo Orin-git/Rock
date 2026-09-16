@@ -864,7 +864,16 @@ class LostRecoveryNode(Node):
         if held < float(self.get_parameter('need_operator_rearm_sec').value):
             return
         self._rearm_since = 0.0
-        self._rearm_count += 1
+        # `_rearm_count` is deliberately NOT touched here.
+        #
+        # It counts consecutive FAILED automatic recoveries (charged in
+        # _start_recovery when the R1/R2/R3 cascade comes back empty-handed),
+        # and a successful unlock is the exact opposite of a failure.
+        # Incrementing it here -- which is what this used to do -- spent the
+        # budget every time the robot recovered *well*, so after three good
+        # recoveries the latch could never be dropped again. That is backwards
+        # from what the docstring above promises, and it is half of why the
+        # robot needed a human on 2026-09-15.
         # unknown_cooldown 是防 Reloc 风暴的；解除闩锁的意图正相反，清掉它，
         # 否则紧接着的真 LOST 会被无谓推迟 60 s。
         self._unknown_until = 0.0
@@ -872,7 +881,7 @@ class LostRecoveryNode(Node):
         self._status3_since = None
         self.get_logger().warn(
             f'NEED_OPERATOR re-armed -> READY after loc_status==0 held '
-            f'{held:.1f}s (attempt {self._rearm_count}/{cap})')
+            f'{held:.1f}s (failed_cascades={self._rearm_count}/{cap})')
         self._set_logical(Phase2CLocState.READY)
 
     def _evaluate_lost_reason(self) -> Optional[str]:
@@ -891,11 +900,33 @@ class LostRecoveryNode(Node):
         # 握手失败变成永久锁死 —— 2026-09-14 建库被拒 12 小时就是这么来的。
         # VERIFYING_OPERATOR_POSE 是真的在等人，保持闩锁。
         if self._logical == Phase2CLocState.NEED_OPERATOR:
+            # Fast path: localization genuinely came back -> drop the latch
+            # without spending a cascade.
             self._maybe_rearm_need_operator()
-        if self._logical in (
-            Phase2CLocState.NEED_OPERATOR,
-            Phase2CLocState.VERIFYING_OPERATOR_POSE,
-        ):
+            if self._logical == Phase2CLocState.NEED_OPERATOR:
+                # Still latched, and THIS is the dead end that mattered.
+                #
+                # NEED_OPERATOR is a *falsifiable claim* -- "no recovery is
+                # possible without a human" -- not a tombstone, and the only
+                # thing that can falsify it is actually attempting a recovery.
+                # Returning None here unconditionally meant nothing ever tried,
+                # so the claim could never be disproved and the robot sat still
+                # until someone pushed it. That is the mechanism behind the
+                # 2026-09-15 build session: paused at 04:51:39, zero re-arm
+                # attempts, and at 04:55:51 the 90 s grace killed the session.
+                #
+                # So fall through to the normal LOST path below -- but only
+                # while the claim is still worth testing. `_rearm_count` counts
+                # consecutive FAILED cascades; at cap the claim has been tested
+                # enough times and a human really is needed, so hold the latch.
+                # `_unknown_until` further down paces the retry, so this cannot
+                # turn into a Reloc storm.
+                cap = int(self.get_parameter('need_operator_rearm_max').value)
+                if self._rearm_count >= cap:
+                    return None
+        elif self._logical == Phase2CLocState.VERIFYING_OPERATOR_POSE:
+            # This one genuinely is waiting on a human: an /initialpose
+            # handshake is in flight. Keep the latch.
             return None
         if self._boot_state in (
             'SENSOR_TIMEOUT',
@@ -1213,6 +1244,24 @@ class LostRecoveryNode(Node):
                 self._unknown_until = self._mono() + float(
                     self.get_parameter('unknown_cooldown_sec').value
                 )
+                # This is where "consecutive failures" -- the thing the
+                # _maybe_rearm_need_operator docstring promises to count --
+                # actually gets counted. Charging it on success made the budget
+                # meaningless; charging it here means the budget measures what
+                # it claims to: how many times in a row automatic recovery has
+                # tried and failed. At cap, _evaluate_lost_reason stops
+                # re-testing the NEED_OPERATOR claim and waits for a human.
+                cap = int(self.get_parameter('need_operator_rearm_max').value)
+                self._rearm_count += 1
+                self.get_logger().warn(
+                    f'cascade failed ({reason}) -> NEED_OPERATOR; '
+                    f'consecutive failures {self._rearm_count}/{cap}'
+                    + (
+                        ' -- automatic recovery exhausted, operator needed'
+                        if self._rearm_count >= cap
+                        else ' -- will retry after unknown_cooldown'
+                    )
+                )
                 resume_policy = {
                     'nav': 'forbidden',
                     'follow': 'forbidden',
@@ -1253,6 +1302,25 @@ class LostRecoveryNode(Node):
             self._phase2c_rec_pub.publish(Bool(data=False))
             self._unknown_until = self._mono() + float(
                 self.get_parameter('unknown_cooldown_sec').value
+            )
+            # `_rearm_count` is deliberately NOT charged here, unlike the
+            # "cascade came back empty-handed" branch above.
+            #
+            # They are different failures. That branch is automatic recovery
+            # doing its job and finding nothing -- a verdict about the world.
+            # This one is the recovery code itself throwing, which says nothing
+            # about where the robot is; the exception message says it instead,
+            # and it is loud. Charging it would let three unrelated software
+            # faults spend a budget meant for "we tried and the world said no",
+            # and a stack trace is already visible without a counter that
+            # silently decides to stop trying.
+            #
+            # Retries are still bounded without the counter: `_unknown_until`
+            # above paces the next attempt by `unknown_cooldown_sec`.
+            self.get_logger().warn(
+                'cascade raised -> NEED_OPERATOR; failures budget NOT charged '
+                '(software fault, not a "no" from the world); '
+                f'next attempt after unknown_cooldown'
             )
         finally:
             self._disarm_sensors()
