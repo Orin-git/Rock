@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Gen2 / 189：CycloneDDS 主域配置。
+     形状 = 一代 70 的生产配置（357 字节，生产验证过）+ 189 独有的必需项。
+     原则：**多一行都要有理由**。每一条见下。
+
+     与一代的关键差异：一代设 ROS_LOCALHOST_ONLY=1（主动放弃跨机可见性），
+     189 必须**保持 0 / 不设** —— 因为 189 要跟主机 165 跨机通信。
+     所以一代靠 ROS_LOCALHOST_ONLY 定网卡，189 只能自己把网卡钉死。 -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain id="any">
+    <General>
+      <!-- 【必需项 1】钉死网卡。
+           P1：189 的 docker0 是 **linkdown 却持有 172.17.0.1/16**，
+           正是 CycloneDDS 自动选网卡会踩的经典坑（选到一个没有载波的地址，
+           发现报文发不出去，表现为「节点活着但互相看不见」）。
+           lo 一并列出：57 个节点同机通信走环回，不必绕 WiFi，也不受 WiFi 抖动影响。
+           ⚠️ 一旦写了 <Interfaces>，就会**替换**掉自动探测的网卡集合 ——
+              所以 lo 必须显式写出来，不会自动带上。 -->
+      <Interfaces>
+        <NetworkInterface address="192.168.0.189"/>
+        <NetworkInterface name="lo"/>
+      </Interfaces>
+    </General>
+    <Discovery>
+      <!-- 【必需项 2】参与者索引。CycloneDDS 默认只有个位数，而 189 有 57 个节点。
+           不设它，超出的节点会**静默拿不到 participant index**（不报错、只是不通）。
+           这是本文件最重要的一行，取一代生产实测值 150。
+           auto + 大上限 = 确定性的端口分配（none 会让内核随机挑临时端口）。 -->
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>150</MaxAutoParticipantIndex>
+      <!-- 【必需项 3】跨机单播发现兜底。
+           纯追加：**不关闭组播**（CycloneDDS 在 WiFi 上会自动把组播限制为仅发现
+           spdp，数据走单播 —— 见 0.10.5 自带 README 第 304-307 行）。
+           走 WiFi 时组播可能被 AP 挡掉，这一条让发现不依赖组播。 -->
+      <Peers>
+        <Peer address="192.168.0.165"/>
+      </Peers>
+    </Discovery>
+    <!-- 刻意**不设**的东西，各有理由：
+         · AllowMulticast  —— 默认行为对 WiFi 已经是对的（仅发现用组播），覆盖反而引入风险
+         · MaxMessageSize / FragmentSize —— README 那对值是跑性能基准用的；
+           65500B 在 MTU 1500 上会被 IP 分片成约 45 片，WiFi 丢一片即丢整包
+         · SharedMemory     —— 不写 = 不启用 iceoryx，与一代主域一致（也就不需要 iox-roudi）
+         · EnableTopicDiscoveryEndpoints —— 默认关，且自带「显著开销」警告，ROS 2 不需要 -->
+  </Domain>
+</CycloneDDS>

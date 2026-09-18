@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Gen2 / 189：CycloneDDS 主域配置。
+     形状 = 一代 70 的生产配置（357 字节，生产验证过）+ 189 独有的必需项。
+     原则：**多一行都要有理由**。每一条见下。
+
+     与一代的关键差异：一代设 ROS_LOCALHOST_ONLY=1（主动放弃跨机可见性），
+     189 必须**保持 0 / 不设** —— 因为 189 要跟主机 165 跨机通信。
+     所以一代靠 ROS_LOCALHOST_ONLY 定网卡，189 只能自己把网卡钉死。 -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain id="any">
+    <General>
+      <!-- 【必需项 1】钉死网卡。属性名是 address=，**不是 ip=**。
+
+           ⚠️ 2026-09-18 实测：`ip=` 被解析器**硬拒** ——
+              "config: //CycloneDDS/Domain/General/Interfaces/NetworkInterface:
+               ip: unknown attribute"，participant 直接建不起来（rc=4）。
+              包内 README 第 298 行写的是 `NetworkInterface[@ip]`，那是 master 分支的写法，
+              与本机 0.10.5 的解析器不符。**以实测为准，不以文档为准。**
+              （同一份探针用 `address=` 与 `name=` 都通过，用不存在的地址则硬失败 ——
+                说明 address= 是真的在匹配网卡，不是被静默忽略。）
+
+           为什么要钉：P1 —— 189 的 docker0 是 linkdown 却持有 172.17.0.1/16，
+           正是 CycloneDDS 自动选网卡会踩的经典坑（选到一个没有载波的地址，
+           发现报文发不出去，表现为「节点活着但互相看不见」）。
+
+           ⚠️⚠️ 2026-09-18 实测：**绝不要把 lo 列进来。**
+              加了 lo 之后 CycloneDDS 打印
+              "selected interface \"lo\" is not multicast-capable: disabling multicast"，
+              **组播发现被整个关掉**，且到对端的单播发送全部失败
+              （900 条 "ddsi_udp_conn_write to udp/192.168.0.165:26xxx failed with retcode -3"）
+              ⇒ 两端互相完全看不见（189 收到 0 条）。
+              去掉 lo 后，**同一对配置立刻互通**：25/25 小消息 + 8/8 条 1.2 MB 大消息，
+              单条 1200006 字节完整到达。
+              ⇒ 同机 57 个节点的环回流量交给默认行为，**不要手动加 lo**。 -->
+      <Interfaces>
+        <NetworkInterface address="192.168.0.189"/>
+      </Interfaces>
+    </General>
+    <Discovery>
+      <!-- 【必需项 2】参与者索引。CycloneDDS 默认只有个位数，而 189 有 57 个节点。
+           不设它，超出的节点会**静默拿不到 participant index**（不报错、只是不通）。
+           这是本文件最重要的一行，取一代生产实测值 150。
+           auto + 大上限 = 确定性的端口分配（none 会让内核随机挑临时端口）。 -->
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>150</MaxAutoParticipantIndex>
+      <!-- 【必需项 3】跨机单播发现兜底。
+           纯追加：**不关闭组播**（CycloneDDS 在 WiFi 上会自动把组播限制为仅发现
+           spdp，数据走单播 —— 见 0.10.5 自带 README 第 304-307 行）。
+           2026-09-18 实测：本 AP 上「纯组播」也能通，所以此行**不是当前必需的**；
+           保留它是为了在「AP 屏蔽组播」的环境里仍有一条发现路径。
+           实测代价为零 —— 互通的两次对照里，发送失败数都是 0。 -->
+      <Peers>
+        <Peer address="192.168.0.165"/>
+      </Peers>
+    </Discovery>
+    <!-- 刻意**不设**的东西，各有理由：
+         · AllowMulticast  —— 默认行为对 WiFi 已经是对的（仅发现用组播），覆盖反而引入风险
+         · MaxMessageSize / FragmentSize —— README 那对值是跑性能基准用的；
+           65500B 在 MTU 1500 上会被 IP 分片成约 45 片，WiFi 丢一片即丢整包。
+           本轮已实测单条 1.2 MB 能完整到达（远超 /map 的 315 KB），不需要它
+         · SharedMemory     —— 不写 = 不启用 iceoryx，与一代主域一致（也就不需要 iox-roudi）
+         · EnableTopicDiscoveryEndpoints —— 默认关，且自带「显著开销」警告，ROS 2 不需要 -->
+  </Domain>
+</CycloneDDS>

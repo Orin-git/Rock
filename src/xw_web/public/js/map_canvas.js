@@ -80,6 +80,12 @@
   let interactMode = 'view';
   let waypointClickCb = null;
   let initialPose = null; // { x, y, yaw }
+  // 蓝点是否被人工指定过（拖动 / 空白处点击 / 调朝向滑块 / 外部 setInitialPose）。
+  // false  ⇒ 当前蓝点只是「机器人自报位姿」的镜像，不是操作员的判断；
+  //          此时不拖动直接点「确认初位姿」= 把 AMCL 自己那一刻的位姿
+  //          ±0.5m/15° 再喂回给它自己 —— 位姿已经错时它不纠正任何东西（空转）。
+  // 见 setInteractMode 的自动重种逻辑。
+  let initialPoseDragged = false;
   let selectedWpIdx = null;
   let dragState = null; // { type: 'pose'|'wp', idx?, ox, oy }
   let yawChangeCb = null;
@@ -791,21 +797,32 @@
 
     if (displayRobot) {
       const isPreview = !robotTf || (interactMode === 'initial_pose' && initialPose);
+      // 未人工指定的蓝点画成琥珀色并写明它只是机器人自报位姿 —— 让「这次按的是
+      // 空转」在蓝点本身上就看得见，而不是只有读源码才知道。
+      const unedited = isPreview && interactMode === 'initial_pose' && !initialPoseDragged;
       drawPoseMarker(
         view,
         displayRobot.x,
         displayRobot.y,
         typeof displayRobot.yaw === 'number' ? displayRobot.yaw : 0,
-        isPreview ? 'rgba(34, 211, 238, 0.92)' : 'rgba(103, 232, 249, 0.9)',
-        isPreview ? '#0891b2' : '#22d3ee',
+        unedited
+          ? 'rgba(251, 191, 36, 0.95)'
+          : isPreview
+            ? 'rgba(34, 211, 238, 0.92)'
+            : 'rgba(103, 232, 249, 0.9)',
+        unedited ? '#b45309' : isPreview ? '#0891b2' : '#22d3ee',
         Math.max(9, view.scale * 2.2)
       );
       if (isPreview) {
         const p = worldToPixel(displayRobot.x, displayRobot.y, view);
-        overlayCtx.fillStyle = '#67e8f9';
+        overlayCtx.fillStyle = unedited ? '#fbbf24' : '#67e8f9';
         overlayCtx.font = '11px "IBM Plex Mono", sans-serif';
         overlayCtx.textAlign = 'center';
-        overlayCtx.fillText('初位姿', p.px, p.py + Math.max(16, view.scale * 3));
+        overlayCtx.fillText(
+          unedited ? '初位姿 = 机器人自报 ⚠ 未人工修正' : '初位姿（人工）',
+          p.px,
+          p.py + Math.max(16, view.scale * 3)
+        );
       }
     }
 
@@ -997,6 +1014,7 @@
       try {
         modeChangeCb(interactMode, {
           initialPose: initialPose,
+          initialPoseDragged: initialPoseDragged,
           selectedWpIdx: selectedWpIdx,
           waypoints: waypoints,
         });
@@ -1026,6 +1044,7 @@
     if (interactMode === 'initial_pose') {
       if (!initialPose) return;
       initialPose.yaw = y;
+      initialPoseDragged = true; // 手动调朝向同样是人工指定（只由滑块/旋转按钮触发）
     } else if (interactMode === 'edit_wp' && selectedWpIdx != null && waypoints[selectedWpIdx]) {
       waypoints[selectedWpIdx].yaw = y;
     } else if (goalPose) {
@@ -1040,13 +1059,20 @@
     interactMode = next;
     dragState = null;
     if (next === 'initial_pose') {
-      if (!initialPose) {
+      // 未人工指定过 ⇒ **每次进入**都按当前 TF 重种蓝点。
+      // 旧代码是 `if (!initialPose)`：只在「页面加载后第一次进这个工具」时种一次，
+      // 之后永不更新 ⇒ 蓝点冻结在页面加载那一刻的位姿上，效果取决于页面新旧、
+      // 不取决于现场实际。刷新页面之所以「就好了」，正是因为刷新把 initialPose
+      // 重置成 null、于是又种了一次，而这次种子是对的。
+      if (!initialPose || !initialPoseDragged) {
         const seed = getRobotTf() || goalPose || mapCenterWorld();
-        initialPose = {
-          x: seed ? Number(seed.x) : 0,
-          y: seed ? Number(seed.y) : 0,
-          yaw: seed && typeof seed.yaw === 'number' ? seed.yaw : 0,
-        };
+        if (seed) {
+          initialPose = {
+            x: Number(seed.x),
+            y: Number(seed.y),
+            yaw: typeof seed.yaw === 'number' ? seed.yaw : 0,
+          };
+        }
       }
     }
     if (next === 'initial_pose') selectedWpIdx = null;
@@ -1096,6 +1122,7 @@
         dragState = { type: 'pose' };
       } else {
         initialPose = { x: world.x, y: world.y, yaw: initialPose ? initialPose.yaw : 0 };
+        initialPoseDragged = true; // 点击即人工指定位置
         dragState = { type: 'pose' };
         notifyYaw();
       }
@@ -1162,6 +1189,7 @@
     if (dragState.type === 'pose' && initialPose) {
       initialPose.x = world.x;
       initialPose.y = world.y;
+      initialPoseDragged = true; // 拖动即人工指定位置
       drawOverlay();
     } else if (dragState.type === 'wp' && dragState.idx != null && waypoints[dragState.idx]) {
       const wp = waypoints[dragState.idx];
@@ -1249,20 +1277,28 @@
   function setInitialPose(pose) {
     if (!pose || typeof pose.x !== 'number') {
       initialPose = null;
+      initialPoseDragged = false;
     } else {
       initialPose = {
         x: Number(pose.x),
         y: Number(pose.y),
         yaw: typeof pose.yaw === 'number' ? pose.yaw : 0,
       };
+      // 外部显式指定 ⇒ 不再是 TF 的镜像，之后进入工具时不再自动重种。
+      initialPoseDragged = true;
     }
     drawOverlay();
     notifyMode();
     notifyYaw();
   }
 
+  function isInitialPoseDragged() {
+    return initialPoseDragged;
+  }
+
   function clearInitialPose() {
     initialPose = null;
+    initialPoseDragged = false;
     drawOverlay();
   }
 
@@ -1540,6 +1576,7 @@
     getWaypoints: getWaypoints,
     setInitialPose: setInitialPose,
     getInitialPose: getInitialPose,
+    isInitialPoseDragged: isInitialPoseDragged,
     clearInitialPose: clearInitialPose,
     getSelectedWaypointIndex: getSelectedWaypointIndex,
     setSelectedWaypointIndex: setSelectedWaypointIndex,

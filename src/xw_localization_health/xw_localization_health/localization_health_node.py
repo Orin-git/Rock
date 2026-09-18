@@ -35,7 +35,11 @@ from std_msgs.msg import Bool, Int8, String
 from std_srvs.srv import Empty
 from tf2_ros import Buffer, TransformException, TransformListener
 
-from xw_global_reloc.laser_verify import DistanceField, score_scan_at_pose
+from xw_global_reloc.laser_verify import (
+    DistanceField,
+    ray_consistency_at_pose,
+    score_scan_at_pose,
+)
 from xw_interfaces.msg import RobotEvent
 
 
@@ -63,6 +67,48 @@ class LocalizationHealthNode(Node):
         self.declare_parameter('cov_xy_bad', 2.5)
         self.declare_parameter('cov_yaw_warn', 0.35)
         self.declare_parameter('cov_yaw_bad', 0.8)
+        # ---- ⑥-A（2026-09-18）：协方差**下界** ----
+        # 上面四个 cov_* 全是**上界**（>= bad 才报）。而本轮的失效模式是**虚假的确定**：
+        # 静止 + 强制更新 ⇒ AMCL 在零运动信息下反复「传感器更新 + 重采样」⇒ 粒子云
+        # 单调收缩，cov 落到 ~1e-7 乃至 1e-14，四道闸门全部轻松通过，网页显示「正常」。
+        # 闸门要的是「cov 大 = 我可能错了」，而塌缩产出的是「cov ≈ 0 = 我确信」——
+        # 后者恰好是上界闸门唯一认得的「健康」形状。所以必须有下界。
+        #
+        # ⚠️ 关于符号 —— **更正我自己先前写在这段里的一句错话**（红线 12 留痕）：
+        #    我原先写「任何 abs()/max(0,·) 都会把要观测的东西抹掉」。写单测时把它验了，
+        #    对**这个下界比较**而言那句话是**错的**：实测塌缩值 c7 = -1.467e-14，
+        #    取 abs 得 1.467e-14、取 max(0,·) 得 0.0，三者在 3e-5 这个阈值下
+        #    **给出同一个判决**（都远小于阈值）。测试 `T1::test_sign_does_not_...
+        #    __documented` 把这个「不变」钉住了。
+        #    符号真正决定的是另外两件事：
+        #      ① **遥测**：`cov.xy_raw` 必须带符号，负号才说明滤波器的方差已落到
+        #         浮点噪声里（= 平台期，不会再降），而不是「正停在一个很小但真实的
+        #         协方差上」。A10 那个 `-0.0` 就是这个意思 —— 5 位小数的打印精度
+        #         让两种完全不同的状态长得一模一样。
+        #      ② **「负值 = 关闭该轴」这个约定**：它只有在按原值比较时才成立。
+        #         若写成 `lim != 0.0` 而不是 `lim > 0.0`，一个负的限值会被当成
+        #         「启用」，于是 `xy < lim` 在负值区反而**成立** ⇒ 误判塌缩。
+        #         测试 `T4::test_negative_limit_near_floor_disables_axis` 钉住这一条
+        #         （限值取在 -1e-14，与实测塌缩值同量级 —— 取 -1.0 是分不开两者的）。
+        #
+        # 取值来源（Step 0 标定，2026-09-18 上午；**单次停车事件**，留痕见方案）：
+        #   ⓐ 正常停在目标点 +20 s（建库每格停留就是这个量级）⇒ 1.77e-3 —— 不得触发
+        #   ⓑ 停放 +300 s ⇒ 3.53e-7（其后 ≥190 s 稳定在 3.4~4.2e-7）    —— 必须触发
+        #   ③ 平台期最大的注入尖峰 ⇒ cov_xy 1.14e-5 / cov_yaw 3.09e-6
+        #      （增广 MCL 的随机注入，实测 33× / 170× 的瞬时跳动）
+        # 阈值取在**尖峰天花板之上**，否则尖峰会把 cov_collapsed_sec 反复清零，
+        # ⑥-C 的重播种将永远等不到保持期：
+        #   cov_xy_min  = 3.0e-5 = 尖峰 ×2.6，ⓐ /59，ⓑ ×85
+        #   cov_yaw_min = 8.0e-6 = 尖峰 ×2.6，ⓐ /64，ⓑ ×239
+        # 负值 = 关闭该轴（cov 可以为负，所以不能用 0 当「关」）。
+        self.declare_parameter('cov_xy_min', 3.0e-5)
+        self.declare_parameter('cov_yaw_min', 8.0e-6)
+        # 塌缩须**连续**保持这么久才置位（防单帧注入尖峰清零计时）。
+        # 标定：cov 从健康 2e-2 衰减到阈值 3e-5 约需 75 s ⇒ 20 s 保持只加很小的延迟；
+        # 而 20 s 的正常停车停留根本到不了阈值（那一档 cov ≈ 1.8e-3，差 59×）。
+        self.declare_parameter('cov_collapse_hold_sec', 20.0)
+        # ⑥-B：塌缩期间跳过强制更新（见 _maybe_force_amcl_update 内的说明）。
+        self.declare_parameter('amcl_force_skip_when_collapsed', True)
         self.declare_parameter('pose_jump_m', 0.8)
         self.declare_parameter('outside_map_margin_m', 0.5)
         self.declare_parameter('status2_hold_sec', 4.0)
@@ -82,6 +128,49 @@ class LocalizationHealthNode(Node):
         # the robot is static (Nav2 otherwise only publishes after update_min_*).
         self.declare_parameter('amcl_force_update_enable', True)
         self.declare_parameter('amcl_force_update_period_sec', 1.0)
+
+        # ---- Stage C（2026-09-18）：射线一致性判据（三值规则）----
+        # 旧口径 min_laser_score 量的是「端点离最近的占用格多近」，不问「这条射线
+        # 该不该打这么远」⇒ 在杂物旁反而给高分（真位姿 0.1186、错位姿 0.42），
+        # 与真实好坏方向相反。**调它的阈值不可能修好它**，所以保留它只做遥测对照，
+        # 判决改由射线一致性驱动。
+        # 三值规则（方案 Stage A 实测改写；**不是**两臂 OR —— 那条在 err≤0.30 m 的
+        # 位姿上错报 44.4%，已否）：
+        #   tr >= laser_max_through_ratio                     → 定罪
+        #   tr <  T_up 且 lm >= laser_min_long_match_ratio    → 释放
+        #   其余（含一切证据不足）                             → 弃权
+        # 弃权 ≡ 释放 ≡ status 0（_raw_code 无弃权分支），但遥测里分得开。
+        self.declare_parameter('laser_ray_enable', True)
+        self.declare_parameter('laser_ray_tol_m', 0.25)
+        self.declare_parameter('laser_ray_step_m', 0.025)
+        self.declare_parameter('laser_ray_max_range_m', 16.0)
+        # ⚠️ 必须与标定口径一致：Stage B 定 T_up 的全部测量用的是 -1.0（关掠射防护），
+        # 而 laser_verify 的默认值是 0.30（G5）。阈值来自哪个口径就用哪个口径跑，
+        # 否则阈值与它赖以成立的数据不匹配。
+        self.declare_parameter('laser_ray_grazing_m', -1.0)
+        self.declare_parameter('laser_min_evidence', 40)
+        self.declare_parameter('laser_min_long_beams', 40)
+        # T_up / T_down 取自 Stage B part 9（红线 11：只能来自标定）。tol=0.25 下
+        # 实测三层：健康 1-5 max 0.0949 < 位置 8 max 0.221 < 位置 6 min 0.3498。
+        # T_up=0.25 落在这个窗口内 ⇒ 位置 8（位置正确、地图远处不符）落进弃权。
+        # ⚠️ 已知代价：T_up>0.221 时合成 1.00 m 位移检出由 94.4% 降到 83.0%。
+        self.declare_parameter('laser_max_through_ratio', 0.25)
+        self.declare_parameter('laser_min_long_match_ratio', 0.40)
+        # G11：连续 K 次定罪才置 _laser_mismatch。0.5 Hz × K=3 = 6 s，
+        # 在一个「闩锁本来就是持续状态」的节点里这是零成本。
+        self.declare_parameter('laser_mismatch_k', 3)
+        # G10：位姿必须「确实停着」才允许定罪，否则弃权。
+        # 比 amcl_static_*（0.12 m / 0.12 rad）紧一个量级 —— 那一对是给「AMCL 静默
+        # 是否算陈旧」用的，不是给判据用的。Stage B 实测：0.15 m 合成位移的 through
+        # 最大已到 0.3338、5° 偏航 p50 0.227，用松阈值会把正常行驶偏差判成穿墙。
+        self.declare_parameter('laser_pose_max_trans_m', 0.05)
+        self.declare_parameter('laser_pose_max_yaw_rad', 0.02)
+        # G12：判决陈旧 ⇒ 当未知，不得继承旧的 _laser_mismatch（旧代码里一次数据
+        # 饥饿之后，陈旧判决可以无限期持住 status 3）。
+        self.declare_parameter('laser_verdict_max_age_sec', 6.0)
+        # C2：raw != 3 连续保持这么久 ⇒ 解除 _latched_3。旧代码只有 raw==0 才解，
+        # 而 raw==1 会被立刻重新闩上 ⇒ 单向陷阱。
+        self.declare_parameter('unlatch_hold_sec', 6.0)
 
         self._cb = ReentrantCallbackGroup()
         self._tf = Buffer()
@@ -122,6 +211,26 @@ class LocalizationHealthNode(Node):
         self._g_outside = False
         self._last_force_update = 0.0
         self._force_update_inflight = False
+
+        # ---- Stage C 新判据状态 ----
+        self._rc = None                      # 最近一次 RayConsistency（遥测用）
+        self._ray_verdict = 'none'           # convict | release | abstain | none
+        self._ray_abstain = ''               # 弃权原因（verdict==abstain 时有值）
+        self._ray_consec_bad = 0             # G11 连续定罪计数
+        self._ray_pose_guard = 'init'        # G10 位姿信任闸门的结论
+        self._laser_convicted = False        # 新口径定罪（= consec_bad >= K）
+        self._laser_old_mismatch = False     # 旧口径的结论，只做对照
+        self._g_laser_fresh = False          # G12 新鲜度闸门
+        self._raw_not3_since: Optional[float] = None   # C2 解闩锁计时起点
+
+        # ---- ⑥（2026-09-18）塌缩防护状态 ----
+        self._cov_collapsed = False          # ⑥-A：连续塌缩 ≥ hold 后的**置位**结果
+        self._cov_collapsed_since = None     # 连续塌缩的计时起点（单调钟）
+        self._cov_collapsed_sec = 0.0        # 已连续塌缩的秒数（遥测用，未到 hold 也报）
+        self._force_skipped = 0              # ⑥-B：因塌缩而拦下的强制更新次数
+        self._reseed_count = 0               # ⑥-C：重播种次数（⑥-C 实装前恒为 0）
+        self._reseed_last_at = None          # ⑥-C：上次重播种的单调钟时刻
+        self._reseed_last_reason = ''        # ⑥-C：上次重播种的原因
 
         latch_in = QoSProfile(
             depth=1,
@@ -244,6 +353,18 @@ class LocalizationHealthNode(Node):
         # 而不是继续显示上一处点位的分数。
         self._laser_eval_mono = None
         self._laser_reason = ''
+        # ⑥（顺带修一个既有的真 bug）：不清 `_last_xy` 的话，新位姿一到，
+        # `_pose_jump()` 会拿它和**上一个位置**的坐标比 —— 一次合法的重新定位
+        # （尤其是 ⑥-C 自己发的、或操作员从几十米外拖过来的）会被报成 pose_jump
+        # ⇒ status 2 ⇒ 可能引出那副已知会加重病情的自旋自愈。这里置 None，
+        # 让 `_pose_jump()` 把它当作新的基准（它自己开头就有 `if self._last_xy is None
+        # ⇒ 重设基准并 return False` 这个分支 —— 按方法名找，不按行号，本文件行号已漂过）。
+        self._last_xy = None
+        # 新的种子意味着滤波器被重新供能，旧的塌缩计时不再描述它。
+        # （下个 tick 的 cov 也会很大而自然清零，这里显式复位以免中间有几帧假置位。）
+        self._cov_collapsed = False
+        self._cov_collapsed_since = None
+        self._cov_collapsed_sec = 0.0
         self.get_logger().info('initialpose → clear status-3 latch')
 
     def _abort_heal_motion(self, reason: str) -> None:
@@ -327,6 +448,53 @@ class LocalizationHealthNode(Node):
         yaw = float(c[35])
         return xy, yaw
 
+    def _update_cov_collapse(self) -> None:
+        """⑥-A：判定「协方差是否已塌缩」，每 tick 调一次 —— **单一写入者**。
+
+        为什么不做进 `_raw_code()`：那里有 3 个 early return（TF 不 ok / amcl 缺失 /
+        不新鲜），塌缩判定会跟着一起被跳过 —— 而塌缩恰恰常与「AMCL 静默」同时发生，
+        那正是最需要它的时刻。
+        为什么不做成惰性：`_publish_detail` 在 `_tick` 的 finally 里**无条件**跑，
+        惰性的话它会读到没被刷新过的旧值，遥测就会说谎。
+
+        比较按**有符号**写（cov 实测为负，见 declare_parameter 处）。负的限值 = 关闭该轴。
+
+        注意：本函数**只写遥测状态，绝不改 `status`**。把「退化」路由进 status 2 等于
+        让 `_self_heal_tick` 去自旋 + reinit —— 09-16 实测那条自愈把估计打得更坏
+        （静止中 yaw 自己跳 +98.3°，through 从 0.3568 升到 0.5864，迄今最坏）。
+        退化的出口是 ⑥-C 重播种，不是自旋。
+        """
+        if self._amcl is None:
+            # 没有位姿就谈不上「确信地错」。保持上次判定，不在这里翻转 ——
+            # 这里翻转会把「还没收到第一条 amcl」误报成「已恢复」。
+            return
+        c = self._amcl.pose.covariance
+        xy = max(float(c[0]), float(c[7]))
+        yaw = float(c[35])
+        lim_xy = float(self.get_parameter('cov_xy_min').value)
+        lim_yaw = float(self.get_parameter('cov_yaw_min').value)
+        hit = ((lim_xy > 0.0 and xy < lim_xy)
+               or (lim_yaw > 0.0 and yaw < lim_yaw))
+        now = self._now()
+        if not hit:
+            self._cov_collapsed = False
+            self._cov_collapsed_since = None
+            self._cov_collapsed_sec = 0.0
+            return
+        if self._cov_collapsed_since is None:
+            self._cov_collapsed_since = now
+        self._cov_collapsed_sec = now - self._cov_collapsed_since
+        hold = float(self.get_parameter('cov_collapse_hold_sec').value)
+        was = self._cov_collapsed
+        self._cov_collapsed = self._cov_collapsed_sec >= hold
+        if self._cov_collapsed and not was:
+            self.get_logger().warn(
+                'cov COLLAPSED (sustained %.1fs >= %.1fs): cov_xy=%.3e (< %.1e) '
+                'cov_yaw=%.3e (< %.1e) — 滤波器已不再探索。这**只是遥测**，'
+                'status 不受影响；退化要走的出口是重播种，不是自旋自愈。'
+                % (self._cov_collapsed_sec, hold, xy, lim_xy, yaw, lim_yaw)
+            )
+
     def _outside_map(self) -> bool:
         if self._amcl is None or self._map is None:
             return False
@@ -378,6 +546,17 @@ class LocalizationHealthNode(Node):
             return
         if self._force_update_inflight:
             return
+        # ⑥-B：位姿已经塌缩时**不要**继续强制更新。
+        # 每一次强制更新都只是在零运动信息下再做一次「传感器更新 + 重采样」，
+        # 只会让样本更贫化 —— 此时该做的是重播种（⑥-C），不是继续搅。
+        # 放在这里（而不是函数开头）是为了让计数器数的是「本次确实要发、但被拦下」，
+        # 而不是每个 tick 都 +1。
+        # ⚠️ 刻意**不更新** `_last_force_update`：跳过不消耗周期记账，下一 tick 仍会
+        #    尝试 —— 塌缩一旦解除就立刻恢复原节奏，不需要等一个完整周期。
+        if (bool(self.get_parameter('amcl_force_skip_when_collapsed').value)
+                and self._cov_collapsed):
+            self._force_skipped += 1
+            return
         if not self._nomotion.service_is_ready():
             return
         self._last_force_update = now
@@ -393,17 +572,62 @@ class LocalizationHealthNode(Node):
 
         fut.add_done_callback(_done)
 
+    def _laser_pose_trust(self) -> tuple:
+        """G10：位姿必须「确实停着」才允许定罪。返回 (ok, reason)。
+
+        旧代码从不检查运动。AMCL 受 update_min_d/a 门控，行驶中 amcl_pose 可比扫描
+        旧一整个更新周期（至多 0.25 m / 0.2 rad）。更糟的是自愈自旋：_self_heal_tick
+        以 0.35 rad/s 转，而激光校验在自旋期间照常跑 ⇒ **自旋自己制造出被判成 LOST
+        的位姿偏差**。旧判据对此近乎免疫（3° 只动 0.009），新判据会把它放大 0.2~0.35。
+
+        阈值不能借 amcl_static_trans_m/amcl_static_yaw_rad（0.12/0.12）—— 那一对是
+        给「AMCL 静默是否算陈旧」用的。Stage B 实测：0.15 m 合成位移的 through 最大
+        已到 0.3338（> T_up），5° 偏航 p50 0.227 ⇒ 用松阈值会把正常行驶偏差判成穿墙。
+        """
+        if self._heal_started is not None or self._heal_phase:
+            return False, 'heal_spin'
+        ref = self._odom_at_amcl
+        if ref is None:
+            ref = self._lookup_odom_pose()
+        cur = self._lookup_odom_pose()
+        if ref is None or cur is None:
+            return False, 'no_odom'
+        dx = cur[0] - ref[0]
+        dy = cur[1] - ref[1]
+        dyaw = abs(math.atan2(math.sin(cur[2] - ref[2]), math.cos(cur[2] - ref[2])))
+        if math.hypot(dx, dy) > float(self.get_parameter('laser_pose_max_trans_m').value):
+            return False, 'moving_trans'
+        if dyaw > float(self.get_parameter('laser_pose_max_yaw_rad').value):
+            return False, 'moving_yaw'
+        return True, 'ok'
+
+    def _laser_verdict_fresh(self) -> bool:
+        """G12：判决必须够新才能参与判决。None 或过旧 ⇒ 当未知，不继承。"""
+        if self._laser_eval_mono is None:
+            return False
+        age = self._now() - self._laser_eval_mono
+        return age <= float(self.get_parameter('laser_verdict_max_age_sec').value)
+
     def _maybe_laser_check(self) -> None:
-        """Score the live scan at the current pose. No motion required."""
+        """Score the live scan at the current pose. No motion required.
+
+        旧口径（端点邻近度）继续算，但只进遥测与 rosout；判决改由射线一致性三值规则
+        驱动（Stage C）。两者同时报出来 —— 一旦出问题能立刻对照，而不是只能看到裸状态码。
+        """
         period = float(self.get_parameter('laser_check_period_sec').value)
         now = self._now()
         if now - self._last_laser_check < period:
             return
-        self._last_laser_check = now
+        # G12：窗口只能在真正做了评估之后才被消费。旧代码在早退**之前**就写了
+        # 时间戳，一次数据饥饿吃掉整个窗口，而 _laser_mismatch 保留旧值继续参与判决。
         if self._amcl is None or self._map is None or self._scan is None or self._scan_mono is None:
             return
         if now - self._scan_mono > float(self.get_parameter('scan_fresh_sec').value):
             return
+        self._last_laser_check = now
+        ray_on = bool(self.get_parameter('laser_ray_enable').value)
+        t_up = float(self.get_parameter('laser_max_through_ratio').value)
+        t_down = float(self.get_parameter('laser_min_long_match_ratio').value)
         try:
             info = self._map.info
             map_id = (int(info.width), int(info.height), float(info.resolution), float(info.origin.position.x), float(info.origin.position.y))
@@ -412,30 +636,98 @@ class LocalizationHealthNode(Node):
                 self._field_map_id = map_id
             p = self._amcl.pose.pose
             yaw = self._yaw_from_quat(p.orientation)
+            px, py = float(p.position.x), float(p.position.y)
             scored = score_scan_at_pose(
                 self._field,
                 self._scan,
-                float(p.position.x),
-                float(p.position.y),
+                px,
+                py,
                 yaw,
                 min_valid_beams=int(self.get_parameter('min_valid_beams').value),
                 min_laser_score=float(self.get_parameter('min_laser_score').value),
             )
+            rc = None
+            if ray_on:
+                rc = ray_consistency_at_pose(
+                    self._field,
+                    self._scan,
+                    px,
+                    py,
+                    yaw,
+                    tol_m=float(self.get_parameter('laser_ray_tol_m').value),
+                    step_m=float(self.get_parameter('laser_ray_step_m').value),
+                    max_range_m=float(self.get_parameter('laser_ray_max_range_m').value),
+                    grazing_m=float(self.get_parameter('laser_ray_grazing_m').value),
+                )
         except Exception as exc:  # noqa: BLE001
             self.get_logger().warn(f'laser mismatch check failed: {exc}')
             return
+
+        # ---- 旧口径：只做遥测对照，不再驱动判决 ----
         self._laser_score = float(scored.laser_score)
         self._laser_eval_mono = self._now()
         self._laser_beams = int(scored.valid_beams)
         self._laser_ratio = float(scored.matched_ratio)
         self._laser_reason = str(scored.reason)
-        mismatch = (not bool(scored.accepted)) and str(scored.reason) != 'few_beams'
-        if mismatch and not self._laser_mismatch:
+        self._laser_old_mismatch = (
+            (not bool(scored.accepted)) and str(scored.reason) != 'few_beams'
+        )
+
+        # ---- 新口径：三值规则 ----
+        self._rc = rc
+        verdict = 'abstain'
+        abstain = 'ray_disabled'
+        if rc is not None:
+            pose_ok, pose_reason = self._laser_pose_trust()
+            self._ray_pose_guard = pose_reason
+            min_ev = int(self.get_parameter('laser_min_evidence').value)
+            min_lb = int(self.get_parameter('laser_min_long_beams').value)
+            if rc.origin_blocked:
+                # G4：原点落在占用格/贴墙 ⇒ 第 1 步就命中 ⇒ through 会假性逼近 100%
+                abstain = f'origin_blocked:{rc.reason}'
+            elif rc.n_evidence < min_ev:
+                abstain = f'few_evidence:{rc.n_evidence}<{min_ev}'
+            elif rc.n_long < min_lb:
+                abstain = f'few_long_beams:{rc.n_long}<{min_lb}'
+            elif not rc.structure_ok:
+                abstain = 'no_structure'
+            elif not pose_ok:
+                abstain = f'pose_{pose_reason}'
+            elif rc.through_ratio >= t_up:
+                verdict = 'convict'
+            elif rc.long_match_ratio >= t_down:
+                verdict = 'release'
+            else:
+                # 正向证据缺失。**它不足以定罪**（那正是被否掉的第二臂），
+                # 只足以「拒绝释放」⇒ 落进弃权：不动状态、不置闩锁，但也不背书。
+                # 位置 8（位置正确、地图远处不符）就落在这里 —— 旧判据在此定罪，
+                # 而它 lm=0.099 也够不上被释放，弃权才是诚实的答案。
+                verdict = 'abstain'
+                abstain = f'weak_positive:lm={float(rc.long_match_ratio):.3f}<{t_down}'
+        self._ray_verdict = verdict
+        self._ray_abstain = abstain if verdict == 'abstain' else ''
+
+        # G11：连续 K 次定罪才置位；任何非定罪（含弃权）都清零。
+        if verdict == 'convict':
+            self._ray_consec_bad += 1
+        else:
+            self._ray_consec_bad = 0
+        k = max(1, int(self.get_parameter('laser_mismatch_k').value))
+        self._laser_convicted = self._ray_consec_bad >= k
+
+        if self._laser_convicted and not self._laser_mismatch:
             self.get_logger().warn(
-                f'laser/map mismatch while pose held '
-                f'score={scored.laser_score:.3f} beams={scored.valid_beams} reason={scored.reason}'
+                f'ray CONVICT consec={self._ray_consec_bad}/{k} '
+                f'through={rc.through_ratio:.4f}>=T_up({t_up:.2f}) '
+                f'evidence={rc.n_evidence} long={rc.n_long} run={rc.max_through_run} '
+                f'old_score={scored.laser_score:.3f} old_reason={scored.reason}'
             )
-        self._laser_mismatch = mismatch
+        elif self._laser_mismatch and not self._laser_convicted:
+            self.get_logger().warn(
+                f'ray conviction CLEARED verdict={verdict} consec={self._ray_consec_bad} '
+                f'through={None if rc is None else round(rc.through_ratio, 4)} abstain={self._ray_abstain}'
+            )
+        self._laser_mismatch = self._laser_convicted
 
     def _raw_code(self) -> int:
         """Immediate health without latch/heal. Always evaluated (incl. FOLLOW)."""
@@ -444,7 +736,10 @@ class LocalizationHealthNode(Node):
         if not self._g_tf_ok or self._amcl is None or not self._g_amcl_fresh:
             return 1
         xy, yaw = self._cov_xy_yaw()
-        if self._laser_mismatch:
+        # G12：陈旧判决不得无限期持住 status 3。旧代码里一次数据饥饿之后，
+        # _laser_mismatch 保留旧值继续参与判决 ⇒ 陈旧判决能把 status 3 一直撑下去。
+        self._g_laser_fresh = self._laser_verdict_fresh()
+        if self._laser_mismatch and self._g_laser_fresh:
             return 3
         self._g_outside = self._outside_map()
         if self._g_outside:
@@ -525,6 +820,12 @@ class LocalizationHealthNode(Node):
             self._heal_started = None
             self._heal_phase = ''
             self._stop_motion()
+            self.get_logger().warn(
+                f'status-3 LATCH SET (self-heal timeout {elapsed:.1f}s > {timeout:.1f}s) '
+                f'raw={self._last_raw} through='
+                f'{None if self._rc is None else round(self._rc.through_ratio, 4)} '
+                f'old_score={self._laser_score}'
+            )
             self._emit(2, 'loc_needs_attention', 'self-heal timeout → status 3')
             return
 
@@ -550,7 +851,15 @@ class LocalizationHealthNode(Node):
             'raw': int(self._last_raw),
             'latched_3': bool(self._latched_3),
             'laser': {
+                # mismatch = 新口径的定罪（驱动判决）。old_* 是旧口径，只做对照 ——
+                # 两者方向相反过一次（真位姿 old 0.42 / 新判据定罪），留着是为了
+                # 以后再出问题时能一眼看出「是判据换了还是现场变了」。
                 'mismatch': bool(self._laser_mismatch),
+                'convicted': bool(self._laser_convicted),
+                'consec_bad': int(self._ray_consec_bad),
+                'verdict': str(self._ray_verdict),
+                'abstain_reason': str(self._ray_abstain),
+                'old_mismatch': bool(self._laser_old_mismatch),
                 'score': self._laser_score,
                 'beams': int(self._laser_beams),
                 'matched_ratio': round(float(self._laser_ratio), 4),
@@ -561,7 +870,63 @@ class LocalizationHealthNode(Node):
                     else round(now - self._laser_eval_mono, 1)
                 ),
             },
-            'cov': {'xy': round(xy, 4), 'yaw': round(yaw, 4)},
+            # 新判据的全部原始计数 —— 判决出问题时不靠猜，直接看是哪一步。
+            'ray': (
+                None if self._rc is None else {
+                    'through_ratio': round(float(self._rc.through_ratio), 4),
+                    'long_match_ratio': round(float(self._rc.long_match_ratio), 4),
+                    'n_evidence': int(self._rc.n_evidence),
+                    'n_long': int(self._rc.n_long),
+                    'n_match': int(self._rc.n_match),
+                    'n_early': int(self._rc.n_early),
+                    'n_through': int(self._rc.n_through),
+                    'n_grazing': int(self._rc.n_grazing),
+                    'n_nohit': int(self._rc.n_nohit),
+                    'n_oob': int(self._rc.n_oob),
+                    'max_through_run': int(self._rc.max_through_run),
+                    'origin_blocked': bool(self._rc.origin_blocked),
+                    'origin_dist_m': round(float(self._rc.origin_dist_m), 3),
+                    'structure_ok': bool(self._rc.structure_ok),
+                    'reason': str(self._rc.reason),
+                    'runtime_ms': round(float(self._rc.runtime_sec) * 1e3, 2),
+                    't_up': float(self.get_parameter('laser_max_through_ratio').value),
+                    't_down': float(self.get_parameter('laser_min_long_match_ratio').value),
+                    'k': int(self.get_parameter('laser_mismatch_k').value),
+                }
+            ),
+            'pose_guard': str(self._ray_pose_guard),
+            'cov': {
+                'xy': round(xy, 4), 'yaw': round(yaw, 4),
+                # ⑥-A：塌缩（**下界**判据）。上面两项按 4 位小数打印，塌缩时它们
+                # 会显示成 `-0.0` —— 那只是打印精度的假象（A10）。这两个字段才是
+                # 「到底塌没塌」的可读答案；xy_raw/yaw_raw 给全精度，便于事后拟合。
+                'collapsed': bool(self._cov_collapsed),
+                'collapsed_sec': round(self._cov_collapsed_sec, 1),
+                'xy_raw': float(xy), 'yaw_raw': float(yaw),
+                'xy_min': float(self.get_parameter('cov_xy_min').value),
+                'yaw_min': float(self.get_parameter('cov_yaw_min').value),
+            },
+            # ⑥-B：强制更新的记账。age_sec = 距上次**真正发出**的强制更新多少秒；
+            # 它与 ages.amcl_sec 的差就是「跳过」造成的空档，塌缩防护是否在起作用
+            # 一眼可见。skipped_degenerate 单调递增，不因塌缩解除而清零。
+            'force_update': {
+                'age_sec': (
+                    None if not self._last_force_update
+                    else round(now - self._last_force_update, 1)
+                ),
+                'period_sec': float(
+                    self.get_parameter('amcl_force_update_period_sec').value),
+                'skipped_degenerate': int(self._force_skipped),
+            },
+            # ⑥-C：重播种的记账。⑥-C 实装前恒为 0 / None / ''。
+            'reseed': {
+                'count': int(self._reseed_count),
+                'last_at': (
+                    None if self._reseed_last_at is None
+                    else round(self._reseed_last_at, 1)
+                ),
+                'last_reason': str(self._reseed_last_reason),
+            },
             'ages': {
                 'scan_sec': (
                     None if self._scan_mono is None
@@ -575,9 +940,19 @@ class LocalizationHealthNode(Node):
             'gates': {
                 'tf_ok': bool(self._g_tf_ok),
                 'amcl_fresh': bool(self._g_amcl_fresh),
+                'laser_verdict_fresh': bool(self._g_laser_fresh),
                 'outside_map': bool(self._g_outside),
                 'pose_jump': bool(self._last_jump),
             },
+            # 解闩锁倒计时：>0 = 正在计时（raw 已经不是 3 了），到
+            # unlatch_hold_sec 就解锁。旧代码没有这个数，也永远到不了 0。
+            'unlatch_in_sec': (
+                None if (not self._latched_3 or self._raw_not3_since is None)
+                else round(
+                    max(0.0, float(self.get_parameter('unlatch_hold_sec').value)
+                        - (now - self._raw_not3_since)), 1
+                )
+            ),
             'map_id': self._field_map_id,
         }
         try:
@@ -598,13 +973,56 @@ class LocalizationHealthNode(Node):
             if self._heal_started is not None or self._heal_phase:
                 self._abort_heal_motion('follow active → stop heal motion')
 
+        # ⑥-A 必须先于 ⑥-B：`_maybe_force_amcl_update` 要读本 tick 的 `_cov_collapsed`，
+        # 而 `_publish_detail`（在 `_tick` 的 finally 里）要读它和 `_cov_collapsed_sec`。
+        self._update_cov_collapse()
         self._maybe_force_amcl_update()
         self._maybe_laser_check()
         raw = self._raw_code()
         self._last_raw = raw
         now = self._now()
 
+        # ---- C2 解闩锁 ----
+        # 旧代码只有 raw==0 才清 _latched_3，而 raw==1（TF/AMCL 瞬时失配，比
+        # 「需要重定位」轻）只 return、不清闩锁；紧接着的 `_latched_3 or raw == 3`
+        # 分支只要 raw 离开 1 就立刻重新闩上 ⇒ **单向陷阱**：位姿没修好就永远出不来，
+        # 而修位姿又常常要先用操作员那个默认空转的按钮（两个缺陷互相咬死）。
+        # 现在：raw != 3 连续保持 unlatch_hold_sec ⇒ 解锁，状态降为 raw。
+        # 安全性：status 1 仍然 != 0 ⇒ 建库侧要的「loc_status==0 连续 20 s」照样
+        # 等不到，什么都没被藏起来；区别只是恢复链路重新可用。
+        if raw == 3:
+            self._raw_not3_since = None
+        elif self._raw_not3_since is None:
+            self._raw_not3_since = now
+        # 只对 raw==1 解锁。**raw==2 故意不在这里解**：解锁后控制流会落到下面
+        # 「raw==2 软保持」那段既有代码，而它在前 status2_hold_sec 内**故意发 status 0**
+        # （防抖设计）⇒ 解锁可能瞬时报「一切正常」，把这套安全论证（「解锁不等于放行」）
+        # 破坏掉。raw==2 的出路本来就是 initialpose + 自愈，不靠这条。
+        if self._latched_3 and raw == 1:
+            held = now - float(self._raw_not3_since)
+            if held >= float(self.get_parameter('unlatch_hold_sec').value):
+                self._latched_3 = False
+                self.get_logger().warn(
+                    f'status-3 latch CLEARED: raw=1 held {held:.1f}s '
+                    f'(>= unlatch_hold_sec) → status 1'
+                )
+                self._emit(0, 'loc_unlatched', f'raw=1 held {held:.1f}s')
+
         if raw == 0:
+            # FIX-H3 的最后一处（⑥-D）：这条路上原本一声不响地清闩锁。
+            # 而它是**唯一**能清闩锁的路（`raw==1` 那条要等 unlatch_hold_sec），
+            # 也就是「08-16 那台机器到底是怎么自己好的」事后唯一的证据点 ——
+            # 旧代码在这里什么都不留，只能去翻 40 分钟的 python3_*.log 反推。
+            # ⚠️ 只在**确实闩着**的时候报：raw==0 是绝大多数 tick 的常态，
+            #    无条件打印会把这个 WARN 淹进噪声里，等于没加。
+            if self._latched_3:
+                self.get_logger().warn(
+                    f'status-3 latch CLEARED (raw=0) '
+                    f'through='
+                    f'{None if self._rc is None else round(self._rc.through_ratio, 4)} '
+                    f'old_score={self._laser_score} '
+                    f'verdict={self._ray_verdict} abstain={self._ray_abstain}'
+                )
             self._raw_bad_since = None
             self._heal_started = None
             self._heal_phase = ''
@@ -620,6 +1038,15 @@ class LocalizationHealthNode(Node):
             return
 
         if self._latched_3 or raw == 3:
+            if not self._latched_3:
+                # FIX-H3：置位必须留痕。旧代码这条路上 rosout 一个字都没有，
+                # 事后只能靠翻 40 分钟的 python3_<pid>_*.log 反推。
+                self.get_logger().warn(
+                    f'status-3 LATCH SET raw=3 laser_convicted={self._laser_convicted} '
+                    f'through={None if self._rc is None else round(self._rc.through_ratio, 4)} '
+                    f'verdict={self._ray_verdict} outside_map={self._g_outside} '
+                    f'pose_jump={self._last_jump}'
+                )
             self._latched_3 = True
             self._status = 3
             self._stop_motion()
@@ -650,6 +1077,13 @@ class LocalizationHealthNode(Node):
                 self._latched_3 = True
                 self._status = 3
                 self._publish_status(3)
+                self.get_logger().warn(
+                    f'status-3 LATCH SET (idle drift sustained '
+                    f'{now - self._raw_bad_since:.1f}s) raw={self._last_raw} '
+                    f'through='
+                    f'{None if self._rc is None else round(self._rc.through_ratio, 4)} '
+                    f'old_score={self._laser_score}'
+                )
                 self._emit(2, 'loc_needs_attention', 'drift while idle')
 
 

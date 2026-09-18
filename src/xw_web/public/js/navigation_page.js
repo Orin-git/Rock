@@ -825,7 +825,18 @@ function wireNavigation(ctx) {
       initial_pose: '拖设初位姿',
       edit_wp: '编辑航点',
     };
-    toolHint.textContent = `工具：${labels[mode] || mode}`;
+    // 蓝点没被人工动过时，点「确认」发出去的是机器人自报位姿的镜像（空转）。
+    // 直接问画布当前状态，不依赖被调用顺序 —— 这个函数在多条路径上都会被调。
+    let hint = `工具：${labels[mode] || mode}`;
+    if (
+      mode === 'initial_pose' &&
+      window.XwMapCanvas &&
+      typeof window.XwMapCanvas.isInitialPoseDragged === 'function' &&
+      !window.XwMapCanvas.isInitialPoseDragged()
+    ) {
+      hint += ' ⚠ 种子=机器人自报位姿，未人工修正';
+    }
+    toolHint.textContent = hint;
     if (orientationControls) {
       orientationControls.setVisible(mode === 'initial_pose' || mode === 'edit_wp');
       orientationControls.syncFromYaw();
@@ -1375,6 +1386,11 @@ function wireNavigation(ctx) {
       flash('请先在地图上拖设初位姿（点「拖设初位姿」后拖动蓝点）', 'err', 7000);
       return;
     }
+    // 蓝点没被人工动过 ⇒ 这次「确认」发出去的就是机器人自报位姿本身。
+    // 位姿已经错时它不会纠正任何东西，必须让操作员看得见（而不是静默空转）。
+    const unedited =
+      typeof window.XwMapCanvas.isInitialPoseDragged === 'function' &&
+      !window.XwMapCanvas.isInitialPoseDragged();
     if (!navActive) {
       flash('尚未进入导航模式：请先点「进入导航」，再确认初位姿', 'err', 7000);
       return;
@@ -1383,8 +1399,10 @@ function wireNavigation(ctx) {
     applyBtn.disabled = true;
     applyBtn.textContent = '发送中…';
     flash(
-      `正在发布初位姿 x=${pose.x.toFixed(2)} y=${pose.y.toFixed(2)} yaw=${pose.yaw.toFixed(2)} …`,
-      'info',
+      unedited
+        ? `⚠ 未人工修正：把机器人自报位姿 x=${pose.x.toFixed(2)} y=${pose.y.toFixed(2)} yaw=${pose.yaw.toFixed(2)} ±0.5m/15° 原样发回给滤波器（若定位已错，这不会纠正它）`
+        : `正在发布初位姿 x=${pose.x.toFixed(2)} y=${pose.y.toFixed(2)} yaw=${pose.yaw.toFixed(2)} …`,
+      unedited ? 'err' : 'info',
       0,
     );
 
@@ -1402,8 +1420,10 @@ function wireNavigation(ctx) {
 
     if (last && last.ok) {
       flash(
-        `初位姿已发送成功（x=${pose.x.toFixed(2)}, y=${pose.y.toFixed(2)}, yaw=${pose.yaw.toFixed(2)}）。请看地图上机器人是否跳到该位置。`,
-        'ok',
+        unedited
+          ? `已发送（未人工修正）：x=${pose.x.toFixed(2)}, y=${pose.y.toFixed(2)}, yaw=${pose.yaw.toFixed(2)}。这就是机器人自报的位姿本身 —— 要看它是否真的移动，请拖动蓝点后再确认。`
+          : `初位姿已发送成功（x=${pose.x.toFixed(2)}, y=${pose.y.toFixed(2)}, yaw=${pose.yaw.toFixed(2)}）。请看地图上机器人是否跳到该位置。`,
+        unedited ? 'err' : 'ok',
         9000,
       );
       if (poseHint) poseHint.textContent = '初位姿已发 · 等待 AMCL 收敛';
