@@ -835,41 +835,6 @@ class VisualDbBuildOrchestrator(Node):
                 max_interlock_retries = int(patrol_cfg.get('max_interlock_retries', 2))
                 interlock_settle_sec = float(patrol_cfg.get('interlock_settle_sec', 3.0))
                 settle_after_interlock = 0.0
-                # ★ Pause-EPISODE state. Round-scoped: the clock belongs to the
-                # pause EPISODE, not to whichever goal happened to be at the head
-                # of the queue when localization dropped.
-                #
-                # The old shape re-zeroed `pause_since` at the top of every goal
-                # and cleared it the instant the pause loop exited -- and that
-                # loop exited on a single `_should_pause() == False` SAMPLE, which
-                # is a flicker, not a recovery (`_await_stable_localization`
-                # measures 14/14 instant aborts firing into exactly such windows).
-                # So `need_operator_grace_sec` -- the liveness guarantee that ends
-                # a session which cannot make progress -- was unreachable on any
-                # session whose localization cleared even momentarily. Such a
-                # session ground on to `max_session` and was recorded as
-                # `session_timeout`: the 90 s fast-fail silently degraded into
-                # burning the whole budget under the wrong reason.
-                #
-                # The operative half of the fix is the settle guard inside the
-                # pause loop below (an exit now requires the clear to HOLD for
-                # `pause_clear_settle_sec`). Declaring the state here is the
-                # structural half: every current exit path from that loop still
-                # falls through the reset, so this is defensive rather than
-                # load-bearing -- but it keeps the lifetime honest, so a future
-                # `continue` or early `break` inside the loop cannot quietly
-                # re-arm a fresh 90 s on every goal.
-                #
-                # `pause_clear_settle_sec` defaults to `interlock_settle_sec`
-                # (3.0 s), not to a value invented here: that 3.0 s is the window
-                # the codebase already derived from the measured 0.16-0.95 s
-                # instant-abort duration, and the question it answers here ("is
-                # this clear real?") is the same question it answers there.
-                pause_since = 0.0
-                pause_reason = ''
-                pause_clear_since = 0.0
-                pause_clear_settle_sec = float(
-                    patrol_cfg.get('pause_clear_settle_sec', interlock_settle_sec))
                 while queue:
                     g = queue.pop(0)
                     if self._stop.is_set():
@@ -888,37 +853,19 @@ class VisualDbBuildOrchestrator(Node):
                     # wait a bounded grace period and then end the session.
                     need_operator_grace = float(
                         patrol_cfg.get('need_operator_grace_sec', 90.0))
-                    while not self._stop.is_set():
-                        if self._should_pause():
-                            pause_clear_since = 0.0
-                            phase2c_now = self._phase2c_state or self._phase2c_loc
-                            pause_reason = (
-                                f'phase2c_{phase2c_now}' if phase2c_now == 'NEED_OPERATOR'
-                                else 'goals_blocked' if self._goals_blocked
-                                else 'localization_not_ready')
-                            self._set_state('PAUSED', 'waiting_localization_ready')
-                            if pause_since <= 0.0:
-                                pause_since = time.time()
-                            self._pause_since = pause_since
-                            self._pause_reason = pause_reason
-                        elif pause_since <= 0.0:
-                            # No episode open -- nothing to wait for.
-                            break
-                        else:
-                            # A clear SAMPLE, not a recovery. Hold until it has
-                            # held for `pause_clear_settle_sec` before calling the
-                            # episode over: a goal dispatched into a flicker is
-                            # aborted by Nav2 in <1 s. The episode clock below
-                            # deliberately keeps running across these samples, so
-                            # flickering cannot buy the session another grace
-                            # period.
-                            if pause_clear_since <= 0.0:
-                                pause_clear_since = time.monotonic()
-                            if (time.monotonic() - pause_clear_since
-                                    >= pause_clear_settle_sec):
-                                break
-
-                        # Episode clock. Runs on BOTH branches above.
+                    pause_since = 0.0
+                    pause_reason = ''
+                    while not self._stop.is_set() and self._should_pause():
+                        phase2c_now = self._phase2c_state or self._phase2c_loc
+                        pause_reason = (
+                            f'phase2c_{phase2c_now}' if phase2c_now == 'NEED_OPERATOR'
+                            else 'goals_blocked' if self._goals_blocked
+                            else 'localization_not_ready')
+                        self._set_state('PAUSED', 'waiting_localization_ready')
+                        if pause_since <= 0.0:
+                            pause_since = time.time()
+                        self._pause_since = pause_since
+                        self._pause_reason = pause_reason
                         if time.time() - pause_since > need_operator_grace:
                             stop_reason = ('need_operator'
                                            if pause_reason == 'phase2c_NEED_OPERATOR'
@@ -953,15 +900,9 @@ class VisualDbBuildOrchestrator(Node):
                             stop_reason = 'session_timeout'
                             break
                         time.sleep(0.5)
-                    # Reaching here means the episode ended because the clear was
-                    # STABLE (or no episode ever opened) -- that is the one event
-                    # that earns a fresh grace budget.
                     if pause_since > 0.0:
                         self._pause_since = 0.0
                         self._pause_reason = ''
-                        pause_since = 0.0
-                        pause_reason = ''
-                        pause_clear_since = 0.0
                     if self._stop.is_set():
                         stop_reason = 'user_stop'
                         break
@@ -971,25 +912,7 @@ class VisualDbBuildOrchestrator(Node):
                     # The flag just cleared, which is not the same as it being
                     # stable. Hold off until it has stayed clear continuously.
                     if settle_after_interlock > 0.0:
-                        # ★ Bounded now. This call had no exit: if _should_pause()
-                        # flickers faster than `settle_sec`, `ok_since` is reset
-                        # before it can mature and the loop never returns. That is
-                        # the 2026-09-14 shape (worker alive, session stuck in
-                        # PAUSED, no way out but a manual stop) -- the pause loop
-                        # got its exit then, this helper was missed.
-                        if not self._await_stable_localization(
-                                settle_after_interlock, need_operator_grace):
-                            settle_after_interlock = 0.0
-                            if self._stop.is_set():
-                                stop_reason = 'user_stop'
-                            else:
-                                stop_reason = 'pause_timeout'
-                                self._set_state('ABORTED', stop_reason)
-                                self.get_logger().warn(
-                                    f'localization would not hold clear for '
-                                    f'{interlock_settle_sec:.1f}s -> ending session '
-                                    f'(stop_reason={stop_reason}, will not promote)')
-                            break
+                        self._await_stable_localization(settle_after_interlock)
                         settle_after_interlock = 0.0
                         if self._stop.is_set():
                             stop_reason = 'user_stop'
@@ -1526,8 +1449,7 @@ class VisualDbBuildOrchestrator(Node):
             return True
         return False
 
-    def _await_stable_localization(self, settle_sec: float,
-                                   max_wait_sec: float = 0.0) -> bool:
+    def _await_stable_localization(self, settle_sec: float) -> None:
         """Block until localization is un-paused continuously for settle_sec.
 
         _should_pause() flickers. A goal fired into one of those momentary
@@ -1535,23 +1457,10 @@ class VisualDbBuildOrchestrator(Node):
         NAV2_STATUS:6 aborts in the 2026-09-10 session ran 0.16-0.95 s, versus
         >=5 s for all 54 real attempts). That instant abort is a bad start pose,
         not a reachability verdict, so do not dispatch into a flicker.
-
-        ★ Returns True once the clear has held for `settle_sec`; False if
-        `max_wait_sec` elapsed first, or the session was stopped.
-
-        The bound is not optional in practice: without it, a `_should_pause()`
-        that alternates faster than `settle_sec` resets `ok_since` on every true
-        sample, so the loop never returns and the worker sits in PAUSED with a
-        live session and no exit but a manual stop. That is precisely the
-        2026-09-14 shape the pause loop was given an exit for; this helper was
-        missed. Callers must treat False as "cannot make progress", never as
-        "clear".
         """
         if settle_sec <= 0.0:
-            return True
+            return
         ok_since: Optional[float] = None
-        deadline = ((time.monotonic() + max_wait_sec)
-                    if max_wait_sec > 0.0 else None)
         while not self._stop.is_set():
             if self._should_pause():
                 ok_since = None
@@ -1560,14 +1469,8 @@ class VisualDbBuildOrchestrator(Node):
                 if ok_since is None:
                     ok_since = time.monotonic()
                 elif time.monotonic() - ok_since >= settle_sec:
-                    return True
-            if deadline is not None and time.monotonic() >= deadline:
-                self.get_logger().warn(
-                    f'localization never held clear for {settle_sec:.1f}s '
-                    f'within {max_wait_sec:.0f}s -> cannot make progress')
-                return False
+                    return
             time.sleep(0.3)
-        return False
 
     def _dump_planner_starved(
         self,

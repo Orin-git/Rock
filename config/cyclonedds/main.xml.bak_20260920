@@ -53,21 +53,6 @@
         <Peer address="192.168.0.165"/>
       </Peers>
     </Discovery>
-    <!-- 【必需项 4】2026-09-20 新增：UDP 接收缓冲区下限 8 MB。
-         根因实测：内核 net.core.rmem_max 原为 212992 ⇒ 任何 socket 的 SO_RCVBUF
-         被硬封顶在 425984 B；而厂商单条深度 614400 B / RGB 921600 B /
-         下视点云最大 4.3 MB ⇒ 缓冲区装不下一条完整消息，分片丢在内核层，
-         包根本到不了应用。实测：桥的 socket 持续丢包 3.7~4.4/s，全局
-         RcvbufErrors 8.2/s 中两个桥占 8.1/s，而同环境第三方订阅者收得到。
-         三臂对照实验已证元素名与属性名正确（写错会报 unknown element/attribute）。
-
-         ⚠️ 硬依赖：必须先有 net.core.rmem_max >= 8MB（内核按请求值 x2 给）。
-            否则 CycloneDDS 拿不到请求值会**直接拒绝创建 participant**（不降级），
-            整个 ROS 起不来。2026-09-20 已提 rmem_max 至 16777216（运行时，重启即失）。
-         参考：本文件顶部「多一行都要有理由」—— 这一行的理由就是上面这段实测。 -->
-    <Internal>
-      <SocketReceiveBufferSize min="8MB"/>
-    </Internal>
     <!-- 刻意**不设**的东西，各有理由：
          · AllowMulticast  —— 默认行为对 WiFi 已经是对的（仅发现用组播），覆盖反而引入风险
          · MaxMessageSize / FragmentSize —— README 那对值是跑性能基准用的；

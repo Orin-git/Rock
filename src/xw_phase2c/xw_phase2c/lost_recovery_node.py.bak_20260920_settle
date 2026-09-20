@@ -136,16 +136,7 @@ class LostRecoveryNode(Node):
         # protection; only an ancient pose is skipped.
         self.declare_parameter('amcl_pose_fresh_sec', 60.0)
         self.declare_parameter('sensor_arm_sec', 3.0)
-        # 2026-09-20: 8.0 -> 12.0。实测依据 /home/cjy/_189work/stage0/r2_events.txt：
-        #   R1 播种->判决配对 369 次 = READY 351 / HANDOFF_FAILED 18。
-        #     READY  窗口 max 7.94s (p95 5.16 / p99 7.38)
-        #     FAILED 窗口 8.01~8.10s -- 全部顶在 8.0 天花板上，与 READY 精确相接、零重叠
-        #   => 那 18 次是「被 8.0 掐断」，不是「收敛不了」；且 0/18 有竞争种子。
-        # 上界：:579 是 min(amcl_timeout_sec=20.0, max(本值,5.0))，故本值必须严格 < 20.0，
-        #   让 amcl_timeout_sec 继续当一条不被触碰的护栏（不必同时改第二个参数）。
-        # 窗口是「上限」不是「延时」=> 对现有 369+20 次成功零影响（仍在同一刻返回 READY）。
-        # 回滚：本行改回 8.0，或运行期 ros2 param set /xw_lost_recovery post_seed_settle_sec 8.0
-        self.declare_parameter('post_seed_settle_sec', 12.0)
+        self.declare_parameter('post_seed_settle_sec', 8.0)
         self.declare_parameter('r_seed_cov_xy', 0.25)
         self.declare_parameter('r_seed_cov_yaw', 0.15)
         self.declare_parameter('last_good_max_age_sec', 7 * 24 * 3600.0)

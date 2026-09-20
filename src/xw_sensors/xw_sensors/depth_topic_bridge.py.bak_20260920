@@ -14,33 +14,7 @@ node sets relay_depth:=false.
 Phase1 Task D lazy rules:
   - MJPEG vendor sub only while compressed_out has subscribers
   - RGB CameraInfo only while RGB relay is wanted (cached)
-  - Depth CameraInfo: optional one-shot cache (legacy path)
-
-★ 2026-09-20 — vendor subscriptions are lazy-created ONCE and NEVER destroyed.
-  Destructor calls were removed from _stop_pointcloud / _stop_rgb /
-  _stop_rgb_info / _stop_mjpeg / _on_depth_info.
-
-  Why: calling destroy_subscription() while the executor is spinning is unsafe
-  in rclpy. It either raises InvalidHandle ("cannot use Destroyable because
-  destruction was requested") or corrupts the node's wait set so that the
-  affected subscriptions stop delivering entirely while the node keeps
-  spinning. Same failure already documented and fixed the same way in
-  xw_global_reloc/phase2d/capture_candidate_node.py (observed 2026-09-10
-  08:25:36).
-
-  Observed on 189 (front_up bridge, 2026-09-20): after three destroy cycles on
-  the RGB subscription the point-cloud callback stopped dead at frames=67 while
-  the 10 s status timer kept printing (executor alive, no crash). The latched
-  RELIABLE control subscriptions (/xw/fall/enable, /xw/follow/enable,
-  /xw/perception/profile_config, /xw/reloc/rgb_request) kept firing long after
-  the freeze, so this is not a whole-executor stall — only the affected
-  subscriptions stop delivering. A reboot does not clear it (09-18 liveness
-  log: fr=11532, quiet=1324s, subs=1).
-
-  The on/off semantics are preserved: _pc_wanted gates _on_points, _rgb_wanted
-  gates _on_rgb, and _on_mjpeg already gates on compressed_out subscriber
-  count. The *_relay_on flags below exist only to keep the ON/OFF log lines
-  from turning into per-callback spam now that the destroy path is gone.
+  - Depth CameraInfo: optional one-shot cache then unsubscribe (legacy path)
 """
 
 from __future__ import annotations
@@ -156,10 +130,6 @@ class DepthTopicBridge(Node):
         self._points_frames = 0
         self._rgb_frames = 0
         self._last_status = 0.0
-        # Log-transition only (functional gating stays in the callbacks).
-        self._pc_relay_on = False
-        self._rgb_relay_on = False
-        self._mjpeg_relay_on = False
 
         self._points_sub = None
         self._rgb_sub = None
@@ -325,7 +295,6 @@ class DepthTopicBridge(Node):
         self._enabled_pub.publish(msg)
 
     def _start_pointcloud(self) -> None:
-        # ★ Created once, never destroyed — see module docstring.
         if self._points_sub is None:
             self._points_sub = self.create_subscription(
                 PointCloud2,
@@ -333,18 +302,18 @@ class DepthTopicBridge(Node):
                 self._on_points,
                 _POINTS_QOS,
             )
-        if not self._pc_relay_on:
-            self._pc_relay_on = True
             out = str(self.get_parameter('points_out').value)
             self.get_logger().info(f'pointcloud relay ON → {out}')
 
     def _stop_pointcloud(self) -> None:
-        # ★ No destroy_subscription() here (module docstring). _on_points drops
-        # frames on its own while _pc_wanted is false.
-        if self._pc_relay_on:
-            self._pc_relay_on = False
+        if self._points_sub is not None:
+            try:
+                self.destroy_subscription(self._points_sub)
+            except Exception:  # noqa: BLE001
+                pass
+            self._points_sub = None
             self._have_points = False
-            self.get_logger().info('pointcloud relay OFF (vendor sub kept alive)')
+            self.get_logger().info('pointcloud relay OFF')
 
     def _sync_pointcloud(self) -> None:
         if self._pc_wanted:
@@ -354,25 +323,23 @@ class DepthTopicBridge(Node):
         self._publish_enabled()
 
     def _start_rgb(self) -> None:
-        # ★ Created once, never destroyed — see module docstring. This was the
-        # path that cycled create/destroy 9 times on 189 before the freeze.
         if self._rgb_sub is None:
             self._rgb_sub = self.create_subscription(
                 Image, str(self.get_parameter('rgb_image_in').value), self._on_rgb, _SENSOR_QOS
             )
-        if not self._rgb_relay_on:
-            self._rgb_relay_on = True
             out = str(self.get_parameter('rgb_image_out').value)
             self.get_logger().info(f'raw RGB relay ON → {out}')
         self._sync_rgb_info()
 
     def _stop_rgb(self) -> None:
-        # ★ No destroy_subscription() here (module docstring). _on_rgb drops
-        # frames on its own while _rgb_wanted is false.
-        if self._rgb_relay_on:
-            self._rgb_relay_on = False
+        if self._rgb_sub is not None:
+            try:
+                self.destroy_subscription(self._rgb_sub)
+            except Exception:  # noqa: BLE001
+                pass
+            self._rgb_sub = None
             self._have_rgb = False
-            self.get_logger().info('raw RGB relay OFF (vendor sub kept alive)')
+            self.get_logger().info('raw RGB relay OFF')
         self._sync_rgb_info()
 
     def _sync_rgb_relay(self) -> None:
@@ -392,19 +359,16 @@ class DepthTopicBridge(Node):
         )
 
     def _stop_rgb_info(self) -> None:
-        # ★ Deliberate no-op: the vendor CameraInfo subscription is created once
-        # and never destroyed (module docstring). _on_rgb_info already gates its
-        # republish on _rgb_wanted, so dropping the subscription bought us
-        # nothing but an unsafe destructor call.
-        return
+        if self._rgb_info_sub is None:
+            return
+        try:
+            self.destroy_subscription(self._rgb_info_sub)
+        except Exception:  # noqa: BLE001
+            pass
+        self._rgb_info_sub = None
 
     def _sync_rgb_info(self) -> None:
-        """Republish the cached rgb CameraInfo while RGB is wanted.
-
-        ★ The vendor sub is no longer dropped when RGB goes unwanted (module
-        docstring), so the vendor may keep sending CameraInfo. Relaying is
-        still gated in _on_rgb_info, so nothing is republished while gated.
-        """
+        """Avoid permanent rgb CameraInfo sub lighting vendor RGB stream."""
         if not self._lazy_rgb_info:
             if self._rgb_info_sub is None:
                 self._start_rgb_info()
@@ -418,25 +382,25 @@ class DepthTopicBridge(Node):
             self._stop_rgb_info()
 
     def _start_mjpeg(self) -> None:
-        # ★ Created once, never destroyed — see module docstring.
-        if self._mjpeg_sub is None:
-            self._mjpeg_sub = self.create_subscription(
-                CompressedImage,
-                str(self.get_parameter('mjpeg_in').value),
-                self._on_mjpeg,
-                _SENSOR_QOS,
-            )
-        if not self._mjpeg_relay_on:
-            self._mjpeg_relay_on = True
-            self.get_logger().info('mjpeg vendor sub ON (preview demand)')
+        if self._mjpeg_sub is not None:
+            return
+        self._mjpeg_sub = self.create_subscription(
+            CompressedImage,
+            str(self.get_parameter('mjpeg_in').value),
+            self._on_mjpeg,
+            _SENSOR_QOS,
+        )
+        self.get_logger().info('mjpeg vendor sub ON (preview demand)')
 
     def _stop_mjpeg(self) -> None:
-        # ★ No destroy_subscription() here (module docstring). _on_mjpeg already
-        # drops frames while compressed_out has no subscribers, so the vendor
-        # stream may stay lit but nothing is copied or relayed on our side.
-        if self._mjpeg_relay_on:
-            self._mjpeg_relay_on = False
-            self.get_logger().info('mjpeg vendor sub OFF (no preview consumers; sub kept alive)')
+        if self._mjpeg_sub is None:
+            return
+        try:
+            self.destroy_subscription(self._mjpeg_sub)
+        except Exception:  # noqa: BLE001
+            pass
+        self._mjpeg_sub = None
+        self.get_logger().info('mjpeg vendor sub OFF (no preview consumers)')
 
     def _sync_mjpeg_relay(self) -> None:
         if not self._lazy_mjpeg:
@@ -488,11 +452,6 @@ class DepthTopicBridge(Node):
         return res
 
     def _on_rgb(self, msg: Image) -> None:
-        # ★ Gate moved here from the (removed) destroy path: this callback used
-        # to be silenced by destroying its subscription. Now it must silence
-        # itself, using the same predicate _sync_rgb_relay() switches on.
-        if not self._rgb_wanted:
-            return
         self._have_rgb = True
         self._rgb_frames += 1
         self._rgb_pub.publish(msg)
@@ -521,13 +480,16 @@ class DepthTopicBridge(Node):
             return
         self._cached_depth_info = msg
         self._depth_info_pub.publish(msg)
-        # ★ The vendor CameraInfo sub used to be destroyed after the first
-        # sample. That call was the one made from inside a subscription
-        # callback the executor was actively dispatching — the textbook
-        # InvalidHandle case. Keep the sub; it costs one tiny CameraInfo.
-        if self._cache_depth_info and not self._depth_info_cached_done:
+        # After first sample, drop vendor CameraInfo sub so it cannot alone
+        # keep lighting streams if image sub is later removed.
+        if self._cache_depth_info and not self._depth_info_cached_done and self._depth_info_sub is not None:
             self._depth_info_cached_done = True
-            self.get_logger().info('depth CameraInfo cached (vendor info sub kept alive)')
+            try:
+                self.destroy_subscription(self._depth_info_sub)
+            except Exception:  # noqa: BLE001
+                pass
+            self._depth_info_sub = None
+            self.get_logger().info('depth CameraInfo cached; vendor info sub released')
 
     def _on_mjpeg(self, msg: CompressedImage) -> None:
         now = time.monotonic()
@@ -561,15 +523,9 @@ class DepthTopicBridge(Node):
         self._publish_enabled()
         pc = 'off'
         if self._pc_wanted and self._points_pub is not None:
-            # ★ age = seconds since the last RELAYED frame. `frames=` alone
-            # cannot distinguish "healthy" from "callback silently stopped":
-            # the 2026-09-20 freeze sat at frames=67 for 4.8 h while every
-            # status line still looked normal. age makes that unambiguous.
-            age = (now - self._last_points) if self._last_points > 0.0 else -1.0
             pc = (
                 f'{"ok" if self._have_points else "wait"} '
                 f'frames={self._points_frames} '
-                f'age={age:.1f}s '
                 f'subs={self._points_pub.get_subscription_count()} '
                 f'manual={self._manual_pc} nav={self._nav_auto_pc}'
             )
@@ -579,9 +535,7 @@ class DepthTopicBridge(Node):
             f'rgb={"ok" if self._have_rgb else ("gated" if not self._rgb_wanted else "wait")} '
             f'rgb_frames={self._rgb_frames} '
             f'preview={"ok" if self._have_preview else "idle"} '
-            # ★ _mjpeg_sub is now non-None forever once created, so it can no
-            # longer answer "is MJPEG actually being relayed?". Report the gate.
-            f'mjpeg_sub={"on" if self._mjpeg_relay_on else "off"} '
+            f'mjpeg_sub={"on" if self._mjpeg_sub else "off"} '
             f'preview_frames={self._preview_frames} '
             f'pointcloud={pc}'
         )

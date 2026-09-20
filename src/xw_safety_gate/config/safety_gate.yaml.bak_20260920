@@ -1,0 +1,27 @@
+/**:
+  ros__parameters:
+    safety_distance: 0.40
+    nav_safety_distance: 0.28
+    turn_safety_distance: 0.25
+    front_angle_deg: 40.0
+    sector_angle_deg: 40.0
+    lidar_yaw_offset_rad: 3.141592653589793
+    lidar_ignore_below_m: 0.20
+    ultrasonic_stop_m: 0.25
+    use_lidar: true
+    use_ultrasonic: true
+    use_depth: true
+    depth_topic: /camera/front_up/depth/image_raw
+    depth_stop_m: 0.40
+    depth_roi_frac: 0.35
+    depth_min_valid_m: 0.05
+    depth_max_valid_m: 4.0
+    depth_scale: 0.001
+    depth_min_hits: 40
+    enable_teleop_oa: true
+    avoid_turn_speed: 0.35
+    avoid_back_speed: 0.18
+    max_linear_speed: 0.45
+    max_angular_speed: 0.85
+    enable_recharge_pass_through: true
+    recharge_pass_linear_max: 0.08

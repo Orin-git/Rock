@@ -1410,14 +1410,7 @@ function wireNavigation(ctx) {
     try {
       for (let i = 0; i < 3; i++) {
         last = await publishInitialPose(pose.x, pose.y, pose.yaw, 'map');
-        // 成功即停 —— 原写法是「失败才跳出」，于是每次成功点击都发满 3 条。
-        // 实测（2026-09-20）：一次点击 = amcl 侧恰好 3 条同值到达（全库 198 个
-        // 「3 条一族」逐一对应）。而 /initialpose 两侧都是 RELIABLE，1 条足够。
-        // 危害有实测：12:58 那场级联里，R2 于 48.722 种下救援种子 (-1.539,-0.552)，
-        // 操作员的第 2 条重发在 +0.72 s 落地 (-7.982,1.146) 把它覆盖，该场失败
-        // （另一次无人打扰的同类 R2 救援 3.4 s 就成功）。11.9 天 20 场 R2 尝试中
-        // 仅此 1 次被插入，属稀有病理，故只改这一行、不动恢复机制。
-        if (last.ok) break;
+        if (!last.ok) break;
         await sleep(120);
       }
     } finally {

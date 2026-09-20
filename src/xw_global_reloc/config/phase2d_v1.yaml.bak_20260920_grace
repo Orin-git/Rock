@@ -123,28 +123,6 @@ phase2d_v1:
     # localization loss (phase2c LOST / RECOVERING / BOOT_LOCALIZING) is NOT
     # debounced and still cancels immediately -- safety semantics unchanged.
     interlock_cancel_debounce_sec: 1.5
-    # How long a session may stay PAUSED (CONTINUOUSLY) before it gives up and
-    # ends. `pause_since` is set on entry to the pause loop and only cleared when
-    # the pause ends, so this budget is consumed by any single uninterrupted
-    # pause -- INCLUDING one caused by a localization recovery cascade, because
-    # `lost_recovery` sets phase2c=RECOVERING for the whole cascade and
-    # RECOVERING is in `_HARD_PAUSE_STATES` (build_orchestrator_node.py:100).
-    #
-    # Measured 2026-09-20 over 474 cascades (`LOST STOP complete` -> `LOST
-    # recovery done`, logs Aug 10 - Sep 20):
-    #   p50 3.7 s | p95 77.9 s | p99 92.3 s | max 120.2 s | 6/474 (1.3%) > 90 s
-    # so the old 90 s value sat INSIDE the cascade distribution. It was never
-    # actually hit by a cascade -- all 6 firings logged the reason
-    # `phase2c_NEED_OPERATOR`, i.e. the cascade had already given up and the
-    # session was waiting for a human -- but the overlap was real and is now
-    # wider: `post_seed_settle_sec` 8.0 -> 12.0 adds up to +8 s to a worst-case
-    # cascade that times out at both R1 and R2 (~128 s). 150 leaves >=20 s.
-    # NOTE: the margin here is ~17%, which is thin. Re-measure after the first
-    # few sessions with the 12 s window and revisit if the tail moved.
-    # Cost of raising it: a genuinely stuck session waits longer before ending.
-    # That is safe -- `pause_timeout` is in `no_promote_stop_reasons` below, so
-    # a session that dies this way still cannot promote.
-    need_operator_grace_sec: 150.0
     # Stop reasons that forbid promoting THIS session's candidates into the
     # production DB. Keyed on the session's stop_reason, not on its `state`:
     # the 90 s pause grace used to `break` while the state was still PAUSED, and

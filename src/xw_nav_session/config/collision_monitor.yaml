@@ -3,6 +3,39 @@
 # FrontStop is slowdown (not hard stop): a hard stop froze cmd_vel and gated
 # off nav recoveries (BackUp/Spin) — box ahead froze the robot for 10 s+ with
 # no backup. slowdown 0.35 still protects but lets nav steer/collision-detect.
+#
+# ★ 2026-09-20 — the front is now TWO stages:
+#     FrontStop      0.58 → 0.30   slowdown_ratio 0.35   (approach)
+#     FrontStopNear  0.30 → 0.12   slowdown_ratio 0.10   (near field)
+#   so the command ramps full → 0.35 → 0.10 instead of stepping straight from
+#   full speed to the 0.40 m hard stop.
+#
+#   ★ Why this works WITHOUT depending on nav2's tie-breaking rule: the two
+#   polygons are geometrically DISJOINT. FrontStop covers x ∈ [0.30, 0.58] and
+#   FrontStopNear x ∈ [0.12, 0.30], both with y ∈ [-0.18, 0.18]; they meet only
+#   on the line x = 0.30. At most one of them can contain a given scan point
+#   (modulo the centimetre-scale base_shift_correction sweep, which can only put
+#   a point on the shared edge), so the ramp comes from the geometry, not from
+#   any "most aggressive polygon wins" behaviour. The same is true of the side
+#   polygons, which meet the front ones only along y = ±0.18.
+#   (Verified only that Action& is passed by reference and mutated across
+#   polygons — processStopSlowdown(..., Action&). The exact ordering rule was
+#   NOT independently verified, which is precisely why the design does not use
+#   it. Note ActionType is DO_NOTHING=0, STOP=1, SLOWDOWN=2, APPROACH=3, so a
+#   plain numeric max would rank STOP as the LEAST aggressive — it cannot be
+#   that either.)
+#
+#   ★ The hard stop itself is deliberately NOT here. It is left to
+#   xw_safety_gate at depth_stop_m = 0.40 — the only publisher of /cmd_vel, and
+#   therefore the only place where /safety_status can tell the truth about it.
+#
+# ★ "slowdown", NOT "stop", in BOTH front bands — this is not a style choice.
+# xw_cmd_arbiter::isActive() treats a near-zero Twist as "this source does not
+# exist" (sources_.erase(name) below |v| < 1e-3). A CM stop publishes zero to
+# /xw/cmd/nav, so nav would be erased, /xw/cmd/gated would degrade to an
+# all-zero Twist carrying an EMPTY source, and xw_safety_gate::tick() would fall
+# into its else branch: out.linear.x = 0.0 with ok = true. The robot stops and
+# /safety_status keeps reporting true — a false "safe".
 collision_monitor:
   ros__parameters:
     use_sim_time: False
@@ -15,7 +48,7 @@ collision_monitor:
     source_timeout: 1.0
     base_shift_correction: True
     stop_pub_timeout: 0.5
-    polygons: ["FrontStop", "SideLeft", "SideRight"]
+    polygons: ["FrontStop", "FrontStopNear", "SideLeft", "SideRight"]
     observation_sources: ["scan"]
     scan:
       type: "scan"
@@ -24,18 +57,39 @@ collision_monitor:
       max_height: 1.5
       enabled: True
       source_timeout: 1.0
+    # Outer band. Inner edge moved 0.12 → 0.30 to hand the last 18 cm to
+    # FrontStopNear; the outer edge and the ratio are unchanged.
     FrontStop:
       type: "polygon"
-      points: [0.58, 0.18, 0.58, -0.18, 0.12, -0.18, 0.12, 0.18]
+      points: [0.58, 0.18, 0.58, -0.18, 0.30, -0.18, 0.30, 0.18]
       action_type: "slowdown"
       slowdown_ratio: 0.35
       max_points: 2
       visualize: False
       polygon_pub_topic: "front_cm_polygon"
       enabled: True
+    # Inner band. Not a stop — see the header. 0.10 keeps the robot creeping
+    # while xw_safety_gate holds the actual 0.40 m stop authority, and at
+    # 0.45 m/s the creep gives roughly 2 s of margin between here and there.
+    FrontStopNear:
+      type: "polygon"
+      points: [0.30, 0.18, 0.30, -0.18, 0.12, -0.18, 0.12, 0.18]
+      action_type: "slowdown"
+      slowdown_ratio: 0.10
+      max_points: 2
+      visualize: False
+      polygon_pub_topic: "front_cm_near_polygon"
+      enabled: True
+    # Inner edge 0.18 → 0.22. Robot half-width is 0.175, so 0.18 left 5 mm of
+    # clearance: brushing a door frame tripped slowdown 0.45, the robot crawled,
+    # the progress checker (under 2 cm in 5 s) declared "Failed to make
+    # progress", and nav recovery looped. 0.22 gives 4.5 cm. ⚠️ This is
+    # geometric reasoning, NOT a measured calibration — it is backed by
+    # acceptance test ④ (narrow-corridor transit) and goes back to 0.18 if that
+    # test does not support it.
     SideLeft:
       type: "polygon"
-      points: [0.20, 0.28, 0.20, 0.18, -0.10, 0.18, -0.10, 0.28]
+      points: [0.20, 0.28, 0.20, 0.22, -0.10, 0.22, -0.10, 0.28]
       action_type: "slowdown"
       slowdown_ratio: 0.45
       max_points: 2
@@ -43,7 +97,7 @@ collision_monitor:
       enabled: True
     SideRight:
       type: "polygon"
-      points: [0.20, -0.18, 0.20, -0.28, -0.10, -0.28, -0.10, -0.18]
+      points: [0.20, -0.22, 0.20, -0.28, -0.10, -0.28, -0.10, -0.22]
       action_type: "slowdown"
       slowdown_ratio: 0.45
       max_points: 2

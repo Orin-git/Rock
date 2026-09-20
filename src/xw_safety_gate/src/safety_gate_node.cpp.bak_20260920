@@ -53,24 +53,6 @@ struct SectorInfo {
   double stop_m{0.0};
 };
 
-// Why the depth source is, or is not, contributing. Reported verbatim in
-// /obstacle_status so that "the gate cannot see" is never again confusable with
-// "the gate sees nothing" -- those two collapsed into the same signal, and on
-// 2026-09-20 189 ran for hours in the second state while reporting the first.
-//
-//   ok                 usable min depth in the ROI
-//   no_data            no depth frame has ever arrived (or the sub was never made)
-//   stale              last frame is older than `depth_ttl_sec`
-//   insufficient_hits  fresh frame, but fewer than `depth_min_hits` valid pixels
-//   bad_encoding       encoding is neither 16UC1/MONO16 nor 32FC1
-//   bad_image          width or height below 8 px
-//   exception          the scan loop threw
-//   disabled           `use_depth` is false
-struct DepthReading {
-  std::optional<double> m;
-  std::string state;
-};
-
 }  // namespace
 
 class SafetyGateNode : public rclcpp::Node
@@ -97,18 +79,6 @@ public:
     declare_parameter<double>("depth_max_valid_m", 4.0);
     declare_parameter<double>("depth_scale", 0.001);
     declare_parameter<int>("depth_min_hits", 40);
-    // ★ Not a calibrated number: the bridge publishes at ~10 fps, so 0.5 s is a
-    // five-frame grace margin. Tune it live with
-    //   ros2 param set /xw_safety_gate depth_ttl_sec <s>
-    // (0 disables the check) -- apply_nav/tick re-read every parameter each
-    // tick, so no restart is needed and the check can be exercised
-    // non-destructively.
-    declare_parameter<double>("depth_ttl_sec", 0.5);
-    // ★ Also uncalibrated defaults. The band is measured from the sector's own
-    // STOP threshold, not from nav_safety_distance (see apply_nav), so the
-    // slowdown starts at stop_m + band and reaches full speed there.
-    declare_parameter<double>("nav_slowdown_band_m", 0.60);
-    declare_parameter<double>("nav_slowdown_floor_ratio", 0.25);
     declare_parameter<bool>("enable_teleop_oa", true);
     declare_parameter<double>("avoid_turn_speed", 0.35);
     declare_parameter<double>("avoid_back_speed", 0.18);
@@ -166,20 +136,9 @@ public:
       depth_sub_ = create_subscription<sensor_msgs::msg::Image>(
         topic, depth_qos,
         [this](const sensor_msgs::msg::Image::SharedPtr msg) {
-          // ★ The arrival stamp is taken here, on EVERY frame, whatever
-          // roi_min_depth decided about its contents. "A frame arrived whose
-          // ROI was unusable" (insufficient_hits) and "no frame has arrived for
-          // a minute" (stale) are different facts and must not share a clock.
-          //
-          // roi_min_depth is lock-free now that its two fail-open branches are
-          // gone, so this is the only lock the callback takes.
-          const DepthReading reading = roi_min_depth(*msg);
-          const double stamp = now().seconds();
+          auto z = roi_min_depth(*msg);
           std::lock_guard<std::mutex> lock(mutex_);
-          depth_min_ = reading.m;
-          depth_state_ = reading.state;
-          depth_stamp_sec_ = stamp;
-          depth_have_ = true;
+          depth_min_ = z;
         });
       RCLCPP_INFO(get_logger(), "depth safety enabled on %s", topic.c_str());
     }
@@ -195,14 +154,12 @@ public:
   }
 
 private:
-  // Lock-free: the two branches that used to re-read `depth_min_` under
-  // mutex_ are gone (they were the reason this could not be const).
-  DepthReading roi_min_depth(const sensor_msgs::msg::Image & msg) const
+  std::optional<double> roi_min_depth(const sensor_msgs::msg::Image & msg)
   {
     const int w = static_cast<int>(msg.width);
     const int h = static_cast<int>(msg.height);
     if (w < 8 || h < 8) {
-      return {std::nullopt, "bad_image"};
+      return std::nullopt;
     }
 
     double frac = get_parameter("depth_roi_frac").as_double();
@@ -269,24 +226,18 @@ private:
           }
         }
       } else {
-        // ★ Fail CLOSED. This used to `return depth_min_`, i.e. hand the caller
-        // the PREVIOUS frame's reading and let it pass for a fresh one. An
-        // unrecognised encoding therefore pinned the depth contribution to a
-        // value of unknown age for as long as it lasted -- the gate would keep
-        // acting on a number it could no longer justify. Dropping the frame
-        // instead costs nothing the lidar and ultrasonics do not already cover,
-        // and `bad_encoding` below makes the condition loud instead of silent.
-        return {std::nullopt, "bad_encoding"};
+        std::lock_guard<std::mutex> lock(mutex_);
+        return depth_min_;
       }
     } catch (...) {
-      // ★ Fail CLOSED, for the same reason.
-      return {std::nullopt, "exception"};
+      std::lock_guard<std::mutex> lock(mutex_);
+      return depth_min_;
     }
 
     if (hits < need) {
-      return {std::nullopt, "insufficient_hits"};
+      return std::nullopt;
     }
-    return {best, "ok"};
+    return best;
   }
 
   std::optional<double> sector_min_lidar(
@@ -537,51 +488,36 @@ private:
     return {out, ok};
   }
 
-  // The predicate apply_nav actually uses to kill forward motion, kept in ONE
-  // place so the telemetry field `nav_blocked` cannot drift away from the
-  // behaviour. That drift is how `blocked` -- keyed on the WINNING source's
-  // stop_m -- came to read false while the published command was already zero:
-  // in the band between `nav_safety_distance` and `stop_m` the command is
-  // stopped (this predicate) but `sectors.front.blocked` is not yet set.
-  bool nav_front_blocked(const Sectors & sectors) const
-  {
-    if (sectors.front.blocked) {
-      return true;
-    }
-    const double nav_stop = get_parameter("nav_safety_distance").as_double();
-    return sectors.front.range_m.has_value() && *sectors.front.range_m < nav_stop;
-  }
-
-  struct NavResult {
-    geometry_msgs::msg::Twist cmd;
-    bool ok{true};
-    bool slowdown_applied{false};
-    double slowdown_ratio{1.0};
-  };
-
-  NavResult apply_nav(
+  std::pair<geometry_msgs::msg::Twist, bool> apply_nav(
     const geometry_msgs::msg::Twist & cmd,
     const Sectors & sectors,
     bool follow_mode = false) const
   {
-    NavResult res;
-    geometry_msgs::msg::Twist & out = res.cmd;
+    geometry_msgs::msg::Twist out;
     out.linear.x = cmd.linear.x;
     out.angular.z = cmd.angular.z;
 
-    const bool front_b = nav_front_blocked(sectors);
+    const double nav_stop = get_parameter("nav_safety_distance").as_double();
+    bool front_b = false;
+    if (sectors.front.range_m.has_value() && *sectors.front.range_m < nav_stop) {
+      front_b = true;
+    }
+    if (sectors.front.blocked) {
+      front_b = true;
+    }
 
     const bool rear_b = sectors.rear.blocked;
     const bool left_b = sectors.left.blocked;
     const bool right_b = sectors.right.blocked;
+    bool ok = true;
 
     if (front_b && out.linear.x > 0.0) {
       out.linear.x = 0.0;
-      res.ok = false;
+      ok = false;
     }
     if (out.linear.x < 0.0 && rear_b) {
       out.linear.x = 0.0;
-      res.ok = false;
+      ok = false;
     }
     // Body-follow: person standing beside the robot trips left/right sectors.
     // Killing yaw toward them makes "see person on edge → never turn" — skip for follow.
@@ -593,38 +529,7 @@ private:
         out.angular.z = 0.0;
       }
     }
-
-    // ★ Progress-preserving slowdown band.
-    //
-    // Keyed on the sector's own STOP threshold -- the threshold of the source
-    // that actually won the sector -- and deliberately NOT on
-    // `nav_safety_distance`. A band hung off nav_stop (0.28) would sit entirely
-    // inside the region where `front_b` is already true, so the block would
-    // always win and the band could never produce a non-zero output. That is
-    // the "eternal full stop" complaint: prior to this, the ONLY thing between
-    // full speed and a hard zero was nothing at all.
-    //
-    // It only ever SCALES linear.x down. It never sets res.ok = false and never
-    // zeroes: /safety_status must keep meaning "am I stopping?", and "slowing"
-    // must be a separate signal. The floor is
-    // floor_ratio * max_linear_speed = 0.25 * 0.45 = 0.1125 m/s by default,
-    // which is two orders of magnitude above xw_cmd_arbiter's isActive() eps of
-    // 1e-3 -- so a slowdown can never be mistaken for "this source is gone" and
-    // silently erased from the arbiter's source table.
-    if (!front_b && sectors.front.range_m.has_value() && out.linear.x > 0.0) {
-      const double band = get_parameter("nav_slowdown_band_m").as_double();
-      const double floor_ratio =
-        std::max(0.0, std::min(1.0, get_parameter("nav_slowdown_floor_ratio").as_double()));
-      const double d = *sectors.front.range_m;
-      const double stop = sectors.front.stop_m;
-      if (band > 0.0 && d < stop + band) {
-        const double r = std::max(0.0, std::min(1.0, (d - stop) / band));
-        res.slowdown_ratio = floor_ratio + (1.0 - floor_ratio) * r;
-        res.slowdown_applied = res.slowdown_ratio < 1.0;
-        out.linear.x *= res.slowdown_ratio;
-      }
-    }
-    return res;
+    return {out, ok};
   }
 
   std::pair<geometry_msgs::msg::Twist, bool> apply_recharge(
@@ -678,24 +583,11 @@ private:
     std::optional<sensor_msgs::msg::LaserScan> scan;
     std::optional<xw_interfaces::msg::UltrasonicArray> ultra;
     std::optional<double> depth_min;
-    std::string depth_state_raw;
-    // ★ A plain double, deliberately, NOT rclcpp::Time. `now()` here returns
-    // RCL_SYSTEM_TIME (this node does not set use_sim_time), and subtracting a
-    // Time of a different clock type throws inside rcl_time_point_subtract --
-    // which, in a 20 Hz tick, would take the whole gate down. Both ends of this
-    // subtraction come from the same node clock, so seconds-since-epoch is
-    // sufficient and has no failure mode.
-    double depth_stamp_sec = -1.0;
-    bool depth_have = false;
-    bool have_scan = false;
-    bool have_ultra = false;
 
     {
       std::lock_guard<std::mutex> lock(mutex_);
       cmd = last_cmd_;
       src = active_source_;
-      have_scan = have_scan_;
-      have_ultra = have_ultra_;
       if (have_scan_) {
         scan = scan_;
       }
@@ -703,70 +595,21 @@ private:
         ultra = ultra_;
       }
       depth_min = depth_min_;
-      depth_state_raw = depth_state_;
-      depth_stamp_sec = depth_stamp_sec_;
-      depth_have = depth_have_;
     }
 
-    // ── Depth liveness gate (A1) ─────────────────────────────────────────────
-    // `depth_min_` used to be a bare optional with no time attached to it: once
-    // set it stayed "valid" for ever. Together with the two fail-open returns
-    // that roi_min_depth used to have, "I stopped receiving depth frames" and
-    // "there is nothing in front of me" collapsed into one signal -- and the
-    // gate resolved it in favour of the second. 189 ran exactly that way for
-    // hours on 2026-09-20 (the bridge's callbacks had been dead since
-    // 1789867268, while /obstacle_status still carried a depth_m as if fresh).
-    //
-    // Now a reading whose frame is older than `depth_ttl_sec` is discarded
-    // outright, and which of the two situations we are in is named in
-    // /obstacle_status (`depth.state`, `degraded`). Discarding is safe: the
-    // lidar at safety_distance 0.40 and the ultrasonics at 0.25 still guard the
-    // same sector, and both fail independently of the camera stack.
-    const bool use_depth = get_parameter("use_depth").as_bool();
-    const double depth_ttl = get_parameter("depth_ttl_sec").as_double();
-    std::string depth_state;
-    std::optional<double> depth_used;
-    double depth_age = -1.0;
-    if (!use_depth) {
-      depth_state = "disabled";
-    } else if (!depth_have) {
-      depth_state = "no_data";
-    } else {
-      depth_age = now().seconds() - depth_stamp_sec;
-      if (depth_ttl > 0.0 && depth_age > depth_ttl) {
-        depth_state = "stale";
-      } else {
-        depth_state = depth_state_raw;
-      }
-      if (depth_state == "ok") {
-        depth_used = depth_min;
-      }
-    }
-
-    auto sectors = build_sectors(scan, ultra, depth_used);
-    // What the gate ACTED on. Distinct from `depth.m` below, which is what the
-    // camera last actually said, fresh or not.
+    auto sectors = build_sectors(scan, ultra, depth_min);
     const auto d_depth = sectors.depth_m;
-    const bool nav_blocked = nav_front_blocked(sectors);
 
     geometry_msgs::msg::Twist out;
     bool ok = true;
-    NavResult nav_res;
-    bool nav_mode = false;
     if (kTeleopSources.count(src)) {
       std::tie(out, ok) = apply_teleop(cmd, sectors);
     } else if (kNavSources.count(src)) {
-      nav_res = apply_nav(cmd, sectors, src == "follow");
-      nav_mode = true;
+      std::tie(out, ok) = apply_nav(cmd, sectors, src == "follow");
     } else if (kRechargeSources.count(src)) {
       std::tie(out, ok) = apply_recharge(cmd, sectors);
     } else {
-      nav_res = apply_nav(cmd, sectors, false);
-      nav_mode = true;
-    }
-    if (nav_mode) {
-      out = nav_res.cmd;
-      ok = nav_res.ok;
+      std::tie(out, ok) = apply_nav(cmd, sectors, false);
     }
 
     safety_ok_ = ok;
@@ -803,66 +646,10 @@ private:
     } else {
       payload["active_source"] = src;
     }
-    // ★ `nav_blocked` reports the predicate apply_nav ACTUALLY used. `blocked`
-    // above is left exactly as it was (sectors.front.blocked, keyed on the
-    // winning source's stop_m) -- this addition exists so the two can be
-    // compared rather than silently disagreeing in the band between
-    // nav_safety_distance and stop_m. Note it is a property of the sectors, so
-    // it is reported for every mode, including teleop.
-    payload["nav_blocked"] = nav_blocked;
     if (d_depth.has_value()) {
       payload["depth_m"] = std::round(*d_depth * 1000.0) / 1000.0;
     } else {
       payload["depth_m"] = nullptr;
-    }
-    // ★ The whole point of A1: make "cannot see" distinguishable from "sees
-    // nothing". `depth.m` is the last thing the camera actually said, with its
-    // age; `depth.used_m` duplicates the effective `depth_m` so a reader never
-    // has to work out which of the two the gate obeyed.
-    {
-      nlohmann::json dj;
-      if (depth_have && depth_min.has_value()) {
-        dj["m"] = std::round(*depth_min * 1000.0) / 1000.0;
-      } else {
-        dj["m"] = nullptr;
-      }
-      if (depth_have) {
-        dj["age_sec"] = std::round(depth_age * 10.0) / 10.0;
-      } else {
-        dj["age_sec"] = nullptr;
-      }
-      dj["ttl_sec"] = depth_ttl;
-      dj["valid"] = (depth_state == "ok");
-      dj["state"] = depth_state;
-      if (d_depth.has_value()) {
-        dj["used_m"] = std::round(*d_depth * 1000.0) / 1000.0;
-      } else {
-        dj["used_m"] = nullptr;
-      }
-      payload["depth"] = dj;
-    }
-    payload["nav_slowdown"] = {
-      {"applied", nav_mode && nav_res.slowdown_applied},
-      {"ratio", std::round(nav_res.slowdown_ratio * 1000.0) / 1000.0},
-      {"band_m", get_parameter("nav_slowdown_band_m").as_double()},
-    };
-    // Sources that are enabled but are not currently contributing anything
-    // usable. ⚠️ `have_scan_` / `have_ultra_` are sticky -- they are never
-    // aged, so this catches "never arrived" but NOT "arrived and then stopped".
-    // Only the depth leg has a liveness clock (depth_ttl_sec); giving the lidar
-    // and ultrasonics one is a separate change and must not be assumed here.
-    {
-      nlohmann::json degraded = nlohmann::json::array();
-      if (get_parameter("use_lidar").as_bool() && !have_scan) {
-        degraded.push_back("lidar:no_data");
-      }
-      if (get_parameter("use_ultrasonic").as_bool() && !have_ultra) {
-        degraded.push_back("ultrasonic:no_data");
-      }
-      if (use_depth && depth_state != "ok") {
-        degraded.push_back("depth:" + depth_state);
-      }
-      payload["degraded"] = degraded;
     }
     payload["sectors"] = {
       {"front", sector_to_json(sectors.front)},
@@ -884,9 +671,6 @@ private:
   xw_interfaces::msg::UltrasonicArray ultra_;
   bool have_ultra_{false};
   std::optional<double> depth_min_;
-  std::string depth_state_;
-  double depth_stamp_sec_{-1.0};
-  bool depth_have_{false};
   bool safety_ok_{true};
   double prefer_turn_sign_{-1.0};
 
