@@ -64,35 +64,13 @@
     # defence.
     depth_raw_floor_points: 1000
     #
-    # depth_min_points — how many points must stand above the floor before the
-    # reading counts as "something is there" rather than "clear".
-    #
-    # ★★ DELIBERATELY 1. This is the code path, not a tuning choice.
-    #
-    #   In tick(), `depth_used` is assigned ONLY when `depth_state == "ok"`
-    #   (line ~1085), and `depth_used` is in turn a PRECONDITION of the
-    #   discrepancy test (line ~1109). So any value above a real obstacle's
-    #   point count does not make the gate more conservative -- it makes the
-    #   low-obstacle feature fail SILENTLY. That is the dangerous direction, and
-    #   it is invisible: the gate keeps reporting `clear` and `safety_ok` while
-    #   the sensor it is supposed to be acting on goes unread.
-    #
-    #   Noise does not need this guard, because noise is stopped by DISTANCE.
-    #   Over a 1216-frame empty-corridor baseline (2026-09-21; 185 more frames in
-    #   a second run) the nearest point standing above the floor was 1.455 m, so
-    #   every noisy frame already fails `*depth_used < depth_low_obstacle_m`
-    #   however many points it carries.
-    #
-    #   Measured 2026-09-21: a 0.10 m box gives 10545 points at 0.565 m and 3841
-    #   at 0.907 m; empty-corridor noise reaches 449 points (p50 16, p90 111) but
-    #   never closer than z = 1.24 m. An intermediate value such as 50 was tried
-    #   and rejected: it splits the noise into 1..49 (`insufficient_points`,
-    #   which then pollutes `degraded` in an empty corridor) and 50..449 (`ok`),
-    #   while blinding the gate to any obstacle smaller than about 2 cm at 1 m.
-    #   At 1, `insufficient_points` becomes unreachable and every real obstacle
-    #   lands in `ok`; `clear` (no points at all, 85% of empty-corridor frames)
-    #   stays the clean, trustworthy signal it is meant to be.
-    depth_min_points: 1
+    # depth_min_points — how many points must stand above the floor before it
+    # counts as "something is there" rather than "clear". Measured: a 0.10 m box
+    # at 0.565 m gave 10545 points, at 0.907 m gave 3841, and an empty corridor
+    # gives exactly 0 above h > 0.05. Far below any real obstacle and far above
+    # the noise floor, so this is not a tuning knob -- it is a "more than a
+    # couple of stray returns" guard.
+    depth_min_points: 5
     #
     # ── Floor-plane model of the front_down camera ───────────────────────────
     # The plane is y = a + b*z in the OPTICAL frame (Z forward, X right,
@@ -146,41 +124,25 @@
     #   sees nothing (or something farther by depth_lidar_margin_m) -- i.e. the
     #   two disagree. A bare threshold would instead fire on the floor and on
     #   everything the lidar already handles.
-    # ★ CALIBRATED 2026-09-21 from a 1216-frame empty-corridor baseline (plus a
-    #   second 185-frame run). The binding number is the NEAREST point noise can
-    #   produce: 1.455 m over the first run, 1.524 m over the second. So any
-    #   threshold below ~1.45 m cannot fire on noise.
-    #   The baseline also showed where the noise lives, and it does not look like
-    #   floor relief: never closer than z = 1.24 m, narrow in x (p50 span 2 cm),
-    #   and mostly pinned at x ~ -0.70 m for z ~ 1.25 m -- which is exactly where
-    #   the horizontal FOV ends. Field-edge artefact is the better explanation.
-    #   1.00 keeps 0.455 m of margin and still detects out to ~1 m: a 0.10 m box
-    #   at 0.565 m yields depth_used ~= 0.60 m, well inside it.
-    #   ⚠️ 0.0 = TEST OFF. The POSITIVE half of this calibration (box at
-    #   0.4/0.6/0.8/1.0 m, plan 11.4) was still outstanding when this was
-    #   written -- see plan 11.5. Do not raise this value without re-running it.
-    depth_low_obstacle_m: 1.00
+    #   ⚠️ 0.0 = TEST OFF, and that is the shipped default: this number must
+    #   come from the 11.4 calibration run (box at 0.4/0.6/0.8/1.0/1.5/2.0 m),
+    #   never from a single measurement. It also cannot be accepted with the
+    #   0.35 m box used on 2026-09-20 -- that box IS visible to the lidar
+    #   (1.362 m), so it cannot exercise the test; a < ~0.22 m obstacle is
+    #   required.
+    depth_low_obstacle_m: 0.0
     # depth_lidar_margin_m — how much farther than the camera the lidar must
-    #   read before the two are called a disagreement. It has to exceed the
-    #   systematic offset between the two sensors looking at the SAME object
-    #   (measured 0.46..0.80 m when both see the box), or a real object would be
-    #   misread as a lidar blind spot.
-    #   Measured 2026-09-21, both directions: lidar front 1.376 m against depth
-    #   0.60 m on the box -> disagreement (fires); 1.376 m against noise at
-    #   >= 1.455 m -> agreement (does not). 0.15 separates the two cases.
+    #   read before the two are called a disagreement. ⚠️ NOT CALIBRATED.
     depth_lidar_margin_m: 0.15
-    # ── Added 2026-09-20 (A1/A2). ──
+    # ── New 2026-09-20 (A1/A2). None of these is a calibrated number. ──
     #
-    # depth_ttl_sec — a frame older than this stops counting as evidence about
-    #   the front. 0 disables the check. ★ CALIBRATED 2026-09-21 against the
-    #   WORST-CASE interval the plan asked for, not the mean: over 1215 measured
-    #   front_down inter-arrivals the mean was 0.148 s (6.75 Hz), p99.9 0.278 s,
-    #   and the worst was 0.294 s, with nothing above 0.3 s at all. 0.7 is 2.4x
-    #   that worst case.
-    #   (History: this used to read 0.5 s, guessed from a presumed 10 fps, and
-    #   then 0.7 s as ~3x the MEAN of a 4.31 Hz points_nav. Both were guesses.
-    #   The frame rate above is measured on the raw front_down cloud, which is
-    #   what the gate actually reads.)
+    # depth_ttl_sec — a points_nav frame older than this stops counting as
+    #   evidence about the front. 0 disables the check. ⚠️ PLACEHOLDER: the
+    #   0.5 s this used to carry was derived from a presumed 10 fps, but
+    #   points_nav actually measured 4.31 Hz (mean, 26 frames / 6.0 s) -- a
+    #   ~0.23 s mean interval, so 0.5 s is barely two frames. 0.7 s ~ 3x the
+    #   mean, and the plan's 11.4 requires the WORST-CASE interval, not the
+    #   mean, before this is final.
     #   On 2026-09-20 this mattered for real: the bridge's subscriptions died at
     #   1789867268 and the gate kept acting on that last reading for hours,
     #   because the old reader had no timestamp and two fail-open branches that

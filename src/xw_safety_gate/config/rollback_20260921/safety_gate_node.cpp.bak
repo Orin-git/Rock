@@ -59,61 +59,26 @@ struct SectorInfo {
 // "the gate sees nothing" -- those two collapsed into the same signal, and on
 // 2026-09-20 189 ran for hours in the second state while reporting the first.
 //
-// ★ 2026-09-21: the source moved from front_up's height band to the RAW
-// front_down cloud, and the test from "inside a fixed height band" to "above the
-// measured FLOOR PLANE". band_min_range() carries the full account; in one line:
-// front_up looks level, so its floor only enters the frame 1.64 m out and a
-// fixed band that excludes the floor must also exclude everything shorter than
-// ~0.27 m -- which is the whole point. front_down looks DOWN 27 deg, so the floor
-// is in view from 0.37 m, every frame re-measures it, and an obstacle is simply a
-// point standing above that plane.
+// The source is now xw_pc_nav_filter's height band (see band_min_range), so the
+// states are about the BAND first and about the STREAMS second:
 //
-// The states are about the FLOOR MODEL first and about the STREAM second:
-//
-//   ok                  >= `depth_min_points` points stand more than
-//                       `depth_floor_h_min` above the floor; `m` is the nearest
-//                       range among them
-//   clear               nothing stands above the floor. ★ NOT a failure: in an
-//                       empty corridor this is the correct reading, and it is
-//                       trustworthy precisely because the raw stream is alive.
-//   insufficient_points 1..depth_min_points-1 such points -- too few to act on,
-//                       but not nothing. Reported, never acted on.
-//   no_floor_model      ★ NEW. A frame arrived, but the floor plane could not be
-//                       solved (too few points inside the fit window). Without a
-//                       floor there is no height scale and therefore NO READING:
-//                       this is emphatically not "clear". Measured 2026-09-21,
-//                       the fit fails when the robot pitch moves ~15 deg away
-//                       from the calibration prior while the first fit pass uses
-//                       a narrow window.
-//   no_data             no frame has ever arrived (or `use_depth` was false when
-//                       the subscription was created)
-//   stale               frames have stopped: none for `depth_ttl_sec`
-//   no_camera_data      frames arrive but carry almost nothing: the cloud is
-//                       empty because the camera chain died, and must not be
-//                       read as "clear"
+//   ok                  the band holds >= `depth_min_points` points; `m` is the
+//                       nearest range among them
+//   clear               the band is empty. ★ NOT a failure: in an empty corridor
+//                       this is the correct reading, and it is trustworthy
+//                       precisely because both streams below are alive.
+//   insufficient_points the band holds 1..depth_min_points-1 points -- too few
+//                       to act on, but not nothing. Reported, never acted on.
+//   no_data             points_nav has never arrived (or `use_depth` was false
+//                       when the subscriptions were created)
+//   stale               points_nav has stopped: no frame for `depth_ttl_sec`
+//   no_camera_data      points_nav is arriving but the RAW cloud behind it is
+//                       missing, stale or empty: the band is empty because the
+//                       camera chain died, and must not be read as "clear"
 //   disabled            `use_depth` is false
 struct Band {
   std::optional<double> min_range;
-  int points{0};                  // points standing above the floor
-  uint64_t raw_points{0};         // valid points in the frame (liveness + scale)
-  bool floor_ok{false};           // did the floor plane solve?
-  double floor_a{0.0};            // y = a + b*z, optical frame (Y down-positive)
-  double floor_b{0.0};
-  long floor_fit_points{0};       // points the fit actually used
-  bool truncated{false};          // short buffer: the frame is not whole
-};
-
-// Everything band_min_range() needs from the parameter server, read once per
-// frame in the callback and passed in. Keeping it a value (rather than reading
-// parameters inside the scan) is what lets that function stay lock-free and
-// allocation-free while looping over every point in the cloud.
-struct FloorCfg {
-  double a0{0.3489};        // ★ CALIBRATED prior, see safety_gate.yaml
-  double b0{-0.5126};
-  double h_min{0.05};
-  double clip_wide{0.25};
-  double clip_narrow{0.06};
-  int min_fit_points{2000};
+  int points{0};
 };
 
 }  // namespace
@@ -134,57 +99,21 @@ public:
     declare_parameter<double>("ultrasonic_stop_m", 0.25);
     declare_parameter<bool>("use_lidar", true);
     declare_parameter<bool>("use_ultrasonic", true);
-    // ── Depth evidence: the floor plane of the DOWNWARD camera ──────────────
-    // 2026-09-21. band_min_range() carries the full account; in one line: the
-    // image ROI selected by depression angle and for a level camera every floor
-    // pixel shares the same optical Y, and a fixed height band on that same
-    // level camera cannot admit anything shorter than ~0.27 m. front_down looks
-    // 27 deg down, so the floor is a live, re-measurable reference surface.
+    // ── Depth evidence: the filtered height band, not the raw depth image ────
+    // 2026-09-21. band_min_range() carries the full account of why the image
+    // ROI was abandoned; in one line: it selected by depression angle, and for
+    // a level camera every floor pixel shares the same optical Y, so no
+    // rectangle in the image can separate floor from obstacle.
     declare_parameter<bool>("use_depth", false);
-    // ★ The RAW front_down cloud, deliberately not xw_pc_nav_filter's output.
-    //   pc_nav_filter caps output at max_points_out (2500) after a voxel filter,
-    //   which can drop the very returns the low-obstacle test depends on, and it
-    //   is shared with the costmap, so its death blinds both at once.
     declare_parameter<std::string>(
-      "depth_pc_topic", "/camera/front_down/depth/points");
-    // ★ Liveness floor, not a judgement threshold. Measured 2026-09-21: the
-    // front_down cloud carries ~275000 valid points in a corridor (of 307200
-    // pixels), so 1000 is 0.4% of normal -- it catches "the camera chain is
-    // dead", and nothing subtler. The TTL is the primary defence.
+      "depth_pc_topic", "/camera/front_up/depth/points_nav");
+    // Liveness only, and never parsed point-by-point: an empty BAND is normal,
+    // an empty CAMERA is not.
+    declare_parameter<std::string>(
+      "depth_raw_topic", "/camera/front_up/depth/points");
+    // ★ Liveness floor, not a judgement threshold. Measured 2026-09-20: the raw
+    // cloud carried 40081 points in a corridor, so 1000 is 2.5% of normal.
     declare_parameter<int>("depth_raw_floor_points", 1000);
-    // ── Floor-plane model, y = a + b*z in the optical frame (Y down-positive) ─
-    // ★★ ALL SIX CALIBRATED on 189, 2026-09-21, over 6+ independent frames.
-    //    Measured plane: H = 0.3097..0.3112 m, pitch = -27.10..-27.19 deg.
-    //      a0 = H / cos(pitch)  = 0.3105 / cos(27.14 deg) = 0.3489
-    //      b0 = -tan(pitch)     = -0.5126
-    //    ★ The sign of b0 is negative and is NOT a typo: Y is down-positive, so
-    //      a camera pitched down sees the floor's y DECREASE with z. Cross-check:
-    //      at z = 0.368 m this plane gives y = +0.160, and the measured global
-    //      y_max of the cloud is +0.162.
-    declare_parameter<double>("depth_floor_a0", 0.3489);
-    declare_parameter<double>("depth_floor_b0", -0.5126);
-    // ★ How far above the floor a point must stand to count as an obstacle.
-    //   Measured noise floor 2026-09-21 on an empty corridor: h > 0.020 -> 0.158%
-    //   of points; h > 0.030 -> 0.020%; h > 0.050 -> EXACTLY ZERO. A 10 cm box at
-    //   0.565 m gave 10545 points. 0.05 sits at the noise floor with ~2x margin.
-    declare_parameter<double>("depth_floor_h_min", 0.05);
-    // ★ Two-stage fit window, in metres of perpendicular distance to the CURRENT
-    //   estimate of the plane. The wide first pass is what buys pitch tolerance:
-    //   measured 2026-09-21 on real clouds, a narrow-only schedule [0.06, 0.06]
-    //   loses the floor entirely at +15 deg of pitch error and biases H by
-    //   +3.6 cm (dangerous: it lifts the plane, so floor points read as
-    //   obstacles) at -10 deg. [0.25, 0.06] tracked every case to within 0.1 cm.
-    //   The wide window is safe against large obstacles for a geometric reason:
-    //   it admits only the bottom 25 cm of a wall, and a wall's bottom edge lies
-    //   ON the floor plane, so it cannot tilt the fit. Measured with a synthetic
-    //   wall covering 30% of the cloud: [0.25, 0.06] -> H off by 0.3 cm, while
-    //   plain iterative least squares -> off by 3.6 cm.
-    declare_parameter<double>("depth_floor_clip_wide_m", 0.25);
-    declare_parameter<double>("depth_floor_clip_narrow_m", 0.06);
-    // ★ Below this many in-window points the frame yields no floor model, and
-    //   the reading becomes `no_floor_model` rather than `clear`. Measured: a
-    //   healthy frame puts ~265000 points inside the wide window.
-    declare_parameter<int>("depth_floor_min_fit_points", 2000);
     // ★ NOT CALIBRATED -- 0 leaves the discrepancy test off. Set it from the
     // measured approach profile, live:
     //   ros2 param set /xw_safety_gate depth_low_obstacle_m <m>
@@ -258,6 +187,7 @@ public:
 
     if (get_parameter("use_depth").as_bool()) {
       const auto pc_topic = get_parameter("depth_pc_topic").as_string();
+      const auto raw_topic = get_parameter("depth_raw_topic").as_string();
       rclcpp::QoS pc_qos(1);
       pc_qos.best_effort();
       pc_qos.keep_last(1);
@@ -265,48 +195,38 @@ public:
         pc_topic, pc_qos,
         [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
           // ★ The arrival stamp is taken here, on EVERY frame, whatever the
-          // frame turned out to contain. "A frame arrived whose floor held
-          // nothing" (clear) and "no frame has arrived for a second" (stale)
-          // are different facts and must not share a clock.
+          // band turned out to contain. "A frame arrived whose band was empty"
+          // (clear) and "no frame has arrived for a second" (stale) are
+          // different facts and must not share a clock.
           //
-          // ★ ONE subscription now carries both jobs. The same walk that solves
-          // the floor also counts every valid point, so `raw_points` is the
-          // liveness heartbeat that used to need a second subscription -- an
-          // empty CLEARING and a dead CAMERA stay distinguishable without
-          // paying for a second 3.3 MB deserialisation of the same message.
-          //
-          // ★ The floor parameters are read HERE, per frame, rather than once at
-          // construction. They are the calibration knobs (see the plan's 11.4),
-          // and reading them per frame is what makes them tunable live with
-          // `ros2 param set` instead of requiring a restart. Six parameter reads
-          // at 8 Hz is not a cost worth trading that for.
-          FloorCfg cfg;
-          cfg.a0 = get_parameter("depth_floor_a0").as_double();
-          cfg.b0 = get_parameter("depth_floor_b0").as_double();
-          cfg.h_min = get_parameter("depth_floor_h_min").as_double();
-          cfg.clip_wide = get_parameter("depth_floor_clip_wide_m").as_double();
-          cfg.clip_narrow = get_parameter("depth_floor_clip_narrow_m").as_double();
-          cfg.min_fit_points =
-            get_parameter("depth_floor_min_fit_points").as_int();
           // band_min_range takes no lock, so this is the only lock the callback
           // takes.
-          const Band band = band_min_range(*msg, cfg);
+          const Band band = band_min_range(*msg);
           const double stamp = now().seconds();
           std::lock_guard<std::mutex> lock(mutex_);
           depth_min_ = band.min_range;
           depth_points_ = band.points;
-          depth_raw_points_ = band.raw_points;
-          depth_floor_ok_ = band.floor_ok;
-          depth_floor_a_ = band.floor_a;
-          depth_floor_b_ = band.floor_b;
-          depth_floor_fit_points_ = band.floor_fit_points;
-          depth_truncated_ = band.truncated;
           depth_stamp_sec_ = stamp;
           depth_have_ = true;
         });
+      raw_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
+        raw_topic, pc_qos,
+        [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+          // Liveness ONLY, and deliberately O(1): it answers "is the camera
+          // chain still producing clouds at all". Without it, a band that went
+          // empty because the vendor stream died is indistinguishable from a
+          // band that is empty because the corridor is clear.
+          const double stamp = now().seconds();
+          const uint64_t n =
+            static_cast<uint64_t>(msg->width) * static_cast<uint64_t>(msg->height);
+          std::lock_guard<std::mutex> lock(mutex_);
+          raw_pc_points_ = n;
+          raw_pc_stamp_sec_ = stamp;
+          have_raw_pc_ = true;
+        });
       RCLCPP_INFO(
-        get_logger(), "depth evidence: raw cloud %s (floor-plane test)",
-        pc_topic.c_str());
+        get_logger(), "depth evidence: band=%s liveness=%s",
+        pc_topic.c_str(), raw_topic.c_str());
     }
 
     cmd_pub_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
@@ -320,256 +240,94 @@ public:
   }
 
 private:
-  // Lock-free (no locks; the few parameters it needs arrive by value) and
-  // allocation-free.
+  // Lock-free (reads no parameter) and allocation-free.
   //
-  // ★ Why this parses the DOWNWARD camera's raw cloud (2026-09-21).
+  // ★ Why this parses a point cloud instead of the depth image (2026-09-21).
   //
-  // The history is worth keeping, because each earlier attempt failed for a
-  // STRUCTURAL reason rather than a tuning reason, and the same trap is still
-  // one parameter away:
+  // Until today this node took the minimum over a CENTRED rectangle of the raw
+  // depth image. Measured on 189 on 2026-09-20, two independent samples:
   //
-  //   1. A centred rectangle of the depth IMAGE. Dead on arrival on 189.
-  //      Measured 2026-09-20, two independent samples of
-  //      /camera/front_up/depth/image_raw: rows 0-319 carry exactly zero valid
-  //      pixels; rows 320-479 carry 40081, z in 1.285..2.607 m. A centred
-  //      depth_roi_frac 0.35 lands on rows 156-323 and meets that window on four
-  //      rows, so `hits` never reached depth_min_hits and the depth leg degraded
-  //      silently to lidar+ultrasonic. It had never once fired, and it could not
-  //      have: for a LEVEL camera every floor pixel shares the same optical Y,
-  //      so an image rectangle selects by depression angle and mixes floor with
-  //      obstacle at every distance.
+  //   /camera/front_up/depth/image_raw   640x480 16UC1
+  //     rows   0-319 : 0 valid pixels (raw == 0) -- exactly zero, both samples
+  //     rows 320-479 : 40081 valid pixels, z in 1.285..2.607 m
   //
-  //   2. A fixed HEIGHT BAND on that same level camera (xw_pc_nav_filter's
-  //      y in [-0.80, 0.40]). This one does separate floor from obstacle, and it
-  //      works -- but excluding the floor requires the band to sit below the
-  //      camera (measured 0.626 m), and the floor only enters a level camera's
-  //      view at 1.64 m. Measured 2026-09-21: admitting a 0.10 m obstacle at
-  //      1.64 m needs y_max >= 0.66, while the floor's own y there starts at
-  //      0.666 -- about a centimetre of separation, against centimetres of floor
-  //      relief. So that band sees >= 0.27 m objects beyond 1.64 m, which is the
-  //      range the lidar already covers best, and nothing shorter.
+  // A centred depth_roi_frac=0.35 selects rows 156-323, which meets that window
+  // on four rows -- so `hits` never reached `depth_min_hits`, `depth.state` was
+  // pinned at "insufficient_hits" for the entire life of the feature, and the
+  // depth leg silently degraded to lidar+ultrasonic. It had never once fired.
   //
-  //   3. THIS: the DOWNWARD camera's raw cloud, with the floor treated as a
-  //      reference SURFACE rather than as something to exclude. front_down is
-  //      pitched 27 deg down and mounted 0.311 m up, so the floor is in view
-  //      from 0.368 m out and every frame re-measures it to an rms of 4.8 mm.
-  //      An obstacle is then simply a point standing above that plane -- and the
-  //      near field, the only place a low obstacle matters, is where the data is
-  //      cleanest (z < 1.0 m: 220262 points, h in -0.013..+0.011 m).
-  //
-  // ★ The measured noise floor, which is what makes a 5 cm threshold defensible
-  //   rather than hopeful. Empty corridor, 2026-09-21: h > 0.020 -> 0.158% of
-  //   points, h > 0.030 -> 0.020%, h > 0.050 -> EXACTLY ZERO. A 0.10 m box at
-  //   0.565 m produced 10545 points. Two orders of magnitude of separation.
-  //
-  // ★ Why the fit is seeded from a CALIBRATED prior and clipped, instead of
-  //   being an unweighted least squares over the whole cloud. Measured
-  //   2026-09-21 on real frames with a synthetic wall injected over 30% of the
-  //   points: plain iterative least squares is dragged 3.6 cm off (H 0.3099 ->
-  //   0.3462); this seed-and-clip schedule stays within 0.3 cm. The mechanism is
-  //   geometric -- the wide window admits only the bottom 25 cm of a wall, and a
-  //   wall's bottom edge lies ON the floor plane.
-  //
-  // ★ And why the FIRST pass is WIDE. A single narrow window [0.06, 0.06] is
-  //   what "just trust the prior" suggests, and it is wrong: measured, it loses
-  //   the floor entirely at +15 deg of pitch error, and biases H by +3.6 cm at
-  //   -10 deg. That bias is the dangerous direction -- it lifts the plane, so
-  //   the floor itself starts reading as an obstacle. [0.25, 0.06] tracked every
-  //   case to within 0.1 cm.
+  // Moving or enlarging the rectangle cannot fix that, and the reason is
+  // geometry rather than tuning: for a level camera every floor pixel has the
+  // SAME optical Y (the camera height, ~0.47 m), so a rectangle selects by
+  // depression angle and mixes floor with obstacle at every distance. Selecting
+  // by real HEIGHT separates them. That is exactly what xw_pc_nav_filter does
+  // (|x| <= 1.20, z in [0.20, 2.50], y in [-0.80, 0.40]), and measurement
+  // agrees: its output is EXACTLY 0 points in an empty corridor -- the floor,
+  // which is 13.6% of the image, is excluded completely -- and 25-37 points
+  // with a 0.35 m box 1.5 m ahead.
   //
   // The range returned is the 3-D norm, chosen so that it is directly
   // comparable with the lidar's range in the discrepancy test in tick().
-
-  // Where x/y/z live in the buffer, and whether the buffer can hold them.
-  // Resolved from the message's own field table: point_step is 12 today (xyz
-  // only), but a vendor change must not silently turn this into garbage.
-  struct PcGeom {
-    int ox{-1};
-    int oy{-1};
-    int oz{-1};
-    size_t step{0};
-    size_t row_step{0};
-    size_t need{0};
-    bool ok{false};
-  };
-
-  static PcGeom resolve_geom(const sensor_msgs::msg::PointCloud2 & msg)
+  Band band_min_range(const sensor_msgs::msg::PointCloud2 & msg) const
   {
-    PcGeom g;
+    Band out;
     if (msg.point_step < sizeof(float) || msg.data.empty()) {
-      return g;
+      return out;
     }
+    // Locate x/y/z as FLOAT32. Never assume the offsets: point_step is 12 today
+    // (xyz only), but a vendor change must not silently turn this into garbage.
+    int ox = -1;
+    int oy = -1;
+    int oz = -1;
     for (const auto & f : msg.fields) {
       if (f.datatype != sensor_msgs::msg::PointField::FLOAT32) {
         continue;
       }
       if (f.name == "x") {
-        g.ox = static_cast<int>(f.offset);
+        ox = static_cast<int>(f.offset);
       } else if (f.name == "y") {
-        g.oy = static_cast<int>(f.offset);
+        oy = static_cast<int>(f.offset);
       } else if (f.name == "z") {
-        g.oz = static_cast<int>(f.offset);
+        oz = static_cast<int>(f.offset);
       }
     }
-    if (g.ox < 0 || g.oy < 0 || g.oz < 0) {
-      return g;
+    if (ox < 0 || oy < 0 || oz < 0) {
+      return out;
     }
-    g.need =
-      static_cast<size_t>(std::max(std::max(g.ox, g.oy), g.oz)) + sizeof(float);
-    if (g.need > msg.point_step) {
-      return g;
+    const size_t need =
+      static_cast<size_t>(std::max(std::max(ox, oy), oz)) + sizeof(float);
+    if (need > msg.point_step) {
+      return out;
     }
-    g.step = msg.point_step;
-    g.row_step =
-      msg.row_step ? static_cast<size_t>(msg.row_step) : g.step * msg.width;
-    g.ok = true;
-    return g;
-  }
-
-  // Visit every finite xyz in the frame. Returns false when the frame is
-  // TRUNCATED: a short buffer means the frame is not whole, and half a frame is
-  // not a frame for something a safety gate decides on.
-  template<typename Fn>
-  static bool each_point(
-    const sensor_msgs::msg::PointCloud2 & msg, const PcGeom & g, Fn && fn)
-  {
+    const size_t step = msg.point_step;
+    const size_t row_step =
+      msg.row_step ? static_cast<size_t>(msg.row_step) : step * msg.width;
     for (uint32_t row = 0; row < msg.height; ++row) {
-      const size_t rbase = static_cast<size_t>(row) * g.row_step;
+      const size_t rbase = static_cast<size_t>(row) * row_step;
       for (uint32_t col = 0; col < msg.width; ++col) {
-        const size_t off = rbase + static_cast<size_t>(col) * g.step;
-        if (off + g.need > msg.data.size()) {
-          return false;
+        const size_t off = rbase + static_cast<size_t>(col) * step;
+        if (off + need > msg.data.size()) {
+          // Truncated frame. Act on what is intact rather than guess at the
+          // rest: this band is a safety input, and half a frame is not a frame.
+          return out;
         }
         float x = 0.0f;
         float y = 0.0f;
         float z = 0.0f;
-        std::memcpy(
-          &x, msg.data.data() + off + static_cast<size_t>(g.ox), sizeof(float));
-        std::memcpy(
-          &y, msg.data.data() + off + static_cast<size_t>(g.oy), sizeof(float));
-        std::memcpy(
-          &z, msg.data.data() + off + static_cast<size_t>(g.oz), sizeof(float));
+        std::memcpy(&x, msg.data.data() + off + static_cast<size_t>(ox), sizeof(float));
+        std::memcpy(&y, msg.data.data() + off + static_cast<size_t>(oy), sizeof(float));
+        std::memcpy(&z, msg.data.data() + off + static_cast<size_t>(oz), sizeof(float));
         if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) {
           continue;
         }
-        fn(x, y, z);
-      }
-    }
-    return true;
-  }
-
-  Band band_min_range(
-    const sensor_msgs::msg::PointCloud2 & msg, const FloorCfg & cfg) const
-  {
-    Band out;
-    const PcGeom g = resolve_geom(msg);
-    if (!g.ok) {
-      return out;
-    }
-
-    // ── Passes 1 and 2: solve the floor plane from the calibrated prior ───────
-    // Each pass is a clipped least-squares over the points lying within `clip`
-    // metres of the CURRENT estimate. The first clip is deliberately WIDE: it is
-    // what tolerates the robot's pitch moving away from the calibration pose,
-    // and it is safe against large obstacles because it admits only the bottom
-    // slice of anything standing on the floor.
-    double a = cfg.a0;
-    double b = cfg.b0;
-    const double clips[2] = {cfg.clip_wide, cfg.clip_narrow};
-    for (int pass = 0; pass < 2; ++pass) {
-      const double clip = clips[pass];
-      const double sect = std::sqrt(1.0 + b * b);
-      double sz = 0.0;
-      double sy = 0.0;
-      double szz = 0.0;
-      double szy = 0.0;
-      long n = 0;
-      const bool whole = each_point(
-        msg, g,
-        [&](float /*xf*/, float yf, float zf) {
-          const double zd = static_cast<double>(zf);
-          if (zd <= 0.0) {
-            return;
-          }
-          const double yd = static_cast<double>(yf);
-          if (std::fabs((a + b * zd - yd) / sect) >= clip) {
-            return;
-          }
-          ++n;
-          sz += zd;
-          sy += yd;
-          szz += zd * zd;
-          szy += zd * yd;
-        });
-      out.floor_fit_points = n;
-      if (!whole) {
-        out.truncated = true;
-        out.floor_ok = false;
-        return out;
-      }
-      if (n < cfg.min_fit_points) {
-        // No floor => no height scale => NO READING. floor_ok stays false and
-        // the caller reports `no_floor_model`; this must never fall through to
-        // `clear`, which would mean "nothing ahead" on the strength of nothing
-        // at all.
-        out.floor_ok = false;
-        return out;
-      }
-      const double dn = static_cast<double>(n);
-      const double det = dn * szz - sz * sz;
-      if (std::fabs(det) < 1e-9) {
-        out.floor_ok = false;
-        return out;
-      }
-      const double nb = (dn * szy - sz * sy) / det;
-      const double na = (sy - nb * sz) / dn;
-      if (!std::isfinite(na) || !std::isfinite(nb)) {
-        out.floor_ok = false;
-        return out;
-      }
-      a = na;
-      b = nb;
-    }
-    out.floor_ok = true;
-    out.floor_a = a;
-    out.floor_b = b;
-
-    // ── Pass 3: how far each point stands above the floor ────────────────────
-    // h = (a + b*z - y) / sqrt(1 + b^2) is the perpendicular distance, positive
-    // above the plane. `raw_points` is counted HERE rather than by a second
-    // subscription: an empty CLEARING and a dead CAMERA have to stay
-    // distinguishable, and this walk already touches every point.
-    //
-    // h_min is floored at 1 cm. At exactly 0 the floor's own noise crosses the
-    // test -- measured p50 of h is -0.0002 m -- and the gate would brake on the
-    // floor for ever.
-    const double h_min = std::max(0.01, cfg.h_min);
-    const double sect = std::sqrt(1.0 + b * b);
-    const bool whole = each_point(
-      msg, g,
-      [&](float xf, float yf, float zf) {
-        const double zd = static_cast<double>(zf);
-        if (zd <= 0.0) {
-          return;
-        }
-        ++out.raw_points;
-        const double yd = static_cast<double>(yf);
-        if ((a + b * zd - yd) / sect <= h_min) {
-          return;
-        }
         ++out.points;
-        const double xd = static_cast<double>(xf);
-        const double r = std::sqrt(xd * xd + yd * yd + zd * zd);
+        const double r = std::sqrt(
+          static_cast<double>(x) * x + static_cast<double>(y) * y +
+          static_cast<double>(z) * z);
         if (!out.min_range.has_value() || r < *out.min_range) {
           out.min_range = r;
         }
-      });
-    if (!whole) {
-      out.truncated = true;
-      out.floor_ok = false;
-      out.points = 0;
-      out.min_range.reset();
+      }
     }
     return out;
   }
@@ -979,12 +737,9 @@ private:
     // sufficient and has no failure mode.
     double depth_stamp_sec = -1.0;
     bool depth_have = false;
-    uint64_t depth_raw_points = 0;
-    bool depth_floor_ok = false;
-    double depth_floor_a = 0.0;
-    double depth_floor_b = 0.0;
-    long depth_floor_fit_points = 0;
-    bool depth_truncated = false;
+    double raw_stamp_sec = -1.0;
+    uint64_t raw_points = 0;
+    bool have_raw = false;
     bool have_scan = false;
     bool have_ultra = false;
 
@@ -1004,12 +759,9 @@ private:
       depth_points = depth_points_;
       depth_stamp_sec = depth_stamp_sec_;
       depth_have = depth_have_;
-      depth_raw_points = depth_raw_points_;
-      depth_floor_ok = depth_floor_ok_;
-      depth_floor_a = depth_floor_a_;
-      depth_floor_b = depth_floor_b_;
-      depth_floor_fit_points = depth_floor_fit_points_;
-      depth_truncated = depth_truncated_;
+      raw_stamp_sec = raw_pc_stamp_sec_;
+      raw_points = raw_pc_points_;
+      have_raw = have_raw_pc_;
     }
 
     // ── Depth liveness gate (A1) ─────────────────────────────────────────────
@@ -1025,20 +777,18 @@ private:
     // about this rewrite that must not be read the old way. Under the image-ROI
     // reading, "0 usable pixels" meant "I cannot see" and was distrusted, so
     // the anchor was a COUNT (`hits < depth_min_hits` => unusable). Under the
-    // floor-plane reading it is the opposite: 0 points standing above the floor
-    // means the corridor ahead is clear, and that is the single most trustworthy
-    // statement this camera makes -- the floor is not excluded by a filter that
-    // could also drop the obstacle, it IS the ruler the test is measured
-    // against, so "nothing stands above it" is a positive reading about the
-    // space rather than missing data. Distrust therefore attaches to the FRAME,
-    // and there are now THREE distinct ways a frame can fail to inform:
-    //   * no frame within `depth_ttl_sec`                      -> stale
-    //   * a frame arrived but no floor could be solved from it  -> no_floor_model
-    //   * the frame carries essentially no points              -> no_camera_data
-    // The middle one is new and is the reason this comment had to change: a
-    // frame whose fit failed is not a frame that said "clear", it is a frame
-    // that said NOTHING, and conflating the two is precisely the failure this
-    // whole family of rewrites exists to prevent.
+    // height band it is the opposite: 0 points in the band means the corridor
+    // ahead is empty, and that is the single most trustworthy statement this
+    // camera makes -- the floor, 13.6% of the image, is excluded by
+    // construction, so an empty band is not missing data but a positive
+    // reading about the space. Distrust therefore attaches to the FRAME, not to
+    // the count:
+    //   * no points_nav frame within `depth_ttl_sec`            -> stale
+    //   * the RAW cloud it is derived from is missing, stale or
+    //     essentially empty                                     -> no_camera_data
+    // (`points_nav` is computed from `points`, so an empty raw cloud is exactly
+    // what a dead camera stack looks like from here; the raw subscription
+    // exists solely so those two failures stay distinguishable.)
     // Discarding is safe: the lidar at safety_distance 0.40 and the ultrasonics
     // at 0.25 still guard the same sector, and both fail independently of the
     // camera stack.
@@ -1062,17 +812,8 @@ private:
       depth_age = now_sec - depth_stamp_sec;
       if (!fresh(depth_stamp_sec)) {
         depth_state = "stale";
-      } else if (!depth_floor_ok) {
-        // ★ ORDER MATTERS. A frame arrived but yielded no floor, so there is no
-        // height scale and therefore no reading at all. This must be tested
-        // BEFORE the liveness branch below, because a failed fit leaves
-        // raw_points at 0 -- the count is taken in the pass that never ran --
-        // and testing liveness first would report a pitch or geometry problem
-        // as `no_camera_data`, a diagnosis that sounds like hardware and would
-        // send the next reader after the wrong thing entirely.
-        depth_state = "no_floor_model";
-      } else if (depth_raw_points <
-        static_cast<uint64_t>(std::max(0, raw_floor)))
+      } else if (!have_raw || !fresh(raw_stamp_sec) ||
+        raw_points < static_cast<uint64_t>(std::max(0, raw_floor)))
       {
         depth_state = "no_camera_data";
       } else if (depth_points >= depth_min_points) {
@@ -1232,36 +973,19 @@ private:
       } else {
         dj["used_m"] = nullptr;
       }
-      // ★ `points` is how much stands above the floor and `raw_points` is the
-      // whole frame. They answer different questions and both are needed to read
-      // `state`: points==0 with a healthy frame is `clear` (empty corridor),
-      // points==0 with a near-empty frame is `no_camera_data`. Together with the
-      // floor block below, this is what makes the fail-closed anchor auditable
-      // from outside the node.
+      // ★ `points` is the band occupancy and `raw_points` the raw cloud behind
+      // it. They answer different questions and both are needed to read
+      // `state`: points==0 with a healthy raw cloud is `clear` (empty
+      // corridor), points==0 with a dead raw cloud is `no_camera_data`. This
+      // pair is what makes the fail-closed anchor auditable from outside.
       dj["points"] = depth_points;
-      dj["raw_points"] = depth_raw_points;
-      payload["depth"] = dj;
-      // ★ The floor model itself. Without this the calibration cannot be
-      // audited: "did the fit work, and on what plane" would only be answerable
-      // from inside. H and pitch are the calibrated form of (a, b) -- they are
-      // what the operator compares against the stand-off measurement -- and
-      // fit_points is what says whether the frame carried enough geometry to be
-      // believed at all.
-      {
-        nlohmann::json fj;
-        fj["ok"] = depth_floor_ok;
-        fj["a"] = std::round(depth_floor_a * 10000.0) / 10000.0;
-        fj["b"] = std::round(depth_floor_b * 10000.0) / 10000.0;
-        const double sect = std::sqrt(1.0 + depth_floor_b * depth_floor_b);
-        fj["H_m"] = std::round(depth_floor_a / sect * 10000.0) / 10000.0;
-        fj["pitch_deg"] =
-          std::round(std::asin(depth_floor_b / sect) * 18000.0 / M_PI) / 100.0;
-        fj["fit_points"] = depth_floor_fit_points;
-        fj["h_min_m"] =
-          std::max(0.01, get_parameter("depth_floor_h_min").as_double());
-        fj["truncated"] = depth_truncated;
-        payload["floor"] = fj;
+      dj["raw_points"] = raw_points;
+      if (have_raw) {
+        dj["raw_age_sec"] = std::round((now_sec - raw_stamp_sec) * 10.0) / 10.0;
+      } else {
+        dj["raw_age_sec"] = nullptr;
       }
+      payload["depth"] = dj;
     }
     payload["low_obstacle_only"] = low_obstacle;
     payload["nav_slowdown"] = {
@@ -1313,12 +1037,9 @@ private:
   int depth_points_{0};
   double depth_stamp_sec_{-1.0};
   bool depth_have_{false};
-  uint64_t depth_raw_points_{0};
-  bool depth_floor_ok_{false};
-  double depth_floor_a_{0.0};
-  double depth_floor_b_{0.0};
-  long depth_floor_fit_points_{0};
-  bool depth_truncated_{false};
+  double raw_pc_stamp_sec_{-1.0};
+  uint64_t raw_pc_points_{0};
+  bool have_raw_pc_{false};
   bool safety_ok_{true};
   double prefer_turn_sign_{-1.0};
 
@@ -1327,6 +1048,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<xw_interfaces::msg::UltrasonicArray>::SharedPtr ultra_sub_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr depth_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr raw_sub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr safe_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr obs_pub_;

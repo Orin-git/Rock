@@ -1,0 +1,110 @@
+/**:
+  ros__parameters:
+    safety_distance: 0.40
+    nav_safety_distance: 0.28
+    turn_safety_distance: 0.25
+    front_angle_deg: 40.0
+    sector_angle_deg: 40.0
+    lidar_yaw_offset_rad: 3.141592653589793
+    lidar_ignore_below_m: 0.20
+    ultrasonic_stop_m: 0.25
+    use_lidar: true
+    use_ultrasonic: true
+    use_depth: true
+    # ── Depth source, rebuilt 2026-09-21 (see plan 回写 10/11) ────────────────
+    #
+    # The gate used to read /camera/front_up/depth/image_raw and take the
+    # minimum over a CENTRED rectangle of it. Measured on 189 on 2026-09-20,
+    # front_up returns valid depth in only rows 320-479 (13.0% of the frame,
+    # z 1.285-2.607 m); rows 0-319 are exactly zero, on two independent
+    # samples. A centred roi_frac 0.35 covers rows 156-323 -- it meets that
+    # window on four rows. `hits` therefore never reached depth_min_hits and
+    # the depth leg was pinned at "insufficient_hits" for the entire life of
+    # the feature: the gate has only ever run on lidar + ultrasonics.
+    #
+    # Enlarging the rectangle cannot fix it, and not because of tuning: for a
+    # level camera every floor pixel has the same optical Y (the camera height,
+    # ~0.47 m), so an image rectangle selects by depression angle and mixes
+    # floor with obstacle at every distance. Selecting by real HEIGHT separates
+    # them, which is what /camera/front_up/depth/points_nav already does
+    # (|x| <= 1.20, z in [0.20, 2.50], y in [-0.80, 0.40] -- the last bound
+    # being below the camera height is why the floor is excluded). Verified:
+    # 0 points in an empty corridor, 25-37 points with a 0.35 m box 1.5 m out.
+    #
+    # ⚠️ SEMANTICS FLIPPED with the source. Under the image reading, "no usable
+    # pixels" meant "I cannot see" and was distrusted. Under the band, 0 points
+    # means "the corridor ahead is empty", which is the single most trustworthy
+    # reading this camera produces. Distrust now attaches to the FRAME: no
+    # points_nav within depth_ttl_sec (stale), or a raw cloud behind it that is
+    # missing/stale/empty (no_camera_data).
+    depth_pc_topic: /camera/front_up/depth/points_nav
+    depth_raw_topic: /camera/front_up/depth/points
+    depth_stop_m: 0.40
+    # depth_raw_floor_points — the raw cloud is only a liveness heartbeat, never
+    #   a safety input. It exists to tell "the corridor is empty" (band 0 points,
+    #   raw healthy) apart from "the camera stack is dead" (both empty), which a
+    #   band-only reading cannot distinguish. ⚠️ NOT CALIBRATED: measure the raw
+    #   width x height on 189 and set this below the healthy value with margin.
+    depth_raw_floor_points: 1000
+    #
+    # depth_min_points — how many points in the band before it counts as
+    #   "something is there" rather than "empty". ⚠️ NOT CALIBRATED (plan 11.4).
+    depth_min_points: 5
+    #
+    # depth_low_obstacle_m — the discrepancy test. The lidar scans a horizontal
+    #   plane at roughly 0.22 m; anything shorter is invisible to it and to the
+    #   ultrasonics (0.25 m range, and soft/sloped surfaces often return
+    #   nothing). The band does see it. A stop is raised only when the camera
+    #   reports something closer than this AND the lidar, on the same bearing,
+    #   sees nothing (or something farther by depth_lidar_margin_m) -- i.e. the
+    #   two disagree. A bare threshold would instead fire on the floor and on
+    #   everything the lidar already handles.
+    #   ⚠️ 0.0 = TEST OFF, and that is the shipped default: this number must
+    #   come from the 11.4 calibration run (box at 0.4/0.6/0.8/1.0/1.5/2.0 m),
+    #   never from a single measurement. It also cannot be accepted with the
+    #   0.35 m box used on 2026-09-20 -- that box IS visible to the lidar
+    #   (1.362 m), so it cannot exercise the test; a < ~0.22 m obstacle is
+    #   required.
+    depth_low_obstacle_m: 0.0
+    # depth_lidar_margin_m — how much farther than the camera the lidar must
+    #   read before the two are called a disagreement. ⚠️ NOT CALIBRATED.
+    depth_lidar_margin_m: 0.15
+    # ── New 2026-09-20 (A1/A2). None of these is a calibrated number. ──
+    #
+    # depth_ttl_sec — a points_nav frame older than this stops counting as
+    #   evidence about the front. 0 disables the check. ⚠️ PLACEHOLDER: the
+    #   0.5 s this used to carry was derived from a presumed 10 fps, but
+    #   points_nav actually measured 4.31 Hz (mean, 26 frames / 6.0 s) -- a
+    #   ~0.23 s mean interval, so 0.5 s is barely two frames. 0.7 s ~ 3x the
+    #   mean, and the plan's 11.4 requires the WORST-CASE interval, not the
+    #   mean, before this is final.
+    #   On 2026-09-20 this mattered for real: the bridge's subscriptions died at
+    #   1789867268 and the gate kept acting on that last reading for hours,
+    #   because the old reader had no timestamp and two fail-open branches that
+    #   returned the stale value.
+    #   Live-tunable, no restart: ros2 param set /xw_safety_gate depth_ttl_sec <s>
+    depth_ttl_sec: 0.7
+    #
+    # nav_slowdown_band_m / nav_slowdown_floor_ratio — nav used to go straight
+    #   from full speed to a hard zero at the stop threshold. It now ramps:
+    #   ratio 1.0 at (stop_m + band), falling linearly to floor_ratio at stop_m.
+    #   The band is measured from the sector's OWN stop_m, not from
+    #   nav_safety_distance — a band hung off nav_safety_distance (0.28) would
+    #   sit entirely inside the already-blocked region and could never produce a
+    #   non-zero output.
+    #   With depth/lidar stop_m 0.40: full speed at 1.00 m, floor from 0.40 m.
+    #   Floor = 0.25 * max_linear_speed 0.45 = 0.1125 m/s, which is far above
+    #   xw_cmd_arbiter's isActive() eps of 1e-3, so a slowdown is never mistaken
+    #   for "this source is gone".
+    #   A slowdown never sets safety_ok false — /safety_status keeps meaning
+    #   "am I stopping", and "slowing" is a separate signal
+    #   (/obstacle_status nav_slowdown).
+    nav_slowdown_band_m: 0.60
+    nav_slowdown_floor_ratio: 0.25
+    enable_teleop_oa: true
+    avoid_turn_speed: 0.35
+    avoid_back_speed: 0.18
+    max_linear_speed: 0.45
+    max_angular_speed: 0.85
+    enable_recharge_pass_through: true
+    recharge_pass_linear_max: 0.08
