@@ -3,7 +3,6 @@
 // Original Python: python_legacy/xw_safety_gate/safety_gate_node.py (kept as backup).
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <limits>
@@ -17,8 +16,8 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "nlohmann/json.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "xw_interfaces/msg/ultrasonic_array.hpp"
@@ -54,31 +53,22 @@ struct SectorInfo {
   double stop_m{0.0};
 };
 
-// Why the depth evidence is, or is not, contributing. Reported verbatim in
+// Why the depth source is, or is not, contributing. Reported verbatim in
 // /obstacle_status so that "the gate cannot see" is never again confusable with
 // "the gate sees nothing" -- those two collapsed into the same signal, and on
 // 2026-09-20 189 ran for hours in the second state while reporting the first.
 //
-// The source is now xw_pc_nav_filter's height band (see band_min_range), so the
-// states are about the BAND first and about the STREAMS second:
-//
-//   ok                  the band holds >= `depth_min_points` points; `m` is the
-//                       nearest range among them
-//   clear               the band is empty. ★ NOT a failure: in an empty corridor
-//                       this is the correct reading, and it is trustworthy
-//                       precisely because both streams below are alive.
-//   insufficient_points the band holds 1..depth_min_points-1 points -- too few
-//                       to act on, but not nothing. Reported, never acted on.
-//   no_data             points_nav has never arrived (or `use_depth` was false
-//                       when the subscriptions were created)
-//   stale               points_nav has stopped: no frame for `depth_ttl_sec`
-//   no_camera_data      points_nav is arriving but the RAW cloud behind it is
-//                       missing, stale or empty: the band is empty because the
-//                       camera chain died, and must not be read as "clear"
-//   disabled            `use_depth` is false
-struct Band {
-  std::optional<double> min_range;
-  int points{0};
+//   ok                 usable min depth in the ROI
+//   no_data            no depth frame has ever arrived (or the sub was never made)
+//   stale              last frame is older than `depth_ttl_sec`
+//   insufficient_hits  fresh frame, but fewer than `depth_min_hits` valid pixels
+//   bad_encoding       encoding is neither 16UC1/MONO16 nor 32FC1
+//   bad_image          width or height below 8 px
+//   exception          the scan loop threw
+//   disabled           `use_depth` is false
+struct DepthReading {
+  std::optional<double> m;
+  std::string state;
 };
 
 }  // namespace
@@ -99,38 +89,21 @@ public:
     declare_parameter<double>("ultrasonic_stop_m", 0.25);
     declare_parameter<bool>("use_lidar", true);
     declare_parameter<bool>("use_ultrasonic", true);
-    // ── Depth evidence: the filtered height band, not the raw depth image ────
-    // 2026-09-21. band_min_range() carries the full account of why the image
-    // ROI was abandoned; in one line: it selected by depression angle, and for
-    // a level camera every floor pixel shares the same optical Y, so no
-    // rectangle in the image can separate floor from obstacle.
     declare_parameter<bool>("use_depth", false);
-    declare_parameter<std::string>(
-      "depth_pc_topic", "/camera/front_up/depth/points_nav");
-    // Liveness only, and never parsed point-by-point: an empty BAND is normal,
-    // an empty CAMERA is not.
-    declare_parameter<std::string>(
-      "depth_raw_topic", "/camera/front_up/depth/points");
-    // ★ Liveness floor, not a judgement threshold. Measured 2026-09-20: the raw
-    // cloud carried 40081 points in a corridor, so 1000 is 2.5% of normal.
-    declare_parameter<int>("depth_raw_floor_points", 1000);
-    // ★ NOT CALIBRATED -- 0 leaves the discrepancy test off. Set it from the
-    // measured approach profile, live:
-    //   ros2 param set /xw_safety_gate depth_low_obstacle_m <m>
-    declare_parameter<double>("depth_low_obstacle_m", 0.0);
-    // ★ NOT CALIBRATED either. Only consulted when depth_low_obstacle_m > 0.
-    declare_parameter<double>("depth_lidar_margin_m", 0.15);
-    // ★ NOT CALIBRATED. Floor on what counts as a real target, so a couple of
-    // stray returns cannot drive the gate. Measured 2026-09-20: a 0.35 m box
-    // 1.5 m ahead gave 25-37 points in the band.
-    declare_parameter<int>("depth_min_points", 5);
+    declare_parameter<std::string>("depth_topic", "/camera/front_up/depth/image_raw");
     declare_parameter<double>("depth_stop_m", 0.40);
-    // ★ Placeholder, NOT measured. The source changed from the image (asumed
-    // ~10 fps) to points_nav, measured at 4.31 Hz MEAN on 2026-09-20; the worst
-    // inter-frame gap was not measured. Derive this from that gap before
-    // trusting it. 0 disables the check. Tune live with
+    declare_parameter<double>("depth_roi_frac", 0.35);
+    declare_parameter<double>("depth_min_valid_m", 0.05);
+    declare_parameter<double>("depth_max_valid_m", 4.0);
+    declare_parameter<double>("depth_scale", 0.001);
+    declare_parameter<int>("depth_min_hits", 40);
+    // ★ Not a calibrated number: the bridge publishes at ~10 fps, so 0.5 s is a
+    // five-frame grace margin. Tune it live with
     //   ros2 param set /xw_safety_gate depth_ttl_sec <s>
-    declare_parameter<double>("depth_ttl_sec", 0.7);
+    // (0 disables the check) -- apply_nav/tick re-read every parameter each
+    // tick, so no restart is needed and the check can be exercised
+    // non-destructively.
+    declare_parameter<double>("depth_ttl_sec", 0.5);
     // ★ Also uncalibrated defaults. The band is measured from the sector's own
     // STOP threshold, not from nav_safety_distance (see apply_nav), so the
     // slowdown starts at stop_m + band and reaches full speed there.
@@ -186,47 +159,29 @@ public:
       });
 
     if (get_parameter("use_depth").as_bool()) {
-      const auto pc_topic = get_parameter("depth_pc_topic").as_string();
-      const auto raw_topic = get_parameter("depth_raw_topic").as_string();
-      rclcpp::QoS pc_qos(1);
-      pc_qos.best_effort();
-      pc_qos.keep_last(1);
-      depth_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
-        pc_topic, pc_qos,
-        [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
-          // ★ The arrival stamp is taken here, on EVERY frame, whatever the
-          // band turned out to contain. "A frame arrived whose band was empty"
-          // (clear) and "no frame has arrived for a second" (stale) are
-          // different facts and must not share a clock.
+      const auto topic = get_parameter("depth_topic").as_string();
+      rclcpp::QoS depth_qos(1);
+      depth_qos.best_effort();
+      depth_qos.keep_last(1);
+      depth_sub_ = create_subscription<sensor_msgs::msg::Image>(
+        topic, depth_qos,
+        [this](const sensor_msgs::msg::Image::SharedPtr msg) {
+          // ★ The arrival stamp is taken here, on EVERY frame, whatever
+          // roi_min_depth decided about its contents. "A frame arrived whose
+          // ROI was unusable" (insufficient_hits) and "no frame has arrived for
+          // a minute" (stale) are different facts and must not share a clock.
           //
-          // band_min_range takes no lock, so this is the only lock the callback
-          // takes.
-          const Band band = band_min_range(*msg);
+          // roi_min_depth is lock-free now that its two fail-open branches are
+          // gone, so this is the only lock the callback takes.
+          const DepthReading reading = roi_min_depth(*msg);
           const double stamp = now().seconds();
           std::lock_guard<std::mutex> lock(mutex_);
-          depth_min_ = band.min_range;
-          depth_points_ = band.points;
+          depth_min_ = reading.m;
+          depth_state_ = reading.state;
           depth_stamp_sec_ = stamp;
           depth_have_ = true;
         });
-      raw_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
-        raw_topic, pc_qos,
-        [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
-          // Liveness ONLY, and deliberately O(1): it answers "is the camera
-          // chain still producing clouds at all". Without it, a band that went
-          // empty because the vendor stream died is indistinguishable from a
-          // band that is empty because the corridor is clear.
-          const double stamp = now().seconds();
-          const uint64_t n =
-            static_cast<uint64_t>(msg->width) * static_cast<uint64_t>(msg->height);
-          std::lock_guard<std::mutex> lock(mutex_);
-          raw_pc_points_ = n;
-          raw_pc_stamp_sec_ = stamp;
-          have_raw_pc_ = true;
-        });
-      RCLCPP_INFO(
-        get_logger(), "depth evidence: band=%s liveness=%s",
-        pc_topic.c_str(), raw_topic.c_str());
+      RCLCPP_INFO(get_logger(), "depth safety enabled on %s", topic.c_str());
     }
 
     cmd_pub_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
@@ -240,96 +195,98 @@ public:
   }
 
 private:
-  // Lock-free (reads no parameter) and allocation-free.
-  //
-  // ★ Why this parses a point cloud instead of the depth image (2026-09-21).
-  //
-  // Until today this node took the minimum over a CENTRED rectangle of the raw
-  // depth image. Measured on 189 on 2026-09-20, two independent samples:
-  //
-  //   /camera/front_up/depth/image_raw   640x480 16UC1
-  //     rows   0-319 : 0 valid pixels (raw == 0) -- exactly zero, both samples
-  //     rows 320-479 : 40081 valid pixels, z in 1.285..2.607 m
-  //
-  // A centred depth_roi_frac=0.35 selects rows 156-323, which meets that window
-  // on four rows -- so `hits` never reached `depth_min_hits`, `depth.state` was
-  // pinned at "insufficient_hits" for the entire life of the feature, and the
-  // depth leg silently degraded to lidar+ultrasonic. It had never once fired.
-  //
-  // Moving or enlarging the rectangle cannot fix that, and the reason is
-  // geometry rather than tuning: for a level camera every floor pixel has the
-  // SAME optical Y (the camera height, ~0.47 m), so a rectangle selects by
-  // depression angle and mixes floor with obstacle at every distance. Selecting
-  // by real HEIGHT separates them. That is exactly what xw_pc_nav_filter does
-  // (|x| <= 1.20, z in [0.20, 2.50], y in [-0.80, 0.40]), and measurement
-  // agrees: its output is EXACTLY 0 points in an empty corridor -- the floor,
-  // which is 13.6% of the image, is excluded completely -- and 25-37 points
-  // with a 0.35 m box 1.5 m ahead.
-  //
-  // The range returned is the 3-D norm, chosen so that it is directly
-  // comparable with the lidar's range in the discrepancy test in tick().
-  Band band_min_range(const sensor_msgs::msg::PointCloud2 & msg) const
+  // Lock-free: the two branches that used to re-read `depth_min_` under
+  // mutex_ are gone (they were the reason this could not be const).
+  DepthReading roi_min_depth(const sensor_msgs::msg::Image & msg) const
   {
-    Band out;
-    if (msg.point_step < sizeof(float) || msg.data.empty()) {
-      return out;
+    const int w = static_cast<int>(msg.width);
+    const int h = static_cast<int>(msg.height);
+    if (w < 8 || h < 8) {
+      return {std::nullopt, "bad_image"};
     }
-    // Locate x/y/z as FLOAT32. Never assume the offsets: point_step is 12 today
-    // (xyz only), but a vendor change must not silently turn this into garbage.
-    int ox = -1;
-    int oy = -1;
-    int oz = -1;
-    for (const auto & f : msg.fields) {
-      if (f.datatype != sensor_msgs::msg::PointField::FLOAT32) {
-        continue;
-      }
-      if (f.name == "x") {
-        ox = static_cast<int>(f.offset);
-      } else if (f.name == "y") {
-        oy = static_cast<int>(f.offset);
-      } else if (f.name == "z") {
-        oz = static_cast<int>(f.offset);
-      }
-    }
-    if (ox < 0 || oy < 0 || oz < 0) {
-      return out;
-    }
-    const size_t need =
-      static_cast<size_t>(std::max(std::max(ox, oy), oz)) + sizeof(float);
-    if (need > msg.point_step) {
-      return out;
-    }
-    const size_t step = msg.point_step;
-    const size_t row_step =
-      msg.row_step ? static_cast<size_t>(msg.row_step) : step * msg.width;
-    for (uint32_t row = 0; row < msg.height; ++row) {
-      const size_t rbase = static_cast<size_t>(row) * row_step;
-      for (uint32_t col = 0; col < msg.width; ++col) {
-        const size_t off = rbase + static_cast<size_t>(col) * step;
-        if (off + need > msg.data.size()) {
-          // Truncated frame. Act on what is intact rather than guess at the
-          // rest: this band is a safety input, and half a frame is not a frame.
-          return out;
+
+    double frac = get_parameter("depth_roi_frac").as_double();
+    frac = std::max(0.1, std::min(0.9, frac));
+    const int rw = std::max(1, static_cast<int>(w * frac));
+    const int rh = std::max(1, static_cast<int>(h * frac));
+    const int x0 = (w - rw) / 2;
+    const int y0 = (h - rh) / 2;
+    const double scale = get_parameter("depth_scale").as_double();
+    const double zmin = get_parameter("depth_min_valid_m").as_double();
+    const double zmax = get_parameter("depth_max_valid_m").as_double();
+    const int need = get_parameter("depth_min_hits").as_int();
+
+    std::string enc = to_lower(msg.encoding);
+    const auto & data = msg.data;
+    const int step = static_cast<int>(msg.step);
+
+    int hits = 0;
+    double best = std::numeric_limits<double>::infinity();
+
+    try {
+      if (enc == "16uc1" || enc == "mono16") {
+        for (int y = y0; y < y0 + rh; ++y) {
+          const int row = y * step;
+          for (int x = x0; x < x0 + rw; ++x) {
+            const size_t off = static_cast<size_t>(row + x * 2);
+            if (off + 1 >= data.size()) {
+              continue;
+            }
+            const uint16_t raw =
+              static_cast<uint16_t>(data[off]) |
+              (static_cast<uint16_t>(data[off + 1]) << 8);
+            if (raw == 0) {
+              continue;
+            }
+            const double z = static_cast<double>(raw) * scale;
+            if (z > zmin && z < zmax) {
+              ++hits;
+              best = std::min(best, z);
+            }
+          }
         }
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        std::memcpy(&x, msg.data.data() + off + static_cast<size_t>(ox), sizeof(float));
-        std::memcpy(&y, msg.data.data() + off + static_cast<size_t>(oy), sizeof(float));
-        std::memcpy(&z, msg.data.data() + off + static_cast<size_t>(oz), sizeof(float));
-        if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) {
-          continue;
+      } else if (enc == "32fc1") {
+        for (int y = y0; y < y0 + rh; ++y) {
+          const int row = y * step;
+          for (int x = x0; x < x0 + rw; ++x) {
+            const size_t off = static_cast<size_t>(row + x * 4);
+            if (off + 3 >= data.size()) {
+              continue;
+            }
+            float zf = 0.0f;
+            std::memcpy(&zf, data.data() + off, sizeof(float));
+            if (!std::isfinite(zf) || zf <= 0.0f) {
+              continue;
+            }
+            double z = static_cast<double>(zf);
+            if (z > 20.0) {
+              z *= scale;
+            }
+            if (z > zmin && z < zmax) {
+              ++hits;
+              best = std::min(best, z);
+            }
+          }
         }
-        ++out.points;
-        const double r = std::sqrt(
-          static_cast<double>(x) * x + static_cast<double>(y) * y +
-          static_cast<double>(z) * z);
-        if (!out.min_range.has_value() || r < *out.min_range) {
-          out.min_range = r;
-        }
+      } else {
+        // ★ Fail CLOSED. This used to `return depth_min_`, i.e. hand the caller
+        // the PREVIOUS frame's reading and let it pass for a fresh one. An
+        // unrecognised encoding therefore pinned the depth contribution to a
+        // value of unknown age for as long as it lasted -- the gate would keep
+        // acting on a number it could no longer justify. Dropping the frame
+        // instead costs nothing the lidar and ultrasonics do not already cover,
+        // and `bad_encoding` below makes the condition loud instead of silent.
+        return {std::nullopt, "bad_encoding"};
       }
+    } catch (...) {
+      // ★ Fail CLOSED, for the same reason.
+      return {std::nullopt, "exception"};
     }
-    return out;
+
+    if (hits < need) {
+      return {std::nullopt, "insufficient_hits"};
+    }
+    return {best, "ok"};
   }
 
   std::optional<double> sector_min_lidar(
@@ -454,12 +411,6 @@ private:
     SectorInfo left;
     SectorInfo right;
     std::optional<double> depth_m;
-    // The lidar's OWN front reading, kept separate from `front.range_m` (which
-    // is the minimum over every source). The discrepancy test in tick() has to
-    // ask what the LIDAR saw, not what the sector settled on -- once depth has
-    // won the sector, `front.range_m` is the depth value and asking it whether
-    // the lidar agrees would be circular.
-    std::optional<double> lidar_front_m;
   };
 
   Sectors build_sectors(
@@ -510,7 +461,6 @@ private:
       "right", lidar_right, ultra_right, std::nullopt, turn_stop,
       stop_lidar, stop_ultra, stop_depth, turn_stop);
     out.depth_m = d_depth;
-    out.lidar_front_m = lidar_front;
     return out;
   }
 
@@ -728,7 +678,7 @@ private:
     std::optional<sensor_msgs::msg::LaserScan> scan;
     std::optional<xw_interfaces::msg::UltrasonicArray> ultra;
     std::optional<double> depth_min;
-    int depth_points = 0;
+    std::string depth_state_raw;
     // ★ A plain double, deliberately, NOT rclcpp::Time. `now()` here returns
     // RCL_SYSTEM_TIME (this node does not set use_sim_time), and subtracting a
     // Time of a different clock type throws inside rcl_time_point_subtract --
@@ -737,9 +687,6 @@ private:
     // sufficient and has no failure mode.
     double depth_stamp_sec = -1.0;
     bool depth_have = false;
-    double raw_stamp_sec = -1.0;
-    uint64_t raw_points = 0;
-    bool have_raw = false;
     bool have_scan = false;
     bool have_ultra = false;
 
@@ -756,51 +703,27 @@ private:
         ultra = ultra_;
       }
       depth_min = depth_min_;
-      depth_points = depth_points_;
+      depth_state_raw = depth_state_;
       depth_stamp_sec = depth_stamp_sec_;
       depth_have = depth_have_;
-      raw_stamp_sec = raw_pc_stamp_sec_;
-      raw_points = raw_pc_points_;
-      have_raw = have_raw_pc_;
     }
 
     // ── Depth liveness gate (A1) ─────────────────────────────────────────────
     // `depth_min_` used to be a bare optional with no time attached to it: once
     // set it stayed "valid" for ever. Together with the two fail-open returns
-    // that the old image reader had, "I stopped receiving depth frames" and
+    // that roi_min_depth used to have, "I stopped receiving depth frames" and
     // "there is nothing in front of me" collapsed into one signal -- and the
     // gate resolved it in favour of the second. 189 ran exactly that way for
     // hours on 2026-09-20 (the bridge's callbacks had been dead since
     // 1789867268, while /obstacle_status still carried a depth_m as if fresh).
     //
-    // ★ The fail-closed anchor MOVED on 2026-09-21, and this is the one thing
-    // about this rewrite that must not be read the old way. Under the image-ROI
-    // reading, "0 usable pixels" meant "I cannot see" and was distrusted, so
-    // the anchor was a COUNT (`hits < depth_min_hits` => unusable). Under the
-    // height band it is the opposite: 0 points in the band means the corridor
-    // ahead is empty, and that is the single most trustworthy statement this
-    // camera makes -- the floor, 13.6% of the image, is excluded by
-    // construction, so an empty band is not missing data but a positive
-    // reading about the space. Distrust therefore attaches to the FRAME, not to
-    // the count:
-    //   * no points_nav frame within `depth_ttl_sec`            -> stale
-    //   * the RAW cloud it is derived from is missing, stale or
-    //     essentially empty                                     -> no_camera_data
-    // (`points_nav` is computed from `points`, so an empty raw cloud is exactly
-    // what a dead camera stack looks like from here; the raw subscription
-    // exists solely so those two failures stay distinguishable.)
-    // Discarding is safe: the lidar at safety_distance 0.40 and the ultrasonics
-    // at 0.25 still guard the same sector, and both fail independently of the
-    // camera stack.
+    // Now a reading whose frame is older than `depth_ttl_sec` is discarded
+    // outright, and which of the two situations we are in is named in
+    // /obstacle_status (`depth.state`, `degraded`). Discarding is safe: the
+    // lidar at safety_distance 0.40 and the ultrasonics at 0.25 still guard the
+    // same sector, and both fail independently of the camera stack.
     const bool use_depth = get_parameter("use_depth").as_bool();
     const double depth_ttl = get_parameter("depth_ttl_sec").as_double();
-    const int depth_min_points = get_parameter("depth_min_points").as_int();
-    const int raw_floor = get_parameter("depth_raw_floor_points").as_int();
-    const double now_sec = now().seconds();
-    const auto fresh = [depth_ttl, now_sec](double stamp) {
-        return depth_ttl <= 0.0 || (now_sec - stamp) <= depth_ttl;
-      };
-
     std::string depth_state;
     std::optional<double> depth_used;
     double depth_age = -1.0;
@@ -809,19 +732,11 @@ private:
     } else if (!depth_have) {
       depth_state = "no_data";
     } else {
-      depth_age = now_sec - depth_stamp_sec;
-      if (!fresh(depth_stamp_sec)) {
+      depth_age = now().seconds() - depth_stamp_sec;
+      if (depth_ttl > 0.0 && depth_age > depth_ttl) {
         depth_state = "stale";
-      } else if (!have_raw || !fresh(raw_stamp_sec) ||
-        raw_points < static_cast<uint64_t>(std::max(0, raw_floor)))
-      {
-        depth_state = "no_camera_data";
-      } else if (depth_points >= depth_min_points) {
-        depth_state = "ok";
-      } else if (depth_points == 0) {
-        depth_state = "clear";
       } else {
-        depth_state = "insufficient_points";
+        depth_state = depth_state_raw;
       }
       if (depth_state == "ok") {
         depth_used = depth_min;
@@ -829,45 +744,6 @@ private:
     }
 
     auto sectors = build_sectors(scan, ultra, depth_used);
-
-    // ── Discrepancy test: an obstacle that only the camera can see ───────────
-    // The lidar scans a horizontal plane at roughly 0.22 m; anything shorter
-    // than that is invisible to it and equally invisible to the ultrasonics
-    // (0.25 m range, and soft or sloped surfaces often return nothing at all).
-    // The height band does see it. So: the camera reports something inside the
-    // danger distance AND the lidar, looking down the same bearing, either sees
-    // nothing or sees something meaningfully farther away => the two disagree,
-    // and the disagreement is the finding. The camera is not being trusted over
-    // the lidar here -- a bare "depth < 0.40" threshold would fire on the floor
-    // and on anything the lidar already knows about; requiring the lidar to
-    // disagree is what makes this specific to the blind spot.
-    //
-    // `depth_low_obstacle_m <= 0` disables the whole test, which is the shipped
-    // default until the distance is calibrated on the robot (see the plan's
-    // 11.4: it must not be set from a single measurement).
-    bool low_obstacle = false;
-    const double low_m = get_parameter("depth_low_obstacle_m").as_double();
-    if (low_m > 0.0 && depth_state == "ok" && depth_used.has_value() &&
-      get_parameter("use_lidar").as_bool())
-    {
-      const double margin =
-        std::max(0.0, get_parameter("depth_lidar_margin_m").as_double());
-      const bool lidar_blind =
-        !sectors.lidar_front_m.has_value() ||
-        (*sectors.lidar_front_m > *depth_used + margin);
-      low_obstacle = (*depth_used < low_m) && lidar_blind;
-    }
-    if (low_obstacle) {
-      // Winning the sector outright is what turns the finding into a brake:
-      // `blocked`, `range_m` and the `stop_m` that apply_nav keys on are all
-      // read from these fields. `stop_m` itself needs no write -- it is already
-      // the depth source's `depth_stop_m`, because `source` is being set to
-      // "depth" right here.
-      sectors.front.blocked = true;
-      sectors.front.range_m = depth_used;
-      sectors.front.source = "depth";
-    }
-
     // What the gate ACTED on. Distinct from `depth.m` below, which is what the
     // camera last actually said, fresh or not.
     const auto d_depth = sectors.depth_m;
@@ -902,17 +778,7 @@ private:
 
     const bool blocked = sectors.front.blocked;
     std::string reason = "clear";
-    if (low_obstacle && depth_used.has_value()) {
-      // Named distinctly from the source-tagged form below, because this stop
-      // is a camera-only finding. A reader of /obstacle_status must be able to
-      // tell "the lidar saw something" apart from "only the camera did" --
-      // plan 11.4/11.5 calibrate and accept on this exact string, so it is
-      // load-bearing, not a label.
-      char buf[64];
-      std::snprintf(
-        buf, sizeof(buf), "low_obstacle_depth_only:%.2f", *depth_used);
-      reason = buf;
-    } else if (blocked) {
+    if (blocked) {
       const std::string s =
         sectors.front.source.empty() ? "front" : sectors.front.source;
       if (sectors.front.range_m.has_value()) {
@@ -973,21 +839,8 @@ private:
       } else {
         dj["used_m"] = nullptr;
       }
-      // ★ `points` is the band occupancy and `raw_points` the raw cloud behind
-      // it. They answer different questions and both are needed to read
-      // `state`: points==0 with a healthy raw cloud is `clear` (empty
-      // corridor), points==0 with a dead raw cloud is `no_camera_data`. This
-      // pair is what makes the fail-closed anchor auditable from outside.
-      dj["points"] = depth_points;
-      dj["raw_points"] = raw_points;
-      if (have_raw) {
-        dj["raw_age_sec"] = std::round((now_sec - raw_stamp_sec) * 10.0) / 10.0;
-      } else {
-        dj["raw_age_sec"] = nullptr;
-      }
       payload["depth"] = dj;
     }
-    payload["low_obstacle_only"] = low_obstacle;
     payload["nav_slowdown"] = {
       {"applied", nav_mode && nav_res.slowdown_applied},
       {"ratio", std::round(nav_res.slowdown_ratio * 1000.0) / 1000.0},
@@ -1006,10 +859,7 @@ private:
       if (get_parameter("use_ultrasonic").as_bool() && !have_ultra) {
         degraded.push_back("ultrasonic:no_data");
       }
-      // ★ `clear` is NOT degraded -- it is a healthy reading of an empty
-      // corridor. Listing it here would make the normal case look like a fault
-      // and train the reader to ignore the field.
-      if (use_depth && depth_state != "ok" && depth_state != "clear") {
+      if (use_depth && depth_state != "ok") {
         degraded.push_back("depth:" + depth_state);
       }
       payload["degraded"] = degraded;
@@ -1034,12 +884,9 @@ private:
   xw_interfaces::msg::UltrasonicArray ultra_;
   bool have_ultra_{false};
   std::optional<double> depth_min_;
-  int depth_points_{0};
+  std::string depth_state_;
   double depth_stamp_sec_{-1.0};
   bool depth_have_{false};
-  double raw_pc_stamp_sec_{-1.0};
-  uint64_t raw_pc_points_{0};
-  bool have_raw_pc_{false};
   bool safety_ok_{true};
   double prefer_turn_sign_{-1.0};
 
@@ -1047,8 +894,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr source_sub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
   rclcpp::Subscription<xw_interfaces::msg::UltrasonicArray>::SharedPtr ultra_sub_;
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr depth_sub_;
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr raw_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr depth_sub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr safe_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr obs_pub_;

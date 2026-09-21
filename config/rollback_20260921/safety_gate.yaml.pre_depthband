@@ -1,0 +1,55 @@
+/**:
+  ros__parameters:
+    safety_distance: 0.40
+    nav_safety_distance: 0.28
+    turn_safety_distance: 0.25
+    front_angle_deg: 40.0
+    sector_angle_deg: 40.0
+    lidar_yaw_offset_rad: 3.141592653589793
+    lidar_ignore_below_m: 0.20
+    ultrasonic_stop_m: 0.25
+    use_lidar: true
+    use_ultrasonic: true
+    use_depth: true
+    depth_topic: /camera/front_up/depth/image_raw
+    depth_stop_m: 0.40
+    depth_roi_frac: 0.35
+    depth_min_valid_m: 0.05
+    depth_max_valid_m: 4.0
+    depth_scale: 0.001
+    depth_min_hits: 40
+    # ── New 2026-09-20 (A1/A2). None of these three is a calibrated number. ──
+    #
+    # depth_ttl_sec — a depth frame older than this stops counting as evidence
+    #   that the front is clear. The bridge publishes at ~10 fps, so 0.5 s is a
+    #   five-frame grace margin. 0 disables the check.
+    #   On 2026-09-20 this mattered for real: the bridge's subscriptions died at
+    #   1789867268 and the gate kept acting on that last reading for hours,
+    #   because roi_min_depth had no timestamp and two fail-open branches that
+    #   returned the stale value.
+    #   Live-tunable, no restart: ros2 param set /xw_safety_gate depth_ttl_sec <s>
+    depth_ttl_sec: 0.5
+    #
+    # nav_slowdown_band_m / nav_slowdown_floor_ratio — nav used to go straight
+    #   from full speed to a hard zero at the stop threshold. It now ramps:
+    #   ratio 1.0 at (stop_m + band), falling linearly to floor_ratio at stop_m.
+    #   The band is measured from the sector's OWN stop_m, not from
+    #   nav_safety_distance — a band hung off nav_safety_distance (0.28) would
+    #   sit entirely inside the already-blocked region and could never produce a
+    #   non-zero output.
+    #   With depth/lidar stop_m 0.40: full speed at 1.00 m, floor from 0.40 m.
+    #   Floor = 0.25 * max_linear_speed 0.45 = 0.1125 m/s, which is far above
+    #   xw_cmd_arbiter's isActive() eps of 1e-3, so a slowdown is never mistaken
+    #   for "this source is gone".
+    #   A slowdown never sets safety_ok false — /safety_status keeps meaning
+    #   "am I stopping", and "slowing" is a separate signal
+    #   (/obstacle_status nav_slowdown).
+    nav_slowdown_band_m: 0.60
+    nav_slowdown_floor_ratio: 0.25
+    enable_teleop_oa: true
+    avoid_turn_speed: 0.35
+    avoid_back_speed: 0.18
+    max_linear_speed: 0.45
+    max_angular_speed: 0.85
+    enable_recharge_pass_through: true
+    recharge_pass_linear_max: 0.08
