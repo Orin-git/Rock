@@ -161,36 +161,14 @@
     #   written -- see plan 11.5. Do not raise this value without re-running it.
     depth_low_obstacle_m: 1.00
     # depth_lidar_margin_m — how much farther than the camera the lidar must
-    #   read before the two are called a disagreement.
-    #   ★★★ 2026-09-21 CORRECTION. The earlier rationale here ("systematic
-    #   offset 0.46..0.80 m when both see the box") was wrong. This test
-    #   subtracts two ranges taken from two DIFFERENT ORIGINS, and the baseline
-    #   between them is a fixed, measurable geometry:
-    #     lidar_joint             xyz = 0     0 0.10  (base_link = robot centre)
-    #     camera_front_down_joint xyz = 0.251 0 0.16  (xw_gen2.urdf:43)
-    #   => the camera sits 0.251 m AHEAD of the lidar. An object the lidar sees
-    #   at L is seen by the camera at about L - 0.251 (minus a small slant term:
-    #   the camera is 0.16 m up and pitched 27 deg down).
-    #   Measured on the robot, same object seen by BOTH:
-    #     lidar 1.115 / depth 0.874 -> 0.241      (object A, one distance)
-    #     lidar 1.225 / depth 0.983 -> 0.242      (object B, moved 0.11 m back)
-    #   1 mm apart across two objects and two distances -> it is geometry, not
-    #   coincidence. Any margin BELOW ~0.24 makes every object the lidar can see
-    #   read as a blind spot, i.e. the robot brakes ~1 m in front of anything.
-    #   That is exactly what the shipped 0.15 did: acceptance (2) failed three
-    #   times, and the cross-check at the same spot said lidar 1.225 / ultra
-    #   0.93 / depth 0.983 -- three sensors all seeing the object.
-    #   0.40 = 0.251 baseline + ~0.15 of genuine discrimination margin.
-    #   Blind-spot direction still holds: with the lidar seeing background B
-    #   behind an obstacle the camera sees at d, it fires on B - d > 0.40. The
-    #   0.08 m box measured 1.363 - 0.807 = 0.556, so it still fires (scanned
-    #   flip point: 0.50 fires, 0.60 does not -- 0.40 is clear of both).
-    #   ⚠️ FIRST-ORDER FIX ONLY. It assumes the object is roughly dead ahead and
-    #   at a typical height. The proper fix predicts the camera range from the
-    #   lidar range using the baseline AND the bearing AND the camera height
-    #   (the slant term varies by ~0.05 m between an object's floor-level part
-    #   and its FOV-cut top), then compares residuals. Not done today.
-    depth_lidar_margin_m: 0.40
+    #   read before the two are called a disagreement. It has to exceed the
+    #   systematic offset between the two sensors looking at the SAME object
+    #   (measured 0.46..0.80 m when both see the box), or a real object would be
+    #   misread as a lidar blind spot.
+    #   Measured 2026-09-21, both directions: lidar front 1.376 m against depth
+    #   0.60 m on the box -> disagreement (fires); 1.376 m against noise at
+    #   >= 1.455 m -> agreement (does not). 0.15 separates the two cases.
+    depth_lidar_margin_m: 0.15
     # ── Added 2026-09-20 (A1/A2). ──
     #
     # depth_ttl_sec — a frame older than this stops counting as evidence about
