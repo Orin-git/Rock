@@ -218,6 +218,18 @@ local_costmap:
         enabled: True
         # Laser + depth pointclouds for local avoidance (do not drop depth).
         observation_sources: scan depth1 depth2 ultrasonic
+        # Layer-level gate, applied to EVERY source's points at the marking
+        # step (obstacle_layer.cpp:470 `if (pz < min_obstacle_height_)`), with
+        # pz in the costmap frame -- absolute z, NOT height above the floor.
+        # The floor sits at z -0.152 and a 12 cm box at -0.096..-0.109, so the
+        # 0.0 default rejected every point the low-obstacle camera can see:
+        # depth2's per-source -0.10 got them past the observation buffer, and
+        # then this second gate discarded them again.  Measured 2026-09-22:
+        # 8 of 698 points survived the buffer filter and not one cell got
+        # marked.  -0.10 = 5 cm above the floor, the same bar xw_safety_gate
+        # brakes on.  No effect on scan / ultrasonic / depth1: their per-source
+        # mins are >= 0, so their buffers never carry anything below 0 anyway.
+        min_obstacle_height: -0.10
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -262,7 +274,14 @@ local_costmap:
         depth2:
           topic: /camera/front_down/depth/points_nav
           max_obstacle_height: 1.4
-          min_obstacle_height: 0.08
+          # Absolute map-frame z, NOT height above the floor: the costmap
+          # compares z AFTER transforming into its global frame
+          # (observation_buffer.cpp:116,136,143).  The floor sits at map z
+          # -0.152 (measured), so this is 5 cm above the floor -- the same bar
+          # xw_safety_gate brakes on, so nothing the gate stops for is
+          # invisible to the planner.  0.08 meant 23 cm above the floor and
+          # rejected every low obstacle.
+          min_obstacle_height: -0.10
           clearing: True
           marking: True
           data_type: "PointCloud2"
@@ -294,6 +313,18 @@ global_costmap:
         # Global plan needs the depth volume too: laser sees thin 2D slices,
         # a stool/desk becomes leg-gaps the plan can thread -> robot brushes by.
         observation_sources: scan depth1 depth2 ultrasonic
+        # Layer-level gate, applied to EVERY source's points at the marking
+        # step (obstacle_layer.cpp:470 `if (pz < min_obstacle_height_)`), with
+        # pz in the costmap frame -- absolute z, NOT height above the floor.
+        # The floor sits at z -0.152 and a 12 cm box at -0.096..-0.109, so the
+        # 0.0 default rejected every point the low-obstacle camera can see:
+        # depth2's per-source -0.10 got them past the observation buffer, and
+        # then this second gate discarded them again.  Measured 2026-09-22:
+        # 8 of 698 points survived the buffer filter and not one cell got
+        # marked.  -0.10 = 5 cm above the floor, the same bar xw_safety_gate
+        # brakes on.  No effect on scan / ultrasonic / depth1: their per-source
+        # mins are >= 0, so their buffers never carry anything below 0 anyway.
+        min_obstacle_height: -0.10
         scan:
           topic: /scan
           max_obstacle_height: 2.0
@@ -336,7 +367,14 @@ global_costmap:
         depth2:
           topic: /camera/front_down/depth/points_nav
           max_obstacle_height: 1.4
-          min_obstacle_height: 0.08
+          # Absolute map-frame z, NOT height above the floor: the costmap
+          # compares z AFTER transforming into its global frame
+          # (observation_buffer.cpp:116,136,143).  The floor sits at map z
+          # -0.152 (measured), so this is 5 cm above the floor -- the same bar
+          # xw_safety_gate brakes on, so nothing the gate stops for is
+          # invisible to the planner.  0.08 meant 23 cm above the floor and
+          # rejected every low obstacle.
+          min_obstacle_height: -0.10
           clearing: True
           marking: True
           data_type: "PointCloud2"

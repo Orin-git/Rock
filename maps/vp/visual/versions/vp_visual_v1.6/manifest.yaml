@@ -1,0 +1,51 @@
+schema_version: 3
+map_name: vp
+map_hash: 35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd
+pipeline: visual_laser
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+tiers:
+- retrieval_ready
+- geometry_ready
+note: Depth geometry optional; retrieval_ready independent of geometry_ready
+created: 1788772543.4354334
+map_yaml: /ros2_ws/maps/vp.yaml
+map_pgm: /ros2_ws/maps/vp.pgm
+version: vp_visual_v1.6
+created_at: 1790066924.5761817
+keyframe_count: 106
+lifecycle: ACTIVE
+source:
+  previous_version: vp_visual_v1.5
+  promoted_candidates:
+  - cand_20260922_081437_877776
+  - cand_20260922_081441_881216
+  - cand_20260922_081448_888506
+  - cand_20260922_081451_891677
+  - cand_20260922_081459_899097
+  - cand_20260922_081502_902407
+  - cand_20260922_081513_913265
+  - cand_20260922_081603_963499
+  - cand_20260922_081627_987062
+  - cand_20260922_081706_026983
+  - cand_20260922_081724_044441
+  - cand_20260922_081727_047851
+  - cand_20260922_081823_103249
+  - cand_20260922_081836_116083
+  - cand_20260922_081840_120073
+  - cand_20260922_081909_149825
+  - cand_20260922_081913_153300
+  - cand_20260922_082120_280105
+  - cand_20260922_082233_353698
+  - cand_20260922_082254_374271
+  - cand_20260922_082614_574829
+  - cand_20260922_082728_648008
+  phase: Phase2D-C2
+previous_version: vp_visual_v1.5
+validation_status: PASSED
+false_accept_count: 0
+camera_id_primary: front_up
+spatial_cells: 42
+yaw_coverage_ratio: 0.25892857142857145
+production_ready: true
+candidate_promoted_count: 22
+appearance_count: 106

@@ -74,6 +74,15 @@ class NavSessionNode(Node):
         self._follow_en = False
         self._recharge_en = False
         self._goals_blocked = False
+        # Enable-watchdog state. /xw/nav/enable is TRANSIENT_LOCAL and is only
+        # published when the operator clicks, so once _set_active() has given up
+        # (lifecycle never became active) the topic carries no further message
+        # and nothing ever calls back — the operator has to toggle the switch by
+        # hand to recover. _enable_watchdog re-arms it instead.
+        self._enable_wanted = False
+        self._enable_retries = 0
+        self._enable_retry_at = 0.0
+        self._enable_capped = False
 
         latch = QoSProfile(
             depth=1,
@@ -131,6 +140,8 @@ class NavSessionNode(Node):
             String, '/xw/nav/map_name', self._on_map_name, latch, callback_group=self._cb
         )
 
+        self.create_timer(5.0, self._enable_watchdog, callback_group=self._cb)
+
         self.get_logger().info('nav session ready')
 
     def _phase2c_blind_seed_disabled(self) -> bool:
@@ -164,7 +175,58 @@ class NavSessionNode(Node):
             self.get_logger().info(f'nav map_name={name}')
 
     def _on_enable(self, msg: Bool) -> None:
-        self._set_active(bool(msg.data), 'enable-topic')
+        wanted = bool(msg.data)
+        if wanted and not self._enable_wanted:
+            # Rising edge — a fresh operator intent. Hand the retry budget back.
+            self._enable_retries = 0
+            self._enable_retry_at = 0.0
+            self._enable_capped = False
+        self._enable_wanted = wanted
+        self._set_active(wanted, 'enable-topic')
+
+    # Re-arm /xw/nav/enable when Nav2 failed to come up. Bounded: after
+    # _ENABLE_RETRY_MAX re-arms it stops and says so, rather than restarts
+    # cycling for ever. Backoff not linear — a lifecycle bringup takes ~200 s.
+    _ENABLE_RETRY_MAX = 6
+    _ENABLE_RETRY_BACKOFF = (15.0, 30.0, 60.0, 120.0, 180.0, 240.0)
+
+    def _enable_watchdog(self) -> None:
+        if not self._enable_wanted or self._enable_capped:
+            return
+        # use_nav2=false means _start_nav2() succeeds without a process, so
+        # _proc_alive() is never true and this would loop for ever.
+        if not bool(self.get_parameter('use_nav2').value):
+            return
+        if self._start_lock.locked():
+            return                       # a start/stop is already in flight
+        with self._lock:
+            active = self._active
+        if active and self._proc_alive():
+            return                       # healthy
+        now = time.monotonic()
+        if now < self._enable_retry_at:
+            return
+        if self._enable_retries >= self._ENABLE_RETRY_MAX:
+            self._enable_capped = True
+            self.get_logger().error(
+                f'Nav2 could not be brought up after {self._ENABLE_RETRY_MAX} '
+                're-arms — giving up; toggle 开启导航 off and on to try again'
+            )
+            return
+        n = self._enable_retries
+        self._enable_retries = n + 1
+        self._enable_retry_at = now + self._ENABLE_RETRY_BACKOFF[
+            min(n, len(self._ENABLE_RETRY_BACKOFF) - 1)
+        ]
+        self.get_logger().warn(
+            f'/xw/nav/enable is still true but Nav2 is not up — re-arming '
+            f'(retry {self._enable_retries}/{self._ENABLE_RETRY_MAX})'
+        )
+        # Off the executor thread: _set_active blocks for the whole bringup
+        # budget, and the timer callback must stay cheap.
+        threading.Thread(
+            target=self._set_active, args=(True, 'enable-watchdog'), daemon=True
+        ).start()
 
     def _on_control(self, req: SessionControl.Request, res: SessionControl.Response):
         self._command_id = req.command_id or 'nav-svc'
@@ -324,7 +386,11 @@ class NavSessionNode(Node):
                 'phase2c_localization_enabled — skipping legacy blind charger seed '
                 '(BOOT cascade / operator must provide /initialpose)'
             )
-        if not self._ensure_nav2_active(deadline_sec=120.0, map_name=map_name):
+        # 210 s: the measured failure on 2026-09-21 burned 187 s of lifecycle
+        # retries and had still not converged when the 120 s window closed. It is
+        # a hard ceiling now, so widening it cannot overshoot; and if it does time
+        # out, _enable_watchdog re-arms instead of leaving nav2 dead for ever.
+        if not self._ensure_nav2_active(deadline_sec=210.0, map_name=map_name):
             self.get_logger().error(f'Nav2 lifecycle did not become active log={log_path}')
             self._stop_nav2()
             return False
@@ -446,22 +512,44 @@ class NavSessionNode(Node):
         return ok
 
     def _ensure_nav2_active(self, deadline_sec: float = 90.0, map_name: str = '') -> bool:
-        """Wait for Nav2 lifecycle; retry STARTUP if bringup aborted (Rock 5T DDS load)."""
+        """Wait for Nav2 lifecycle; retry STARTUP if bringup aborted (Rock 5T DDS load).
+
+        `deadline_sec` is a HARD ceiling. It used to be tested only at the top of
+        the loop, while one pass through the RESET/STARTUP branch below could
+        block for 30+2+60+75 s and overshoot it by a minute or more — measured
+        2026-09-21: deadline 07:20:34, gave up 07:21:37. Every blocking call now
+        gets min(its own budget, whatever is left).
+        """
         if not bool(self.get_parameter('use_nav2').value):
             return True
 
         deadline = time.monotonic() + deadline_sec
+
+        def remaining() -> float:
+            return deadline - time.monotonic()
+
+        def budget(cap: float) -> float:
+            return max(0.0, min(cap, remaining()))
+
         attempts = 0
         seeded = False
         last_mgmt = time.monotonic()
         last_seed = 0.0
+        last_report = 0.0
         name = (map_name or self._map_name or '').strip()
-        while time.monotonic() < deadline:
+        while remaining() > 0:
             if self._proc is not None and self._proc.poll() is not None:
                 self.get_logger().error('nav2 process died during bringup wait')
                 return False
             loc_ok = self._cli_is_active(self._loc_active_cli, timeout_sec=1.5)
             nav_ok = self._cli_is_active(self._nav_active_cli, timeout_sec=1.5)
+            if time.monotonic() - last_report >= 15.0:
+                last_report = time.monotonic()
+                self.get_logger().info(
+                    f'waiting for Nav2 — {remaining():.0f}s left of '
+                    f'{deadline_sec:.0f}s (localization_active={loc_ok} '
+                    f'navigation_active={nav_ok})'
+                )
             # Seed while nav2 is still coming up (AMCL may not have been
             # subscribed when the early seeds were published, and planner
             # activation needs map->base TF that only exists after AMCL
@@ -488,27 +576,32 @@ class NavSessionNode(Node):
                     time.monotonic() - last_mgmt >= 75.0):
                 last_mgmt = time.monotonic()
                 self.get_logger().warn(
-                    f'Nav2 not active — retry STARTUP (attempt {attempts})'
+                    f'Nav2 not active — retry STARTUP (attempt {attempts}, '
+                    f'{remaining():.0f}s left)'
                 )
                 # RESET is best-effort; STARTUP is what re-runs configure/activate.
-                self._nav2_manage(ManageLifecycleNodes.Request.RESET, timeout_sec=30.0)
+                self._nav2_manage(ManageLifecycleNodes.Request.RESET, timeout_sec=budget(30.0))
+                if remaining() <= 0:
+                    break
                 # Only nudge localization if it is NOT already active — STARTUP on an
                 # already-active map_server aborts bringup and flips is_active=false.
                 if not self._cli_is_active(self._loc_active_cli, timeout_sec=1.5):
-                    if self._loc_lifecycle_cli.wait_for_service(timeout_sec=2.0):
+                    if self._loc_lifecycle_cli.wait_for_service(timeout_sec=budget(2.0)):
                         req = ManageLifecycleNodes.Request()
                         req.command = ManageLifecycleNodes.Request.STARTUP
                         fut = self._loc_lifecycle_cli.call_async(req)
-                        self._wait_future(fut, 60.0)
-                time.sleep(0.5)
-                self._nav2_manage(ManageLifecycleNodes.Request.STARTUP, timeout_sec=75.0)
+                        self._wait_future(fut, budget(60.0))
+                if remaining() <= 0:
+                    break
+                time.sleep(budget(0.5))
+                self._nav2_manage(ManageLifecycleNodes.Request.STARTUP, timeout_sec=budget(75.0))
                 # Re-seed after STARTUP — AMCL may have been reset.
                 if name and not self._phase2c_blind_seed_disabled():
-                    time.sleep(0.5)
+                    time.sleep(budget(0.5))
                     self._seed_initial_pose(name)
                     seeded = True
             else:
-                time.sleep(2.0)
+                time.sleep(budget(2.0))
         return self._nav2_lifecycle_is_active(timeout_sec=2.0) and self._nav_client.wait_for_server(
             timeout_sec=3.0
         )

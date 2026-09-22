@@ -1,6 +1,6 @@
 schema_version: 3
 map_name: vp
-map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+map_hash: 35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd
 pipeline: visual_laser
 extrinsic_status: EXTRINSIC_UNCALIBRATED
 tiers:

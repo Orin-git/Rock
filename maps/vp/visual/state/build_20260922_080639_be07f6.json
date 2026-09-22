@@ -1,0 +1,2350 @@
+{
+  "build_session_id": "build_20260922_080639_be07f6",
+  "mode": "RESUME_BUILD",
+  "state": "COMPLETE",
+  "start_time": 1790064399.6054487,
+  "end_time": 1790066930.8592975,
+  "planned_goals": 40,
+  "attempted_goals": 41,
+  "reached_goals": 33,
+  "nav_failed": 7,
+  "nav_dropped": 0,
+  "accepted_candidates": 23,
+  "duplicate_skips": 0,
+  "covered_skips": 0,
+  "image_rejects": 0,
+  "laser_rejects": 8,
+  "pose_rejects": 2,
+  "quota_skips": 0,
+  "other_skips": 0,
+  "coverage_before": {
+    "active_frames": 84,
+    "candidate_frames": 120,
+    "occupied_spatial_cells": 81,
+    "active_occupied_cells": 36,
+    "candidate_occupied_cells": 73,
+    "yaw_bins": 8,
+    "active_yaw_bin_occupancy": 66,
+    "active_yaw_coverage_ratio": 0.22916666666666666,
+    "cell_size_m": 1.0,
+    "candidate_new_cells": 45,
+    "candidate_new_yaw_bins": 72,
+    "duplicate_skips": 0,
+    "novelty_captures": 0,
+    "quota_skips": 0,
+    "covered_skips": 0,
+    "captures": 0
+  },
+  "coverage_after": {
+    "frames": 106,
+    "cells": 42,
+    "occupied_cells": 42,
+    "yaw_occupancy": 87
+  },
+  "current_goal": {
+    "x": -3.5,
+    "y": 4.5,
+    "yaw": 1.9634954084936207,
+    "spatial_cell": "cell_-4_4",
+    "yaw_bin": 2,
+    "reason": "missing_cell"
+  },
+  "goals": [
+    {
+      "x": -3.5,
+      "y": 4.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-4_4",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav_result_code": "NAV2_STATUS:6",
+      "nav_elapsed_sec": 106.89,
+      "nav_retryable": false,
+      "nav": "NAV_FAILED",
+      "future_resume_candidate": false,
+      "permanent_unreachable": true
+    },
+    {
+      "x": -3.5,
+      "y": 4.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-4_4",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav_result_code": "INTERLOCK_PAUSED",
+      "nav_elapsed_sec": 109.048,
+      "nav_retryable": true,
+      "nav": "INTERLOCK_PAUSED",
+      "future_resume_candidate": false,
+      "permanent_unreachable": false,
+      "nav_requeued": true
+    },
+    {
+      "x": 0.5,
+      "y": 12.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_0_12",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 44.708,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_POSE"
+    },
+    {
+      "x": 0.5,
+      "y": 12.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_0_12",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 4.661,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": 1.5,
+      "y": 12.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_1_12",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 6.999,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": 1.5,
+      "y": 12.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_1_12",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 5.568,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": 1.5,
+      "y": 13.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_1_13",
+      "yaw_bin": 0,
+      "reason": "missing_cell",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 6.77,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": 1.5,
+      "y": 13.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_1_13",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 4.765,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": -11.5,
+      "y": -2.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-12_-3",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "TIMEOUT",
+      "nav_elapsed_sec": 120.133,
+      "nav_retryable": true,
+      "nav": "NAV_FAILED",
+      "future_resume_candidate": true,
+      "permanent_unreachable": false
+    },
+    {
+      "x": -11.5,
+      "y": -2.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-12_-3",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "NAV2_STATUS:6",
+      "nav_elapsed_sec": 33.679,
+      "nav_retryable": true,
+      "nav": "NAV_FAILED",
+      "future_resume_candidate": true,
+      "permanent_unreachable": false
+    },
+    {
+      "x": -10.5,
+      "y": -2.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-11_-3",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 8.179,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -10.5,
+      "y": -2.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-11_-3",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 3.162,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -10.5,
+      "y": -1.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-11_-2",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 6.994,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -10.5,
+      "y": -1.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-11_-2",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 2.757,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -9.5,
+      "y": -1.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-10_-2",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 6.976,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -9.5,
+      "y": -1.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-10_-2",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 2.864,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -8.5,
+      "y": -1.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-9_-2",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 10.48,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -8.5,
+      "y": -1.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-9_-2",
+      "yaw_bin": 2,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 49.892,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -4.5,
+      "y": -1.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-5_-2",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 23.122,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -4.5,
+      "y": -1.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-5_-2",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 6.296,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -9.5,
+      "y": -0.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-10_-1",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 32.701,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -9.5,
+      "y": -0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-10_-1",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 2.659,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": -7.5,
+      "y": -0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-8_-1",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 13.601,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -7.5,
+      "y": -0.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-8_-1",
+      "yaw_bin": 2,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 3.16,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -3.5,
+      "y": -0.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-4_-1",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 54.724,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -3.5,
+      "y": -0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-4_-1",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 2.966,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": -2.5,
+      "y": -0.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-3_-1",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 8.586,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -2.5,
+      "y": -0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-3_-1",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 3.159,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": 3.5,
+      "y": -0.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_3_-1",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 28.566,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": 3.5,
+      "y": -0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_3_-1",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 3.082,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -4.5,
+      "y": 0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-5_0",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "TIMEOUT",
+      "nav_elapsed_sec": 120.125,
+      "nav_retryable": true,
+      "nav": "NAV_FAILED",
+      "future_resume_candidate": true,
+      "permanent_unreachable": false
+    },
+    {
+      "x": -4.5,
+      "y": 0.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-5_0",
+      "yaw_bin": 2,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 6.27,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -3.5,
+      "y": 0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-4_0",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 73.294,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -3.5,
+      "y": 0.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-4_0",
+      "yaw_bin": 2,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 3.56,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_LASER"
+    },
+    {
+      "x": -2.5,
+      "y": 0.5,
+      "yaw": 0.39269908169872414,
+      "spatial_cell": "cell_-3_0",
+      "yaw_bin": 0,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 11.894,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "REJECTED_POSE"
+    },
+    {
+      "x": -2.5,
+      "y": 0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-3_0",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 3.161,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -1.5,
+      "y": 0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-2_0",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "NAV2_STATUS:6",
+      "nav_elapsed_sec": 88.062,
+      "nav_retryable": true,
+      "nav": "NAV_FAILED",
+      "future_resume_candidate": true,
+      "permanent_unreachable": false
+    },
+    {
+      "x": -1.5,
+      "y": 0.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-2_0",
+      "yaw_bin": 2,
+      "reason": "missing_yaw",
+      "nav_result_code": "NAV2_STATUS:6",
+      "nav_elapsed_sec": 95.365,
+      "nav_retryable": true,
+      "nav": "NAV_FAILED",
+      "future_resume_candidate": true,
+      "permanent_unreachable": false
+    },
+    {
+      "x": -0.5,
+      "y": 0.5,
+      "yaw": 1.1780972450961724,
+      "spatial_cell": "cell_-1_0",
+      "yaw_bin": 1,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 16.626,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -0.5,
+      "y": 0.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-1_0",
+      "yaw_bin": 2,
+      "reason": "missing_yaw",
+      "nav_result_code": "SUCCEEDED:4",
+      "nav_elapsed_sec": 72.836,
+      "nav_retryable": true,
+      "nav": "REACHED",
+      "future_resume_candidate": false,
+      "capture": "ACCEPTED"
+    },
+    {
+      "x": -3.5,
+      "y": 4.5,
+      "yaw": 1.9634954084936207,
+      "spatial_cell": "cell_-4_4",
+      "yaw_bin": 2,
+      "reason": "missing_cell",
+      "nav_result_code": "NAV2_STATUS:6",
+      "nav_elapsed_sec": 65.776,
+      "nav_retryable": false,
+      "nav": "NAV_FAILED",
+      "future_resume_candidate": false,
+      "permanent_unreachable": true
+    }
+  ],
+  "message": "build_done v1.5\u2192v1.6 stop=coverage_gate_pass map_complete=True",
+  "dry_run": false,
+  "simulate_nav": false,
+  "patrol_mode": "full",
+  "build_kind": "RESUME_BUILD",
+  "targets": {},
+  "old_version": "vp_visual_v1.5",
+  "new_version": "vp_visual_v1.6",
+  "validation": {
+    "pass": true,
+    "verified": 22,
+    "rejected": 1,
+    "false_accept": 0,
+    "Hit@1": 0.44047619047619047,
+    "Hit@3": 0.4880952380952381,
+    "Hit@5": 0.5,
+    "confusion": 0,
+    "gate": {
+      "false_accept_0": true,
+      "map_hash_match": true,
+      "legacy_regression_ok": true,
+      "coverage_increase": true,
+      "verified_nonempty": true,
+      "batch_dedup": true,
+      "loo": true,
+      "confusion": true
+    },
+    "error": null,
+    "aborted": null,
+    "coverage_before": {
+      "frames": 84,
+      "cells": 36,
+      "yaw_occupancy": 66,
+      "yaw_coverage_ratio": 0.22916666666666666,
+      "cell_ids": [
+        "cell_-10_-1",
+        "cell_-10_-2",
+        "cell_-10_0",
+        "cell_-10_3",
+        "cell_-11_-1",
+        "cell_-1_-1",
+        "cell_-1_0",
+        "cell_-1_5",
+        "cell_-1_6",
+        "cell_-1_9",
+        "cell_-2_-1",
+        "cell_-2_-2",
+        "cell_-2_0",
+        "cell_-3_-1",
+        "cell_-3_-2",
+        "cell_-4_-1",
+        "cell_-4_-2",
+        "cell_-5_-2",
+        "cell_-5_5",
+        "cell_-6_-2",
+        "cell_-7_-2",
+        "cell_-8_-1",
+        "cell_-8_-2",
+        "cell_-8_3",
+        "cell_-8_4",
+        "cell_-9_-1",
+        "cell_-9_-2",
+        "cell_-9_3",
+        "cell_0_-1",
+        "cell_0_0",
+        "cell_0_1",
+        "cell_0_6",
+        "cell_1_-1",
+        "cell_1_0",
+        "cell_2_-1",
+        "cell_2_0"
+      ]
+    },
+    "coverage_projected": {
+      "cells": 42,
+      "yaw_occupancy": 87,
+      "frames": 106
+    },
+    "coverage_after": {
+      "frames": 106,
+      "cells": 42,
+      "yaw_occupancy": 87,
+      "yaw_coverage_ratio": 0.25892857142857145,
+      "cell_ids": [
+        "cell_-10_-1",
+        "cell_-10_-2",
+        "cell_-10_0",
+        "cell_-10_3",
+        "cell_-11_-1",
+        "cell_-11_-2",
+        "cell_-11_-3",
+        "cell_-1_-1",
+        "cell_-1_0",
+        "cell_-1_5",
+        "cell_-1_6",
+        "cell_-1_9",
+        "cell_-2_-1",
+        "cell_-2_-2",
+        "cell_-2_0",
+        "cell_-3_-1",
+        "cell_-3_-2",
+        "cell_-3_0",
+        "cell_-4_-1",
+        "cell_-4_-2",
+        "cell_-4_0",
+        "cell_-5_-2",
+        "cell_-5_0",
+        "cell_-5_5",
+        "cell_-6_-2",
+        "cell_-7_-2",
+        "cell_-8_-1",
+        "cell_-8_-2",
+        "cell_-8_3",
+        "cell_-8_4",
+        "cell_-9_-1",
+        "cell_-9_-2",
+        "cell_-9_3",
+        "cell_0_-1",
+        "cell_0_0",
+        "cell_0_1",
+        "cell_0_6",
+        "cell_1_-1",
+        "cell_1_0",
+        "cell_2_-1",
+        "cell_2_0",
+        "cell_3_-1"
+      ]
+    }
+  },
+  "promote": {
+    "built": "/ros2_ws/maps/vp/visual/versions/vp_visual_v1.6",
+    "validate": "OK",
+    "ok": true,
+    "previous_unchanged": true,
+    "promoted_count": 22,
+    "promoted_ids": [
+      {
+        "cand": "cand_20260922_081437_877776",
+        "kf": "kf_000085"
+      },
+      {
+        "cand": "cand_20260922_081441_881216",
+        "kf": "kf_000086"
+      },
+      {
+        "cand": "cand_20260922_081448_888506",
+        "kf": "kf_000087"
+      },
+      {
+        "cand": "cand_20260922_081451_891677",
+        "kf": "kf_000088"
+      },
+      {
+        "cand": "cand_20260922_081459_899097",
+        "kf": "kf_000089"
+      },
+      {
+        "cand": "cand_20260922_081502_902407",
+        "kf": "kf_000090"
+      },
+      {
+        "cand": "cand_20260922_081513_913265",
+        "kf": "kf_000091"
+      },
+      {
+        "cand": "cand_20260922_081603_963499",
+        "kf": "kf_000092"
+      },
+      {
+        "cand": "cand_20260922_081627_987062",
+        "kf": "kf_000093"
+      },
+      {
+        "cand": "cand_20260922_081706_026983",
+        "kf": "kf_000094"
+      },
+      {
+        "cand": "cand_20260922_081724_044441",
+        "kf": "kf_000095"
+      },
+      {
+        "cand": "cand_20260922_081727_047851",
+        "kf": "kf_000096"
+      },
+      {
+        "cand": "cand_20260922_081823_103249",
+        "kf": "kf_000097"
+      },
+      {
+        "cand": "cand_20260922_081836_116083",
+        "kf": "kf_000098"
+      },
+      {
+        "cand": "cand_20260922_081840_120073",
+        "kf": "kf_000099"
+      },
+      {
+        "cand": "cand_20260922_081909_149825",
+        "kf": "kf_000100"
+      },
+      {
+        "cand": "cand_20260922_081913_153300",
+        "kf": "kf_000101"
+      },
+      {
+        "cand": "cand_20260922_082120_280105",
+        "kf": "kf_000102"
+      },
+      {
+        "cand": "cand_20260922_082233_353698",
+        "kf": "kf_000103"
+      },
+      {
+        "cand": "cand_20260922_082254_374271",
+        "kf": "kf_000104"
+      },
+      {
+        "cand": "cand_20260922_082614_574829",
+        "kf": "kf_000105"
+      },
+      {
+        "cand": "cand_20260922_082728_648008",
+        "kf": "kf_000106"
+      }
+    ],
+    "previous_version": "vp_visual_v1.5",
+    "new_version": "vp_visual_v1.6",
+    "set_active": {
+      "status": "OK",
+      "old_version": "vp_visual_v1.5",
+      "requested_version": "vp_visual_v1.6",
+      "active_version_after": "vp_visual_v1.6",
+      "reload": {
+        "old_version": "vp_visual_v1.5",
+        "requested_version": "vp_visual_v1.6",
+        "active_version_after": "vp_visual_v1.6",
+        "loaded_keyframe_count": 106,
+        "elapsed_ms": 1281,
+        "status": "RELOAD_OK",
+        "db_root": "/ros2_ws/maps/vp/visual/versions/vp_visual_v1.6"
+      }
+    },
+    "commit": true
+  },
+  "map_name": "vp",
+  "completion": {
+    "eligible": {
+      "total_free_cells": 253,
+      "eligible_visual_cells": 94,
+      "excluded_unknown": 505,
+      "excluded_clearance": 140,
+      "excluded_unreachable": 19,
+      "excluded_structure": 0,
+      "seed_resolution": {
+        "seed_source": "seed_cells",
+        "seeds": [
+          [
+            -12,
+            -3
+          ],
+          [
+            -12,
+            -1
+          ],
+          [
+            -12,
+            0
+          ],
+          [
+            -12,
+            1
+          ],
+          [
+            -11,
+            -3
+          ],
+          [
+            -11,
+            -2
+          ],
+          [
+            -11,
+            -1
+          ],
+          [
+            -11,
+            0
+          ],
+          [
+            -11,
+            1
+          ],
+          [
+            -10,
+            -3
+          ],
+          [
+            -10,
+            -2
+          ],
+          [
+            -10,
+            -1
+          ],
+          [
+            -10,
+            0
+          ],
+          [
+            -10,
+            1
+          ],
+          [
+            -10,
+            2
+          ],
+          [
+            -10,
+            3
+          ],
+          [
+            -9,
+            -2
+          ],
+          [
+            -9,
+            -1
+          ],
+          [
+            -9,
+            0
+          ],
+          [
+            -9,
+            1
+          ],
+          [
+            -9,
+            2
+          ],
+          [
+            -9,
+            3
+          ],
+          [
+            -8,
+            -2
+          ],
+          [
+            -8,
+            -1
+          ],
+          [
+            -8,
+            3
+          ],
+          [
+            -8,
+            4
+          ],
+          [
+            -8,
+            5
+          ],
+          [
+            -7,
+            -2
+          ],
+          [
+            -7,
+            3
+          ],
+          [
+            -7,
+            4
+          ],
+          [
+            -7,
+            5
+          ],
+          [
+            -6,
+            -2
+          ],
+          [
+            -6,
+            4
+          ],
+          [
+            -6,
+            5
+          ],
+          [
+            -6,
+            6
+          ],
+          [
+            -5,
+            -2
+          ],
+          [
+            -5,
+            -1
+          ],
+          [
+            -5,
+            0
+          ],
+          [
+            -5,
+            4
+          ],
+          [
+            -5,
+            5
+          ],
+          [
+            -5,
+            6
+          ],
+          [
+            -5,
+            7
+          ],
+          [
+            -4,
+            -2
+          ],
+          [
+            -4,
+            -1
+          ],
+          [
+            -4,
+            0
+          ],
+          [
+            -4,
+            8
+          ],
+          [
+            -3,
+            -1
+          ],
+          [
+            -3,
+            0
+          ],
+          [
+            -3,
+            8
+          ],
+          [
+            -3,
+            9
+          ],
+          [
+            -2,
+            -1
+          ],
+          [
+            -2,
+            0
+          ],
+          [
+            -2,
+            8
+          ],
+          [
+            -2,
+            9
+          ],
+          [
+            -2,
+            10
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            4
+          ],
+          [
+            -1,
+            5
+          ],
+          [
+            -1,
+            6
+          ],
+          [
+            -1,
+            7
+          ],
+          [
+            -1,
+            8
+          ],
+          [
+            -1,
+            9
+          ],
+          [
+            -1,
+            10
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            5
+          ],
+          [
+            0,
+            6
+          ],
+          [
+            0,
+            7
+          ],
+          [
+            0,
+            8
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            -1
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            -1
+          ]
+        ],
+        "requested": [
+          [
+            -12,
+            -3
+          ],
+          [
+            -12,
+            -1
+          ],
+          [
+            -12,
+            0
+          ],
+          [
+            -12,
+            1
+          ],
+          [
+            -11,
+            -3
+          ],
+          [
+            -11,
+            -2
+          ],
+          [
+            -11,
+            -1
+          ],
+          [
+            -11,
+            0
+          ],
+          [
+            -11,
+            1
+          ],
+          [
+            -10,
+            -3
+          ],
+          [
+            -10,
+            -2
+          ],
+          [
+            -10,
+            -1
+          ],
+          [
+            -10,
+            0
+          ],
+          [
+            -10,
+            1
+          ],
+          [
+            -10,
+            2
+          ],
+          [
+            -10,
+            3
+          ],
+          [
+            -9,
+            -2
+          ],
+          [
+            -9,
+            -1
+          ],
+          [
+            -9,
+            0
+          ],
+          [
+            -9,
+            1
+          ],
+          [
+            -9,
+            2
+          ],
+          [
+            -9,
+            3
+          ],
+          [
+            -8,
+            -2
+          ],
+          [
+            -8,
+            -1
+          ],
+          [
+            -8,
+            3
+          ],
+          [
+            -8,
+            4
+          ],
+          [
+            -8,
+            5
+          ],
+          [
+            -7,
+            -2
+          ],
+          [
+            -7,
+            3
+          ],
+          [
+            -7,
+            4
+          ],
+          [
+            -7,
+            5
+          ],
+          [
+            -6,
+            -2
+          ],
+          [
+            -6,
+            4
+          ],
+          [
+            -6,
+            5
+          ],
+          [
+            -6,
+            6
+          ],
+          [
+            -5,
+            -2
+          ],
+          [
+            -5,
+            -1
+          ],
+          [
+            -5,
+            0
+          ],
+          [
+            -5,
+            4
+          ],
+          [
+            -5,
+            5
+          ],
+          [
+            -5,
+            6
+          ],
+          [
+            -5,
+            7
+          ],
+          [
+            -4,
+            -2
+          ],
+          [
+            -4,
+            -1
+          ],
+          [
+            -4,
+            0
+          ],
+          [
+            -4,
+            8
+          ],
+          [
+            -3,
+            -2
+          ],
+          [
+            -3,
+            -1
+          ],
+          [
+            -3,
+            0
+          ],
+          [
+            -3,
+            8
+          ],
+          [
+            -3,
+            9
+          ],
+          [
+            -2,
+            -2
+          ],
+          [
+            -2,
+            -1
+          ],
+          [
+            -2,
+            0
+          ],
+          [
+            -2,
+            8
+          ],
+          [
+            -2,
+            9
+          ],
+          [
+            -2,
+            10
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            3
+          ],
+          [
+            -1,
+            4
+          ],
+          [
+            -1,
+            5
+          ],
+          [
+            -1,
+            6
+          ],
+          [
+            -1,
+            7
+          ],
+          [
+            -1,
+            8
+          ],
+          [
+            -1,
+            9
+          ],
+          [
+            -1,
+            10
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            5
+          ],
+          [
+            0,
+            6
+          ],
+          [
+            0,
+            7
+          ],
+          [
+            0,
+            8
+          ],
+          [
+            0,
+            11
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            -1
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            -1
+          ]
+        ],
+        "dropped_non_candidate": [
+          [
+            -3,
+            -2
+          ],
+          [
+            -2,
+            -2
+          ],
+          [
+            -1,
+            3
+          ],
+          [
+            0,
+            11
+          ]
+        ],
+        "snapped_from": [],
+        "notes": [],
+        "seed_unresolved": false
+      },
+      "connectivity": {
+        "component_count": 3,
+        "component_sizes": [
+          94,
+          18,
+          1
+        ],
+        "largest_component_size": 94,
+        "unreachable_component_sizes": [
+          18,
+          1
+        ]
+      }
+    },
+    "covered_eligible": 77,
+    "spatial_coverage_ratio": 0.8191489361702128,
+    "yaw_sufficient": 63,
+    "yaw_insufficient": 14,
+    "yaw_completeness_ratio": 0.8181818181818182,
+    "unvisited": 16,
+    "under_covered": 14,
+    "nav_failed_retryable": 2,
+    "unreachable": 20,
+    "unsafe_clearance": 140,
+    "unknown_map": 505,
+    "unresolved_nav_fail_ratio": 0.02127659574468085,
+    "gate_pass": true,
+    "gate_reasons": [],
+    "map_complete_claim_allowed": true,
+    "counts": {
+      "eligible": 94,
+      "candidate_cells": 113,
+      "covered_outside_eligible": 4,
+      "covered": 77,
+      "under_covered": 14,
+      "unvisited": 16,
+      "nav_failed_retryable": 2,
+      "unreachable": 20,
+      "yaw_sufficient": 63,
+      "yaw_insufficient": 14,
+      "unsafe_clearance": 140,
+      "unknown_map": 505
+    },
+    "cell_status": {
+      "cell_-10_1": "COVERED",
+      "cell_0_5": "COVERED",
+      "cell_-9_2": "YAW_INSUFFICIENT",
+      "cell_-2_-1": "COVERED",
+      "cell_-1_-1": "COVERED",
+      "cell_-12_-3": "YAW_INSUFFICIENT",
+      "cell_-1_7": "YAW_INSUFFICIENT",
+      "cell_-10_3": "COVERED",
+      "cell_0_-1": "COVERED",
+      "cell_-3_8": "COVERED",
+      "cell_0_7": "YAW_INSUFFICIENT",
+      "cell_-9_4": "UNVISITED",
+      "cell_-8_3": "COVERED",
+      "cell_-2_0": "YAW_INSUFFICIENT",
+      "cell_-11_-3": "COVERED",
+      "cell_-1_0": "COVERED",
+      "cell_-2_9": "YAW_INSUFFICIENT",
+      "cell_-1_9": "COVERED",
+      "cell_-6_5": "COVERED",
+      "cell_-5_4": "COVERED",
+      "cell_0_0": "COVERED",
+      "cell_0_9": "UNVISITED",
+      "cell_-8_5": "COVERED",
+      "cell_-4_5": "UNVISITED",
+      "cell_-12_1": "COVERED",
+      "cell_-10_-2": "COVERED",
+      "cell_-10_-1": "COVERED",
+      "cell_-1_11": "UNVISITED",
+      "cell_-6_-2": "COVERED",
+      "cell_-6_-1": "UNVISITED",
+      "cell_-5_6": "COVERED",
+      "cell_-8_-2": "COVERED",
+      "cell_-8_-1": "COVERED",
+      "cell_1_3": "UNVISITED",
+      "cell_-4_-2": "COVERED",
+      "cell_-4_-1": "COVERED",
+      "cell_1_12": "UNVISITED",
+      "cell_-4_7": "UNVISITED",
+      "cell_-1_4": "COVERED",
+      "cell_-10_0": "COVERED",
+      "cell_-8_0": "UNVISITED",
+      "cell_-4_0": "COVERED",
+      "cell_-13_-3": "UNVISITED",
+      "cell_-10_2": "COVERED",
+      "cell_-3_-1": "COVERED",
+      "cell_-8_2": "UNVISITED",
+      "cell_1_-1": "COVERED",
+      "cell_-7_3": "COVERED",
+      "cell_-12_-1": "COVERED",
+      "cell_3_-1": "COVERED",
+      "cell_-6_4": "COVERED",
+      "cell_-3_0": "COVERED",
+      "cell_-3_9": "YAW_INSUFFICIENT",
+      "cell_1_0": "COVERED",
+      "cell_-7_5": "COVERED",
+      "cell_-4_4": "UNREACHABLE",
+      "cell_-12_0": "COVERED",
+      "cell_-10_-3": "COVERED",
+      "cell_-11_1": "COVERED",
+      "cell_3_0": "UNVISITED",
+      "cell_-6_6": "YAW_INSUFFICIENT",
+      "cell_-5_5": "YAW_INSUFFICIENT",
+      "cell_0_4": "YAW_INSUFFICIENT",
+      "cell_-9_1": "YAW_INSUFFICIENT",
+      "cell_-7_-2": "COVERED",
+      "cell_-1_6": "COVERED",
+      "cell_-5_-2": "COVERED",
+      "cell_-5_-1": "COVERED",
+      "cell_-5_7": "COVERED",
+      "cell_1_4": "UNVISITED",
+      "cell_0_6": "COVERED",
+      "cell_-9_3": "COVERED",
+      "cell_1_13": "UNVISITED",
+      "cell_-2_8": "COVERED",
+      "cell_-1_8": "COVERED",
+      "cell_-5_0": "COVERED",
+      "cell_0_8": "YAW_INSUFFICIENT",
+      "cell_-8_4": "YAW_INSUFFICIENT",
+      "cell_-11_-2": "COVERED",
+      "cell_-11_-1": "COVERED",
+      "cell_-2_10": "COVERED",
+      "cell_-1_10": "COVERED",
+      "cell_0_1": "COVERED",
+      "cell_-9_-2": "COVERED",
+      "cell_-9_-1": "COVERED",
+      "cell_2_-1": "COVERED",
+      "cell_-7_4": "COVERED",
+      "cell_-4_6": "UNVISITED",
+      "cell_-11_0": "COVERED",
+      "cell_-9_0": "COVERED",
+      "cell_2_0": "COVERED",
+      "cell_0_12": "UNVISITED",
+      "cell_-4_8": "COVERED",
+      "cell_-1_5": "YAW_INSUFFICIENT",
+      "cell_-11_2": "UNSAFE_CLEARANCE",
+      "cell_4_0": "UNSAFE_CLEARANCE",
+      "cell_-10_10": "UNSAFE_CLEARANCE",
+      "cell_4_9": "UNSAFE_CLEARANCE",
+      "cell_-6_1": "UNSAFE_CLEARANCE",
+      "cell_5_1": "UNSAFE_CLEARANCE",
+      "cell_0_-4": "UNSAFE_CLEARANCE",
+      "cell_-14_6": "UNSAFE_CLEARANCE",
+      "cell_-3_6": "UNSAFE_CLEARANCE",
+      "cell_-8_1": "UNSAFE_CLEARANCE",
+      "cell_-15_4": "UNSAFE_CLEARANCE",
+      "cell_-4_1": "UNSAFE_CLEARANCE",
+      "cell_-13_-2": "UNSAFE_CLEARANCE",
+      "cell_-2_-2": "UNSAFE_CLEARANCE",
+      "cell_-1_-2": "UNSAFE_CLEARANCE",
+      "cell_7_1": "UNSAFE_CLEARANCE",
+      "cell_-2_7": "UNSAFE_CLEARANCE",
+      "cell_-19_0": "UNSAFE_CLEARANCE",
+      "cell_4_2": "UNSAFE_CLEARANCE",
+      "cell_-6_3": "UNSAFE_CLEARANCE",
+      "cell_5_3": "UNSAFE_CLEARANCE",
+      "cell_-23_-4": "UNSAFE_CLEARANCE",
+      "cell_0_-2": "UNSAFE_CLEARANCE",
+      "cell_-20_1": "UNSAFE_CLEARANCE",
+      "cell_-17_0": "UNSAFE_CLEARANCE",
+      "cell_-15_-3": "UNSAFE_CLEARANCE",
+      "cell_1_8": "UNSAFE_CLEARANCE",
+      "cell_-4_3": "UNSAFE_CLEARANCE",
+      "cell_-13_0": "UNSAFE_CLEARANCE",
+      "cell_-21_-4": "UNSAFE_CLEARANCE",
+      "cell_3_8": "UNSAFE_CLEARANCE",
+      "cell_-14_1": "UNSAFE_CLEARANCE",
+      "cell_-3_1": "UNSAFE_CLEARANCE",
+      "cell_-9_-3": "UNSAFE_CLEARANCE",
+      "cell_-22_-3": "UNSAFE_CLEARANCE",
+      "cell_-8_-4": "UNSAFE_CLEARANCE",
+      "cell_-17_-7": "UNSAFE_CLEARANCE",
+      "cell_-3_10": "UNSAFE_CLEARANCE",
+      "cell_6_-3": "UNSAFE_CLEARANCE",
+      "cell_-16_-6": "UNSAFE_CLEARANCE",
+      "cell_1_10": "UNSAFE_CLEARANCE",
+      "cell_-7_6": "UNSAFE_CLEARANCE",
+      "cell_-2_2": "UNSAFE_CLEARANCE",
+      "cell_-1_2": "UNSAFE_CLEARANCE",
+      "cell_-19_-5": "UNSAFE_CLEARANCE",
+      "cell_-2_11": "UNSAFE_CLEARANCE",
+      "cell_3_1": "UNSAFE_CLEARANCE",
+      "cell_5_-2": "UNSAFE_CLEARANCE",
+      "cell_-6_7": "UNSAFE_CLEARANCE",
+      "cell_-3_3": "UNSAFE_CLEARANCE",
+      "cell_0_2": "UNSAFE_CLEARANCE",
+      "cell_-20_-4": "UNSAFE_CLEARANCE",
+      "cell_-8_7": "UNSAFE_CLEARANCE",
+      "cell_-13_-5": "UNSAFE_CLEARANCE",
+      "cell_-13_4": "UNSAFE_CLEARANCE",
+      "cell_-10_9": "UNSAFE_CLEARANCE",
+      "cell_-6_0": "UNSAFE_CLEARANCE",
+      "cell_-14_-4": "UNSAFE_CLEARANCE",
+      "cell_0_-5": "UNSAFE_CLEARANCE",
+      "cell_-3_-4": "UNSAFE_CLEARANCE",
+      "cell_-5_8": "UNSAFE_CLEARANCE",
+      "cell_-14_5": "UNSAFE_CLEARANCE",
+      "cell_-3_5": "UNSAFE_CLEARANCE",
+      "cell_1_5": "UNSAFE_CLEARANCE",
+      "cell_6_1": "UNSAFE_CLEARANCE",
+      "cell_-18_1": "UNSAFE_CLEARANCE",
+      "cell_-16_-1": "UNSAFE_CLEARANCE",
+      "cell_-1_-3": "UNSAFE_CLEARANCE",
+      "cell_1_14": "UNSAFE_CLEARANCE",
+      "cell_2_13": "UNSAFE_CLEARANCE",
+      "cell_-4_9": "UNSAFE_CLEARANCE",
+      "cell_-6_2": "UNSAFE_CLEARANCE",
+      "cell_5_2": "UNSAFE_CLEARANCE",
+      "cell_-14_-2": "UNSAFE_CLEARANCE",
+      "cell_-23_-5": "UNSAFE_CLEARANCE",
+      "cell_-3_-2": "UNSAFE_CLEARANCE",
+      "cell_-14_-1": "UNSAFE_CLEARANCE",
+      "cell_-20_0": "UNSAFE_CLEARANCE",
+      "cell_-16_0": "UNSAFE_CLEARANCE",
+      "cell_-4_2": "UNSAFE_CLEARANCE",
+      "cell_-12_-2": "UNSAFE_CLEARANCE",
+      "cell_-24_-4": "UNSAFE_CLEARANCE",
+      "cell_3_-2": "UNSAFE_CLEARANCE",
+      "cell_-5_3": "UNSAFE_CLEARANCE",
+      "cell_-14_0": "UNSAFE_CLEARANCE",
+      "cell_-22_-4": "UNSAFE_CLEARANCE",
+      "cell_0_11": "UNSAFE_CLEARANCE",
+      "cell_-9_8": "UNSAFE_CLEARANCE",
+      "cell_5_-3": "UNSAFE_CLEARANCE",
+      "cell_-13_-4": "UNSAFE_CLEARANCE",
+      "cell_4_8": "UNSAFE_CLEARANCE",
+      "cell_-3_2": "UNSAFE_CLEARANCE",
+      "cell_-20_-5": "UNSAFE_CLEARANCE",
+      "cell_1_2": "UNSAFE_CLEARANCE",
+      "cell_2_1": "UNSAFE_CLEARANCE",
+      "cell_-7_-1": "UNSAFE_CLEARANCE",
+      "cell_-16_-5": "UNSAFE_CLEARANCE",
+      "cell_1_11": "UNSAFE_CLEARANCE",
+      "cell_0_13": "UNSAFE_CLEARANCE",
+      "cell_-12_2": "UNSAFE_CLEARANCE",
+      "cell_-2_6": "UNSAFE_CLEARANCE",
+      "cell_-11_3": "UNSAFE_CLEARANCE",
+      "cell_-3_-5": "UNSAFE_CLEARANCE",
+      "cell_-20_-3": "UNSAFE_CLEARANCE",
+      "cell_-7_0": "UNSAFE_CLEARANCE",
+      "cell_-15_-4": "UNSAFE_CLEARANCE",
+      "cell_2_12": "UNSAFE_CLEARANCE",
+      "cell_-7_9": "UNSAFE_CLEARANCE",
+      "cell_-19_1": "UNSAFE_CLEARANCE",
+      "cell_4_3": "UNSAFE_CLEARANCE",
+      "cell_-14_-3": "UNSAFE_CLEARANCE",
+      "cell_-3_-3": "UNSAFE_CLEARANCE",
+      "cell_1_6": "UNSAFE_CLEARANCE",
+      "cell_-18_2": "UNSAFE_CLEARANCE",
+      "cell_-17_1": "UNSAFE_CLEARANCE",
+      "cell_-15_-2": "UNSAFE_CLEARANCE",
+      "cell_2_14": "UNSAFE_CLEARANCE",
+      "cell_-1_1": "UNSAFE_CLEARANCE",
+      "cell_-21_-3": "UNSAFE_CLEARANCE",
+      "cell_-5_2": "UNSAFE_CLEARANCE",
+      "cell_-22_-5": "UNSAFE_CLEARANCE",
+      "cell_2_-2": "UNSAFE_CLEARANCE",
+      "cell_-18_-5": "UNSAFE_CLEARANCE",
+      "cell_-16_-8": "UNSAFE_CLEARANCE",
+      "cell_-8_-3": "UNSAFE_CLEARANCE",
+      "cell_0_10": "UNSAFE_CLEARANCE",
+      "cell_-9_7": "UNSAFE_CLEARANCE",
+      "cell_-8_6": "UNSAFE_CLEARANCE",
+      "cell_-13_-6": "UNSAFE_CLEARANCE",
+      "cell_-13_3": "UNSAFE_CLEARANCE",
+      "cell_-2_3": "UNSAFE_CLEARANCE",
+      "cell_-1_3": "UNSAFE_CLEARANCE",
+      "cell_4_-2": "UNSAFE_CLEARANCE",
+      "cell_4_-1": "UNSAFE_CLEARANCE",
+      "cell_1_1": "UNSAFE_CLEARANCE",
+      "cell_0_3": "UNSAFE_CLEARANCE",
+      "cell_-7_-3": "UNSAFE_CLEARANCE",
+      "cell_-15_2": "UNSAFE_CLEARANCE",
+      "cell_-1_-4": "UNSAFE_CLEARANCE",
+      "cell_-2_5": "UNSAFE_CLEARANCE",
+      "cell_-12_4": "UNKNOWN_MAP",
+      "cell_-16_15": "UNKNOWN_MAP",
+      "cell_-12_13": "UNKNOWN_MAP",
+      "cell_-23_-6": "UNKNOWN_MAP",
+      "cell_-8_-8": "UNKNOWN_MAP",
+      "cell_-23_3": "UNKNOWN_MAP",
+      "cell_-23_12": "UNKNOWN_MAP",
+      "cell_0_14": "UNKNOWN_MAP",
+      "cell_-20_8": "UNKNOWN_MAP",
+      "cell_-8_10": "UNKNOWN_MAP",
+      "cell_-11_-5": "UNKNOWN_MAP",
+      "cell_4_-7": "UNKNOWN_MAP",
+      "cell_-11_4": "UNKNOWN_MAP",
+      "cell_-19_9": "UNKNOWN_MAP",
+      "cell_3_6": "UNKNOWN_MAP",
+      "cell_3_15": "UNKNOWN_MAP",
+      "cell_-7_-8": "UNKNOWN_MAP",
+      "cell_-18_-8": "UNKNOWN_MAP",
+      "cell_-5_11": "UNKNOWN_MAP",
+      "cell_-4_-6": "UNKNOWN_MAP",
+      "cell_7_-6": "UNKNOWN_MAP",
+      "cell_-16_1": "UNKNOWN_MAP",
+      "cell_7_3": "UNKNOWN_MAP",
+      "cell_-16_10": "UNKNOWN_MAP",
+      "cell_-4_12": "UNKNOWN_MAP",
+      "cell_7_12": "UNKNOWN_MAP",
+      "cell_-24_6": "UNKNOWN_MAP",
+      "cell_-12_8": "UNKNOWN_MAP",
+      "cell_-24_15": "UNKNOWN_MAP",
+      "cell_-23_-2": "UNKNOWN_MAP",
+      "cell_-23_-1": "UNKNOWN_MAP",
+      "cell_-20_-6": "UNKNOWN_MAP",
+      "cell_-23_7": "UNKNOWN_MAP",
+      "cell_-20_3": "UNKNOWN_MAP",
+      "cell_-20_12": "UNKNOWN_MAP",
+      "cell_-8_14": "UNKNOWN_MAP",
+      "cell_-19_4": "UNKNOWN_MAP",
+      "cell_3_10": "UNKNOWN_MAP",
+      "cell_-5_15": "UNKNOWN_MAP",
+      "cell_7_-2": "UNKNOWN_MAP",
+      "cell_7_-1": "UNKNOWN_MAP",
+      "cell_-24_-8": "UNKNOWN_MAP",
+      "cell_-12_-6": "UNKNOWN_MAP",
+      "cell_-16_5": "UNKNOWN_MAP",
+      "cell_7_7": "UNKNOWN_MAP",
+      "cell_-24_1": "UNKNOWN_MAP",
+      "cell_-12_3": "UNKNOWN_MAP",
+      "cell_-16_14": "UNKNOWN_MAP",
+      "cell_-24_10": "UNKNOWN_MAP",
+      "cell_-12_12": "UNKNOWN_MAP",
+      "cell_-23_-7": "UNKNOWN_MAP",
+      "cell_-23_2": "UNKNOWN_MAP",
+      "cell_-23_11": "UNKNOWN_MAP",
+      "cell_-20_7": "UNKNOWN_MAP",
+      "cell_-9_13": "UNKNOWN_MAP",
+      "cell_3_-4": "UNKNOWN_MAP",
+      "cell_-5_-8": "UNKNOWN_MAP",
+      "cell_3_5": "UNKNOWN_MAP",
+      "cell_3_14": "UNKNOWN_MAP",
+      "cell_-5_10": "UNKNOWN_MAP",
+      "cell_-4_-7": "UNKNOWN_MAP",
+      "cell_7_-7": "UNKNOWN_MAP",
+      "cell_7_2": "UNKNOWN_MAP",
+      "cell_-16_9": "UNKNOWN_MAP",
+      "cell_7_11": "UNKNOWN_MAP",
+      "cell_-24_5": "UNKNOWN_MAP",
+      "cell_-12_7": "UNKNOWN_MAP",
+      "cell_-24_14": "UNKNOWN_MAP",
+      "cell_6_15": "UNKNOWN_MAP",
+      "cell_-23_-3": "UNKNOWN_MAP",
+      "cell_-20_-7": "UNKNOWN_MAP",
+      "cell_-8_-5": "UNKNOWN_MAP",
+      "cell_-20_2": "UNKNOWN_MAP",
+      "cell_2_8": "UNKNOWN_MAP",
+      "cell_-17_4": "UNKNOWN_MAP",
+      "cell_-17_13": "UNKNOWN_MAP",
+      "cell_-5_-4": "UNKNOWN_MAP",
+      "cell_3_9": "UNKNOWN_MAP",
+      "cell_-5_14": "UNKNOWN_MAP",
+      "cell_-4_-3": "UNKNOWN_MAP",
+      "cell_7_-3": "UNKNOWN_MAP",
+      "cell_-12_-7": "UNKNOWN_MAP",
+      "cell_-16_4": "UNKNOWN_MAP",
+      "cell_-24_0": "UNKNOWN_MAP",
+      "cell_-24_9": "UNKNOWN_MAP",
+      "cell_6_10": "UNKNOWN_MAP",
+      "cell_-13_6": "UNKNOWN_MAP",
+      "cell_-13_15": "UNKNOWN_MAP",
+      "cell_-2_15": "UNKNOWN_MAP",
+      "cell_-23_-8": "UNKNOWN_MAP",
+      "cell_-21_11": "UNKNOWN_MAP",
+      "cell_-10_11": "UNKNOWN_MAP",
+      "cell_-1_15": "UNKNOWN_MAP",
+      "cell_-9_-6": "UNKNOWN_MAP",
+      "cell_2_-6": "UNKNOWN_MAP",
+      "cell_2_3": "UNKNOWN_MAP",
+      "cell_-9_12": "UNKNOWN_MAP",
+      "cell_-17_8": "UNKNOWN_MAP",
+      "cell_3_-5": "UNKNOWN_MAP",
+      "cell_3_4": "UNKNOWN_MAP",
+      "cell_-5_9": "UNKNOWN_MAP",
+      "cell_-6_13": "UNKNOWN_MAP",
+      "cell_7_-8": "UNKNOWN_MAP",
+      "cell_-24_-5": "UNKNOWN_MAP",
+      "cell_6_-4": "UNKNOWN_MAP",
+      "cell_-24_4": "UNKNOWN_MAP",
+      "cell_6_5": "UNKNOWN_MAP",
+      "cell_-13_1": "UNKNOWN_MAP",
+      "cell_-2_1": "UNKNOWN_MAP",
+      "cell_6_14": "UNKNOWN_MAP",
+      "cell_-13_10": "UNKNOWN_MAP",
+      "cell_-21_6": "UNKNOWN_MAP",
+      "cell_-10_6": "UNKNOWN_MAP",
+      "cell_-21_15": "UNKNOWN_MAP",
+      "cell_-10_15": "UNKNOWN_MAP",
+      "cell_-17_-6": "UNKNOWN_MAP",
+      "cell_2_7": "UNKNOWN_MAP",
+      "cell_-17_3": "UNKNOWN_MAP",
+      "cell_-17_12": "UNKNOWN_MAP",
+      "cell_-5_-5": "UNKNOWN_MAP",
+      "cell_-6_8": "UNKNOWN_MAP",
+      "cell_5_8": "UNKNOWN_MAP",
+      "cell_-14_13": "UNKNOWN_MAP",
+      "cell_-3_13": "UNKNOWN_MAP",
+      "cell_6_0": "UNKNOWN_MAP",
+      "cell_-2_-4": "UNKNOWN_MAP",
+      "cell_6_9": "UNKNOWN_MAP",
+      "cell_-10_-8": "UNKNOWN_MAP",
+      "cell_-21_-8": "UNKNOWN_MAP",
+      "cell_-13_5": "UNKNOWN_MAP",
+      "cell_-21_1": "UNKNOWN_MAP",
+      "cell_-13_14": "UNKNOWN_MAP",
+      "cell_-2_14": "UNKNOWN_MAP",
+      "cell_-1_14": "UNKNOWN_MAP",
+      "cell_-21_10": "UNKNOWN_MAP",
+      "cell_-9_-7": "UNKNOWN_MAP",
+      "cell_2_-7": "UNKNOWN_MAP",
+      "cell_2_2": "UNKNOWN_MAP",
+      "cell_2_11": "UNKNOWN_MAP",
+      "cell_-17_7": "UNKNOWN_MAP",
+      "cell_1_15": "UNKNOWN_MAP",
+      "cell_-6_-6": "UNKNOWN_MAP",
+      "cell_-6_12": "UNKNOWN_MAP",
+      "cell_5_12": "UNKNOWN_MAP",
+      "cell_-14_8": "UNKNOWN_MAP",
+      "cell_-22_4": "UNKNOWN_MAP",
+      "cell_6_-5": "UNKNOWN_MAP",
+      "cell_-22_13": "UNKNOWN_MAP",
+      "cell_6_4": "UNKNOWN_MAP",
+      "cell_6_13": "UNKNOWN_MAP",
+      "cell_-10_-4": "UNKNOWN_MAP",
+      "cell_-13_9": "UNKNOWN_MAP",
+      "cell_-21_5": "UNKNOWN_MAP",
+      "cell_-10_5": "UNKNOWN_MAP",
+      "cell_-21_14": "UNKNOWN_MAP",
+      "cell_-10_14": "UNKNOWN_MAP",
+      "cell_2_-3": "UNKNOWN_MAP",
+      "cell_-17_2": "UNKNOWN_MAP",
+      "cell_-18_6": "UNKNOWN_MAP",
+      "cell_-18_15": "UNKNOWN_MAP",
+      "cell_-7_15": "UNKNOWN_MAP",
+      "cell_-15_11": "UNKNOWN_MAP",
+      "cell_5_-1": "UNKNOWN_MAP",
+      "cell_-14_-6": "UNKNOWN_MAP",
+      "cell_-3_-6": "UNKNOWN_MAP",
+      "cell_5_7": "UNKNOWN_MAP",
+      "cell_-14_3": "UNKNOWN_MAP",
+      "cell_-14_12": "UNKNOWN_MAP",
+      "cell_-3_12": "UNKNOWN_MAP",
+      "cell_-22_8": "UNKNOWN_MAP",
+      "cell_-2_-5": "UNKNOWN_MAP",
+      "cell_-1_-5": "UNKNOWN_MAP",
+      "cell_-2_4": "UNKNOWN_MAP",
+      "cell_-21_0": "UNKNOWN_MAP",
+      "cell_-21_9": "UNKNOWN_MAP",
+      "cell_-11_13": "UNKNOWN_MAP",
+      "cell_2_-8": "UNKNOWN_MAP",
+      "cell_4_11": "UNKNOWN_MAP",
+      "cell_1_-4": "UNKNOWN_MAP",
+      "cell_-7_1": "UNKNOWN_MAP",
+      "cell_-18_10": "UNKNOWN_MAP",
+      "cell_-7_10": "UNKNOWN_MAP",
+      "cell_-15_6": "UNKNOWN_MAP",
+      "cell_-15_15": "UNKNOWN_MAP",
+      "cell_-6_-7": "UNKNOWN_MAP",
+      "cell_5_-7": "UNKNOWN_MAP",
+      "cell_-6_11": "UNKNOWN_MAP",
+      "cell_-22_-6": "UNKNOWN_MAP",
+      "cell_5_11": "UNKNOWN_MAP",
+      "cell_-14_7": "UNKNOWN_MAP",
+      "cell_-3_7": "UNKNOWN_MAP",
+      "cell_-22_3": "UNKNOWN_MAP",
+      "cell_6_-6": "UNKNOWN_MAP",
+      "cell_-22_12": "UNKNOWN_MAP",
+      "cell_-21_-5": "UNKNOWN_MAP",
+      "cell_-10_-5": "UNKNOWN_MAP",
+      "cell_4_-3": "UNKNOWN_MAP",
+      "cell_-11_8": "UNKNOWN_MAP",
+      "cell_4_6": "UNKNOWN_MAP",
+      "cell_-19_13": "UNKNOWN_MAP",
+      "cell_4_15": "UNKNOWN_MAP",
+      "cell_-7_-4": "UNKNOWN_MAP",
+      "cell_-15_-8": "UNKNOWN_MAP",
+      "cell_-18_5": "UNKNOWN_MAP",
+      "cell_-15_1": "UNKNOWN_MAP",
+      "cell_-18_14": "UNKNOWN_MAP",
+      "cell_-7_14": "UNKNOWN_MAP",
+      "cell_-15_10": "UNKNOWN_MAP",
+      "cell_-14_-7": "UNKNOWN_MAP",
+      "cell_-3_-7": "UNKNOWN_MAP",
+      "cell_5_6": "UNKNOWN_MAP",
+      "cell_-14_2": "UNKNOWN_MAP",
+      "cell_-22_-2": "UNKNOWN_MAP",
+      "cell_-22_-1": "UNKNOWN_MAP",
+      "cell_-14_11": "UNKNOWN_MAP",
+      "cell_-3_11": "UNKNOWN_MAP",
+      "cell_-22_7": "UNKNOWN_MAP",
+      "cell_-8_9": "UNKNOWN_MAP",
+      "cell_-11_-6": "UNKNOWN_MAP",
+      "cell_4_-8": "UNKNOWN_MAP",
+      "cell_4_1": "UNKNOWN_MAP",
+      "cell_-11_12": "UNKNOWN_MAP",
+      "cell_-19_8": "UNKNOWN_MAP",
+      "cell_4_10": "UNKNOWN_MAP",
+      "cell_1_-5": "UNKNOWN_MAP",
+      "cell_-18_9": "UNKNOWN_MAP",
+      "cell_-15_5": "UNKNOWN_MAP",
+      "cell_-15_14": "UNKNOWN_MAP",
+      "cell_-6_-8": "UNKNOWN_MAP",
+      "cell_5_-8": "UNKNOWN_MAP",
+      "cell_-4_11": "UNKNOWN_MAP",
+      "cell_-22_-7": "UNKNOWN_MAP",
+      "cell_-22_2": "UNKNOWN_MAP",
+      "cell_-23_6": "UNKNOWN_MAP",
+      "cell_-23_15": "UNKNOWN_MAP",
+      "cell_-20_11": "UNKNOWN_MAP",
+      "cell_-8_13": "UNKNOWN_MAP",
+      "cell_-19_-6": "UNKNOWN_MAP",
+      "cell_4_-4": "UNKNOWN_MAP",
+      "cell_-11_7": "UNKNOWN_MAP",
+      "cell_-19_3": "UNKNOWN_MAP",
+      "cell_4_5": "UNKNOWN_MAP",
+      "cell_-19_12": "UNKNOWN_MAP",
+      "cell_4_14": "UNKNOWN_MAP",
+      "cell_-7_-5": "UNKNOWN_MAP",
+      "cell_-18_4": "UNKNOWN_MAP",
+      "cell_-15_0": "UNKNOWN_MAP",
+      "cell_-15_9": "UNKNOWN_MAP",
+      "cell_7_6": "UNKNOWN_MAP",
+      "cell_-16_13": "UNKNOWN_MAP",
+      "cell_-4_15": "UNKNOWN_MAP",
+      "cell_-3_-8": "UNKNOWN_MAP",
+      "cell_-12_11": "UNKNOWN_MAP",
+      "cell_7_15": "UNKNOWN_MAP",
+      "cell_0_-6": "UNKNOWN_MAP",
+      "cell_-23_1": "UNKNOWN_MAP",
+      "cell_-23_10": "UNKNOWN_MAP",
+      "cell_-20_6": "UNKNOWN_MAP",
+      "cell_-8_8": "UNKNOWN_MAP",
+      "cell_-20_15": "UNKNOWN_MAP",
+      "cell_-11_-7": "UNKNOWN_MAP",
+      "cell_-11_11": "UNKNOWN_MAP",
+      "cell_-19_7": "UNKNOWN_MAP",
+      "cell_1_-6": "UNKNOWN_MAP",
+      "cell_3_13": "UNKNOWN_MAP",
+      "cell_-15_-5": "UNKNOWN_MAP",
+      "cell_-4_-8": "UNKNOWN_MAP",
+      "cell_-16_8": "UNKNOWN_MAP",
+      "cell_-4_10": "UNKNOWN_MAP",
+      "cell_7_10": "UNKNOWN_MAP",
+      "cell_-12_6": "UNKNOWN_MAP",
+      "cell_-24_13": "UNKNOWN_MAP",
+      "cell_-12_15": "UNKNOWN_MAP",
+      "cell_-20_-8": "UNKNOWN_MAP",
+      "cell_-8_-6": "UNKNOWN_MAP",
+      "cell_-23_5": "UNKNOWN_MAP",
+      "cell_-23_14": "UNKNOWN_MAP",
+      "cell_-20_10": "UNKNOWN_MAP",
+      "cell_-8_12": "UNKNOWN_MAP",
+      "cell_-19_-7": "UNKNOWN_MAP",
+      "cell_4_-5": "UNKNOWN_MAP",
+      "cell_-11_6": "UNKNOWN_MAP",
+      "cell_-19_2": "UNKNOWN_MAP",
+      "cell_-19_11": "UNKNOWN_MAP",
+      "cell_-5_13": "UNKNOWN_MAP",
+      "cell_-4_-4": "UNKNOWN_MAP",
+      "cell_7_-4": "UNKNOWN_MAP",
+      "cell_-12_-8": "UNKNOWN_MAP",
+      "cell_-16_3": "UNKNOWN_MAP",
+      "cell_7_5": "UNKNOWN_MAP",
+      "cell_-16_12": "UNKNOWN_MAP",
+      "cell_-4_14": "UNKNOWN_MAP",
+      "cell_7_14": "UNKNOWN_MAP",
+      "cell_-24_8": "UNKNOWN_MAP",
+      "cell_-12_10": "UNKNOWN_MAP",
+      "cell_0_-7": "UNKNOWN_MAP",
+      "cell_-23_0": "UNKNOWN_MAP",
+      "cell_-23_9": "UNKNOWN_MAP",
+      "cell_-20_5": "UNKNOWN_MAP",
+      "cell_-20_14": "UNKNOWN_MAP",
+      "cell_-11_-8": "UNKNOWN_MAP",
+      "cell_-9_11": "UNKNOWN_MAP",
+      "cell_3_-6": "UNKNOWN_MAP",
+      "cell_3_3": "UNKNOWN_MAP",
+      "cell_3_12": "UNKNOWN_MAP",
+      "cell_7_0": "UNKNOWN_MAP",
+      "cell_-24_-6": "UNKNOWN_MAP",
+      "cell_-12_-4": "UNKNOWN_MAP",
+      "cell_-16_7": "UNKNOWN_MAP",
+      "cell_7_9": "UNKNOWN_MAP",
+      "cell_-24_3": "UNKNOWN_MAP",
+      "cell_-12_5": "UNKNOWN_MAP",
+      "cell_-24_12": "UNKNOWN_MAP",
+      "cell_-12_14": "UNKNOWN_MAP",
+      "cell_0_-3": "UNKNOWN_MAP",
+      "cell_-8_-7": "UNKNOWN_MAP",
+      "cell_-23_4": "UNKNOWN_MAP",
+      "cell_-20_9": "UNKNOWN_MAP",
+      "cell_-9_6": "UNKNOWN_MAP",
+      "cell_2_6": "UNKNOWN_MAP",
+      "cell_-9_15": "UNKNOWN_MAP",
+      "cell_2_15": "UNKNOWN_MAP",
+      "cell_-17_11": "UNKNOWN_MAP",
+      "cell_-5_-6": "UNKNOWN_MAP",
+      "cell_3_7": "UNKNOWN_MAP",
+      "cell_-5_12": "UNKNOWN_MAP",
+      "cell_-4_-5": "UNKNOWN_MAP",
+      "cell_7_-5": "UNKNOWN_MAP",
+      "cell_-16_2": "UNKNOWN_MAP",
+      "cell_7_4": "UNKNOWN_MAP",
+      "cell_-24_-2": "UNKNOWN_MAP",
+      "cell_-24_-1": "UNKNOWN_MAP",
+      "cell_-16_11": "UNKNOWN_MAP",
+      "cell_-24_7": "UNKNOWN_MAP",
+      "cell_6_8": "UNKNOWN_MAP",
+      "cell_-12_9": "UNKNOWN_MAP",
+      "cell_-13_13": "UNKNOWN_MAP",
+      "cell_-2_13": "UNKNOWN_MAP",
+      "cell_-1_13": "UNKNOWN_MAP",
+      "cell_-9_-8": "UNKNOWN_MAP",
+      "cell_-20_4": "UNKNOWN_MAP",
+      "cell_-9_10": "UNKNOWN_MAP",
+      "cell_2_10": "UNKNOWN_MAP",
+      "cell_-17_6": "UNKNOWN_MAP",
+      "cell_-17_15": "UNKNOWN_MAP",
+      "cell_3_-7": "UNKNOWN_MAP",
+      "cell_3_2": "UNKNOWN_MAP",
+      "cell_-24_-7": "UNKNOWN_MAP",
+      "cell_-12_-5": "UNKNOWN_MAP",
+      "cell_-16_6": "UNKNOWN_MAP",
+      "cell_-24_2": "UNKNOWN_MAP",
+      "cell_6_3": "UNKNOWN_MAP",
+      "cell_-24_11": "UNKNOWN_MAP",
+      "cell_6_12": "UNKNOWN_MAP",
+      "cell_-13_8": "UNKNOWN_MAP",
+      "cell_-21_4": "UNKNOWN_MAP",
+      "cell_-21_13": "UNKNOWN_MAP",
+      "cell_-10_13": "UNKNOWN_MAP",
+      "cell_-9_-4": "UNKNOWN_MAP",
+      "cell_2_-4": "UNKNOWN_MAP",
+      "cell_-17_-8": "UNKNOWN_MAP",
+      "cell_-9_5": "UNKNOWN_MAP",
+      "cell_2_5": "UNKNOWN_MAP",
+      "cell_-9_14": "UNKNOWN_MAP",
+      "cell_-17_10": "UNKNOWN_MAP",
+      "cell_3_-3": "UNKNOWN_MAP",
+      "cell_-5_-7": "UNKNOWN_MAP",
+      "cell_-6_15": "UNKNOWN_MAP",
+      "cell_5_15": "UNKNOWN_MAP",
+      "cell_-24_-3": "UNKNOWN_MAP",
+      "cell_6_-2": "UNKNOWN_MAP",
+      "cell_6_-1": "UNKNOWN_MAP",
+      "cell_-2_-6": "UNKNOWN_MAP",
+      "cell_-1_-6": "UNKNOWN_MAP",
+      "cell_6_7": "UNKNOWN_MAP",
+      "cell_-13_12": "UNKNOWN_MAP",
+      "cell_-2_12": "UNKNOWN_MAP",
+      "cell_-1_12": "UNKNOWN_MAP",
+      "cell_-21_8": "UNKNOWN_MAP",
+      "cell_-10_8": "UNKNOWN_MAP",
+      "cell_-9_9": "UNKNOWN_MAP",
+      "cell_2_9": "UNKNOWN_MAP",
+      "cell_-17_5": "UNKNOWN_MAP",
+      "cell_-17_14": "UNKNOWN_MAP",
+      "cell_3_-8": "UNKNOWN_MAP",
+      "cell_-5_-3": "UNKNOWN_MAP",
+      "cell_-6_10": "UNKNOWN_MAP",
+      "cell_5_10": "UNKNOWN_MAP",
+      "cell_-14_15": "UNKNOWN_MAP",
+      "cell_-3_15": "UNKNOWN_MAP",
+      "cell_6_-7": "UNKNOWN_MAP",
+      "cell_-22_11": "UNKNOWN_MAP",
+      "cell_6_2": "UNKNOWN_MAP",
+      "cell_6_11": "UNKNOWN_MAP",
+      "cell_-21_-6": "UNKNOWN_MAP",
+      "cell_-10_-6": "UNKNOWN_MAP",
+      "cell_-13_7": "UNKNOWN_MAP",
+      "cell_-21_3": "UNKNOWN_MAP",
+      "cell_-21_12": "UNKNOWN_MAP",
+      "cell_-10_12": "UNKNOWN_MAP",
+      "cell_-9_-5": "UNKNOWN_MAP",
+      "cell_2_-5": "UNKNOWN_MAP",
+      "cell_2_4": "UNKNOWN_MAP",
+      "cell_-17_9": "UNKNOWN_MAP",
+      "cell_-18_13": "UNKNOWN_MAP",
+      "cell_-7_13": "UNKNOWN_MAP",
+      "cell_-6_-4": "UNKNOWN_MAP",
+      "cell_5_-4": "UNKNOWN_MAP",
+      "cell_-14_-8": "UNKNOWN_MAP",
+      "cell_5_5": "UNKNOWN_MAP",
+      "cell_-6_14": "UNKNOWN_MAP",
+      "cell_5_14": "UNKNOWN_MAP",
+      "cell_-14_10": "UNKNOWN_MAP",
+      "cell_-22_6": "UNKNOWN_MAP",
+      "cell_-22_15": "UNKNOWN_MAP",
+      "cell_-13_-7": "UNKNOWN_MAP",
+      "cell_-2_-7": "UNKNOWN_MAP",
+      "cell_-1_-7": "UNKNOWN_MAP",
+      "cell_6_6": "UNKNOWN_MAP",
+      "cell_-13_2": "UNKNOWN_MAP",
+      "cell_-21_-2": "UNKNOWN_MAP",
+      "cell_-21_-1": "UNKNOWN_MAP",
+      "cell_-13_11": "UNKNOWN_MAP",
+      "cell_-21_7": "UNKNOWN_MAP",
+      "cell_-10_7": "UNKNOWN_MAP",
+      "cell_-17_-5": "UNKNOWN_MAP",
+      "cell_-18_8": "UNKNOWN_MAP",
+      "cell_-7_8": "UNKNOWN_MAP",
+      "cell_-15_13": "UNKNOWN_MAP",
+      "cell_5_0": "UNKNOWN_MAP",
+      "cell_-6_9": "UNKNOWN_MAP",
+      "cell_-22_-8": "UNKNOWN_MAP",
+      "cell_5_9": "UNKNOWN_MAP",
+      "cell_-22_1": "UNKNOWN_MAP",
+      "cell_-14_14": "UNKNOWN_MAP",
+      "cell_-3_14": "UNKNOWN_MAP",
+      "cell_6_-8": "UNKNOWN_MAP",
+      "cell_-22_10": "UNKNOWN_MAP",
+      "cell_-2_-3": "UNKNOWN_MAP",
+      "cell_-21_-7": "UNKNOWN_MAP",
+      "cell_-10_-7": "UNKNOWN_MAP",
+      "cell_-21_2": "UNKNOWN_MAP",
+      "cell_4_4": "UNKNOWN_MAP",
+      "cell_-11_15": "UNKNOWN_MAP",
+      "cell_4_13": "UNKNOWN_MAP",
+      "cell_1_-2": "UNKNOWN_MAP",
+      "cell_-18_-6": "UNKNOWN_MAP",
+      "cell_-7_-6": "UNKNOWN_MAP",
+      "cell_-18_3": "UNKNOWN_MAP",
+      "cell_-18_12": "UNKNOWN_MAP",
+      "cell_-7_12": "UNKNOWN_MAP",
+      "cell_-15_8": "UNKNOWN_MAP",
+      "cell_-6_-5": "UNKNOWN_MAP",
+      "cell_5_-5": "UNKNOWN_MAP",
+      "cell_5_4": "UNKNOWN_MAP",
+      "cell_5_13": "UNKNOWN_MAP",
+      "cell_-14_9": "UNKNOWN_MAP",
+      "cell_-22_5": "UNKNOWN_MAP",
+      "cell_-22_14": "UNKNOWN_MAP",
+      "cell_-13_-8": "UNKNOWN_MAP",
+      "cell_-2_-8": "UNKNOWN_MAP",
+      "cell_-1_-8": "UNKNOWN_MAP",
+      "cell_-11_10": "UNKNOWN_MAP",
+      "cell_-19_6": "UNKNOWN_MAP",
+      "cell_-19_15": "UNKNOWN_MAP",
+      "cell_1_-7": "UNKNOWN_MAP",
+      "cell_-15_-6": "UNKNOWN_MAP",
+      "cell_-18_7": "UNKNOWN_MAP",
+      "cell_-7_7": "UNKNOWN_MAP",
+      "cell_-15_3": "UNKNOWN_MAP",
+      "cell_-15_12": "UNKNOWN_MAP",
+      "cell_-14_4": "UNKNOWN_MAP",
+      "cell_-22_0": "UNKNOWN_MAP",
+      "cell_-22_9": "UNKNOWN_MAP",
+      "cell_-23_13": "UNKNOWN_MAP",
+      "cell_0_15": "UNKNOWN_MAP",
+      "cell_-8_11": "UNKNOWN_MAP",
+      "cell_-11_-4": "UNKNOWN_MAP",
+      "cell_-19_-8": "UNKNOWN_MAP",
+      "cell_4_-6": "UNKNOWN_MAP",
+      "cell_-11_5": "UNKNOWN_MAP",
+      "cell_-11_14": "UNKNOWN_MAP",
+      "cell_-19_10": "UNKNOWN_MAP",
+      "cell_4_12": "UNKNOWN_MAP",
+      "cell_1_-3": "UNKNOWN_MAP",
+      "cell_-18_-7": "UNKNOWN_MAP",
+      "cell_-7_-7": "UNKNOWN_MAP",
+      "cell_-15_-1": "UNKNOWN_MAP",
+      "cell_-18_11": "UNKNOWN_MAP",
+      "cell_-7_11": "UNKNOWN_MAP",
+      "cell_-15_7": "UNKNOWN_MAP",
+      "cell_5_-6": "UNKNOWN_MAP",
+      "cell_-4_13": "UNKNOWN_MAP",
+      "cell_7_13": "UNKNOWN_MAP",
+      "cell_0_-8": "UNKNOWN_MAP",
+      "cell_-23_8": "UNKNOWN_MAP",
+      "cell_-20_13": "UNKNOWN_MAP",
+      "cell_-8_15": "UNKNOWN_MAP",
+      "cell_-11_9": "UNKNOWN_MAP",
+      "cell_-19_5": "UNKNOWN_MAP",
+      "cell_4_7": "UNKNOWN_MAP",
+      "cell_-19_14": "UNKNOWN_MAP",
+      "cell_1_-8": "UNKNOWN_MAP",
+      "cell_-15_-7": "UNKNOWN_MAP",
+      "cell_7_8": "UNKNOWN_MAP",
+      "cell_-20_-2": "UNREACHABLE",
+      "cell_-20_-1": "UNREACHABLE",
+      "cell_-19_-1": "UNREACHABLE",
+      "cell_-19_-2": "UNREACHABLE",
+      "cell_-18_-2": "UNREACHABLE",
+      "cell_-18_-1": "UNREACHABLE",
+      "cell_-17_-3": "UNREACHABLE",
+      "cell_-16_-2": "UNREACHABLE",
+      "cell_-19_-4": "UNREACHABLE",
+      "cell_-17_-2": "UNREACHABLE",
+      "cell_-17_-1": "UNREACHABLE",
+      "cell_-18_-4": "UNREACHABLE",
+      "cell_-16_-7": "UNREACHABLE",
+      "cell_-16_-4": "UNREACHABLE",
+      "cell_-19_-3": "UNREACHABLE",
+      "cell_-18_-3": "UNREACHABLE",
+      "cell_-17_-4": "UNREACHABLE",
+      "cell_-18_0": "UNREACHABLE",
+      "cell_-16_-3": "UNREACHABLE"
+    },
+    "status_text": "\u89c6\u89c9\u5730\u56fe\u5efa\u5e93\nEligible\u533a\u57df\uff1a94\n\u5df2\u8986\u76d6\uff1a77\n\u7a7a\u95f4\u8986\u76d6\u7387\uff1a81.9%\n\n\u671d\u5411\u5145\u5206\uff1a63\n\u5f85\u8865\u671d\u5411\uff1a14\n\n\u5bfc\u822a\u5931\u8d25\uff1a2\n\u4e0d\u53ef\u8fbe\uff1a20\n\n\u72b6\u6001\uff1a\u3010\u89c6\u89c9\u5b9a\u4f4d\u5e93\u5efa\u5e93\u5b8c\u6210\u3011"
+  },
+  "stop_reason": "coverage_gate_pass",
+  "map_complete": true,
+  "resume": true
+}

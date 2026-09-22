@@ -553,8 +553,31 @@ class LostRecoveryNode(Node):
                 f' clusters={ca.get("cluster_count")}'
                 f' survivors={ca.get("survivor_count")}'
             )
+        # Same class of bug, second instance. `reason=handoff_failed` on an
+        # R1/R2 ACCEPT row says the laser gate accepted the seed and the AMCL
+        # handoff never reached READY -- but every field that says WHICH of the
+        # four gates failed (tf_ok / cov_ok / status_ok / near) lives inside the
+        # `amcl` sub-dict, which the preview above cuts off. 20 such rows exist
+        # in the corpus and not one of them is diagnosable.
+        def _g(v: Any) -> str:
+            return f'{v:.4g}' if isinstance(v, float) else str(v)
+
+        am = kwargs.get('amcl')
+        am_s = ''
+        if isinstance(am, dict) and am:
+            am_s = (
+                f' amcl[gates={am.get("gates_ok")}'
+                f' tf={am.get("tf_ok")}'
+                f' cov_xy={_g(am.get("cov_xy"))}'
+                f' cov_yaw={_g(am.get("cov_yaw"))}'
+                f' status={am.get("loc_status")}'
+                f' near={am.get("near_candidate")}'
+                f' held={_g(am.get("stable_for_sec"))}'
+                f' far_rej={am.get("far_latched_rejected")}'
+                f' conv={_g(am.get("amcl_convergence_sec"))}]'
+            )
         self.get_logger().info(
-            f'LOST cascade {code}: {head}{ca_s}'
+            f'LOST cascade {code}: {head}{ca_s}{am_s}'
             f' | {json.dumps(kwargs, default=str)[:280]}'
         )
         return row
