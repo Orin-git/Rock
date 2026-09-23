@@ -105,6 +105,12 @@ phase2d_v1:
     free_kernel_cells: 2          # static-map free neighborhood radius (cells @ map res)
     cell_sample_stride: 1         # sample every N coverage cells
     prefer_near_existing_m: 8.0   # bias goals near existing Active coverage
+    # D1 Multi-Appearance (2026-09-23): append ONE round whose only job is
+    # re-visiting already-covered slots to collect a second appearance (see
+    # `revisit_targets` / the appended-round block in build_orchestrator_node).
+    # It costs one round of session budget and only acts inside a build
+    # session; false restores the pre-D1 two-round behaviour exactly.
+    revisit_round: true
     settle_sec: 1.0
     capture_retry: 1
     nav_timeout_sec: 120.0

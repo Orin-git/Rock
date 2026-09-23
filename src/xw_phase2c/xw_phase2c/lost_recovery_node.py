@@ -202,7 +202,12 @@ class LostRecoveryNode(Node):
         self._seeds_this_session = 0
         self._sequential_fallback_seed_count = 0
 
-        # TF / scan / map only inside an active recovery — never IDLE.
+        # TF / scan / map are only USED inside an active recovery — never IDLE.
+        # The entities themselves are created once and kept for the life of the
+        # node (see `_arm_tf` / `_disarm_sensors`): destroying rclpy entities
+        # while the executor spins is what crashed this node.
+        self._tf_armed = False
+        self._sensors_armed = False
         self._tf: Optional[Buffer] = None
         self._tf_listener = None
         self._scan_sub = None
@@ -405,45 +410,65 @@ class LostRecoveryNode(Node):
         return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
 
     def _arm_tf(self) -> None:
+        # Accept payloads BEFORE creating the listener: this runs on the recovery
+        # worker thread, and the executor's other thread may deliver into it the
+        # instant it is registered. Setting the flag afterwards would silently
+        # drop the first transforms of every arm.
+        self._tf_armed = True
         if self._tf is None:
             self._tf = Buffer()
             self._tf_listener = TransformListener(self._tf, self, spin_thread=False)
 
     def _disarm_tf(self) -> None:
-        listener = self._tf_listener
-        self._tf_listener = None
-        self._tf = None
-        if listener is not None:
-            try:
-                listener.unregister()
-            except Exception:  # noqa: BLE001
-                pass
+        # NO `listener.unregister()` here. `TransformListener` owns rclpy
+        # subscriptions; unregistering them from the recovery worker's `finally`
+        # while `MultiThreadedExecutor(num_threads=2)` (`main`) is spinning is the
+        # `executors.py:399 with sub.handle` race that killed this node with
+        # `InvalidHandle: cannot use Destroyable because destruction was
+        # requested` (2026-09-22 05:10:46, exit 1, respawned 2 s later).
+        # Disarm is a state toggle: stop using the buffer, keep the entity.
+        #
+        # Keeping the buffer warm is also the fix for cold-start TF: a fresh
+        # Buffer only holds what arrives after it subscribes, so a re-armed one
+        # used to fail `can_transform` until it filled back up. A stale buffer
+        # still fails closed -- `_tf_ok` rejects on the transform's own age.
+        self._tf_armed = False
 
     def _arm_sensors(self) -> None:
         """Scan + map only while a recovery owns the incident. Never IDLE."""
+        # Accept payloads BEFORE checking the subscriptions exist: same reason as
+        # `_arm_tf`. Setting this afterwards would silently drop the first scan of
+        # every arm.
+        self._sensors_armed = True
         if self._scan_sub is None:
             self._scan_sub = self.create_subscription(LaserScan, '/scan', self._on_scan, 10)
         if self._map_sub is None:
             self._map_sub = self.create_subscription(OccupancyGrid, '/map', self._on_map, _MAP_QOS)
 
     def _disarm_sensors(self) -> None:
-        for attr in ('_scan_sub', '_map_sub'):
-            sub = getattr(self, attr)
-            if sub is not None:
-                try:
-                    self.destroy_subscription(sub)
-                except Exception:  # noqa: BLE001
-                    pass
-                setattr(self, attr, None)
+        # NO destroy_subscription here. This is called from the recovery worker's
+        # `finally`, while `MultiThreadedExecutor(num_threads=2)` (`main`) is
+        # spinning: tearing an entity down while the executor is taking from it is
+        # what killed capture_candidate_node, and this node twice before.
+        # Disarm is therefore a state toggle: stop retaining, keep the entity.
+        # The subscriptions are created once and reused, so `ros2 node info`
+        # reports exactly one `/scan` and one `/map` no matter how many episodes
+        # run. `_map` is deliberately kept (it is latched and expensive); only the
+        # derived field is dropped, so the next episode rebuilds it from cache.
+        self._sensors_armed = False
         self._scan = None
         self._scan_mono = None
         self._field = None
 
     def _on_scan(self, msg: LaserScan) -> None:
+        if not self._sensors_armed:
+            return
         self._scan = msg
         self._scan_mono = self._mono()
 
     def _on_map(self, msg: OccupancyGrid) -> None:
+        if not self._sensors_armed:
+            return
         self._map = msg
         self._field = None
 
@@ -854,7 +879,9 @@ class LostRecoveryNode(Node):
         )
 
     def _tf_ok(self, parent: str, child: str) -> bool:
-        if self._tf is None:
+        # `_tf is None` alone is no longer the disarm gate: `_disarm_tf` keeps the
+        # buffer alive (see there), so the explicit flag is what says "not now".
+        if not self._tf_armed or self._tf is None:
             return False
         try:
             if not self._tf.can_transform(parent, child, rclpy.time.Time()):

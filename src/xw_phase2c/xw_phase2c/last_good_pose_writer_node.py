@@ -25,6 +25,7 @@ from tf2_ros import Buffer, TransformException, TransformListener
 from xw_phase2c.last_good_pose import (
     LastGoodPose,
     compute_map_hash_cached,
+    is_superior_record,
     pose_delta,
     quality_from_cov,
     read_last_good_pose,
@@ -373,6 +374,35 @@ class LastGoodPoseWriter(Node):
             laser_valid_beams=beams,
             scan_stamp=scan_stamp,
         )
+        # ★ Monotonicity guard (plan 9.3-8): never let a WEAKER record overwrite a
+        # stronger one. The laser gate above says "consistent enough to be a
+        # proposal"; it says nothing about being BETTER than what is on disk.
+        # Measured 2026-09-22 05:24:21: a rescue-cascade seed at (-12.59,-1.91),
+        # convicted by the ray gate one second later, passed the 0.38 gate with
+        # 0.412 and overwrote a good record -- after which R2 scored 0.0595
+        # forever (plan 23.3). See `is_superior_record` for why the comparison is
+        # on `laser_score_at_write` and not on `quality`, and for why the map
+        # identity checks are not a threshold.
+        #
+        # A suppressed write deliberately does NOT advance `_last_write_mono`:
+        # not writing is not writing. (It has 3 sites in this file -- :85 init,
+        # :297 read, :378 set -- and no watchdog reads it.)
+        existing = read_last_good_pose(maps_dir, self._map_name)
+        if not is_superior_record(rec, existing):
+            kept = float(existing.laser_score_at_write) if existing is not None else 0.0
+            self._publish_diag({
+                'event': 'last_good_write_suppressed',
+                'reason': 'not_superior',
+                'laser_score_at_write': rec.laser_score_at_write,
+                'existing_laser_score_at_write': kept,
+                'pose': {'x': pose[0], 'y': pose[1], 'yaw': pose[2]},
+                'kept_existing': True,
+            })
+            self.get_logger().warn(
+                f'last_good_write_suppressed: not_superior '
+                f'laser={rec.laser_score_at_write:.3f} < kept={kept:.3f}'
+            )
+            return
         try:
             path = write_last_good_pose(maps_dir, rec)
             self._last_write_mono = now

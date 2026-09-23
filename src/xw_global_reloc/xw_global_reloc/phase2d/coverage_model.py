@@ -35,6 +35,11 @@ class FrameRef:
     descriptors: Any = None  # optional cached np array
     timestamp: float = 0.0
     source: str = ''
+    # ---- D1 Multi-Appearance (2026-09-23). Purely additive: defaults to None,
+    # which is what EVERY pre-D1 frame on disk carries, so old DBs load exactly
+    # as before. Frames sharing an appearance_id are views of ONE appearance;
+    # frames with None all fold into the slot's single default appearance.
+    appearance_id: Optional[str] = None
 
 
 @dataclass
@@ -42,7 +47,25 @@ class CellYawSlot:
     active_ids: List[str] = field(default_factory=list)
     candidate_ids: List[str] = field(default_factory=list)
     latest_capture: float = 0.0
-    appearance_count: int = 0  # reserved; V1 counts frames as proxy
+    # D1: DISTINCT appearances in the slot (not frames -- see
+    # CoverageModel.appearance_count / count_cell_yaw, which are two different
+    # numbers on purpose).
+    appearance_count: int = 0
+
+
+def appearance_id_for_slot(cell: str, yaw_bin: int, index: int) -> str:
+    """D1 Multi-Appearance: the canonical, recomputable appearance id.
+
+    A pure function of (slot key, index) -- no uuid, no random, no counter and
+    no config key -- so replaying the same DB reproduces identical ids.
+    """
+    return f'{cell}/{int(yaw_bin)}/{int(index)}'
+
+
+def _appearance_id_from_meta(meta: Dict[str, Any]) -> Optional[str]:
+    """D1: read meta['appearance_id']; absent or empty means the default appearance."""
+    val = meta.get('appearance_id')
+    return str(val) if val else None
 
 
 @dataclass
@@ -102,7 +125,9 @@ class CoverageModel:
             if ref.keyframe_id not in slot.candidate_ids:
                 slot.candidate_ids.append(ref.keyframe_id)
         slot.latest_capture = max(slot.latest_capture, float(ref.timestamp or 0.0))
-        slot.appearance_count = len(slot.active_ids) + len(slot.candidate_ids)
+        # D1: distinct appearances, derived from the slot's frames (was: frame
+        # count, i.e. the same expression as count_cell_yaw below).
+        slot.appearance_count = len(self._slot_appearance_ids(slot))
 
     def load_legacy_active(self, *, load_descriptors: bool = False) -> int:
         """Read-only scan of Active keyframes (prefer current_active_version)."""
@@ -149,6 +174,7 @@ class CoverageModel:
                 descriptors_path=kdir / 'descriptors.npy',
                 timestamp=float(meta.get('timestamp') or 0.0),
                 source=source_tag,
+                appearance_id=_appearance_id_from_meta(meta),
             )
             self.add_frame(ref, cache_desc=load_descriptors)
             n += 1
@@ -200,6 +226,7 @@ class CoverageModel:
                 descriptors_path=kdir / 'descriptors.npy',
                 timestamp=float(meta.get('timestamp') or 0.0),
                 source=str(meta.get('source') or 'candidate'),
+                appearance_id=_appearance_id_from_meta(meta),
             )
             self.add_frame(ref, cache_desc=load_descriptors)
             n += 1
@@ -224,7 +251,43 @@ class CoverageModel:
             return False
         return bool(slot.active_ids or slot.candidate_ids)
 
+    def _slot_appearance_ids(self, slot: CellYawSlot) -> Set[str]:
+        """D1: distinct appearance ids in a slot; '' is the default appearance.
+
+        Every frame whose meta carries no `appearance_id` (i.e. all pre-D1 data)
+        folds into that ONE default appearance.
+        """
+        out: Set[str] = set()
+        for kid in list(slot.active_ids) + list(slot.candidate_ids):
+            fr = self.frames.get(kid)
+            if fr is not None:
+                out.add(str(fr.appearance_id or ''))
+        return out
+
+    def appearance_ids(self, cell: str, yaw_bin: int) -> Set[str]:
+        """D1: distinct appearance ids recorded in a slot ('' = the default one)."""
+        slot = self.slots.get((cell, int(yaw_bin)))
+        if slot is None:
+            return set()
+        return self._slot_appearance_ids(slot)
+
+    def appearance_count(self, cell: str, yaw_bin: int) -> int:
+        """D1: number of DISTINCT appearances in a slot (D2-b's quota input).
+
+        An old, all-None slot reports 1 -- never more than its frame count --
+        which is why capping on this number can only tighten, never loosen,
+        existing behaviour.
+        """
+        return len(self.appearance_ids(cell, yaw_bin))
+
     def count_cell_yaw(self, cell: str, yaw_bin: int) -> int:
+        """FRAME count in the slot -- the existing `max_per_cell_yaw` quota.
+
+        Deliberately NOT the appearance count (which lives in appearance_count
+        right above): D2-b gates on BOTH, and conflating them here would LOOSEN
+        the quota, because an old all-None slot would report 1 instead of its
+        frame count.
+        """
         slot = self.slots.get((cell, int(yaw_bin)))
         if slot is None:
             return 0
@@ -334,6 +397,14 @@ class CoverageModel:
         yaw_possible = max(len(active_cells), 1) * self.yaw_bins
         for c in active_cells:
             yaw_occ += len(c.active_yaw_bins)
+        # D1 Multi-Appearance: a COUNT, not a threshold -- the completion gate's
+        # criteria are untouched (Visual only ever proposes, §18).
+        ma_slots = 0
+        ma_cells: Set[str] = set()
+        for (cell_id, _yb), slot in self.slots.items():
+            if len(self._slot_appearance_ids(slot)) >= 2:
+                ma_slots += 1
+                ma_cells.add(cell_id)
         return {
             'active_frames': n_active,
             'candidate_frames': n_cand,
@@ -343,6 +414,8 @@ class CoverageModel:
             'yaw_bins': self.yaw_bins,
             'active_yaw_bin_occupancy': yaw_occ,
             'active_yaw_coverage_ratio': float(yaw_occ) / float(yaw_possible) if active_cells else 0.0,
+            'multi_appearance_slots': ma_slots,
+            'multi_appearance_cells': len(ma_cells),
             'cell_size_m': self.cell_size_m,
         }
 

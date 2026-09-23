@@ -44,7 +44,7 @@ from xw_global_reloc.phase2d.build_completion import (
     update_nav_fail_history,
     load_nav_fail_history,
 )
-from xw_global_reloc.phase2d.patrol_planner import PatrolGoal, plan_patrol_goals
+from xw_global_reloc.phase2d.patrol_planner import PatrolGoal, plan_patrol_goals, revisit_targets
 from xw_global_reloc.phase2d.version_store import (
     next_visual_version,
     resolve_active_root,
@@ -87,6 +87,20 @@ STATES = (
 # CANCELLED         = legacy code, kept so old session records stay excluded
 # Goals ending this way are requeued in-session and never billed as cell failures.
 _CANCEL_NAV_CODES = frozenset({'INTERLOCK_PAUSED', 'ABORTED', 'CANCELLED'})
+
+# The complete command surface of the build topic. Anything else is refused.
+#
+# Why this exists: `payload.get('action') or 'start'` made EVERY unknown string
+# fall through to the bottom of `_on_build_cmd`, which is `start_build(...)`.
+# So a typo (`"strat"`) or a probing `{"action": "reset"}` -- an action this node
+# does not have, and deliberately will not gain: clearing `_session` would break
+# the `stop_reason`-keyed promote guard and race the worker -- silently started a
+# real build on the robot.
+#
+# `start` is still the default for a MISSING or EMPTY action: the web UI
+# (`web_server.publish_visual_db_build`) and the operator probes rely on that
+# contract. Only *present-but-unknown* is refused.
+_BUILD_ACTIONS = frozenset({'start', 'stop', 'abort', 'cancel', 'status'})
 
 # Localization states that mean "the robot currently does not know where it is".
 # These are real state, not a flicker, so an in-flight goal is cancelled on them
@@ -186,6 +200,10 @@ class BuildSession:
     stop_reason: str = ''
     map_complete: bool = False
     resume: bool = False
+    # A2 diagnostics (2026-09-22): per-round planner selection data. It lives here
+    # rather than in a side file because `to_dict()` is `asdict(self)` -- adding
+    # the field IS the whole persistence story. Read-only: nothing consumes it.
+    planner_diag: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -419,7 +437,15 @@ class VisualDbBuildOrchestrator(Node):
             payload = json.loads(msg.data or '{}')
         except json.JSONDecodeError:
             payload = {}
-        action = str(payload.get('action') or 'start').lower()
+        raw_action = payload.get('action')
+        action = str(raw_action or 'start').lower()
+        if action not in _BUILD_ACTIONS:
+            # Present-but-unknown. Do NOT fall through to start_build().
+            self.get_logger().warn(
+                f'build cmd REFUSED: unknown action={raw_action!r} '
+                f'(known: {sorted(_BUILD_ACTIONS)}); payload ignored'
+            )
+            return
         if action in ('stop', 'abort', 'cancel'):
             self.stop_build(abort=True)
             return
@@ -681,6 +707,16 @@ class VisualDbBuildOrchestrator(Node):
             else:
                 max_rounds = int(auto_cfg.get('max_planning_rounds') or patrol_cfg.get('max_planning_rounds', 2))
                 max_session = float(auto_cfg.get('max_session_sec') or patrol_cfg.get('max_session_sec', 1800))
+                # D1 revisit round (opt-in: `patrol.revisit_round`, default off).
+                # One APPENDED round whose only job is re-visiting already-covered
+                # slots for a second appearance. Its cost is paid here and is
+                # explicit: the cap below uses the incremented `max_rounds`, so the
+                # session budget grows by exactly one round's worth (live yaml:
+                # micro per-round clamp 6, session cap 40*2=80 -> 40*3=120, while
+                # two normal rounds can attempt at most 12 -- the appended round is
+                # reachable with a wide margin; see plan section for the bound).
+                if bool(patrol_cfg.get('revisit_round', False)):
+                    max_rounds += 1
                 session_goal_cap = int(patrol_cfg.get('max_total_goals', 40)) * max_rounds
             max_cand = int(self._cfg.get('candidate_limits', {}).get('max_per_build_session', 500))
             if self._session.build_kind in PRODUCTION_BUILD_MODES:
@@ -770,9 +806,42 @@ class VisualDbBuildOrchestrator(Node):
                     if _pc:
                         session_attempted_pairs.add((_pc, _pb))
 
+                # ---- D1 revisit round (the appended last round) ----------------
+                # Re-visit covered slots instead of chasing gaps. The candidate
+                # set MUST come from slots this session has NOT attempted: both
+                # the planner's own `exclude_pairs` gate and the `fresh` filter
+                # below drop a re-tried pair, so an attempted set would plan a
+                # batch that then silently vanishes. `session_attempted_pairs`
+                # above and `seen` below are built from the same source
+                # (`self._session.goals`), so "not attempted" is exactly what
+                # both gates accept -- no `exclude_pairs` change is needed.
+                revisit_round_now = (
+                    bool(patrol_cfg.get('revisit_round', False))
+                    and not is_full
+                    and round_i == max_rounds - 1
+                )
+                force_pairs: Set[Tuple[str, int]] = set()
+                if revisit_round_now:
+                    revisit_cells, force_pairs = revisit_targets(
+                        model,
+                        attempted_pairs=session_attempted_pairs,
+                        exclude_cells=exclude_cells,
+                        max_per_slot=int(
+                            self._cfg.get('candidate_limits', {}).get('max_per_cell_yaw', 5)
+                        ),
+                    )
+                    if not force_pairs:
+                        # Nothing left worth a second look (all attempted this
+                        # session, all at the per-slot cap, or all unreachable).
+                        # Not a failure: the coverage work was already done.
+                        stop_reason = 'no_revisit_targets'
+                        break
+                    only_cells = revisit_cells
+
                 # Temporary cfg override for this round's max goals
                 round_cfg = dict(self._cfg)
                 round_cfg['patrol'] = patrol_cfg
+                round_diag: Dict[str, Any] = {'round': int(round_i)}
                 goals = plan_patrol_goals(
                     model,
                     map_yaml=map_yaml,
@@ -783,7 +852,13 @@ class VisualDbBuildOrchestrator(Node):
                     only_cells=only_cells,
                     exclude_cells=exclude_cells,
                     exclude_pairs=session_attempted_pairs,
+                    force_pairs=force_pairs,
+                    diag=round_diag,
                 )
+                # A2: record what the planner saw, including the rounds that
+                # produced nothing (planner_starved is diagnosed from `goals`).
+                self._session.planner_diag.setdefault('rounds', []).append(round_diag)
+                self._session.planner_diag['last'] = round_diag
                 # TARGETED_BUILD: filter to requested cells/waypoints when provided
                 goals = self._apply_targets(goals)
                 # Session goal cap
@@ -866,7 +941,6 @@ class VisualDbBuildOrchestrator(Node):
                 # instant-abort duration, and the question it answers here ("is
                 # this clear real?") is the same question it answers there.
                 pause_since = 0.0
-                pause_reason = ''
                 pause_clear_since = 0.0
                 pause_clear_settle_sec = float(
                     patrol_cfg.get('pause_clear_settle_sec', interlock_settle_sec))
@@ -891,16 +965,11 @@ class VisualDbBuildOrchestrator(Node):
                     while not self._stop.is_set():
                         if self._should_pause():
                             pause_clear_since = 0.0
-                            phase2c_now = self._phase2c_state or self._phase2c_loc
-                            pause_reason = (
-                                f'phase2c_{phase2c_now}' if phase2c_now == 'NEED_OPERATOR'
-                                else 'goals_blocked' if self._goals_blocked
-                                else 'localization_not_ready')
                             self._set_state('PAUSED', 'waiting_localization_ready')
                             if pause_since <= 0.0:
                                 pause_since = time.time()
                             self._pause_since = pause_since
-                            self._pause_reason = pause_reason
+                            self._pause_reason = self._pause_reason_now()
                         elif pause_since <= 0.0:
                             # No episode open -- nothing to wait for.
                             break
@@ -920,8 +989,16 @@ class VisualDbBuildOrchestrator(Node):
 
                         # Episode clock. Runs on BOTH branches above.
                         if time.time() - pause_since > need_operator_grace:
+                            # ★ Recompute HERE. This block runs on the
+                            # clear-settle branch too, where `_should_pause()`
+                            # is False right now -- reading a stored reason is
+                            # what made a need_operator death look like a
+                            # pause_timeout. One value drives stop_reason, the
+                            # state and the log, so they cannot disagree.
+                            reason_now = self._pause_reason_now()
+                            self._pause_reason = reason_now
                             stop_reason = ('need_operator'
-                                           if pause_reason == 'phase2c_NEED_OPERATOR'
+                                           if reason_now == 'phase2c_NEED_OPERATOR'
                                            else 'pause_timeout')
                             # Write the terminal state HERE, before breaking out.
                             #
@@ -939,13 +1016,13 @@ class VisualDbBuildOrchestrator(Node):
                             # the guard no longer depends on that being true.
                             self._set_state(
                                 'NEED_OPERATOR'
-                                if pause_reason == 'phase2c_NEED_OPERATOR'
+                                if reason_now == 'phase2c_NEED_OPERATOR'
                                 else 'ABORTED',
                                 stop_reason,
                             )
                             self.get_logger().warn(
                                 f'pause persisted {need_operator_grace:.0f}s '
-                                f'({pause_reason}) -> ending session '
+                                f'({reason_now}) -> ending session '
                                 f'(stop_reason={stop_reason}, will not promote)')
                             break
                         # A paused session must not outlive its budget either.
@@ -960,7 +1037,6 @@ class VisualDbBuildOrchestrator(Node):
                         self._pause_since = 0.0
                         self._pause_reason = ''
                         pause_since = 0.0
-                        pause_reason = ''
                         pause_clear_since = 0.0
                     if self._stop.is_set():
                         stop_reason = 'user_stop'
@@ -1518,6 +1594,38 @@ class VisualDbBuildOrchestrator(Node):
         if st in _HARD_PAUSE_STATES:
             return f'phase2c_{st}'
         return ''
+
+    def _pause_reason_now(self) -> str:
+        """Why the session is (or was) paused, from the CURRENT inputs.
+
+        ★ Never read a stored `pause_reason` where this is what you mean.
+
+        `_should_pause()` is a level; a pause EPISODE is not. The episode clock
+        deliberately keeps running across clear samples (so flickering cannot
+        buy a fresh grace budget) and the clear-settle branch does not refresh
+        the reason -- so a stored reason is a snapshot that can be arbitrarily
+        old by the time the grace expires. Measured 2026-09-22 (s2): the last
+        PAUSED sample was `goals_blocked` at 06:52:13.897, phase2c then entered
+        NEED_OPERATOR with `goals_blocked` false, and 150.4 s later the session
+        was classified `pause_timeout` / ABORTED instead of
+        `need_operator` / NEED_OPERATOR.
+
+        The order affects only the STRING, never the verdict: both reasons are
+        in `no_promote_stop_reasons`. NEED_OPERATOR first because that is the
+        one the caller keys on; then `goals_blocked` (what the old expression
+        checked second); then the hard states, so a LOST/RECOVERING episode is
+        no longer reported as the misleading `localization_not_ready`; then the
+        fallback for "episode open, nothing blocking right now".
+        """
+        st = self._phase2c_state or self._phase2c_loc
+        if st == 'NEED_OPERATOR':
+            return f'phase2c_{st}'
+        if self._goals_blocked:
+            return 'goals_blocked'
+        hard = self._pause_hard_reason()
+        if hard:
+            return hard
+        return 'localization_not_ready'
 
     def _should_pause(self) -> bool:
         if self._pause_hard_reason():

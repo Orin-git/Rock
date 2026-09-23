@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Read-only: what is actually around the robot, separating LETHAL from UNKNOWN.
+
+fsview.py rendered `#` for `v >= 200`, which catches BOTH 254 (lethal) and 255
+(no-information) -> its legend cannot tell a wall from unmapped space. This does.
+
+Legend: X=254 lethal  I=253 inscribed  +=1..252  .=0 free  ?=255 unknown  ' '=outside
+Also prints, along the robot heading, how far the first X/I cell is.
+"""
+import math
+import sys
+
+import numpy as np
+import rclpy
+from rclpy.node import Node
+from nav2_msgs.srv import GetCostmap
+import tf2_ros
+
+VIEW = 2.0      # metres each way
+
+
+def fetch(node, srv, timeout=8.0):
+    cli = node.create_client(GetCostmap, srv)
+    if not cli.wait_for_service(timeout_sec=timeout):
+        return None
+    fut = cli.call_async(GetCostmap.Request())
+    t0 = node.get_clock().now()
+    while rclpy.ok() and not fut.done():
+        rclpy.spin_once(node, timeout_sec=0.05)
+        if (node.get_clock().now() - t0).nanoseconds * 1e-9 > timeout:
+            return None
+    return fut.result().map
+
+
+def at(cm, res, ox, oy, wx, wy):
+    ii = int((wx - ox) / res)
+    jj = int((wy - oy) / res)
+    if not (0 <= ii < cm.metadata.size_x and 0 <= jj < cm.metadata.size_y):
+        return None
+    d = np.frombuffer(bytes(cm.data), dtype=np.uint8).reshape(
+        int(cm.metadata.size_y), int(cm.metadata.size_x))
+    return int(d[jj, ii])
+
+
+def main():
+    rclpy.init()
+    n = Node('cmclassify')
+    buf = tf2_ros.Buffer()
+    tf2_ros.TransformListener(buf, n)
+    tr = None
+    for _ in range(200):
+        rclpy.spin_once(n, timeout_sec=0.05)
+        try:
+            tr = buf.lookup_transform('map', 'base_link', rclpy.time.Time())
+            break
+        except Exception:  # noqa: BLE001
+            continue
+    if tr is None:
+        print('NO map->base_link TF')
+        return
+    rx = tr.transform.translation.x
+    ry = tr.transform.translation.y
+    q = tr.transform.rotation
+    yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+    print(f'robot @ map ({rx:+.3f},{ry:+.3f}) yaw {yaw:+.4f} ({math.degrees(yaw):+.1f} deg)')
+    print(f'heading ({math.cos(yaw):+.3f},{math.sin(yaw):+.3f})   '
+          f'goal was (-0.50,+4.50) -> bearing {math.degrees(math.atan2(4.50-ry, -0.50-rx)):+.1f} deg')
+
+    for name, srv in (('local', '/local_costmap/get_costmap'),
+                      ('global', '/global_costmap/get_costmap')):
+        cm = fetch(n, srv)
+        if cm is None:
+            print(f'\n### {name}: SERVICE UNAVAILABLE')
+            continue
+        res = cm.metadata.resolution
+        ox, oy = cm.metadata.origin.position.x, cm.metadata.origin.position.y
+        d = np.frombuffer(bytes(cm.data), dtype=np.uint8).reshape(
+            int(cm.metadata.size_y), int(cm.metadata.size_x))
+        counts = {k: int((d == k).sum()) for k in (0, 253, 254, 255)}
+        mid = int(((d > 0) & (d < 253)).sum())
+        print(f'\n### {name}  frame={cm.header.frame_id} res={res:.3f} '
+              f'{d.shape[1]}x{d.shape[0]} origin=({ox:+.2f},{oy:+.2f})')
+        print(f'    free(0)={counts[0]}  1..252={mid}  inscribed(253)={counts[253]}  '
+              f'LETHAL(254)={counts[254]}  UNKNOWN(255)={counts[255]}')
+        # forward ray
+        ray = []
+        for k in range(1, 61):
+            v = at(cm, res, ox, oy, rx + k * 0.05 * math.cos(yaw),
+                   ry + k * 0.05 * math.sin(yaw))
+            ray.append(' ' if v is None else ('X' if v == 254 else
+                                              ('I' if v == 253 else
+                                               ('+' if v > 0 else '.'))))
+        print(f'    forward 0-3.00m (5cm steps): {"".join(ray)}')
+        rows = []
+        HALF = VIEW
+        COLS, ROWS = 80, 32
+        for j in range(ROWS):
+            wy = ry + HALF - (j + 0.5) * (2 * HALF / ROWS)
+            line = []
+            for i in range(COLS):
+                wx = rx - HALF + (i + 0.5) * (2 * HALF / COLS)
+                ii = int((wx - ox) / res)
+                jj = int((wy - oy) / res)
+                if not (0 <= ii < d.shape[1] and 0 <= jj < d.shape[0]):
+                    line.append(' ')
+                    continue
+                v = int(d[jj, ii])
+                line.append('X' if v == 254 else ('I' if v == 253 else
+                                                  ('+' if v > 0 else ('.' if v == 0 else '?'))))
+            rows.append(line)
+        i = int((rx - rx + HALF) / (2 * HALF / COLS))
+        j = int((ry + HALF - ry) / (2 * HALF / ROWS))
+        if 0 <= i < COLS and 0 <= j < ROWS:
+            rows[j][i] = 'R'
+        print(f'    window x[{rx-HALF:+.1f},{rx+HALF:+.1f}] y[{ry-HALF:+.1f},{ry+HALF:+.1f}]  '
+              f'(north/up = +y)')
+        for r in rows:
+            print('    ' + ''.join(r))
+    n.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

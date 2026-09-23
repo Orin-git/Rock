@@ -1,0 +1,3624 @@
+{
+  "bytes": 15239213,
+  "dst": "/ros2_ws/config/rollback_20260922/candidate.before_archive",
+  "entries": {
+    "capture_stats.json": [
+      "file",
+      347,
+      "c880721e2cdf7e234b41cc82084fe986"
+    ],
+    "index.json": [
+      "file",
+      74967,
+      "7fb536d66fc8e9827c8a8bd65944ae96"
+    ],
+    "keyframes/cand_20260910_050642_802950/descriptors.npy": [
+      "file",
+      32128,
+      "e88d48f91e20d2ddb622eb13272137a7"
+    ],
+    "keyframes/cand_20260910_050642_802950/keypoints.npy": [
+      "file",
+      28128,
+      "cedfcd41c8d07a0c85c00946ee9983f7"
+    ],
+    "keyframes/cand_20260910_050642_802950/meta.yaml": [
+      "file",
+      1270,
+      "65b9140e793f77e562e67fe912c0200e"
+    ],
+    "keyframes/cand_20260910_050642_802950/rgb.jpg": [
+      "file",
+      41767,
+      "a352aa23d961c3af67fb9e0c00220d12"
+    ],
+    "keyframes/cand_20260910_050642_802950/scan.npz": [
+      "file",
+      6004,
+      "43d23a6c3fd56bbf38f87a3d35d4607a"
+    ],
+    "keyframes/cand_20260910_050746_866747/descriptors.npy": [
+      "file",
+      32128,
+      "0582fe843ae1e1019fd1f3a9810f265c"
+    ],
+    "keyframes/cand_20260910_050746_866747/keypoints.npy": [
+      "file",
+      28128,
+      "6fc2ccd02d5c5453bc5b1368c1cf201c"
+    ],
+    "keyframes/cand_20260910_050746_866747/meta.yaml": [
+      "file",
+      1278,
+      "fc8c4b793ba751fadb3c516b70a848f9"
+    ],
+    "keyframes/cand_20260910_050746_866747/rgb.jpg": [
+      "file",
+      46428,
+      "6d8aac11506cf6617dac54fa5217c88d"
+    ],
+    "keyframes/cand_20260910_050746_866747/scan.npz": [
+      "file",
+      6066,
+      "b3aa8b84a7ac6e1908324c4e9f6c312a"
+    ],
+    "keyframes/cand_20260910_050757_877362/descriptors.npy": [
+      "file",
+      32128,
+      "60b8d9a6e71cac1fc25f3ec46e80e83a"
+    ],
+    "keyframes/cand_20260910_050757_877362/keypoints.npy": [
+      "file",
+      28128,
+      "9f95127ec7c07e10011dc160f93f837a"
+    ],
+    "keyframes/cand_20260910_050757_877362/meta.yaml": [
+      "file",
+      1288,
+      "8273117fc60e9327bb82bd58c2f6d7bb"
+    ],
+    "keyframes/cand_20260910_050757_877362/rgb.jpg": [
+      "file",
+      45124,
+      "704731885ab900ff84fdba14e168705a"
+    ],
+    "keyframes/cand_20260910_050757_877362/scan.npz": [
+      "file",
+      6069,
+      "4f5c801951c607d649df393f9899d8e2"
+    ],
+    "keyframes/cand_20260910_050818_898218/descriptors.npy": [
+      "file",
+      32128,
+      "874bc778e7f4d820a3bbbb43df0839ea"
+    ],
+    "keyframes/cand_20260910_050818_898218/keypoints.npy": [
+      "file",
+      28128,
+      "671f1fafcd6273fb60631f67970960cf"
+    ],
+    "keyframes/cand_20260910_050818_898218/meta.yaml": [
+      "file",
+      1267,
+      "8275bcb93d093a481de432a169991a5a"
+    ],
+    "keyframes/cand_20260910_050818_898218/rgb.jpg": [
+      "file",
+      46291,
+      "f23a8cfa60266a098cb980cb60c1a14f"
+    ],
+    "keyframes/cand_20260910_050818_898218/scan.npz": [
+      "file",
+      5950,
+      "4fc6929628b1c2149d770255df7f8146"
+    ],
+    "keyframes/cand_20260910_050829_909710/descriptors.npy": [
+      "file",
+      32128,
+      "46633670ac775ba3b31340de122a266d"
+    ],
+    "keyframes/cand_20260910_050829_909710/keypoints.npy": [
+      "file",
+      28128,
+      "821c3714f9bb9ceba4a6591ebe411f84"
+    ],
+    "keyframes/cand_20260910_050829_909710/meta.yaml": [
+      "file",
+      1284,
+      "65b985dfd81e001acaee8a89efd19f83"
+    ],
+    "keyframes/cand_20260910_050829_909710/rgb.jpg": [
+      "file",
+      46513,
+      "2afe7cff967eeb9a99d66fff7e0cc343"
+    ],
+    "keyframes/cand_20260910_050829_909710/scan.npz": [
+      "file",
+      6027,
+      "73183926e0237e209b65128cf3ef9de9"
+    ],
+    "keyframes/cand_20260910_050849_929251/descriptors.npy": [
+      "file",
+      32128,
+      "9df892072fb1c4953c306213d2f4438d"
+    ],
+    "keyframes/cand_20260910_050849_929251/keypoints.npy": [
+      "file",
+      28128,
+      "c12b37404b1b1e96c462d7850f01283e"
+    ],
+    "keyframes/cand_20260910_050849_929251/meta.yaml": [
+      "file",
+      1272,
+      "a35cc281086dbeda4356f863b61b612a"
+    ],
+    "keyframes/cand_20260910_050849_929251/rgb.jpg": [
+      "file",
+      36777,
+      "ce6e391eb10cee443a6d935ea0f2b08d"
+    ],
+    "keyframes/cand_20260910_050849_929251/scan.npz": [
+      "file",
+      5953,
+      "145810d097b323a02588b4aa88fe6929"
+    ],
+    "keyframes/cand_20260910_051001_001703/descriptors.npy": [
+      "file",
+      32128,
+      "c7ff662b239b00ffe87eba093c7ba158"
+    ],
+    "keyframes/cand_20260910_051001_001703/keypoints.npy": [
+      "file",
+      28128,
+      "9f38141a6d5e04e34a5452f32d59e5cf"
+    ],
+    "keyframes/cand_20260910_051001_001703/meta.yaml": [
+      "file",
+      1273,
+      "a495472d2faf9a7589705c5892ba646c"
+    ],
+    "keyframes/cand_20260910_051001_001703/rgb.jpg": [
+      "file",
+      42038,
+      "2bb00730f9d112b94c0b5374f55acdb6"
+    ],
+    "keyframes/cand_20260910_051001_001703/scan.npz": [
+      "file",
+      5958,
+      "301350d7cbd409a15cf8d45f92a1fd86"
+    ],
+    "keyframes/cand_20260910_051044_044183/descriptors.npy": [
+      "file",
+      32128,
+      "cbbeaf6824f98b8a15c271ffd79d49a2"
+    ],
+    "keyframes/cand_20260910_051044_044183/keypoints.npy": [
+      "file",
+      28128,
+      "d1e64031acc439fdc5877830d81b7ea4"
+    ],
+    "keyframes/cand_20260910_051044_044183/meta.yaml": [
+      "file",
+      1291,
+      "fd9299791a8203abeef73d7edda73931"
+    ],
+    "keyframes/cand_20260910_051044_044183/rgb.jpg": [
+      "file",
+      47416,
+      "65ffc58b553dcd7b410e15d927afd401"
+    ],
+    "keyframes/cand_20260910_051044_044183/scan.npz": [
+      "file",
+      5944,
+      "bcbcc8386496fea30d8753e64085261c"
+    ],
+    "keyframes/cand_20260910_051053_053718/descriptors.npy": [
+      "file",
+      32128,
+      "36fdbe275c348b3fb0953101d753e893"
+    ],
+    "keyframes/cand_20260910_051053_053718/keypoints.npy": [
+      "file",
+      28128,
+      "fc59c57dfb3aa3616a45d10c06df4d3d"
+    ],
+    "keyframes/cand_20260910_051053_053718/meta.yaml": [
+      "file",
+      1301,
+      "4d01df5123016a2f8bbbff62b704fbe2"
+    ],
+    "keyframes/cand_20260910_051053_053718/rgb.jpg": [
+      "file",
+      37218,
+      "0b379749acd2a4b16fdc0974e5160f33"
+    ],
+    "keyframes/cand_20260910_051053_053718/scan.npz": [
+      "file",
+      6012,
+      "8cadcb291961a924d67935200f569884"
+    ],
+    "keyframes/cand_20260910_051125_085653/descriptors.npy": [
+      "file",
+      32128,
+      "9a22ed9fb05cb4eebb6878638565d643"
+    ],
+    "keyframes/cand_20260910_051125_085653/keypoints.npy": [
+      "file",
+      28128,
+      "13a1f6290229e0e1e52e078dc8cf4065"
+    ],
+    "keyframes/cand_20260910_051125_085653/meta.yaml": [
+      "file",
+      1284,
+      "78d421fde370923533a2f47fe29da2b8"
+    ],
+    "keyframes/cand_20260910_051125_085653/rgb.jpg": [
+      "file",
+      41658,
+      "4d61767e67d52538a0f848caec7c519e"
+    ],
+    "keyframes/cand_20260910_051125_085653/scan.npz": [
+      "file",
+      5902,
+      "01a6fe73341873dffbf96c4e5bc508ac"
+    ],
+    "keyframes/cand_20260910_051134_094868/descriptors.npy": [
+      "file",
+      32128,
+      "91481fd242927f2d50bcc35e525510f6"
+    ],
+    "keyframes/cand_20260910_051134_094868/keypoints.npy": [
+      "file",
+      28128,
+      "22ca63cd984309488361ee200d278652"
+    ],
+    "keyframes/cand_20260910_051134_094868/meta.yaml": [
+      "file",
+      1291,
+      "b54c51aeec7d0cf84ef57e57f94a5814"
+    ],
+    "keyframes/cand_20260910_051134_094868/rgb.jpg": [
+      "file",
+      36330,
+      "5edf7b636494f51d0437d74d6d7d5059"
+    ],
+    "keyframes/cand_20260910_051134_094868/scan.npz": [
+      "file",
+      6047,
+      "093b564c700e26aef1dc86c148d0c03c"
+    ],
+    "keyframes/cand_20260910_051423_263381/descriptors.npy": [
+      "file",
+      32128,
+      "b7b45f93e191e5c574e2d53df41db0c6"
+    ],
+    "keyframes/cand_20260910_051423_263381/keypoints.npy": [
+      "file",
+      28128,
+      "041b9823c5e718f272ab0ea80522010e"
+    ],
+    "keyframes/cand_20260910_051423_263381/meta.yaml": [
+      "file",
+      1296,
+      "fb746f48a26b52800086b6fcf22b3cd7"
+    ],
+    "keyframes/cand_20260910_051423_263381/rgb.jpg": [
+      "file",
+      42897,
+      "8986665e3c55485df574244f01a804c7"
+    ],
+    "keyframes/cand_20260910_051423_263381/scan.npz": [
+      "file",
+      5978,
+      "7d0e78cba9bf95b3cb6e987e0fa42c4b"
+    ],
+    "keyframes/cand_20260910_064259_579454/descriptors.npy": [
+      "file",
+      32128,
+      "76e93a1a24e78453d3e1300575e01e6b"
+    ],
+    "keyframes/cand_20260910_064259_579454/keypoints.npy": [
+      "file",
+      28128,
+      "1d574cfce8dbf106eccc154ec1bdfa2f"
+    ],
+    "keyframes/cand_20260910_064259_579454/meta.yaml": [
+      "file",
+      1274,
+      "05de01d935a3a012457cc870d803e853"
+    ],
+    "keyframes/cand_20260910_064259_579454/rgb.jpg": [
+      "file",
+      49562,
+      "4e3c905b7d8c85a13ac8431aea32c0c4"
+    ],
+    "keyframes/cand_20260910_064259_579454/scan.npz": [
+      "file",
+      5936,
+      "213e8fe7a2dcfecc3e622167ad932e33"
+    ],
+    "keyframes/cand_20260910_064351_631011/descriptors.npy": [
+      "file",
+      32128,
+      "85c3b25231fb15a6115842a2f090e530"
+    ],
+    "keyframes/cand_20260910_064351_631011/keypoints.npy": [
+      "file",
+      28128,
+      "b74587fa849f4efe865bc3998ec0f8c2"
+    ],
+    "keyframes/cand_20260910_064351_631011/meta.yaml": [
+      "file",
+      1308,
+      "3069384fb1a7f1c336a3d6c1422a6b29"
+    ],
+    "keyframes/cand_20260910_064351_631011/rgb.jpg": [
+      "file",
+      38863,
+      "ce09d12eafb45c76edb9dd76c7a328bf"
+    ],
+    "keyframes/cand_20260910_064351_631011/scan.npz": [
+      "file",
+      5999,
+      "ed0d19397e1ea4c9d9caed0418932915"
+    ],
+    "keyframes/cand_20260910_064453_693023/descriptors.npy": [
+      "file",
+      32128,
+      "2aa25a70ec4d21c5d881669072038bf6"
+    ],
+    "keyframes/cand_20260910_064453_693023/keypoints.npy": [
+      "file",
+      28128,
+      "dae5bf28cc5a1774aeaf275923326f02"
+    ],
+    "keyframes/cand_20260910_064453_693023/meta.yaml": [
+      "file",
+      1284,
+      "a32d1571a1f9417e160dcf9a829e6d64"
+    ],
+    "keyframes/cand_20260910_064453_693023/rgb.jpg": [
+      "file",
+      39457,
+      "9609cfe836df94e51063ffd9c1f9517c"
+    ],
+    "keyframes/cand_20260910_064453_693023/scan.npz": [
+      "file",
+      5822,
+      "9774ba6944e3bf79c09a42fe579c8027"
+    ],
+    "keyframes/cand_20260910_064516_716843/descriptors.npy": [
+      "file",
+      32128,
+      "a6d4b5d8e0d73294e01e5effd61e3132"
+    ],
+    "keyframes/cand_20260910_064516_716843/keypoints.npy": [
+      "file",
+      28128,
+      "d4c02f180ac3883579869907069f7cc6"
+    ],
+    "keyframes/cand_20260910_064516_716843/meta.yaml": [
+      "file",
+      1304,
+      "7730b5244efa2f602fc0c2649084bfba"
+    ],
+    "keyframes/cand_20260910_064516_716843/rgb.jpg": [
+      "file",
+      42734,
+      "35128f866591dfef94cf514c55f21895"
+    ],
+    "keyframes/cand_20260910_064516_716843/scan.npz": [
+      "file",
+      6002,
+      "636f383fbd7e4d52ead8e2bea90f6a7b"
+    ],
+    "keyframes/cand_20260910_064526_726510/descriptors.npy": [
+      "file",
+      31840,
+      "1fa992633ddb3bbafd599421383e7003"
+    ],
+    "keyframes/cand_20260910_064526_726510/keypoints.npy": [
+      "file",
+      27876,
+      "15a0ce8948e4429436077e307c3d2e73"
+    ],
+    "keyframes/cand_20260910_064526_726510/meta.yaml": [
+      "file",
+      1293,
+      "cc1c40a38a358e9eae5fd30f26b98f74"
+    ],
+    "keyframes/cand_20260910_064526_726510/rgb.jpg": [
+      "file",
+      35507,
+      "1a396eb5793447a2f96bd006a16a1c9d"
+    ],
+    "keyframes/cand_20260910_064526_726510/scan.npz": [
+      "file",
+      6048,
+      "489e4c97d31adec44ec74875e4b78279"
+    ],
+    "keyframes/cand_20260910_064601_761446/descriptors.npy": [
+      "file",
+      32128,
+      "36fa426bcf46167b69378a811f64fee7"
+    ],
+    "keyframes/cand_20260910_064601_761446/keypoints.npy": [
+      "file",
+      28128,
+      "3ce8674ff51e8933cdf2cbdb94c71579"
+    ],
+    "keyframes/cand_20260910_064601_761446/meta.yaml": [
+      "file",
+      1302,
+      "7a9b9db7d6faa0f14916302155a9fd76"
+    ],
+    "keyframes/cand_20260910_064601_761446/rgb.jpg": [
+      "file",
+      44407,
+      "46069cb8fb03ec6c4f9201a67f79231c"
+    ],
+    "keyframes/cand_20260910_064601_761446/scan.npz": [
+      "file",
+      6009,
+      "4ee6d088a4cc6ec582284cd0a0fa2992"
+    ],
+    "keyframes/cand_20260910_064611_771885/descriptors.npy": [
+      "file",
+      32128,
+      "4b970002a8ea20cc024e69c89a29f647"
+    ],
+    "keyframes/cand_20260910_064611_771885/keypoints.npy": [
+      "file",
+      28128,
+      "aaf127a6563e7170cb57eb532e2704e6"
+    ],
+    "keyframes/cand_20260910_064611_771885/meta.yaml": [
+      "file",
+      1292,
+      "58d83155ecf5426c98e7d143a91ef5ba"
+    ],
+    "keyframes/cand_20260910_064611_771885/rgb.jpg": [
+      "file",
+      41101,
+      "6192e40ebaca4b432035548cee0f5786"
+    ],
+    "keyframes/cand_20260910_064611_771885/scan.npz": [
+      "file",
+      5862,
+      "2b41e20fd69675a6ffd0fe85208a368e"
+    ],
+    "keyframes/cand_20260910_075811_091528/descriptors.npy": [
+      "file",
+      32128,
+      "31675d7b6ef337f5ff3930b364f14eb2"
+    ],
+    "keyframes/cand_20260910_075811_091528/keypoints.npy": [
+      "file",
+      28128,
+      "e343240eab9305be07b40c50392c35e6"
+    ],
+    "keyframes/cand_20260910_075811_091528/meta.yaml": [
+      "file",
+      1272,
+      "75497049cce7660f5f127bc4e47b7912"
+    ],
+    "keyframes/cand_20260910_075811_091528/rgb.jpg": [
+      "file",
+      43500,
+      "09c3d08cd8e644ed4e7f58d7f421104c"
+    ],
+    "keyframes/cand_20260910_075811_091528/scan.npz": [
+      "file",
+      5761,
+      "35c7779ee0d7d38a7344001cb95e157f"
+    ],
+    "keyframes/cand_20260910_075820_100482/descriptors.npy": [
+      "file",
+      32128,
+      "d61b6aee796ed73eff78f2a16f9bc43d"
+    ],
+    "keyframes/cand_20260910_075820_100482/keypoints.npy": [
+      "file",
+      28128,
+      "a55d37cec739cf73a5b0c83f1cf3eee4"
+    ],
+    "keyframes/cand_20260910_075820_100482/meta.yaml": [
+      "file",
+      1297,
+      "7e65a90058e69799614474b571eb413e"
+    ],
+    "keyframes/cand_20260910_075820_100482/rgb.jpg": [
+      "file",
+      41752,
+      "d758da80ded8605839821fc926df9448"
+    ],
+    "keyframes/cand_20260910_075820_100482/scan.npz": [
+      "file",
+      5802,
+      "87be4cd3f6c6ab1924f875eccf10bf61"
+    ],
+    "keyframes/cand_20260910_075839_119037/descriptors.npy": [
+      "file",
+      32128,
+      "6f6d227de9b156a016ef495c93982fad"
+    ],
+    "keyframes/cand_20260910_075839_119037/keypoints.npy": [
+      "file",
+      28128,
+      "6568cb18eb7bed5833ce31d2bda91cee"
+    ],
+    "keyframes/cand_20260910_075839_119037/meta.yaml": [
+      "file",
+      1258,
+      "9fc7d402bf8d520fa322186146b86c8a"
+    ],
+    "keyframes/cand_20260910_075839_119037/rgb.jpg": [
+      "file",
+      42463,
+      "7dc2aa66a9b08f4aab2b36c4f57a08dc"
+    ],
+    "keyframes/cand_20260910_075839_119037/scan.npz": [
+      "file",
+      5668,
+      "203f8d34a241eeb1fc482b248842d90b"
+    ],
+    "keyframes/cand_20260910_075847_127961/descriptors.npy": [
+      "file",
+      31616,
+      "3c701496e256de21ecaa22af2f1afae1"
+    ],
+    "keyframes/cand_20260910_075847_127961/keypoints.npy": [
+      "file",
+      27680,
+      "9d9f61d598757247410a6737be970ea1"
+    ],
+    "keyframes/cand_20260910_075847_127961/meta.yaml": [
+      "file",
+      1284,
+      "2d4b747037169d82f51ae7044a624d4b"
+    ],
+    "keyframes/cand_20260910_075847_127961/rgb.jpg": [
+      "file",
+      35999,
+      "e17cfcb3b0c2a6948f5d1126c0b4f719"
+    ],
+    "keyframes/cand_20260910_075847_127961/scan.npz": [
+      "file",
+      5807,
+      "409f83c2cabd951204eb7efdd1b7bf54"
+    ],
+    "keyframes/cand_20260910_075902_142698/descriptors.npy": [
+      "file",
+      32128,
+      "dd782a325bd75e4c144dd60a1dc2df6e"
+    ],
+    "keyframes/cand_20260910_075902_142698/keypoints.npy": [
+      "file",
+      28128,
+      "22948bfebf7464fb3af6350dde93a480"
+    ],
+    "keyframes/cand_20260910_075902_142698/meta.yaml": [
+      "file",
+      1291,
+      "2732304ef9f87ead618dea3972538efb"
+    ],
+    "keyframes/cand_20260910_075902_142698/rgb.jpg": [
+      "file",
+      41414,
+      "8bf727e45687f917ecdca6fb9a360da1"
+    ],
+    "keyframes/cand_20260910_075902_142698/scan.npz": [
+      "file",
+      5527,
+      "6ce4d199defda0bc8b9b6501879ca4a4"
+    ],
+    "keyframes/cand_20260910_080005_205948/descriptors.npy": [
+      "file",
+      32128,
+      "129c15bf3c9d246ee8ebc9d74addc0a7"
+    ],
+    "keyframes/cand_20260910_080005_205948/keypoints.npy": [
+      "file",
+      28128,
+      "b5f3cb05ebf44a26ae1c42a87a37d3fa"
+    ],
+    "keyframes/cand_20260910_080005_205948/meta.yaml": [
+      "file",
+      1272,
+      "09c7f93b2edf53e7426d1d5484a278f8"
+    ],
+    "keyframes/cand_20260910_080005_205948/rgb.jpg": [
+      "file",
+      40828,
+      "88ca9860f9bdb7c4383b3ad77ec44a0b"
+    ],
+    "keyframes/cand_20260910_080005_205948/scan.npz": [
+      "file",
+      5896,
+      "0b0cdce7968e84a27f4e441900cbeef7"
+    ],
+    "keyframes/cand_20260910_080022_222434/descriptors.npy": [
+      "file",
+      32128,
+      "2c3cb2d9c18fc99807254966a6b04a2c"
+    ],
+    "keyframes/cand_20260910_080022_222434/keypoints.npy": [
+      "file",
+      28128,
+      "3b387ecf670564547b02cd21b266b57f"
+    ],
+    "keyframes/cand_20260910_080022_222434/meta.yaml": [
+      "file",
+      1304,
+      "34bee8e4d8e8d3a1384bb8ecd1b1b5b3"
+    ],
+    "keyframes/cand_20260910_080022_222434/rgb.jpg": [
+      "file",
+      39562,
+      "e44c09d14a4149858615704c5b095f43"
+    ],
+    "keyframes/cand_20260910_080022_222434/scan.npz": [
+      "file",
+      5830,
+      "9a8a06fd8df5cc85214acaa8c8bdbc8b"
+    ],
+    "keyframes/cand_20260910_080032_232872/descriptors.npy": [
+      "file",
+      32128,
+      "b1c850c22794d5452f4688834ae8a940"
+    ],
+    "keyframes/cand_20260910_080032_232872/keypoints.npy": [
+      "file",
+      28128,
+      "9532b39b661baecb34f8dd1d49243cdb"
+    ],
+    "keyframes/cand_20260910_080032_232872/meta.yaml": [
+      "file",
+      1299,
+      "4fb4ef564fc3b0d356b89bb2c334cb67"
+    ],
+    "keyframes/cand_20260910_080032_232872/rgb.jpg": [
+      "file",
+      38881,
+      "4260409d26df6993e786b49eac75726c"
+    ],
+    "keyframes/cand_20260910_080032_232872/scan.npz": [
+      "file",
+      5797,
+      "547d7dda4677402aaefb396dcc942768"
+    ],
+    "keyframes/cand_20260910_080103_263082/descriptors.npy": [
+      "file",
+      31136,
+      "932fe64f1b5d44762b8898375f9d271c"
+    ],
+    "keyframes/cand_20260910_080103_263082/keypoints.npy": [
+      "file",
+      27260,
+      "1a77ce74f42dbe2f347e026bc3c6b89b"
+    ],
+    "keyframes/cand_20260910_080103_263082/meta.yaml": [
+      "file",
+      1257,
+      "aea8e746f20798cb4d86c72d7dcef0f6"
+    ],
+    "keyframes/cand_20260910_080103_263082/rgb.jpg": [
+      "file",
+      31744,
+      "1197d819d1997e45f001f9493542cb45"
+    ],
+    "keyframes/cand_20260910_080103_263082/scan.npz": [
+      "file",
+      5904,
+      "0591f9ff59fdf61d5fc32a015cc90aac"
+    ],
+    "keyframes/cand_20260910_080114_274486/descriptors.npy": [
+      "file",
+      32128,
+      "1e29cce1cf09f5517e214800ae27d84a"
+    ],
+    "keyframes/cand_20260910_080114_274486/keypoints.npy": [
+      "file",
+      28128,
+      "10c65982f9470778358e85b53aa8379c"
+    ],
+    "keyframes/cand_20260910_080114_274486/meta.yaml": [
+      "file",
+      1292,
+      "cd03421189cc4a989b8801a151fc49aa"
+    ],
+    "keyframes/cand_20260910_080114_274486/rgb.jpg": [
+      "file",
+      44286,
+      "f9ba298a2b2f063fed806bc13a4d3313"
+    ],
+    "keyframes/cand_20260910_080114_274486/scan.npz": [
+      "file",
+      5905,
+      "5e6d93421dd529f2d0039166f19e4a65"
+    ],
+    "keyframes/cand_20260910_080937_777906/descriptors.npy": [
+      "file",
+      32128,
+      "24ffd3372edf1c7ab4bc98167b5a4907"
+    ],
+    "keyframes/cand_20260910_080937_777906/keypoints.npy": [
+      "file",
+      28128,
+      "8d15c72376c5733afd86d8b66ef738b7"
+    ],
+    "keyframes/cand_20260910_080937_777906/meta.yaml": [
+      "file",
+      1279,
+      "48e95224f5cdeebc127ef9e25f279ab3"
+    ],
+    "keyframes/cand_20260910_080937_777906/rgb.jpg": [
+      "file",
+      48260,
+      "44fdf64125082ade4fe3a9cbe70ae687"
+    ],
+    "keyframes/cand_20260910_080937_777906/scan.npz": [
+      "file",
+      5783,
+      "9b8625562a9e098b4f75988a21d7311e"
+    ],
+    "keyframes/cand_20260910_081121_881518/descriptors.npy": [
+      "file",
+      32128,
+      "31abd502bda06da959e9447422667ff2"
+    ],
+    "keyframes/cand_20260910_081121_881518/keypoints.npy": [
+      "file",
+      28128,
+      "f32a289e46955540dff4cd29776107cc"
+    ],
+    "keyframes/cand_20260910_081121_881518/meta.yaml": [
+      "file",
+      1291,
+      "2be100e69a2f1c555b4b8ea93e7028b6"
+    ],
+    "keyframes/cand_20260910_081121_881518/rgb.jpg": [
+      "file",
+      34116,
+      "f0491d9d3ab227f0e7cb90dd817cb44a"
+    ],
+    "keyframes/cand_20260910_081121_881518/scan.npz": [
+      "file",
+      5671,
+      "20eec6f616b2300f6480b61f005c91aa"
+    ],
+    "keyframes/cand_20260910_081132_892425/descriptors.npy": [
+      "file",
+      32128,
+      "02453bf8707eb9ffd168563677ff8b31"
+    ],
+    "keyframes/cand_20260910_081132_892425/keypoints.npy": [
+      "file",
+      28128,
+      "ade1ea25d2d196d866dd4446d9a66f6a"
+    ],
+    "keyframes/cand_20260910_081132_892425/meta.yaml": [
+      "file",
+      1298,
+      "689184cc5b230230f154e3b12f881208"
+    ],
+    "keyframes/cand_20260910_081132_892425/rgb.jpg": [
+      "file",
+      43072,
+      "8658eaaaf31b2c521298ba2c3ac58e48"
+    ],
+    "keyframes/cand_20260910_081132_892425/scan.npz": [
+      "file",
+      5651,
+      "d551237a4eaa9341eda0d360a6c3d9be"
+    ],
+    "keyframes/cand_20260910_081150_910799/descriptors.npy": [
+      "file",
+      28480,
+      "0ac2e5f81a6f6adcd32e5f80eb710374"
+    ],
+    "keyframes/cand_20260910_081150_910799/keypoints.npy": [
+      "file",
+      24936,
+      "fc267a28ba6a971d1a2b173907569750"
+    ],
+    "keyframes/cand_20260910_081150_910799/meta.yaml": [
+      "file",
+      1290,
+      "b2f47b7ce4d73e38932bad088e3b1e4f"
+    ],
+    "keyframes/cand_20260910_081150_910799/rgb.jpg": [
+      "file",
+      34215,
+      "d500dafc37e2bd1f9d667e5f569f04cc"
+    ],
+    "keyframes/cand_20260910_081150_910799/scan.npz": [
+      "file",
+      5759,
+      "e90ffe28790d26f0840b96670529cc1a"
+    ],
+    "keyframes/cand_20260910_081201_921046/descriptors.npy": [
+      "file",
+      32128,
+      "d0914563cf5cf11e92fd54c5bcad6b99"
+    ],
+    "keyframes/cand_20260910_081201_921046/keypoints.npy": [
+      "file",
+      28128,
+      "8c3aeefc472d3917b4ff2c2df1ef458b"
+    ],
+    "keyframes/cand_20260910_081201_921046/meta.yaml": [
+      "file",
+      1293,
+      "5359c683901959bb455956631114a5c3"
+    ],
+    "keyframes/cand_20260910_081201_921046/rgb.jpg": [
+      "file",
+      43319,
+      "2f8aac1d5e0e8781dca0a1e84985c160"
+    ],
+    "keyframes/cand_20260910_081201_921046/scan.npz": [
+      "file",
+      5763,
+      "3882504e9376fb6fe236e3d324d9f09d"
+    ],
+    "keyframes/cand_20260910_081353_033238/descriptors.npy": [
+      "file",
+      32128,
+      "cb32b4bfa3710aced5c939a05d7a3cb9"
+    ],
+    "keyframes/cand_20260910_081353_033238/keypoints.npy": [
+      "file",
+      28128,
+      "e3398f1b6bc1769385fd01847641b116"
+    ],
+    "keyframes/cand_20260910_081353_033238/meta.yaml": [
+      "file",
+      1263,
+      "fb23b8f9fbe96a040493c9dd8135e3c0"
+    ],
+    "keyframes/cand_20260910_081353_033238/rgb.jpg": [
+      "file",
+      35306,
+      "b0451879506adad7f7a88598e01de3d4"
+    ],
+    "keyframes/cand_20260910_081353_033238/scan.npz": [
+      "file",
+      5922,
+      "274a7e3b5fce659974fd36f7d0fcc675"
+    ],
+    "keyframes/cand_20260910_081427_067918/descriptors.npy": [
+      "file",
+      18304,
+      "f0a06e9ce3961e47321718207c1d8720"
+    ],
+    "keyframes/cand_20260910_081427_067918/keypoints.npy": [
+      "file",
+      16032,
+      "8270a992e8f9b94e3f5761f1c1a15ec0"
+    ],
+    "keyframes/cand_20260910_081427_067918/meta.yaml": [
+      "file",
+      1270,
+      "aafe6fc492fee0a315209df836c3cef6"
+    ],
+    "keyframes/cand_20260910_081427_067918/rgb.jpg": [
+      "file",
+      21114,
+      "c344c5b67d593d2398322cb90577fcaa"
+    ],
+    "keyframes/cand_20260910_081427_067918/scan.npz": [
+      "file",
+      5731,
+      "e570abd390fb95bf01728ba7ca9837ce"
+    ],
+    "keyframes/cand_20260910_081446_086742/descriptors.npy": [
+      "file",
+      32128,
+      "3f57f109a4649f160f79f0569b4d3cb7"
+    ],
+    "keyframes/cand_20260910_081446_086742/keypoints.npy": [
+      "file",
+      28128,
+      "6a787554281e71674f0afb918ab47a34"
+    ],
+    "keyframes/cand_20260910_081446_086742/meta.yaml": [
+      "file",
+      1268,
+      "ede9914619bcc7d7c7e630275ba4b2f1"
+    ],
+    "keyframes/cand_20260910_081446_086742/rgb.jpg": [
+      "file",
+      47123,
+      "111ef2023776f041b29cc29d93802ab1"
+    ],
+    "keyframes/cand_20260910_081446_086742/scan.npz": [
+      "file",
+      5660,
+      "89267691f9aad66ef4f806a7ffbc56a4"
+    ],
+    "keyframes/cand_20260910_081457_097548/descriptors.npy": [
+      "file",
+      20320,
+      "9449d81f45232f570d41bf4e3714c61a"
+    ],
+    "keyframes/cand_20260910_081457_097548/keypoints.npy": [
+      "file",
+      17796,
+      "c54e5aa2c2f1b03762f491b6dafc835c"
+    ],
+    "keyframes/cand_20260910_081457_097548/meta.yaml": [
+      "file",
+      1307,
+      "578f5e7accf8aa763e55e29cd30573c6"
+    ],
+    "keyframes/cand_20260910_081457_097548/rgb.jpg": [
+      "file",
+      20425,
+      "23fb544ce036f0f830bc093a021cd3cd"
+    ],
+    "keyframes/cand_20260910_081457_097548/scan.npz": [
+      "file",
+      6057,
+      "e57e76c4e75a10dfbac8c24814e3b2a2"
+    ],
+    "keyframes/cand_20260910_081849_329366/descriptors.npy": [
+      "file",
+      32128,
+      "240d63c057fe4cfee0ec6b08a9d5ba93"
+    ],
+    "keyframes/cand_20260910_081849_329366/keypoints.npy": [
+      "file",
+      28128,
+      "2ab9b28e8cc9337ada086ffc903983ee"
+    ],
+    "keyframes/cand_20260910_081849_329366/meta.yaml": [
+      "file",
+      1284,
+      "6ef67f04a393f0d5ef0c32d83bed847a"
+    ],
+    "keyframes/cand_20260910_081849_329366/rgb.jpg": [
+      "file",
+      36824,
+      "42014e13cd0db9ff1a2f82a140f13e55"
+    ],
+    "keyframes/cand_20260910_081849_329366/scan.npz": [
+      "file",
+      5735,
+      "eb793849bc4870315121fb3658c358ec"
+    ],
+    "keyframes/cand_20260910_082032_432429/descriptors.npy": [
+      "file",
+      32128,
+      "adda2870dc51471f069cc3b69e020600"
+    ],
+    "keyframes/cand_20260910_082032_432429/keypoints.npy": [
+      "file",
+      28128,
+      "c70e25eab9a4cb52870a3935f8aacec5"
+    ],
+    "keyframes/cand_20260910_082032_432429/meta.yaml": [
+      "file",
+      1288,
+      "32e3e205b614d5b7da7633d7f85abeb2"
+    ],
+    "keyframes/cand_20260910_082032_432429/rgb.jpg": [
+      "file",
+      49385,
+      "211880b6adb5b2b97c8c075dce2da7d0"
+    ],
+    "keyframes/cand_20260910_082032_432429/scan.npz": [
+      "file",
+      5516,
+      "3501a0ce2732c005ff9e013093ac22c8"
+    ],
+    "keyframes/cand_20260910_082041_441982/descriptors.npy": [
+      "file",
+      32128,
+      "9dbbbe8a7755980e0e7e5027728af60d"
+    ],
+    "keyframes/cand_20260910_082041_441982/keypoints.npy": [
+      "file",
+      28128,
+      "0f7992e6de5778834acaca63f38efe7f"
+    ],
+    "keyframes/cand_20260910_082041_441982/meta.yaml": [
+      "file",
+      1284,
+      "6033b41403dee439d557e41b3f157680"
+    ],
+    "keyframes/cand_20260910_082041_441982/rgb.jpg": [
+      "file",
+      39607,
+      "47022b531522bfe1c03973ec0ad830e7"
+    ],
+    "keyframes/cand_20260910_082041_441982/scan.npz": [
+      "file",
+      5634,
+      "349cd045b99053b7fcd12126286277a2"
+    ],
+    "keyframes/cand_20260910_082524_724448/descriptors.npy": [
+      "file",
+      32128,
+      "bf27fc117f81a4c45c500124dfd96848"
+    ],
+    "keyframes/cand_20260910_082524_724448/keypoints.npy": [
+      "file",
+      28128,
+      "7faca9f6287ea50043f5da3febc21b32"
+    ],
+    "keyframes/cand_20260910_082524_724448/meta.yaml": [
+      "file",
+      1294,
+      "d7d63d850a0134962f73a5ab89d1c6ae"
+    ],
+    "keyframes/cand_20260910_082524_724448/rgb.jpg": [
+      "file",
+      45293,
+      "c3fcebda10fc2b701c9ed5323912d922"
+    ],
+    "keyframes/cand_20260910_082524_724448/scan.npz": [
+      "file",
+      5957,
+      "032b37803e02ee6597200b38b1f97132"
+    ],
+    "keyframes/cand_20260911_020850_530742/descriptors.npy": [
+      "file",
+      32128,
+      "9a41840e51e48f6319bbcff782f73d29"
+    ],
+    "keyframes/cand_20260911_020850_530742/keypoints.npy": [
+      "file",
+      28128,
+      "c35aaff505ae17a1eba44d83384d5da6"
+    ],
+    "keyframes/cand_20260911_020850_530742/meta.yaml": [
+      "file",
+      1216,
+      "4a8bafb9cd3084f6443e29fed4cffc5f"
+    ],
+    "keyframes/cand_20260911_020850_530742/rgb.jpg": [
+      "file",
+      48092,
+      "6e65f02fd16fc7e747ad367f812ef030"
+    ],
+    "keyframes/cand_20260911_020850_530742/scan.npz": [
+      "file",
+      5797,
+      "10be9abaf6e1748f33e2213d903e6f8d"
+    ],
+    "keyframes/cand_20260911_020901_541705/descriptors.npy": [
+      "file",
+      29216,
+      "23307920c7e7bd96681936857e091b4f"
+    ],
+    "keyframes/cand_20260911_020901_541705/keypoints.npy": [
+      "file",
+      25580,
+      "c6de4dc93ce795ba60f035b5d815e209"
+    ],
+    "keyframes/cand_20260911_020901_541705/meta.yaml": [
+      "file",
+      1227,
+      "243ff77c06c0116200052d1c3351a1b4"
+    ],
+    "keyframes/cand_20260911_020901_541705/rgb.jpg": [
+      "file",
+      27990,
+      "6e8a35da29b568f1cfca1786d4b2fbb4"
+    ],
+    "keyframes/cand_20260911_020901_541705/scan.npz": [
+      "file",
+      5793,
+      "c699754e01d0c13c6502562f5c42eca4"
+    ],
+    "keyframes/cand_20260911_021101_661933/descriptors.npy": [
+      "file",
+      32128,
+      "8e75c357ba9deda7a49e5a0741933581"
+    ],
+    "keyframes/cand_20260911_021101_661933/keypoints.npy": [
+      "file",
+      28128,
+      "4476eabb179d66617986924b499cbd1d"
+    ],
+    "keyframes/cand_20260911_021101_661933/meta.yaml": [
+      "file",
+      1227,
+      "8d88a926f8c31d96c24e2c05466d0bb2"
+    ],
+    "keyframes/cand_20260911_021101_661933/rgb.jpg": [
+      "file",
+      40675,
+      "b6284a63ffb32cd3946adb76fc36a8fc"
+    ],
+    "keyframes/cand_20260911_021101_661933/scan.npz": [
+      "file",
+      5675,
+      "ee646c98efaa01525e351a4757e6243e"
+    ],
+    "keyframes/cand_20260911_021113_673696/descriptors.npy": [
+      "file",
+      30656,
+      "102a0719f3af64f817cc996a22315d14"
+    ],
+    "keyframes/cand_20260911_021113_673696/keypoints.npy": [
+      "file",
+      26840,
+      "c74eafa7917768bb97ab46a8366d0b7e"
+    ],
+    "keyframes/cand_20260911_021113_673696/meta.yaml": [
+      "file",
+      1231,
+      "2171147dc77eae6f75ec6e2468041c03"
+    ],
+    "keyframes/cand_20260911_021113_673696/rgb.jpg": [
+      "file",
+      30767,
+      "2fffb849092101c40fe5ebe629610490"
+    ],
+    "keyframes/cand_20260911_021113_673696/scan.npz": [
+      "file",
+      5768,
+      "c5837b1ec6bbd80957bb873268f71d8d"
+    ],
+    "keyframes/cand_20260911_021203_723763/descriptors.npy": [
+      "file",
+      30720,
+      "dec8ac0db363913dbe8f891a259b0101"
+    ],
+    "keyframes/cand_20260911_021203_723763/keypoints.npy": [
+      "file",
+      26896,
+      "54c862b3da49b08b25c9499e13d4407b"
+    ],
+    "keyframes/cand_20260911_021203_723763/meta.yaml": [
+      "file",
+      1213,
+      "6f907dd6a1560bb512362a91b1deb2a2"
+    ],
+    "keyframes/cand_20260911_021203_723763/rgb.jpg": [
+      "file",
+      37425,
+      "4124b82b678a6f65639554f637ed4262"
+    ],
+    "keyframes/cand_20260911_021203_723763/scan.npz": [
+      "file",
+      5800,
+      "a7adf252a0b61cbbdc26e02f015e3a2e"
+    ],
+    "keyframes/cand_20260911_021344_824731/descriptors.npy": [
+      "file",
+      32128,
+      "4b1377f3cb0fded1ae762068efc405f8"
+    ],
+    "keyframes/cand_20260911_021344_824731/keypoints.npy": [
+      "file",
+      28128,
+      "181e78df509c786b487fb82466bb0217"
+    ],
+    "keyframes/cand_20260911_021344_824731/meta.yaml": [
+      "file",
+      1223,
+      "81da8cf9f3bf10457dfe1ecdbcc6539f"
+    ],
+    "keyframes/cand_20260911_021344_824731/rgb.jpg": [
+      "file",
+      44707,
+      "a6d763a994a7f27e9b539b6e0bac218e"
+    ],
+    "keyframes/cand_20260911_021344_824731/scan.npz": [
+      "file",
+      5766,
+      "cb2bacadeca19ac8985493c119c84ef2"
+    ],
+    "keyframes/cand_20260911_021355_835058/descriptors.npy": [
+      "file",
+      31712,
+      "14213e420aac2dddc7bcb8c06588d739"
+    ],
+    "keyframes/cand_20260911_021355_835058/keypoints.npy": [
+      "file",
+      27764,
+      "a319ebcc0f4682362aa949b2f33effbe"
+    ],
+    "keyframes/cand_20260911_021355_835058/meta.yaml": [
+      "file",
+      1236,
+      "9dbb330e2fc9386233f0e2c6e30eaf92"
+    ],
+    "keyframes/cand_20260911_021355_835058/rgb.jpg": [
+      "file",
+      26487,
+      "cefd8c59360047e21881b4bedb95c786"
+    ],
+    "keyframes/cand_20260911_021355_835058/scan.npz": [
+      "file",
+      5818,
+      "0a318f4a84124da69670834719286856"
+    ],
+    "keyframes/cand_20260911_021435_875428/descriptors.npy": [
+      "file",
+      23904,
+      "c7827bfe523b60eec6ded5826c4d0fa2"
+    ],
+    "keyframes/cand_20260911_021435_875428/keypoints.npy": [
+      "file",
+      20932,
+      "c7b65a0c299e3835df683508818947ff"
+    ],
+    "keyframes/cand_20260911_021435_875428/meta.yaml": [
+      "file",
+      1209,
+      "74bf355e69cd23c2b96512032b4c155f"
+    ],
+    "keyframes/cand_20260911_021435_875428/rgb.jpg": [
+      "file",
+      28792,
+      "9485c53e83dc8995d330b05fa7137140"
+    ],
+    "keyframes/cand_20260911_021435_875428/scan.npz": [
+      "file",
+      5797,
+      "2a35b1bef20749a889a31f1aa6dc36a4"
+    ],
+    "keyframes/cand_20260911_021445_885299/descriptors.npy": [
+      "file",
+      21664,
+      "c209cb935ed2a72404cb76f69c1f66d4"
+    ],
+    "keyframes/cand_20260911_021445_885299/keypoints.npy": [
+      "file",
+      18972,
+      "ec38e1805e002a58185f63927b75d7d5"
+    ],
+    "keyframes/cand_20260911_021445_885299/meta.yaml": [
+      "file",
+      1223,
+      "915ca9a5e892fd380738b62c9a5ae657"
+    ],
+    "keyframes/cand_20260911_021445_885299/rgb.jpg": [
+      "file",
+      21125,
+      "37724c961faf823d8b7eaf67ba25fad3"
+    ],
+    "keyframes/cand_20260911_021445_885299/scan.npz": [
+      "file",
+      5811,
+      "167e6406f8eb001693490fef2ff27725"
+    ],
+    "keyframes/cand_20260911_021648_008452/descriptors.npy": [
+      "file",
+      32128,
+      "01c1c8d31a4d1e13c60228047a7a6004"
+    ],
+    "keyframes/cand_20260911_021648_008452/keypoints.npy": [
+      "file",
+      28128,
+      "a42a2770f08aef71fae11bbdb2e90be6"
+    ],
+    "keyframes/cand_20260911_021648_008452/meta.yaml": [
+      "file",
+      1240,
+      "0f91ff2a240a9a05b4032c2f891af6c3"
+    ],
+    "keyframes/cand_20260911_021648_008452/rgb.jpg": [
+      "file",
+      48489,
+      "dcb5c31f1e6c12b05bf55a2b0875e5c5"
+    ],
+    "keyframes/cand_20260911_021648_008452/scan.npz": [
+      "file",
+      5854,
+      "f524fc036ae337381a269adc439a1b3e"
+    ],
+    "keyframes/cand_20260911_021733_053594/descriptors.npy": [
+      "file",
+      32128,
+      "6591bc379a33f5d984bb6fe645767a69"
+    ],
+    "keyframes/cand_20260911_021733_053594/keypoints.npy": [
+      "file",
+      28128,
+      "90833e9ccdcaae4360962ef5d1a71331"
+    ],
+    "keyframes/cand_20260911_021733_053594/meta.yaml": [
+      "file",
+      1246,
+      "a201a68b329ba43cc8c8d0d2f565c84c"
+    ],
+    "keyframes/cand_20260911_021733_053594/rgb.jpg": [
+      "file",
+      44280,
+      "44aa750ff8ae9094623a1a8d111737bf"
+    ],
+    "keyframes/cand_20260911_021733_053594/scan.npz": [
+      "file",
+      6076,
+      "36d812f45825ce88ec187fe64002c319"
+    ],
+    "keyframes/cand_20260911_021811_091190/descriptors.npy": [
+      "file",
+      26240,
+      "b28a784390cf4a5b9e93bd637e9ff12c"
+    ],
+    "keyframes/cand_20260911_021811_091190/keypoints.npy": [
+      "file",
+      22976,
+      "20aaeb483af7881b06f3192e79d7fd1e"
+    ],
+    "keyframes/cand_20260911_021811_091190/meta.yaml": [
+      "file",
+      1224,
+      "fc4670623c3a5b165512666dad5b44ba"
+    ],
+    "keyframes/cand_20260911_021811_091190/rgb.jpg": [
+      "file",
+      24780,
+      "ecc549e26920a3b622dc86710c45bb57"
+    ],
+    "keyframes/cand_20260911_021811_091190/scan.npz": [
+      "file",
+      5502,
+      "0add668bc2a453ca8b59cc20181fd754"
+    ],
+    "keyframes/cand_20260911_021919_159216/descriptors.npy": [
+      "file",
+      32128,
+      "23cc0e4da6589629d30db1a43048612a"
+    ],
+    "keyframes/cand_20260911_021919_159216/keypoints.npy": [
+      "file",
+      28128,
+      "ba75cb0939f57ab64bbf22b0ae1c21d1"
+    ],
+    "keyframes/cand_20260911_021919_159216/meta.yaml": [
+      "file",
+      1222,
+      "320969df4acd12f906c02a159d9f25a2"
+    ],
+    "keyframes/cand_20260911_021919_159216/rgb.jpg": [
+      "file",
+      46751,
+      "6bc190f7d09841c8e4ff60b170ce5c2a"
+    ],
+    "keyframes/cand_20260911_021919_159216/scan.npz": [
+      "file",
+      5626,
+      "de338915ac44f661c9b38f8cf85755ca"
+    ],
+    "keyframes/cand_20260911_021927_167778/descriptors.npy": [
+      "file",
+      32128,
+      "dc7be0f78851626457d8c2f04f1e37b8"
+    ],
+    "keyframes/cand_20260911_021927_167778/keypoints.npy": [
+      "file",
+      28128,
+      "a814308fb563dc4af1ead179ded22c18"
+    ],
+    "keyframes/cand_20260911_021927_167778/meta.yaml": [
+      "file",
+      1231,
+      "233d0ede4f642b32c9ff62b410d6c4ca"
+    ],
+    "keyframes/cand_20260911_021927_167778/rgb.jpg": [
+      "file",
+      35403,
+      "074260ada22ff816832e4b30da1a2401"
+    ],
+    "keyframes/cand_20260911_021927_167778/scan.npz": [
+      "file",
+      5433,
+      "95b80bb7d809abbb140d3f41897131df"
+    ],
+    "keyframes/cand_20260911_022115_275781/descriptors.npy": [
+      "file",
+      32128,
+      "fd0b913691e8b25cc1c57bebb6bc4330"
+    ],
+    "keyframes/cand_20260911_022115_275781/keypoints.npy": [
+      "file",
+      28128,
+      "884bb88506901ffbbb860c0ab7240f61"
+    ],
+    "keyframes/cand_20260911_022115_275781/meta.yaml": [
+      "file",
+      1249,
+      "ac90d04fb2d38ec4f42717fca0777eeb"
+    ],
+    "keyframes/cand_20260911_022115_275781/rgb.jpg": [
+      "file",
+      41176,
+      "5d0f4b4e81f235c4ab15ae6420e77dbb"
+    ],
+    "keyframes/cand_20260911_022115_275781/scan.npz": [
+      "file",
+      5875,
+      "3dc917ba55bf8f7ad5afe1e1f0334ffe"
+    ],
+    "keyframes/cand_20260911_022155_315761/descriptors.npy": [
+      "file",
+      32128,
+      "ccf6d81ac22d05e50690d9ca7ccd9bfe"
+    ],
+    "keyframes/cand_20260911_022155_315761/keypoints.npy": [
+      "file",
+      28128,
+      "f1a942c11c2ec226f2a59ce2bbff6462"
+    ],
+    "keyframes/cand_20260911_022155_315761/meta.yaml": [
+      "file",
+      1237,
+      "f75d5766fd64fde54d0fb1e3fd217662"
+    ],
+    "keyframes/cand_20260911_022155_315761/rgb.jpg": [
+      "file",
+      46373,
+      "11fd36b9f5d7a3b82fae04d75baa8ef6"
+    ],
+    "keyframes/cand_20260911_022155_315761/scan.npz": [
+      "file",
+      5772,
+      "72bbd7b05a697f4c59feb03c6b59fd05"
+    ],
+    "keyframes/cand_20260911_022205_325225/descriptors.npy": [
+      "file",
+      32128,
+      "e0b384f6143c2143138096ecf936d58f"
+    ],
+    "keyframes/cand_20260911_022205_325225/keypoints.npy": [
+      "file",
+      28128,
+      "247a607397dedc375020994930d54ed5"
+    ],
+    "keyframes/cand_20260911_022205_325225/meta.yaml": [
+      "file",
+      1247,
+      "de28407cde719be9e4cabfb9a8bce7aa"
+    ],
+    "keyframes/cand_20260911_022205_325225/rgb.jpg": [
+      "file",
+      44662,
+      "b92eaf7016477a0ec31637a010e046cd"
+    ],
+    "keyframes/cand_20260911_022205_325225/scan.npz": [
+      "file",
+      5784,
+      "ec220bc9f3b7e2b6f3d62c61b39aa80a"
+    ],
+    "keyframes/cand_20260911_022246_366239/descriptors.npy": [
+      "file",
+      32128,
+      "a8ba204e3b1118f0eef7689ee5f4dadf"
+    ],
+    "keyframes/cand_20260911_022246_366239/keypoints.npy": [
+      "file",
+      28128,
+      "cea1550e51fc9ff4324aa4b3e3ea2887"
+    ],
+    "keyframes/cand_20260911_022246_366239/meta.yaml": [
+      "file",
+      1239,
+      "4c8ca92f362d436c8fd300619318fc0a"
+    ],
+    "keyframes/cand_20260911_022246_366239/rgb.jpg": [
+      "file",
+      47714,
+      "25492cadb8b37c8fcf00358c05a82223"
+    ],
+    "keyframes/cand_20260911_022246_366239/scan.npz": [
+      "file",
+      5627,
+      "011bc79381c51abd489913684efeba2d"
+    ],
+    "keyframes/cand_20260911_022648_608675/descriptors.npy": [
+      "file",
+      32128,
+      "430aa92df6380d9edaf5417ff65826b8"
+    ],
+    "keyframes/cand_20260911_022648_608675/keypoints.npy": [
+      "file",
+      28128,
+      "3b06928fe94798f0b65fda0adb13e785"
+    ],
+    "keyframes/cand_20260911_022648_608675/meta.yaml": [
+      "file",
+      1244,
+      "05447bb8d758d9beab27592d1153aff1"
+    ],
+    "keyframes/cand_20260911_022648_608675/rgb.jpg": [
+      "file",
+      39011,
+      "7c7627d5bc72443099f1917c891c0174"
+    ],
+    "keyframes/cand_20260911_022648_608675/scan.npz": [
+      "file",
+      5801,
+      "2f8d68bdc775e8440e96ea9af318ec11"
+    ],
+    "keyframes/cand_20260911_022915_755219/descriptors.npy": [
+      "file",
+      32128,
+      "6ff85b8f05a0f516b23f094250af45e8"
+    ],
+    "keyframes/cand_20260911_022915_755219/keypoints.npy": [
+      "file",
+      28128,
+      "05fa9a0263cacd4856db5eb15ab8521e"
+    ],
+    "keyframes/cand_20260911_022915_755219/meta.yaml": [
+      "file",
+      1235,
+      "3bffb1ed24079b49897e6fba0e73c0b0"
+    ],
+    "keyframes/cand_20260911_022915_755219/rgb.jpg": [
+      "file",
+      38225,
+      "718db90ff4fb77430263e8fd084b42cb"
+    ],
+    "keyframes/cand_20260911_022915_755219/scan.npz": [
+      "file",
+      5833,
+      "d5168672d7707d6cbd4709392115476b"
+    ],
+    "keyframes/cand_20260911_022925_765290/descriptors.npy": [
+      "file",
+      32128,
+      "c37698d4f56b65e69d3c40a8edee9d4e"
+    ],
+    "keyframes/cand_20260911_022925_765290/keypoints.npy": [
+      "file",
+      28128,
+      "bec8627b33830e0f7e4540de9e38a122"
+    ],
+    "keyframes/cand_20260911_022925_765290/meta.yaml": [
+      "file",
+      1242,
+      "e1ae9b754d5ddf92fe216bb974537553"
+    ],
+    "keyframes/cand_20260911_022925_765290/rgb.jpg": [
+      "file",
+      40954,
+      "9f12b06a91ddc54c51ccbc7f6c60df27"
+    ],
+    "keyframes/cand_20260911_022925_765290/scan.npz": [
+      "file",
+      5943,
+      "ddad8c146328e78a1730204e656168f1"
+    ],
+    "keyframes/cand_20260911_022956_796413/descriptors.npy": [
+      "file",
+      25408,
+      "3bddeb2fa43b22a89a4f58b88ed3c292"
+    ],
+    "keyframes/cand_20260911_022956_796413/keypoints.npy": [
+      "file",
+      22248,
+      "54e11484380f1f7dfda372b7282c5bd6"
+    ],
+    "keyframes/cand_20260911_022956_796413/meta.yaml": [
+      "file",
+      1199,
+      "0ed6773010b091ecbc7645b050d85071"
+    ],
+    "keyframes/cand_20260911_022956_796413/rgb.jpg": [
+      "file",
+      23563,
+      "8672ab91a750acad20a19a770ad8331d"
+    ],
+    "keyframes/cand_20260911_022956_796413/scan.npz": [
+      "file",
+      5812,
+      "df1c4b153aa07e3c96d93a185a3f618d"
+    ],
+    "keyframes/cand_20260911_023023_823231/descriptors.npy": [
+      "file",
+      32128,
+      "e58a6c5ecfbd32c40f94236ccbcd45f1"
+    ],
+    "keyframes/cand_20260911_023023_823231/keypoints.npy": [
+      "file",
+      28128,
+      "0035bfd7313a71be110f14614781a894"
+    ],
+    "keyframes/cand_20260911_023023_823231/meta.yaml": [
+      "file",
+      1227,
+      "bde4a3d24e532e1c079f88dab415a99d"
+    ],
+    "keyframes/cand_20260911_023023_823231/rgb.jpg": [
+      "file",
+      36569,
+      "99ff6590f23f036bd07fd0a271710ea9"
+    ],
+    "keyframes/cand_20260911_023023_823231/scan.npz": [
+      "file",
+      5571,
+      "97d3745df1b9fe9debb7c962c57dab64"
+    ],
+    "keyframes/cand_20260911_023131_891459/descriptors.npy": [
+      "file",
+      30368,
+      "ef833bb14c4f29bf2312bde82621272b"
+    ],
+    "keyframes/cand_20260911_023131_891459/keypoints.npy": [
+      "file",
+      26588,
+      "62dd5072708a694b2c4f79b82f077e01"
+    ],
+    "keyframes/cand_20260911_023131_891459/meta.yaml": [
+      "file",
+      1237,
+      "3b003918fa907b800f6c62606617fec7"
+    ],
+    "keyframes/cand_20260911_023131_891459/rgb.jpg": [
+      "file",
+      31132,
+      "9f6fb87b296f0576ee57f0da1011ddcf"
+    ],
+    "keyframes/cand_20260911_023131_891459/scan.npz": [
+      "file",
+      6037,
+      "769783006b244341424eb2d9a9fc9a02"
+    ],
+    "keyframes/cand_20260911_023314_994472/descriptors.npy": [
+      "file",
+      32128,
+      "13da49774272c038e9ece0861a261252"
+    ],
+    "keyframes/cand_20260911_023314_994472/keypoints.npy": [
+      "file",
+      28128,
+      "437414ccdd2189bca7efda14020acdb1"
+    ],
+    "keyframes/cand_20260911_023314_994472/meta.yaml": [
+      "file",
+      1243,
+      "edd80e6ed04d66158337ec5ef39f8c5d"
+    ],
+    "keyframes/cand_20260911_023314_994472/rgb.jpg": [
+      "file",
+      37404,
+      "b46a867255ceef307ffc109f143ffc95"
+    ],
+    "keyframes/cand_20260911_023314_994472/scan.npz": [
+      "file",
+      5658,
+      "9b79b703f31adca7fbdfa54e47a8504f"
+    ],
+    "keyframes/cand_20260911_023330_010704/descriptors.npy": [
+      "file",
+      32128,
+      "09eb8ebcf0d93a7c5a3d0cfe1d3fef74"
+    ],
+    "keyframes/cand_20260911_023330_010704/keypoints.npy": [
+      "file",
+      28128,
+      "668f2bc2937728cfe7d39df6bb12a951"
+    ],
+    "keyframes/cand_20260911_023330_010704/meta.yaml": [
+      "file",
+      1237,
+      "e33908ef6ba4c5b7cc46e3e7bff36b86"
+    ],
+    "keyframes/cand_20260911_023330_010704/rgb.jpg": [
+      "file",
+      46280,
+      "399b32b3bdc07c28f357d7c4295978d1"
+    ],
+    "keyframes/cand_20260911_023330_010704/scan.npz": [
+      "file",
+      5717,
+      "c8a7854b8e653344758d8772e2686525"
+    ],
+    "keyframes/cand_20260911_023517_117804/descriptors.npy": [
+      "file",
+      32128,
+      "fd3f7c3b2653d347220e02377ea650b2"
+    ],
+    "keyframes/cand_20260911_023517_117804/keypoints.npy": [
+      "file",
+      28128,
+      "32870259d2d0e7311ca5dc69591a0c8c"
+    ],
+    "keyframes/cand_20260911_023517_117804/meta.yaml": [
+      "file",
+      1243,
+      "660f615f8d2660bf9095876d032b35fa"
+    ],
+    "keyframes/cand_20260911_023517_117804/rgb.jpg": [
+      "file",
+      46885,
+      "ddd8c0535e409a5df7174584e24b03af"
+    ],
+    "keyframes/cand_20260911_023517_117804/scan.npz": [
+      "file",
+      5734,
+      "098d13e4d68c090e6def37a75c319618"
+    ],
+    "keyframes/cand_20260911_023707_227281/descriptors.npy": [
+      "file",
+      32128,
+      "e944a73d6206cd4330f5ce7140a980f2"
+    ],
+    "keyframes/cand_20260911_023707_227281/keypoints.npy": [
+      "file",
+      28128,
+      "8c6b8c03306918c9a6c9eade28149e17"
+    ],
+    "keyframes/cand_20260911_023707_227281/meta.yaml": [
+      "file",
+      1240,
+      "86ebb58f9adf4d4577e76e03e59ca87d"
+    ],
+    "keyframes/cand_20260911_023707_227281/rgb.jpg": [
+      "file",
+      46651,
+      "86d4e31e6f8318f1ee6b8660899389a7"
+    ],
+    "keyframes/cand_20260911_023707_227281/scan.npz": [
+      "file",
+      5854,
+      "96691238dd5d4b8bf402dfd1af41fd6b"
+    ],
+    "keyframes/cand_20260911_023717_237217/descriptors.npy": [
+      "file",
+      29312,
+      "99da687696493f174f177a37960f5014"
+    ],
+    "keyframes/cand_20260911_023717_237217/keypoints.npy": [
+      "file",
+      25664,
+      "963b92b050f5fdc5ab1046b7e13d2662"
+    ],
+    "keyframes/cand_20260911_023717_237217/meta.yaml": [
+      "file",
+      1237,
+      "e8f04a4c310c2476c2cacc7021313f4f"
+    ],
+    "keyframes/cand_20260911_023717_237217/rgb.jpg": [
+      "file",
+      45733,
+      "3e2d9330eb1438fd8e0a512d0a70928b"
+    ],
+    "keyframes/cand_20260911_023717_237217/scan.npz": [
+      "file",
+      5688,
+      "6ba5b8ed2434c4a1489943e1cb3d6f00"
+    ],
+    "keyframes/cand_20260914_053035_835723/descriptors.npy": [
+      "file",
+      31744,
+      "9e84932b5c9e6dcda94888fccb08e211"
+    ],
+    "keyframes/cand_20260914_053035_835723/keypoints.npy": [
+      "file",
+      27792,
+      "4c9b6a36026c477a8afe369febddcee9"
+    ],
+    "keyframes/cand_20260914_053035_835723/meta.yaml": [
+      "file",
+      1227,
+      "e6e7e5765330242c5ed2997865384fe9"
+    ],
+    "keyframes/cand_20260914_053035_835723/rgb.jpg": [
+      "file",
+      35826,
+      "f698babbfbcab47f1b1573b1c074d92d"
+    ],
+    "keyframes/cand_20260914_053035_835723/scan.npz": [
+      "file",
+      6157,
+      "5d28199cdcfa38ba84f9155f396fe42f"
+    ],
+    "keyframes/cand_20260914_053150_910315/descriptors.npy": [
+      "file",
+      32128,
+      "ac1b04680de8cf4ee146bcdc0afa980c"
+    ],
+    "keyframes/cand_20260914_053150_910315/keypoints.npy": [
+      "file",
+      28128,
+      "3e389e1455398b758997b69c436269b4"
+    ],
+    "keyframes/cand_20260914_053150_910315/meta.yaml": [
+      "file",
+      1225,
+      "c7e7e8661e77bef7604136d44db5330e"
+    ],
+    "keyframes/cand_20260914_053150_910315/rgb.jpg": [
+      "file",
+      44348,
+      "a06cdacf6c32ad8562e2a1d249f8025d"
+    ],
+    "keyframes/cand_20260914_053150_910315/scan.npz": [
+      "file",
+      5856,
+      "eabb7d5243e8fd51a60694eba0d344b0"
+    ],
+    "keyframes/cand_20260914_053323_003570/descriptors.npy": [
+      "file",
+      32128,
+      "8462f3124feb45d1d82fc773f4537b5d"
+    ],
+    "keyframes/cand_20260914_053323_003570/keypoints.npy": [
+      "file",
+      28128,
+      "77d1bf9c5ed85beb2d1124cb5ae13d0b"
+    ],
+    "keyframes/cand_20260914_053323_003570/meta.yaml": [
+      "file",
+      1235,
+      "392652157059b73630600b5d21b148ab"
+    ],
+    "keyframes/cand_20260914_053323_003570/rgb.jpg": [
+      "file",
+      44454,
+      "773e29024a8ec932d0c2d987088fa071"
+    ],
+    "keyframes/cand_20260914_053323_003570/scan.npz": [
+      "file",
+      5416,
+      "3369fb35412785aa12335b87ac7e7063"
+    ],
+    "keyframes/cand_20260914_053331_011852/descriptors.npy": [
+      "file",
+      32000,
+      "80c48e1ab4ee262e9f2e3926181df960"
+    ],
+    "keyframes/cand_20260914_053331_011852/keypoints.npy": [
+      "file",
+      28016,
+      "b34f4cb2312e54cc8fefa4aff7e16b01"
+    ],
+    "keyframes/cand_20260914_053331_011852/meta.yaml": [
+      "file",
+      1233,
+      "16dea811f70df8e5b76cdced939099ac"
+    ],
+    "keyframes/cand_20260914_053331_011852/rgb.jpg": [
+      "file",
+      36822,
+      "4f65e03408c890d4ff4b59876d5dedde"
+    ],
+    "keyframes/cand_20260914_053331_011852/scan.npz": [
+      "file",
+      5507,
+      "0bd914862ee1043e03992648e4329001"
+    ],
+    "keyframes/cand_20260914_053346_026816/descriptors.npy": [
+      "file",
+      32128,
+      "5af31c82f45c61fcb51dbcb6db8a0644"
+    ],
+    "keyframes/cand_20260914_053346_026816/keypoints.npy": [
+      "file",
+      28128,
+      "2ed119885801ec456e98a6947fbb74ad"
+    ],
+    "keyframes/cand_20260914_053346_026816/meta.yaml": [
+      "file",
+      1223,
+      "1315ad9799120549126495b788212118"
+    ],
+    "keyframes/cand_20260914_053346_026816/rgb.jpg": [
+      "file",
+      46773,
+      "dbca46dc1f9fb43195f06658643dff82"
+    ],
+    "keyframes/cand_20260914_053346_026816/scan.npz": [
+      "file",
+      5387,
+      "43ca9adb3df4652f21b7182de3f494fe"
+    ],
+    "keyframes/cand_20260914_053356_036419/descriptors.npy": [
+      "file",
+      32128,
+      "2f71101ff70ef2834c4cf084dd7545a7"
+    ],
+    "keyframes/cand_20260914_053356_036419/keypoints.npy": [
+      "file",
+      28128,
+      "a6b899f3e0ea3892e6d3a0071c99c1a2"
+    ],
+    "keyframes/cand_20260914_053356_036419/meta.yaml": [
+      "file",
+      1243,
+      "ffd11eefe74989b4300e3acc38956be0"
+    ],
+    "keyframes/cand_20260914_053356_036419/rgb.jpg": [
+      "file",
+      43601,
+      "3ecd1a7dd260034c86ea54d120510f29"
+    ],
+    "keyframes/cand_20260914_053356_036419/scan.npz": [
+      "file",
+      5215,
+      "93eb36ed1569f54b184f72fded8482f4"
+    ],
+    "keyframes/cand_20260914_053414_054807/descriptors.npy": [
+      "file",
+      32128,
+      "2b6b1098d49067f852003ce60afdba3b"
+    ],
+    "keyframes/cand_20260914_053414_054807/keypoints.npy": [
+      "file",
+      28128,
+      "ae895dac86ebbdedf4a978166aac74d4"
+    ],
+    "keyframes/cand_20260914_053414_054807/meta.yaml": [
+      "file",
+      1232,
+      "1c811e931b2bc2f13f30ace381108352"
+    ],
+    "keyframes/cand_20260914_053414_054807/rgb.jpg": [
+      "file",
+      46389,
+      "a66758f09a46798b5272d01918a25891"
+    ],
+    "keyframes/cand_20260914_053414_054807/scan.npz": [
+      "file",
+      5724,
+      "21574909f75fa68b5a9d31147a58e10d"
+    ],
+    "keyframes/cand_20260914_053441_081755/descriptors.npy": [
+      "file",
+      32128,
+      "e7e2b87acf94138a7c5d18614d8b366e"
+    ],
+    "keyframes/cand_20260914_053441_081755/keypoints.npy": [
+      "file",
+      28128,
+      "b1dfeeeb89d33515bc66876ce8fe2561"
+    ],
+    "keyframes/cand_20260914_053441_081755/meta.yaml": [
+      "file",
+      1236,
+      "16a5a071de19abbc807df3457537a8d9"
+    ],
+    "keyframes/cand_20260914_053441_081755/rgb.jpg": [
+      "file",
+      49004,
+      "bf1645b881738049e52edc8b839f012d"
+    ],
+    "keyframes/cand_20260914_053441_081755/scan.npz": [
+      "file",
+      5731,
+      "81c35a3e5e2648d416aadeae165e4126"
+    ],
+    "keyframes/cand_20260914_053450_090056/descriptors.npy": [
+      "file",
+      31872,
+      "bec6628dbb6ed5ec4d4ed5065b89bd77"
+    ],
+    "keyframes/cand_20260914_053450_090056/keypoints.npy": [
+      "file",
+      27904,
+      "0943b31113cf5f34a02e4c5006b68cde"
+    ],
+    "keyframes/cand_20260914_053450_090056/meta.yaml": [
+      "file",
+      1241,
+      "f45c8345f47bae97f56f47929e5166ef"
+    ],
+    "keyframes/cand_20260914_053450_090056/rgb.jpg": [
+      "file",
+      34854,
+      "1a670298bbbe7621bf646b850e3f0e34"
+    ],
+    "keyframes/cand_20260914_053450_090056/scan.npz": [
+      "file",
+      5953,
+      "4ecc09e9c9526f30c78489e2cbb44d2f"
+    ],
+    "keyframes/cand_20260914_053502_102889/descriptors.npy": [
+      "file",
+      32128,
+      "b9c74f1138acc71d59e83d31b32fa0c5"
+    ],
+    "keyframes/cand_20260914_053502_102889/keypoints.npy": [
+      "file",
+      28128,
+      "4041f3f5be32643fe25f8d7e8508548e"
+    ],
+    "keyframes/cand_20260914_053502_102889/meta.yaml": [
+      "file",
+      1240,
+      "0c02b4ff9c85cfeff355d5f9d3c86cef"
+    ],
+    "keyframes/cand_20260914_053502_102889/rgb.jpg": [
+      "file",
+      46276,
+      "5412d7443d8fc2220533d95ba4aa287c"
+    ],
+    "keyframes/cand_20260914_053502_102889/scan.npz": [
+      "file",
+      5882,
+      "66fd732337d7eb7b05e640d086945f75"
+    ],
+    "keyframes/cand_20260914_053512_112843/descriptors.npy": [
+      "file",
+      32128,
+      "7e240e0e37ad317498215c083bc23564"
+    ],
+    "keyframes/cand_20260914_053512_112843/keypoints.npy": [
+      "file",
+      28128,
+      "7f67ad3873b3b86689b0ed5a262c4d3c"
+    ],
+    "keyframes/cand_20260914_053512_112843/meta.yaml": [
+      "file",
+      1240,
+      "a195d6274fc5c06712238260f9d15f0b"
+    ],
+    "keyframes/cand_20260914_053512_112843/rgb.jpg": [
+      "file",
+      36906,
+      "d5b36f1b07392591e92af4ff8993f531"
+    ],
+    "keyframes/cand_20260914_053512_112843/scan.npz": [
+      "file",
+      5867,
+      "70a9a94079eba0704548a4b270565d03"
+    ],
+    "keyframes/cand_20260914_053537_137805/descriptors.npy": [
+      "file",
+      32128,
+      "c10a59805599c8f1d15cbfeca168eb45"
+    ],
+    "keyframes/cand_20260914_053537_137805/keypoints.npy": [
+      "file",
+      28128,
+      "c52e4cf0f1d2550060871e08321f69d2"
+    ],
+    "keyframes/cand_20260914_053537_137805/meta.yaml": [
+      "file",
+      1226,
+      "bc686cdfef4f20b325077394daabc23b"
+    ],
+    "keyframes/cand_20260914_053537_137805/rgb.jpg": [
+      "file",
+      42930,
+      "24449d21dd6ec17a9398d34590a2ea3f"
+    ],
+    "keyframes/cand_20260914_053537_137805/scan.npz": [
+      "file",
+      5933,
+      "a80636773c73281b557e525adc1c5767"
+    ],
+    "keyframes/cand_20260914_053545_145493/descriptors.npy": [
+      "file",
+      32128,
+      "7ee7ad713171627bf6429d95dc49f816"
+    ],
+    "keyframes/cand_20260914_053545_145493/keypoints.npy": [
+      "file",
+      28128,
+      "e18b34972dae6ccbfda64e76d6f2d9d1"
+    ],
+    "keyframes/cand_20260914_053545_145493/meta.yaml": [
+      "file",
+      1234,
+      "727273c773ad7c1cc539603cdc4a143b"
+    ],
+    "keyframes/cand_20260914_053545_145493/rgb.jpg": [
+      "file",
+      40444,
+      "fe59c6d08aeb3e00bba69a127c4afc4f"
+    ],
+    "keyframes/cand_20260914_053545_145493/scan.npz": [
+      "file",
+      5986,
+      "b143d064f187311b7bf9622d5456dc0c"
+    ],
+    "keyframes/cand_20260914_053620_180831/descriptors.npy": [
+      "file",
+      32128,
+      "31b31abb39cfa644feebb0b4f37bdda5"
+    ],
+    "keyframes/cand_20260914_053620_180831/keypoints.npy": [
+      "file",
+      28128,
+      "0276c479f96d7782d4be93ed3d72d2e1"
+    ],
+    "keyframes/cand_20260914_053620_180831/meta.yaml": [
+      "file",
+      1229,
+      "5cfca61875fa0e30dbc764b62db2aefd"
+    ],
+    "keyframes/cand_20260914_053620_180831/rgb.jpg": [
+      "file",
+      35329,
+      "5156a625d472f457c9659681840b174f"
+    ],
+    "keyframes/cand_20260914_053620_180831/scan.npz": [
+      "file",
+      5915,
+      "e71252a4dbd1b739f74b5669dc2a609a"
+    ],
+    "keyframes/cand_20260914_053729_249337/descriptors.npy": [
+      "file",
+      32128,
+      "1b8636c31c61331dbe2e3dc06d0726b6"
+    ],
+    "keyframes/cand_20260914_053729_249337/keypoints.npy": [
+      "file",
+      28128,
+      "33a21ecfbf86f202e434c413399d70be"
+    ],
+    "keyframes/cand_20260914_053729_249337/meta.yaml": [
+      "file",
+      1235,
+      "9eb8f9c8ef2402d5ca9a83337541db3f"
+    ],
+    "keyframes/cand_20260914_053729_249337/rgb.jpg": [
+      "file",
+      38112,
+      "a56d5a4c4ff4ccc53e79ae149471c5a0"
+    ],
+    "keyframes/cand_20260914_053729_249337/scan.npz": [
+      "file",
+      5686,
+      "8fbe8bae2c648600520f589a657eb8a6"
+    ],
+    "keyframes/cand_20260914_053801_281813/descriptors.npy": [
+      "file",
+      31840,
+      "ee347e0323c6d51d27b1e457d0785893"
+    ],
+    "keyframes/cand_20260914_053801_281813/keypoints.npy": [
+      "file",
+      27876,
+      "c173a5b7ee6a961aafbb21d9651e27ec"
+    ],
+    "keyframes/cand_20260914_053801_281813/meta.yaml": [
+      "file",
+      1231,
+      "f8336a7c9ba46b81ab8adefe1b77bfc0"
+    ],
+    "keyframes/cand_20260914_053801_281813/rgb.jpg": [
+      "file",
+      49344,
+      "69e4061976407e750c0ab783fba97c10"
+    ],
+    "keyframes/cand_20260914_053801_281813/scan.npz": [
+      "file",
+      5913,
+      "e018dfaef1f4cf6840515ec3b1c4bda2"
+    ],
+    "keyframes/cand_20260914_053809_289390/descriptors.npy": [
+      "file",
+      27360,
+      "075ac4d2b89a668f2c42966375cef67f"
+    ],
+    "keyframes/cand_20260914_053809_289390/keypoints.npy": [
+      "file",
+      23956,
+      "45bb1d4b669f0a06cc2bd9250eab8038"
+    ],
+    "keyframes/cand_20260914_053809_289390/meta.yaml": [
+      "file",
+      1224,
+      "91b81cb521bc65d1209eda152dd76bb8"
+    ],
+    "keyframes/cand_20260914_053809_289390/rgb.jpg": [
+      "file",
+      25848,
+      "9b5bb63558d2b21b352debb3a7262c56"
+    ],
+    "keyframes/cand_20260914_053809_289390/scan.npz": [
+      "file",
+      5756,
+      "fe6d70f215fe080e62f484fb75131247"
+    ],
+    "keyframes/cand_20260914_053843_323360/descriptors.npy": [
+      "file",
+      31360,
+      "a8b04512473d32ec9d86a7d9c25aa84c"
+    ],
+    "keyframes/cand_20260914_053843_323360/keypoints.npy": [
+      "file",
+      27456,
+      "7e9274325c223fd51b3557b79bb2acf3"
+    ],
+    "keyframes/cand_20260914_053843_323360/meta.yaml": [
+      "file",
+      1238,
+      "ea3f06d8047a3cf3e4ba7237f015b767"
+    ],
+    "keyframes/cand_20260914_053843_323360/rgb.jpg": [
+      "file",
+      35012,
+      "11f5fc4704aa21f09a13c3474dde8070"
+    ],
+    "keyframes/cand_20260914_053843_323360/scan.npz": [
+      "file",
+      5930,
+      "ad25799e4c64c8a8f505e67a59229c45"
+    ],
+    "keyframes/cand_20260914_053902_342752/descriptors.npy": [
+      "file",
+      31584,
+      "d3b6859ed2600fd64244d373f76befcb"
+    ],
+    "keyframes/cand_20260914_053902_342752/keypoints.npy": [
+      "file",
+      27652,
+      "6765cf21462b4443092918c6f980561f"
+    ],
+    "keyframes/cand_20260914_053902_342752/meta.yaml": [
+      "file",
+      1222,
+      "ed9fab2c98de5f8315f4f0bac4eef3a4"
+    ],
+    "keyframes/cand_20260914_053902_342752/rgb.jpg": [
+      "file",
+      37967,
+      "8402f007b3faace6d3e9b63c5649bc69"
+    ],
+    "keyframes/cand_20260914_053902_342752/scan.npz": [
+      "file",
+      5806,
+      "ec1bd269132cf20c9825ad07be235d14"
+    ],
+    "keyframes/cand_20260914_053912_352284/descriptors.npy": [
+      "file",
+      9120,
+      "942b36f04cde56b0256810ebb9799762"
+    ],
+    "keyframes/cand_20260914_053912_352284/keypoints.npy": [
+      "file",
+      7996,
+      "9a5bcc177513a8317d0e7ab7256bff7a"
+    ],
+    "keyframes/cand_20260914_053912_352284/meta.yaml": [
+      "file",
+      1236,
+      "f8e27a91436a6df4a64b0afeb123f607"
+    ],
+    "keyframes/cand_20260914_053912_352284/rgb.jpg": [
+      "file",
+      22967,
+      "e30d5d504923d650e608f4eaff184eb2"
+    ],
+    "keyframes/cand_20260914_053912_352284/scan.npz": [
+      "file",
+      5683,
+      "929d2f4240bd5155c4f5fc8de4836d56"
+    ],
+    "keyframes/cand_20260914_054050_450453/descriptors.npy": [
+      "file",
+      32128,
+      "162b67ff6f9cd960cd3e72c1c599769b"
+    ],
+    "keyframes/cand_20260914_054050_450453/keypoints.npy": [
+      "file",
+      28128,
+      "d20e385d0a0a9032b4ed838bffaf8e4c"
+    ],
+    "keyframes/cand_20260914_054050_450453/meta.yaml": [
+      "file",
+      1249,
+      "7c195b31fad145a1db06f291949bb0b6"
+    ],
+    "keyframes/cand_20260914_054050_450453/rgb.jpg": [
+      "file",
+      37165,
+      "0b4120b31410d8d675a2ab9e2e4fb382"
+    ],
+    "keyframes/cand_20260914_054050_450453/scan.npz": [
+      "file",
+      5966,
+      "4b77c1bb22e78fb1ae40dbb9aa2ee52d"
+    ],
+    "keyframes/cand_20260914_054111_471263/descriptors.npy": [
+      "file",
+      32128,
+      "f4b35d3c71e6845b2296baf649b8cd89"
+    ],
+    "keyframes/cand_20260914_054111_471263/keypoints.npy": [
+      "file",
+      28128,
+      "4878362ec8fd31039dcdb33b1397f3e2"
+    ],
+    "keyframes/cand_20260914_054111_471263/meta.yaml": [
+      "file",
+      1228,
+      "3c34588d0aab85071006886963c0c6af"
+    ],
+    "keyframes/cand_20260914_054111_471263/rgb.jpg": [
+      "file",
+      44144,
+      "c4abe45154d8cf469fe74555263e69e3"
+    ],
+    "keyframes/cand_20260914_054111_471263/scan.npz": [
+      "file",
+      5279,
+      "0503bf7b59a3972e0768f3460995fb5f"
+    ],
+    "keyframes/cand_20260914_054119_479812/descriptors.npy": [
+      "file",
+      32128,
+      "5fdfcbeffc49110015c3d88ef11f687c"
+    ],
+    "keyframes/cand_20260914_054119_479812/keypoints.npy": [
+      "file",
+      28128,
+      "96fc4a17bdae5525263506686dfbced5"
+    ],
+    "keyframes/cand_20260914_054119_479812/meta.yaml": [
+      "file",
+      1233,
+      "0087a73664bddb399561839fa7e2db31"
+    ],
+    "keyframes/cand_20260914_054119_479812/rgb.jpg": [
+      "file",
+      31058,
+      "44a687e718c29fd07ca11b88618cc15d"
+    ],
+    "keyframes/cand_20260914_054119_479812/scan.npz": [
+      "file",
+      5222,
+      "55ba209e8f299e97cf5eaa3d3bfcda6b"
+    ],
+    "keyframes/cand_20260914_054156_516310/descriptors.npy": [
+      "file",
+      32128,
+      "34bbd1a6252e7f7b9b99df2d9fda8555"
+    ],
+    "keyframes/cand_20260914_054156_516310/keypoints.npy": [
+      "file",
+      28128,
+      "dd41c5a050f8a61c89f0254cc1a113b2"
+    ],
+    "keyframes/cand_20260914_054156_516310/meta.yaml": [
+      "file",
+      1243,
+      "b6839fd25501add63747cc0be799959e"
+    ],
+    "keyframes/cand_20260914_054156_516310/rgb.jpg": [
+      "file",
+      41867,
+      "42aa4be8290f394a196b5c4519ae2d5b"
+    ],
+    "keyframes/cand_20260914_054156_516310/scan.npz": [
+      "file",
+      5881,
+      "59adfde02e625e606545002222ac7312"
+    ],
+    "keyframes/cand_20260914_054208_528550/descriptors.npy": [
+      "file",
+      32128,
+      "4093f908be7236555d129091c88eef1a"
+    ],
+    "keyframes/cand_20260914_054208_528550/keypoints.npy": [
+      "file",
+      28128,
+      "f01d5f9a29b97d25052fed7aaf735323"
+    ],
+    "keyframes/cand_20260914_054208_528550/meta.yaml": [
+      "file",
+      1238,
+      "5e21c21a2fe99c91177797d0087cce9b"
+    ],
+    "keyframes/cand_20260914_054208_528550/rgb.jpg": [
+      "file",
+      42277,
+      "5fa9a51fb065a009edf70fa7dd2fbfc6"
+    ],
+    "keyframes/cand_20260914_054208_528550/scan.npz": [
+      "file",
+      6050,
+      "2753a703cfac252b2295c79a97b5c1d6"
+    ],
+    "keyframes/cand_20260914_054230_550220/descriptors.npy": [
+      "file",
+      31168,
+      "075a50a80b0e26f55c2a62c728dcaa17"
+    ],
+    "keyframes/cand_20260914_054230_550220/keypoints.npy": [
+      "file",
+      27288,
+      "333f42e49061bccc2826928fb1964988"
+    ],
+    "keyframes/cand_20260914_054230_550220/meta.yaml": [
+      "file",
+      1237,
+      "621ecf3739971c962ba87e2f905f89df"
+    ],
+    "keyframes/cand_20260914_054230_550220/rgb.jpg": [
+      "file",
+      38265,
+      "a2a6ab37685130a9ba19dec98e3d0cb1"
+    ],
+    "keyframes/cand_20260914_054230_550220/scan.npz": [
+      "file",
+      5934,
+      "f62214a725201239627305f313365644"
+    ],
+    "keyframes/cand_20260914_054238_558309/descriptors.npy": [
+      "file",
+      31776,
+      "de4456d1a50fb7fd181327ab65c2863e"
+    ],
+    "keyframes/cand_20260914_054238_558309/keypoints.npy": [
+      "file",
+      27820,
+      "9fdb44f3b57bbc4dfbe18075b5775072"
+    ],
+    "keyframes/cand_20260914_054238_558309/meta.yaml": [
+      "file",
+      1236,
+      "3983afb2658fd79ef9dcf6520391c8c4"
+    ],
+    "keyframes/cand_20260914_054238_558309/rgb.jpg": [
+      "file",
+      41166,
+      "f1849c252ff28e75a84047c9bc91b624"
+    ],
+    "keyframes/cand_20260914_054238_558309/scan.npz": [
+      "file",
+      5694,
+      "ebc816c6e374a392a42b4ebbd31549db"
+    ],
+    "keyframes/cand_20260915_015604_364905/descriptors.npy": [
+      "file",
+      32128,
+      "7d1cad3e3e95bf8a160703368cdb014e"
+    ],
+    "keyframes/cand_20260915_015604_364905/keypoints.npy": [
+      "file",
+      28128,
+      "0f5122b6f376c6dd26c3184f41a43ebb"
+    ],
+    "keyframes/cand_20260915_015604_364905/meta.yaml": [
+      "file",
+      1293,
+      "a44c26ec1d177ee46cc7d7397bd78e7b"
+    ],
+    "keyframes/cand_20260915_015604_364905/rgb.jpg": [
+      "file",
+      45977,
+      "6061152d28bd405364d7ffbdc6ef031b"
+    ],
+    "keyframes/cand_20260915_015604_364905/scan.npz": [
+      "file",
+      5780,
+      "6374a0bf15aefddf448e3208589291ae"
+    ],
+    "keyframes/cand_20260915_015612_372864/descriptors.npy": [
+      "file",
+      21664,
+      "6475e0d3fb81fcfeaf5604371420da5a"
+    ],
+    "keyframes/cand_20260915_015612_372864/keypoints.npy": [
+      "file",
+      18972,
+      "ef6f71563743eb85e22662e2abcb5ef5"
+    ],
+    "keyframes/cand_20260915_015612_372864/meta.yaml": [
+      "file",
+      1284,
+      "8318967555b19ba8e9d5fbe8da155b19"
+    ],
+    "keyframes/cand_20260915_015612_372864/rgb.jpg": [
+      "file",
+      26091,
+      "d6db7c4577f613efce3bebb300eb8d09"
+    ],
+    "keyframes/cand_20260915_015612_372864/scan.npz": [
+      "file",
+      5721,
+      "d1e64f5eb0aa174d713d75d67d8d79ff"
+    ],
+    "keyframes/cand_20260915_015631_391803/descriptors.npy": [
+      "file",
+      32128,
+      "222ed2e66cfffa2f70a7fa67da2ab526"
+    ],
+    "keyframes/cand_20260915_015631_391803/keypoints.npy": [
+      "file",
+      28128,
+      "82620a2655024dfbc944ff8be3f5417b"
+    ],
+    "keyframes/cand_20260915_015631_391803/meta.yaml": [
+      "file",
+      1290,
+      "f02fa8b5ab697d7ef0d2b07704c3b63f"
+    ],
+    "keyframes/cand_20260915_015631_391803/rgb.jpg": [
+      "file",
+      46259,
+      "85ff3f97f6f8bd4eb25f047928f2ebfe"
+    ],
+    "keyframes/cand_20260915_015631_391803/scan.npz": [
+      "file",
+      5844,
+      "5c76f1d03dcdd641520e50ee008c8534"
+    ],
+    "keyframes/cand_20260915_015641_401801/descriptors.npy": [
+      "file",
+      22272,
+      "8bfc11cc3e10bcfec06b6eda78e413c9"
+    ],
+    "keyframes/cand_20260915_015641_401801/keypoints.npy": [
+      "file",
+      19504,
+      "74f428a6c6eed0b95e420dcd66c8c26f"
+    ],
+    "keyframes/cand_20260915_015641_401801/meta.yaml": [
+      "file",
+      1294,
+      "f03b73b1b7ea340c23df5ed59e8dd841"
+    ],
+    "keyframes/cand_20260915_015641_401801/rgb.jpg": [
+      "file",
+      24950,
+      "b567446914e6fc09a9c92248d0d37576"
+    ],
+    "keyframes/cand_20260915_015641_401801/scan.npz": [
+      "file",
+      5833,
+      "8ac38c4d9a8ad63d7c0c0a19b85c587f"
+    ],
+    "keyframes/cand_20260915_045155_915331/descriptors.npy": [
+      "file",
+      31680,
+      "aacbfc2693738f14540eda064880cca1"
+    ],
+    "keyframes/cand_20260915_045155_915331/keypoints.npy": [
+      "file",
+      27736,
+      "2e4991682145af87a0a8517cf3a9c2b8"
+    ],
+    "keyframes/cand_20260915_045155_915331/meta.yaml": [
+      "file",
+      1287,
+      "9e3b079cb47d1db2478cfcdb262cea77"
+    ],
+    "keyframes/cand_20260915_045155_915331/rgb.jpg": [
+      "file",
+      28893,
+      "eabc3a477f2463691b7dac561462ed22"
+    ],
+    "keyframes/cand_20260915_045155_915331/scan.npz": [
+      "file",
+      5845,
+      "ac1b75a07329e7085b08ac0d2485241d"
+    ],
+    "keyframes/cand_20260915_045248_968483/descriptors.npy": [
+      "file",
+      32128,
+      "493ee9102c2d0abe306bb109c30222c1"
+    ],
+    "keyframes/cand_20260915_045248_968483/keypoints.npy": [
+      "file",
+      28128,
+      "bda0052f6bb27ef990a47c89357f9ea7"
+    ],
+    "keyframes/cand_20260915_045248_968483/meta.yaml": [
+      "file",
+      1289,
+      "01fbd95cb8d0267fdd1e9bfe2dd4b5f3"
+    ],
+    "keyframes/cand_20260915_045248_968483/rgb.jpg": [
+      "file",
+      40983,
+      "ab347b062f87ce1105790320d4f64eb2"
+    ],
+    "keyframes/cand_20260915_045248_968483/scan.npz": [
+      "file",
+      5880,
+      "5b689907ee6b867c0f58780b66c7e96e"
+    ],
+    "keyframes/cand_20260922_050636_596347/descriptors.npy": [
+      "file",
+      32128,
+      "03573debb76c2ee1c81a51f71bd86b40"
+    ],
+    "keyframes/cand_20260922_050636_596347/keypoints.npy": [
+      "file",
+      28128,
+      "31f83b69e20c21e34c587146ea6f3417"
+    ],
+    "keyframes/cand_20260922_050636_596347/meta.yaml": [
+      "file",
+      1215,
+      "324a796c5e4cb4e6991165d97d6797cb"
+    ],
+    "keyframes/cand_20260922_050636_596347/rgb.jpg": [
+      "file",
+      45525,
+      "4e916b5a218b475737cb1ff632852aae"
+    ],
+    "keyframes/cand_20260922_050636_596347/scan.npz": [
+      "file",
+      5803,
+      "56c4af1bf309df667a97a1397f9b81c4"
+    ],
+    "keyframes/cand_20260922_050641_601290/descriptors.npy": [
+      "file",
+      32128,
+      "9a10147957f69fe19ce4bc3503ed6f96"
+    ],
+    "keyframes/cand_20260922_050641_601290/keypoints.npy": [
+      "file",
+      28128,
+      "7220014240b567ac9b29512f760b8595"
+    ],
+    "keyframes/cand_20260922_050641_601290/meta.yaml": [
+      "file",
+      1240,
+      "cdfa873ad8e7b976f04578b68b2867ec"
+    ],
+    "keyframes/cand_20260922_050641_601290/rgb.jpg": [
+      "file",
+      31547,
+      "912bfff7c1eb121c747ee895b26c4c8a"
+    ],
+    "keyframes/cand_20260922_050641_601290/scan.npz": [
+      "file",
+      5821,
+      "871ef64b4170a46db6726e594affbd6a"
+    ],
+    "keyframes/cand_20260922_051415_055918/descriptors.npy": [
+      "file",
+      31680,
+      "40ac6763988c20dd587e36ad4e8ca24f"
+    ],
+    "keyframes/cand_20260922_051415_055918/keypoints.npy": [
+      "file",
+      27736,
+      "075b5f32dba01af6d03e0961ac3343ea"
+    ],
+    "keyframes/cand_20260922_051415_055918/meta.yaml": [
+      "file",
+      1220,
+      "8307af51410acc0483b4695f7df14f20"
+    ],
+    "keyframes/cand_20260922_051415_055918/rgb.jpg": [
+      "file",
+      37411,
+      "30482dbe5ba6ce1badae75a9f4f880af"
+    ],
+    "keyframes/cand_20260922_051415_055918/scan.npz": [
+      "file",
+      5955,
+      "94e671a03bcecca978b6e4ac1bccafd0"
+    ],
+    "keyframes/cand_20260922_051421_061108/descriptors.npy": [
+      "file",
+      31808,
+      "d0676bc1e11c3c9e31f0bb5344e32f62"
+    ],
+    "keyframes/cand_20260922_051421_061108/keypoints.npy": [
+      "file",
+      27848,
+      "9c283b62c29d9b60efba9206db284f68"
+    ],
+    "keyframes/cand_20260922_051421_061108/meta.yaml": [
+      "file",
+      1241,
+      "4d3b1cd36b759fe6d4e671efced40c23"
+    ],
+    "keyframes/cand_20260922_051421_061108/rgb.jpg": [
+      "file",
+      28391,
+      "8cf3187b95e5261f0050d193906a9157"
+    ],
+    "keyframes/cand_20260922_051421_061108/scan.npz": [
+      "file",
+      5958,
+      "1c66de9132bd7201b1133a5f8359b386"
+    ],
+    "keyframes/cand_20260922_051433_073439/descriptors.npy": [
+      "file",
+      31744,
+      "028e7bdbcbdd49669727f108899068b3"
+    ],
+    "keyframes/cand_20260922_051433_073439/keypoints.npy": [
+      "file",
+      27792,
+      "7abd81eea396181deee1db83a8d97cdc"
+    ],
+    "keyframes/cand_20260922_051433_073439/meta.yaml": [
+      "file",
+      1239,
+      "775c0b5544f4de20d0d326d71ba450c3"
+    ],
+    "keyframes/cand_20260922_051433_073439/rgb.jpg": [
+      "file",
+      38373,
+      "2111f6392ec22480809622a46cab0c8b"
+    ],
+    "keyframes/cand_20260922_051433_073439/scan.npz": [
+      "file",
+      5832,
+      "6e7b626f2baf47949885f413fe554cde"
+    ],
+    "keyframes/cand_20260922_051439_079502/descriptors.npy": [
+      "file",
+      31232,
+      "df429932bc700fcc1ca810ff5a86d8f7"
+    ],
+    "keyframes/cand_20260922_051439_079502/keypoints.npy": [
+      "file",
+      27344,
+      "f53caa66bd8d42e8a3f499db68c88988"
+    ],
+    "keyframes/cand_20260922_051439_079502/meta.yaml": [
+      "file",
+      1221,
+      "4bfcce4674751a13cc55eb67facc32c6"
+    ],
+    "keyframes/cand_20260922_051439_079502/rgb.jpg": [
+      "file",
+      35529,
+      "df6c2246096e0d80547227f6be9896c1"
+    ],
+    "keyframes/cand_20260922_051439_079502/scan.npz": [
+      "file",
+      5704,
+      "5f7fdc0354c69858753ab8d77744dc1b"
+    ],
+    "keyframes/cand_20260922_051617_177022/descriptors.npy": [
+      "file",
+      32128,
+      "b1760b1041ce0b99878d58c0f4962ab6"
+    ],
+    "keyframes/cand_20260922_051617_177022/keypoints.npy": [
+      "file",
+      28128,
+      "42fd1aa2e024c3176a08b790861101bd"
+    ],
+    "keyframes/cand_20260922_051617_177022/meta.yaml": [
+      "file",
+      1213,
+      "0f90719548d77145c0e148d87e96bdad"
+    ],
+    "keyframes/cand_20260922_051617_177022/rgb.jpg": [
+      "file",
+      47723,
+      "53222aed67527a79765c673be39b8fbd"
+    ],
+    "keyframes/cand_20260922_051617_177022/scan.npz": [
+      "file",
+      5651,
+      "a60ece9391091b53a7ca57ac04ca76f7"
+    ],
+    "keyframes/cand_20260922_053850_530967/descriptors.npy": [
+      "file",
+      32128,
+      "67b07a554b427bdd5045181f493bc2fd"
+    ],
+    "keyframes/cand_20260922_053850_530967/keypoints.npy": [
+      "file",
+      28128,
+      "284c7a083b579515099a50e2777aafc0"
+    ],
+    "keyframes/cand_20260922_053850_530967/meta.yaml": [
+      "file",
+      1223,
+      "da79d805728cebf62442bd80d54b572e"
+    ],
+    "keyframes/cand_20260922_053850_530967/rgb.jpg": [
+      "file",
+      33358,
+      "1a2824057749038a3315e4492adeb7cd"
+    ],
+    "keyframes/cand_20260922_053850_530967/scan.npz": [
+      "file",
+      5821,
+      "c631716e1eb1e8ab829249a3d512cf5c"
+    ],
+    "keyframes/cand_20260922_053952_592106/descriptors.npy": [
+      "file",
+      32128,
+      "058b11927ab83ebb4bafef5c514525d9"
+    ],
+    "keyframes/cand_20260922_053952_592106/keypoints.npy": [
+      "file",
+      28128,
+      "85e6f14fb4b704da3e38fc972c102552"
+    ],
+    "keyframes/cand_20260922_053952_592106/meta.yaml": [
+      "file",
+      1232,
+      "7d6fec467f4d116a571f4ab3bcb86d19"
+    ],
+    "keyframes/cand_20260922_053952_592106/rgb.jpg": [
+      "file",
+      35407,
+      "e237b30d401a9635fc1604c7a0ba9517"
+    ],
+    "keyframes/cand_20260922_053952_592106/scan.npz": [
+      "file",
+      5890,
+      "eb1d61d027c33478b9ec1242d5a511ad"
+    ],
+    "keyframes/cand_20260922_054030_630393/descriptors.npy": [
+      "file",
+      32128,
+      "ff1a4de7f77aad51b440b4dfefd67fed"
+    ],
+    "keyframes/cand_20260922_054030_630393/keypoints.npy": [
+      "file",
+      28128,
+      "bf645bc0443fb6e2f961214a5c1b69da"
+    ],
+    "keyframes/cand_20260922_054030_630393/meta.yaml": [
+      "file",
+      1247,
+      "fbcf24f6e6023cca269b5227763d78e0"
+    ],
+    "keyframes/cand_20260922_054030_630393/rgb.jpg": [
+      "file",
+      42104,
+      "8ef3a0bf1b571d4d3992fe51e171c9cb"
+    ],
+    "keyframes/cand_20260922_054030_630393/scan.npz": [
+      "file",
+      5895,
+      "be9d0f39c45e20c474f8942ca54a2f6b"
+    ],
+    "keyframes/cand_20260922_054036_636071/descriptors.npy": [
+      "file",
+      32128,
+      "2d6de4feccb52ab91f6a570817e96779"
+    ],
+    "keyframes/cand_20260922_054036_636071/keypoints.npy": [
+      "file",
+      28128,
+      "3368c7f9b7a77937342501c174cb1da9"
+    ],
+    "keyframes/cand_20260922_054036_636071/meta.yaml": [
+      "file",
+      1225,
+      "0599c161392a91081ac992270b359661"
+    ],
+    "keyframes/cand_20260922_054036_636071/rgb.jpg": [
+      "file",
+      36454,
+      "5bc6af770c77476776d7069052e87f6c"
+    ],
+    "keyframes/cand_20260922_054036_636071/scan.npz": [
+      "file",
+      5937,
+      "aeea7094b4f047138d16291e02a98600"
+    ],
+    "keyframes/cand_20260922_054134_694784/descriptors.npy": [
+      "file",
+      32128,
+      "d082991f978a1983fc32fcdf9a2bb497"
+    ],
+    "keyframes/cand_20260922_054134_694784/keypoints.npy": [
+      "file",
+      28128,
+      "622450ae600dd0061a7a54e75a7c66a7"
+    ],
+    "keyframes/cand_20260922_054134_694784/meta.yaml": [
+      "file",
+      1210,
+      "972b2b770755b4c87d9a62e01ba6a9a1"
+    ],
+    "keyframes/cand_20260922_054134_694784/rgb.jpg": [
+      "file",
+      47435,
+      "5992a2d441ba5dd177769396811f06bb"
+    ],
+    "keyframes/cand_20260922_054134_694784/scan.npz": [
+      "file",
+      5859,
+      "8d8c0f45112a44a35f5ca26f0c443ed1"
+    ],
+    "keyframes/cand_20260922_054140_700651/descriptors.npy": [
+      "file",
+      32128,
+      "86dd6bc84798fcafc0cb76297cb873e5"
+    ],
+    "keyframes/cand_20260922_054140_700651/keypoints.npy": [
+      "file",
+      28128,
+      "90e0004158792ededb5e00009cdd2c8c"
+    ],
+    "keyframes/cand_20260922_054140_700651/meta.yaml": [
+      "file",
+      1240,
+      "34496c12a07c360db143e01bf19b3f16"
+    ],
+    "keyframes/cand_20260922_054140_700651/rgb.jpg": [
+      "file",
+      41083,
+      "7977617cb7d4241513f6bb7f4d3abb86"
+    ],
+    "keyframes/cand_20260922_054140_700651/scan.npz": [
+      "file",
+      5905,
+      "71e2d2de768ec451fdc04677c9466ae2"
+    ],
+    "keyframes/cand_20260922_054740_060716/descriptors.npy": [
+      "file",
+      20544,
+      "b12d78ed030838c61ec0d5bdc80b3c16"
+    ],
+    "keyframes/cand_20260922_054740_060716/keypoints.npy": [
+      "file",
+      17992,
+      "ba2cb282a53328daa208bceacdcdcc3e"
+    ],
+    "keyframes/cand_20260922_054740_060716/meta.yaml": [
+      "file",
+      1233,
+      "62bc84fa24a1573a25ae7be764622315"
+    ],
+    "keyframes/cand_20260922_054740_060716/rgb.jpg": [
+      "file",
+      29355,
+      "253f33304605a377bb6ba5ced75445dc"
+    ],
+    "keyframes/cand_20260922_054740_060716/scan.npz": [
+      "file",
+      5685,
+      "38368a9138ca9330e2f2c2373c050f07"
+    ],
+    "keyframes/cand_20260922_062540_340055/descriptors.npy": [
+      "file",
+      16512,
+      "120d626db50e84564865da238d879883"
+    ],
+    "keyframes/cand_20260922_062540_340055/keypoints.npy": [
+      "file",
+      14464,
+      "7e0ecf2a83becd5b3c8b9d0c00c74580"
+    ],
+    "keyframes/cand_20260922_062540_340055/meta.yaml": [
+      "file",
+      1222,
+      "78ffab5ad3cbdcb6112fd5941a4ae5c2"
+    ],
+    "keyframes/cand_20260922_062540_340055/rgb.jpg": [
+      "file",
+      22869,
+      "2af9d4fa9f64bd1aa602bb8dff0fd8cc"
+    ],
+    "keyframes/cand_20260922_062540_340055/scan.npz": [
+      "file",
+      5930,
+      "5cc828d2f10720ed51e3f2383efe54fd"
+    ],
+    "keyframes/cand_20260922_064849_729236/descriptors.npy": [
+      "file",
+      32128,
+      "324acd26aa7701b1f9c22a6a4b15e1c4"
+    ],
+    "keyframes/cand_20260922_064849_729236/keypoints.npy": [
+      "file",
+      28128,
+      "59a5bd277a41265567d15820ceba2e40"
+    ],
+    "keyframes/cand_20260922_064849_729236/meta.yaml": [
+      "file",
+      1230,
+      "71311ddb25f93779eee55e9014c4a26d"
+    ],
+    "keyframes/cand_20260922_064849_729236/rgb.jpg": [
+      "file",
+      37353,
+      "fc4e1a7d7138da73ef1c792f1598979f"
+    ],
+    "keyframes/cand_20260922_064849_729236/scan.npz": [
+      "file",
+      5455,
+      "019be5e317da2fd107771cc75575ab67"
+    ],
+    "keyframes/cand_20260922_081437_877776/descriptors.npy": [
+      "file",
+      32128,
+      "2af5692f8964d94a20bf5e8e6af79ab1"
+    ],
+    "keyframes/cand_20260922_081437_877776/keypoints.npy": [
+      "file",
+      28128,
+      "b4d1d14d9422cb8dd6f32c4f0642366e"
+    ],
+    "keyframes/cand_20260922_081437_877776/meta.yaml": [
+      "file",
+      1299,
+      "249e45c07a57c30c128a8198b50d21f1"
+    ],
+    "keyframes/cand_20260922_081437_877776/rgb.jpg": [
+      "file",
+      49185,
+      "f2b35106a0365013a1fb675fcd5ce9d5"
+    ],
+    "keyframes/cand_20260922_081437_877776/scan.npz": [
+      "file",
+      5922,
+      "ced611198978908e012aaec9c60db5e9"
+    ],
+    "keyframes/cand_20260922_081441_881216/descriptors.npy": [
+      "file",
+      32128,
+      "ee4b0775d556b6332818f8858ccecd6b"
+    ],
+    "keyframes/cand_20260922_081441_881216/keypoints.npy": [
+      "file",
+      28128,
+      "cd5421f427639c6e3c4cfee0ceb672d8"
+    ],
+    "keyframes/cand_20260922_081441_881216/meta.yaml": [
+      "file",
+      1298,
+      "1e359721867b0e48b78760af50d9d12c"
+    ],
+    "keyframes/cand_20260922_081441_881216/rgb.jpg": [
+      "file",
+      46436,
+      "0f773c6b06222049b7a7989135788d48"
+    ],
+    "keyframes/cand_20260922_081441_881216/scan.npz": [
+      "file",
+      6089,
+      "b4735d12a22425c7d38832938969b51e"
+    ],
+    "keyframes/cand_20260922_081448_888506/descriptors.npy": [
+      "file",
+      32128,
+      "2d4fe64785ab998848e6faae430c8295"
+    ],
+    "keyframes/cand_20260922_081448_888506/keypoints.npy": [
+      "file",
+      28128,
+      "a041b81dfffae0e97a5b0e78d57e52d9"
+    ],
+    "keyframes/cand_20260922_081448_888506/meta.yaml": [
+      "file",
+      1285,
+      "1ea878e398aace600f39629a945a0342"
+    ],
+    "keyframes/cand_20260922_081448_888506/rgb.jpg": [
+      "file",
+      48708,
+      "41eb3cf2263a7c7948e8408eea972cbf"
+    ],
+    "keyframes/cand_20260922_081448_888506/scan.npz": [
+      "file",
+      5813,
+      "fc829168d4af497daf2273a035567ea2"
+    ],
+    "keyframes/cand_20260922_081451_891677/descriptors.npy": [
+      "file",
+      32128,
+      "debeffe4fbd28ca2dac71427e9bce000"
+    ],
+    "keyframes/cand_20260922_081451_891677/keypoints.npy": [
+      "file",
+      28128,
+      "adf18f2f5a5af70e551956c31071cc17"
+    ],
+    "keyframes/cand_20260922_081451_891677/meta.yaml": [
+      "file",
+      1295,
+      "58aa8814c1788f26c020d236dedfdffc"
+    ],
+    "keyframes/cand_20260922_081451_891677/rgb.jpg": [
+      "file",
+      41890,
+      "9aff51e00fe8d07d5734903a781382ac"
+    ],
+    "keyframes/cand_20260922_081451_891677/scan.npz": [
+      "file",
+      5829,
+      "c6b1f626cd37b72e14b4c54c9db415d8"
+    ],
+    "keyframes/cand_20260922_081459_899097/descriptors.npy": [
+      "file",
+      32128,
+      "4e6247769ac921b96a03eb5261bb7506"
+    ],
+    "keyframes/cand_20260922_081459_899097/keypoints.npy": [
+      "file",
+      28128,
+      "1f103de7cfb9620f1abfd89ce90e558a"
+    ],
+    "keyframes/cand_20260922_081459_899097/meta.yaml": [
+      "file",
+      1298,
+      "285fb5d291e3ee4853545768d46b2580"
+    ],
+    "keyframes/cand_20260922_081459_899097/rgb.jpg": [
+      "file",
+      41790,
+      "db64c1b3979f6946d64fbb3bb6d215af"
+    ],
+    "keyframes/cand_20260922_081459_899097/scan.npz": [
+      "file",
+      5853,
+      "f928cfc3d6eca77c00402dde7da741e4"
+    ],
+    "keyframes/cand_20260922_081502_902407/descriptors.npy": [
+      "file",
+      32128,
+      "a5645b8e762d2ca7df9310f101500214"
+    ],
+    "keyframes/cand_20260922_081502_902407/keypoints.npy": [
+      "file",
+      28128,
+      "f07f2ab6377f633421dd8b7e2929c891"
+    ],
+    "keyframes/cand_20260922_081502_902407/meta.yaml": [
+      "file",
+      1298,
+      "ed22f9da52fd2bb2eeb3f82a79a0d941"
+    ],
+    "keyframes/cand_20260922_081502_902407/rgb.jpg": [
+      "file",
+      44305,
+      "ba14d07a8dbc4d02d4c022510985646d"
+    ],
+    "keyframes/cand_20260922_081502_902407/scan.npz": [
+      "file",
+      5991,
+      "d7e6bc78d1650ca56e19b1c20c609b01"
+    ],
+    "keyframes/cand_20260922_081513_913265/descriptors.npy": [
+      "file",
+      32128,
+      "5543062d64741ac042ba53cd71746e0d"
+    ],
+    "keyframes/cand_20260922_081513_913265/keypoints.npy": [
+      "file",
+      28128,
+      "00d4db9650edea9744529cb7357bc640"
+    ],
+    "keyframes/cand_20260922_081513_913265/meta.yaml": [
+      "file",
+      1267,
+      "6f5f7e0f7bbcb2ec98b3c460526f5aa3"
+    ],
+    "keyframes/cand_20260922_081513_913265/rgb.jpg": [
+      "file",
+      45847,
+      "32beddcb46a3516adbd8545b80431181"
+    ],
+    "keyframes/cand_20260922_081513_913265/scan.npz": [
+      "file",
+      5953,
+      "9a8e48eacf85bcb1bcb5c32a2f45cfda"
+    ],
+    "keyframes/cand_20260922_081603_963499/descriptors.npy": [
+      "file",
+      32128,
+      "f121eb1c588ccc655e12e87ff7918e19"
+    ],
+    "keyframes/cand_20260922_081603_963499/keypoints.npy": [
+      "file",
+      28128,
+      "afa9d93033f95d92ba9c00f6fa567d7f"
+    ],
+    "keyframes/cand_20260922_081603_963499/meta.yaml": [
+      "file",
+      1286,
+      "c42c969081626a7a9a035fcf99b95be3"
+    ],
+    "keyframes/cand_20260922_081603_963499/rgb.jpg": [
+      "file",
+      36512,
+      "f6db6d8e48906535c3309bc4e143dba0"
+    ],
+    "keyframes/cand_20260922_081603_963499/scan.npz": [
+      "file",
+      5992,
+      "bba16e167ea021c16dafd62f2da3207e"
+    ],
+    "keyframes/cand_20260922_081627_987062/descriptors.npy": [
+      "file",
+      32128,
+      "f45eb2d99ab1bcd5b7c11864be439a8f"
+    ],
+    "keyframes/cand_20260922_081627_987062/keypoints.npy": [
+      "file",
+      28128,
+      "248c50e85abca855e122eafcadfae1cd"
+    ],
+    "keyframes/cand_20260922_081627_987062/meta.yaml": [
+      "file",
+      1275,
+      "19196557b791118789d8fb9b343d8e4e"
+    ],
+    "keyframes/cand_20260922_081627_987062/rgb.jpg": [
+      "file",
+      45000,
+      "657cd164e9f850550b892466004120af"
+    ],
+    "keyframes/cand_20260922_081627_987062/scan.npz": [
+      "file",
+      5868,
+      "15588b76ba9e6a8161fa6e35e2d57d57"
+    ],
+    "keyframes/cand_20260922_081633_993685/descriptors.npy": [
+      "file",
+      32128,
+      "9418e9d1381aaa79464da5a3d8bfd569"
+    ],
+    "keyframes/cand_20260922_081633_993685/keypoints.npy": [
+      "file",
+      28128,
+      "2d780787e51178b886a516e64ab70abb"
+    ],
+    "keyframes/cand_20260922_081633_993685/meta.yaml": [
+      "file",
+      1296,
+      "1c9b89e6fb3796a567d4dbb41f60cd61"
+    ],
+    "keyframes/cand_20260922_081633_993685/rgb.jpg": [
+      "file",
+      45220,
+      "9c7c3cef75c883826bc1766d1e3521f2"
+    ],
+    "keyframes/cand_20260922_081633_993685/scan.npz": [
+      "file",
+      6060,
+      "7187570c4eeb75e065ef3be80fb38ca5"
+    ],
+    "keyframes/cand_20260922_081706_026983/descriptors.npy": [
+      "file",
+      32128,
+      "9742d616743a61f2aa022868d00d2209"
+    ],
+    "keyframes/cand_20260922_081706_026983/keypoints.npy": [
+      "file",
+      28128,
+      "44bcbfb0adb5ba5faf12e7782af56d07"
+    ],
+    "keyframes/cand_20260922_081706_026983/meta.yaml": [
+      "file",
+      1275,
+      "311a5fa79e7ba44bbf527ae305b382b2"
+    ],
+    "keyframes/cand_20260922_081706_026983/rgb.jpg": [
+      "file",
+      47931,
+      "c40b821d0ebaad4e81423bc074929d5e"
+    ],
+    "keyframes/cand_20260922_081706_026983/scan.npz": [
+      "file",
+      5685,
+      "5331b07ffe77a887fea122e8d387ae72"
+    ],
+    "keyframes/cand_20260922_081724_044441/descriptors.npy": [
+      "file",
+      31776,
+      "4687854008acbde4ec72bdd1bdca3fda"
+    ],
+    "keyframes/cand_20260922_081724_044441/keypoints.npy": [
+      "file",
+      27820,
+      "5152c5c04c664dce6b1b34a999e628f6"
+    ],
+    "keyframes/cand_20260922_081724_044441/meta.yaml": [
+      "file",
+      1268,
+      "d202390e0fee0bd2fc4e79ce8aa4ff30"
+    ],
+    "keyframes/cand_20260922_081724_044441/rgb.jpg": [
+      "file",
+      33869,
+      "ebdc88f6c70e58864e80d125c0bb4b24"
+    ],
+    "keyframes/cand_20260922_081724_044441/scan.npz": [
+      "file",
+      5756,
+      "170cc9d56908355270a3afde88fd5b7c"
+    ],
+    "keyframes/cand_20260922_081727_047851/descriptors.npy": [
+      "file",
+      32128,
+      "9e34c61f961f800ec8769a043b907376"
+    ],
+    "keyframes/cand_20260922_081727_047851/keypoints.npy": [
+      "file",
+      28128,
+      "d0adf632e6307216ff9d39aea192539d"
+    ],
+    "keyframes/cand_20260922_081727_047851/meta.yaml": [
+      "file",
+      1299,
+      "5e489219fdd00b0c44901430202a362a"
+    ],
+    "keyframes/cand_20260922_081727_047851/rgb.jpg": [
+      "file",
+      34026,
+      "efb3d944585f4073bdffb108edaf666e"
+    ],
+    "keyframes/cand_20260922_081727_047851/scan.npz": [
+      "file",
+      5656,
+      "8d5f0c584ae94b71e34139fb664f6461"
+    ],
+    "keyframes/cand_20260922_081823_103249/descriptors.npy": [
+      "file",
+      32128,
+      "743472915ddb03608eeea7a11aed4982"
+    ],
+    "keyframes/cand_20260922_081823_103249/keypoints.npy": [
+      "file",
+      28128,
+      "31dd380be34d235c8cc3a249c58d2262"
+    ],
+    "keyframes/cand_20260922_081823_103249/meta.yaml": [
+      "file",
+      1290,
+      "c124fc74357833bb2ccf9d7658aa5c5f"
+    ],
+    "keyframes/cand_20260922_081823_103249/rgb.jpg": [
+      "file",
+      44992,
+      "ef2dfd693148cfd9d75e49dc30e1d561"
+    ],
+    "keyframes/cand_20260922_081823_103249/scan.npz": [
+      "file",
+      5732,
+      "1fceb6fecc1bb15f60fb3ac37c00b06a"
+    ],
+    "keyframes/cand_20260922_081836_116083/descriptors.npy": [
+      "file",
+      32128,
+      "5f5abe147f7b57f6aaac210b7a4bd482"
+    ],
+    "keyframes/cand_20260922_081836_116083/keypoints.npy": [
+      "file",
+      28128,
+      "ec9f80a7ff791171db8c737c2db15946"
+    ],
+    "keyframes/cand_20260922_081836_116083/meta.yaml": [
+      "file",
+      1281,
+      "ffa8eb51995ec8282430cdbb81f96cfb"
+    ],
+    "keyframes/cand_20260922_081836_116083/rgb.jpg": [
+      "file",
+      46901,
+      "127c41a403801bb5ae4534d1dba235c1"
+    ],
+    "keyframes/cand_20260922_081836_116083/scan.npz": [
+      "file",
+      5884,
+      "8f1a1b48ad68a6106d3e5896323edf7d"
+    ],
+    "keyframes/cand_20260922_081840_120073/descriptors.npy": [
+      "file",
+      32128,
+      "91c3b221e5acb0519a946ff2d3fcf148"
+    ],
+    "keyframes/cand_20260922_081840_120073/keypoints.npy": [
+      "file",
+      28128,
+      "362ffc2d1c067de29b0f8f8b5f181b50"
+    ],
+    "keyframes/cand_20260922_081840_120073/meta.yaml": [
+      "file",
+      1294,
+      "ab4182e91e5a3ce194854fdb2af19a4c"
+    ],
+    "keyframes/cand_20260922_081840_120073/rgb.jpg": [
+      "file",
+      46325,
+      "1f723a04f9737436960c554c97cc7264"
+    ],
+    "keyframes/cand_20260922_081840_120073/scan.npz": [
+      "file",
+      5998,
+      "74abaeeeb4bd6060c8c010f17254738a"
+    ],
+    "keyframes/cand_20260922_081909_149825/descriptors.npy": [
+      "file",
+      15552,
+      "dab216728cc33eea247978dc0c7c2600"
+    ],
+    "keyframes/cand_20260922_081909_149825/keypoints.npy": [
+      "file",
+      13624,
+      "faacee33164794c91f21115373f5a937"
+    ],
+    "keyframes/cand_20260922_081909_149825/meta.yaml": [
+      "file",
+      1277,
+      "3cc65ff8c34df150e335b3969f724577"
+    ],
+    "keyframes/cand_20260922_081909_149825/rgb.jpg": [
+      "file",
+      32405,
+      "053f71f48ac5b48fe77871b519554223"
+    ],
+    "keyframes/cand_20260922_081909_149825/scan.npz": [
+      "file",
+      5688,
+      "5828b507feb7c5fa55800a27769f5949"
+    ],
+    "keyframes/cand_20260922_081913_153300/descriptors.npy": [
+      "file",
+      32128,
+      "0d4bae2b108e48802dfcc97d8cf7dde5"
+    ],
+    "keyframes/cand_20260922_081913_153300/keypoints.npy": [
+      "file",
+      28128,
+      "b762987bad768d9037ddaa5300d5dada"
+    ],
+    "keyframes/cand_20260922_081913_153300/meta.yaml": [
+      "file",
+      1303,
+      "cf9c26e55e329ab5d270167a843eb439"
+    ],
+    "keyframes/cand_20260922_081913_153300/rgb.jpg": [
+      "file",
+      34084,
+      "a4e7790cc914ac42d1aac3c13351100d"
+    ],
+    "keyframes/cand_20260922_081913_153300/scan.npz": [
+      "file",
+      5791,
+      "2a28fc6835b23baf6fd30707865ae872"
+    ],
+    "keyframes/cand_20260922_082120_280105/descriptors.npy": [
+      "file",
+      32128,
+      "10374852a23cff42c33e2017da1a04de"
+    ],
+    "keyframes/cand_20260922_082120_280105/keypoints.npy": [
+      "file",
+      28128,
+      "7e90293f3349bcdbbf50cea12b279120"
+    ],
+    "keyframes/cand_20260922_082120_280105/meta.yaml": [
+      "file",
+      1272,
+      "a3cea91b0ea02b466343f2158b178634"
+    ],
+    "keyframes/cand_20260922_082120_280105/rgb.jpg": [
+      "file",
+      49318,
+      "e7e8c58274a67a03c151405a2436078a"
+    ],
+    "keyframes/cand_20260922_082120_280105/scan.npz": [
+      "file",
+      5897,
+      "d6b951aa24a325f52951252b5280d911"
+    ],
+    "keyframes/cand_20260922_082233_353698/descriptors.npy": [
+      "file",
+      21664,
+      "782485f924b94ad7d0e4c766eaa2f85a"
+    ],
+    "keyframes/cand_20260922_082233_353698/keypoints.npy": [
+      "file",
+      18972,
+      "a4595dcd4302f196d8a557ea7176791d"
+    ],
+    "keyframes/cand_20260922_082233_353698/meta.yaml": [
+      "file",
+      1271,
+      "30582f4455bf451fc15db1fc1dc4be91"
+    ],
+    "keyframes/cand_20260922_082233_353698/rgb.jpg": [
+      "file",
+      27494,
+      "b42e326ad2c957c362f5c77ef4eed35a"
+    ],
+    "keyframes/cand_20260922_082233_353698/scan.npz": [
+      "file",
+      5845,
+      "6386c36e6cfdf67a7b6e934c0b839486"
+    ],
+    "keyframes/cand_20260922_082254_374271/descriptors.npy": [
+      "file",
+      32128,
+      "f13459d3bccddb00a01744d1283abff6"
+    ],
+    "keyframes/cand_20260922_082254_374271/keypoints.npy": [
+      "file",
+      28128,
+      "237a76601c6c432ed10f342665c17ca7"
+    ],
+    "keyframes/cand_20260922_082254_374271/meta.yaml": [
+      "file",
+      1296,
+      "616f5d141e5730a778a739b2aed255a9"
+    ],
+    "keyframes/cand_20260922_082254_374271/rgb.jpg": [
+      "file",
+      31259,
+      "e2b161d67c781bdcb0b00faa056265fb"
+    ],
+    "keyframes/cand_20260922_082254_374271/scan.npz": [
+      "file",
+      5713,
+      "4d81c705977f0de878424e8df0c6709a"
+    ],
+    "keyframes/cand_20260922_082614_574829/descriptors.npy": [
+      "file",
+      32128,
+      "aae072c2777bc5fe9f2b0f5229250e66"
+    ],
+    "keyframes/cand_20260922_082614_574829/keypoints.npy": [
+      "file",
+      28128,
+      "3a7ebf74b5bc34e6e2f90999ac8edb8a"
+    ],
+    "keyframes/cand_20260922_082614_574829/meta.yaml": [
+      "file",
+      1264,
+      "32d60f7067f9aee5b0c7d0567e7bd733"
+    ],
+    "keyframes/cand_20260922_082614_574829/rgb.jpg": [
+      "file",
+      49255,
+      "adf825a265dd81f5a5395a3c41081632"
+    ],
+    "keyframes/cand_20260922_082614_574829/scan.npz": [
+      "file",
+      5662,
+      "f35c3762f7a769a3e7b02221fa3a8817"
+    ],
+    "keyframes/cand_20260922_082728_648008/descriptors.npy": [
+      "file",
+      30016,
+      "6586562d6470b7051bda2266812f73b4"
+    ],
+    "keyframes/cand_20260922_082728_648008/keypoints.npy": [
+      "file",
+      26280,
+      "ef615b68cfef37ee801d30c5f6044a71"
+    ],
+    "keyframes/cand_20260922_082728_648008/meta.yaml": [
+      "file",
+      1288,
+      "8f04237f4e4d59fc0d73f1902441c05c"
+    ],
+    "keyframes/cand_20260922_082728_648008/rgb.jpg": [
+      "file",
+      25466,
+      "0d78ab6805bd6a7f47bac7fd441716ef"
+    ],
+    "keyframes/cand_20260922_082728_648008/scan.npz": [
+      "file",
+      5775,
+      "32ce6e242dd7f5c85c6d16b6336952ba"
+    ],
+    "reports/c1_validation_promote_2026-09-10.json": [
+      "file",
+      41046,
+      "fe22ed2b4a6c2e1220a74d035304c4b0"
+    ],
+    "reports/c2_validation_promote_20260910.json": [
+      "file",
+      58225,
+      "12f2e78a95635dc30353c607bf66b5a0"
+    ],
+    "reports/c2_validation_promote_20260915.json": [
+      "file",
+      21574,
+      "4d8da9593a9b1011d34cbcbce2f28053"
+    ],
+    "reports/c2_validation_promote_20260922.json": [
+      "file",
+      59372,
+      "d180953b896ba465d72e3cbcc3c4aae9"
+    ],
+    "reports/coverage.json": [
+      "file",
+      56892,
+      "f95282c3ad2f0d63dc68fc9a260f6f59"
+    ],
+    "reports/coverage_report.md": [
+      "file",
+      4996,
+      "672179be0b3d210590de56ffb8e7c5da"
+    ]
+  },
+  "file_count": 723,
+  "src": "/ros2_ws/maps/vp/visual/candidate",
+  "symlink_count": 0
+}

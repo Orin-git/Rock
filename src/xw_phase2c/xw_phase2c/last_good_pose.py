@@ -158,6 +158,46 @@ def read_last_good_pose(maps_dir: Path | str, map_name: str) -> Optional[LastGoo
         return None
 
 
+def is_superior_record(incoming: LastGoodPose,
+                       existing: Optional[LastGoodPose]) -> bool:
+    """May `incoming` REPLACE `existing` on disk? (plan 9.3-8)
+
+    ★ Compares `laser_score_at_write` -- NOT `quality`.
+    `quality` is derived from AMCL's own covariance (`quality_from_cov`: 0.6*q_xy
+    + 0.4*q_yaw), so it says how CONFIDENT amcl is, not whether the pose is
+    RIGHT. Measured live 2026-09-22 05:24:21: a rescue-cascade seed at
+    (-12.59,-1.91) -- a pose the ray gate convicted one second later -- was
+    written with `quality=1.00` and `laser_score_at_write=0.412`. A perfect
+    quality on a wrong pose is exactly the failure this guard exists for.
+
+    The rule is RELATIVE (`>=`), so it introduces NO threshold: a tie still
+    writes, and that is what keeps the file's timestamp fresh. Ties are the
+    common case on a stationary robot, and `validate_as_proposal` ages a record
+    out (`max_age_sec`), so a frozen timestamp is the worse failure.
+
+    Comparability (still not a threshold): the two identity checks below are the
+    same two `validate_as_proposal` rejects on, for the same reason -- a record
+    whose map_name/map_hash does not match THIS file's map is not a usable bar.
+    It is already unusable for R2 (`map_name_mismatch` / `map_hash_mismatch`),
+    so refusing to overwrite it could only leave the file with no usable record
+    at all. Real case: the free_thresh fix (2026-09-22 07:17:05) edited
+    maps/vp.yaml, so every pre-edit record's hash stopped matching the current
+    one.
+
+    ★ Known cost (accepted, plan 9.3-8): a high score can freeze the file. The
+    failure direction is safe -- `validate_as_proposal` then returns
+    `age_exceeded` (or `map_hash_mismatch`), so R2 yields to R3 instead of
+    seeding a bad pose.
+    """
+    if existing is None:
+        return True
+    if existing.map_name != incoming.map_name:
+        return True
+    if existing.map_hash != incoming.map_hash:
+        return True
+    return float(incoming.laser_score_at_write) >= float(existing.laser_score_at_write)
+
+
 def validate_as_proposal(
     maps_dir: Path | str,
     map_name: str,

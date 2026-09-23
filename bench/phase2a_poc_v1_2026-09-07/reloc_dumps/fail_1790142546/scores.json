@@ -1,0 +1,16 @@
+{
+  "decision": "UNKNOWN",
+  "reason": "no_survivor",
+  "mode": "visual_laser",
+  "cluster_accept": {
+    "status": "UNKNOWN",
+    "reason": "no_survivor",
+    "cluster_margin": 0.0,
+    "single_cluster_min_score": 0.55,
+    "cluster_count": 0,
+    "best_cluster": null,
+    "second_cluster": null,
+    "survivor_count": 0,
+    "rejected_count": 10
+  }
+}

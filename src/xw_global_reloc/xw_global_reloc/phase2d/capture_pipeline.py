@@ -13,7 +13,12 @@ from sensor_msgs.msg import LaserScan
 from xw_global_reloc.laser_verify import DistanceField
 from xw_global_reloc.phase2d.candidate_writer import CandidateWriter
 from xw_global_reloc.phase2d.capture_policy import CaptureDecision, evaluate_capture_policy
-from xw_global_reloc.phase2d.coverage_model import CoverageModel, FrameRef, build_coverage_model
+from xw_global_reloc.phase2d.coverage_model import (
+    CoverageModel,
+    FrameRef,
+    appearance_id_for_slot,
+    build_coverage_model,
+)
 from xw_global_reloc.phase2d.image_quality_gate import ImageGateResult, evaluate_image_gate
 from xw_global_reloc.phase2d.laser_quality_gate import LaserGateResult, evaluate_laser_gate
 from xw_global_reloc.phase2d.pose_quality_gate import PoseGateInput, PoseGateResult, evaluate_pose_gate
@@ -67,6 +72,26 @@ def _scan_to_npz(scan: LaserScan) -> Dict[str, Any]:
         'range_max': float(scan.range_max),
         'frame_id': str(scan.header.frame_id),
     }
+
+
+def _appearance_id_for(model: CoverageModel, decision: CaptureDecision) -> Optional[str]:
+    """D1 Multi-Appearance: the appearance this frame would ADD, or None.
+
+    Only a frame the policy already flagged as visually novel
+    (`possible_new_appearance`, decided with the EXISTING min_visual_diff
+    threshold -- no new threshold is introduced) starts a new appearance.
+    Everything else stays in the slot's default appearance, which is what every
+    pre-D1 frame on disk is. Derived from the slot key + the slot's current
+    DISTINCT appearance count => no uuid, no counter, no config key => reloading
+    the same DB reproduces identical ids.
+    """
+    if not decision.possible_new_appearance:
+        return None
+    return appearance_id_for_slot(
+        str(decision.spatial_cell),
+        int(decision.yaw_bin),
+        model.appearance_count(decision.spatial_cell, decision.yaw_bin),
+    )
 
 
 def run_capture_pipeline(
@@ -195,7 +220,7 @@ def run_capture_pipeline(
         'build_session_id': build_session_id or '',
         'spatial_cell': decision.spatial_cell,
         'yaw_bin': int(decision.yaw_bin),
-        'appearance_id': None,
+        'appearance_id': _appearance_id_for(model, decision),
         'possible_new_appearance': bool(decision.possible_new_appearance),
         'capture_decision': decision.to_meta(),
         'validation': {'status': 'pending'},
@@ -242,6 +267,13 @@ def run_capture_pipeline(
                     descriptors=image.orb.descriptors,
                     timestamp=float(meta['timestamp']),
                     source=src,
+                    # D1: carry the derived id into the in-memory model, exactly as
+                    # written to meta.yaml above. Without it the model cannot see
+                    # what it just wrote, so the next capture at this slot in the
+                    # SAME process derives the same index again and two genuinely
+                    # different appearances collapse into one on disk.
+                    # (Measured 2026-09-23: two real writes both got `/3/3`.)
+                    appearance_id=meta.get('appearance_id'),
                 ),
                 cache_desc=False,
             )

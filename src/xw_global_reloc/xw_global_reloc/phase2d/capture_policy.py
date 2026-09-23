@@ -17,6 +17,7 @@ from xw_global_reloc.phase2d.spatial import yaw_delta_deg
 CAPTURE_NEW_CELL = 'CAPTURE_NEW_CELL'
 CAPTURE_NEW_YAW = 'CAPTURE_NEW_YAW'
 CAPTURE_TRANSLATION = 'CAPTURE_TRANSLATION'
+CAPTURE_YAW_CHANGE = 'CAPTURE_YAW_CHANGE'
 CAPTURE_VISUAL_NOVELTY = 'CAPTURE_VISUAL_NOVELTY'
 SKIP_DUPLICATE = 'SKIP_DUPLICATE'
 SKIP_COVERED = 'SKIP_COVERED'
@@ -130,6 +131,23 @@ def evaluate_capture_policy(
     # Cell+yaw candidate/active quota
     if model.count_cell_yaw(cell, yb) >= max_per_slot:
         # Still allow novelty only if visual very different? Spec says quota skip.
+        model.stats['quota_skips'] += 1
+        return CaptureDecision(
+            False,
+            SKIP_CELL_YAW_QUOTA,
+            cell,
+            yb,
+            nearest_keyframe_id=nearest_id,
+            nearest_distance_m=nearest_d,
+            nearest_yaw_delta_deg=nearest_dyaw,
+        )
+
+    # D2-b Multi-Appearance: the SAME existing key (max_per_cell_yaw) also caps
+    # the number of DISTINCT appearances in the slot -- zero new config keys.
+    # Strictly tightening: a slot whose frames carry no appearance_id (all pre-D1
+    # data) folds into ONE default appearance, so this can never skip a frame
+    # that the frame quota above would have accepted.
+    if model.appearance_count(cell, yb) >= max_per_slot:
         model.stats['quota_skips'] += 1
         return CaptureDecision(
             False,

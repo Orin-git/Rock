@@ -1,0 +1,30 @@
+{
+  "vp_visual_v1.0": {
+    "index_md5": "6e83bbf4b1102cdfba4afde1a9bc34a3",
+    "manifest_md5": "ce07c17c06b39f5aba40d9be9b4292a7"
+  },
+  "vp_visual_v1.1": {
+    "index_md5": "3b2c38165839002debafa2ecdb9c3b47",
+    "manifest_md5": "448d9c8fa17b1a515d2284606268ea05"
+  },
+  "vp_visual_v1.2": {
+    "index_md5": "7151aabca32a18ece50086065fb5b5da",
+    "manifest_md5": "0a6916ea63a6e2a85322ec2d1294abee"
+  },
+  "vp_visual_v1.3": {
+    "index_md5": "7c2c63b56bd351a6212d15e725c38ca7",
+    "manifest_md5": "38989eda758fb6648a4a15b8b179b087"
+  },
+  "vp_visual_v1.4": {
+    "index_md5": "a57b8348c31be385b809318aa7710032",
+    "manifest_md5": "c6379c82b26e059503f2fdabaf59012c"
+  },
+  "vp_visual_v1.5": {
+    "index_md5": "895149f5049191e521f625c7345f331b",
+    "manifest_md5": "a2b055bdecf4b0864055987665559d02"
+  },
+  "vp_visual_v1.6": {
+    "index_md5": "abbbe691783ca0859538e2beda0b421b",
+    "manifest_md5": "04c18d8a242f5c60ba3273ffc78db92a"
+  }
+}

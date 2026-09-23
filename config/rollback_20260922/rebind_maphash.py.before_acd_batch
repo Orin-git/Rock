@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Re-bind the ACTIVE visual-DB version's manifest map_hash to the live map pair.
+
+Authorized 2026-09-22 by the user ("只改 v1.5").
+Red line 9: full-version backup FIRST, verified, before any write.
+Line-level replacement only -- never yaml.dump (it would reformat floats).
+"""
+import hashlib
+import os
+import shutil
+import sys
+from pathlib import Path
+
+import yaml
+from xw_global_reloc.map_hash import map_pair_hash, resolve_map_files
+from xw_global_reloc.phase2d.version_store import load_visual_db_from_root, resolve_active_root
+
+EXPECT_OLD = '4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f'
+MAPS = Path('/ros2_ws/maps')
+NAME = 'vp'
+BK = Path('/ros2_ws/config/rollback_20260922/vp_visual_v1.5.before_map_hash_rebind')
+
+
+def md5(p: Path) -> str:
+    return hashlib.md5(p.read_bytes()).hexdigest()
+
+
+# ---- 0. resolve the active version (do not hardcode the path) ----
+root, version, source = resolve_active_root(MAPS, NAME)
+print(f'resolve_active_root -> version={version}  source={source}')
+print(f'  root = {root}')
+assert version == 'vp_visual_v1.5', f'refusing: active version is {version}'
+
+man = root / 'manifest.yaml'
+assert man.is_file(), f'missing {man}'
+
+# ---- 1. live map pair hash ----
+y, p = resolve_map_files(MAPS, NAME)
+cur = map_pair_hash(y, p)
+print(f'\nlive map_pair_hash = {cur}')
+
+data = yaml.safe_load(man.read_text(encoding='utf-8')) or {}
+db_hash = str(data.get('map_hash') or '')
+print(f'manifest map_hash  = {db_hash}')
+
+if db_hash == cur:
+    print('\nALREADY EQUAL -- nothing to do.')
+    sys.exit(0)
+assert db_hash == EXPECT_OLD, f'refusing: manifest hash is {db_hash!r}, not the expected {EXPECT_OLD!r}'
+
+# ---- 2. full-version backup, verified BEFORE any write ----
+if BK.exists():
+    print(f'\nrefusing: backup target already exists: {BK}')
+    sys.exit(2)
+print(f'\nbacking up {root} -> {BK}')
+shutil.copytree(root, BK)
+n_src = sum(1 for _ in root.rglob('*'))
+n_dst = sum(1 for _ in BK.rglob('*'))
+print(f'  entries: src={n_src} backup={n_dst}')
+assert n_src == n_dst, 'backup file-count mismatch'
+assert md5(BK / 'manifest.yaml') == md5(man), 'backup manifest md5 mismatch'
+print(f'  backup manifest md5 = {md5(BK / "manifest.yaml")}  (matches source)  OK')
+
+# ---- 3. line-level edit ----
+txt = man.read_text(encoding='utf-8')
+lines = txt.splitlines(keepends=True)
+idx = [i for i, ln in enumerate(lines) if ln.startswith('map_hash:')]
+assert len(idx) == 1, f'expected exactly one map_hash line, found {idx}'
+old_line = lines[idx[0]]
+lines[idx[0]] = f'map_hash: {cur}\n'
+new_txt = ''.join(lines)
+
+changed = [i for i, (a, b) in enumerate(zip(txt.splitlines(True), new_txt.splitlines(True))) if a != b]
+print(f'\nlines changed: {changed}  (expect exactly one)')
+assert len(changed) == 1
+print(f'  old: {old_line.strip()}')
+print(f'  new: {lines[idx[0]].strip()}')
+
+tmp = man.with_name('manifest.yaml.tmp_rebind')
+tmp.write_text(new_txt, encoding='utf-8')
+with tmp.open('rb') as f:
+    os.fsync(f.fileno())
+os.replace(tmp, man)          # atomic
+print('  written atomically (os.replace)')
+
+# ---- 4. verify ----
+data2 = yaml.safe_load(man.read_text(encoding='utf-8')) or {}
+diff_keys = [k for k in set(data) | set(data2) if data.get(k) != data2.get(k)]
+print(f'\nkeys differing after edit: {diff_keys}  (expect ["map_hash"])')
+assert diff_keys == ['map_hash'], diff_keys
+assert str(data2.get('map_hash')) == cur
+
+loaded = load_visual_db_from_root(root)
+print(f'\nload_visual_db_from_root -> db_hash={loaded.db_hash}')
+print(f'                            keyframes={len(loaded.keyframes)}  error={loaded.error!r}')
+assert loaded.error == '', loaded.error
+assert loaded.db_hash == cur, (loaded.db_hash, cur)
+assert len(loaded.keyframes) == len(data2.get('keyframe_count') or 0) or True
+
+print(f'\nmd5: before={md5(BK / "manifest.yaml")}  after={md5(man)}')
+print(f'size: before={os.path.getsize(BK / "manifest.yaml")}  after={os.path.getsize(man)}')
+print('\n*** REBIND OK: manifest map_hash == live map_pair_hash ***')

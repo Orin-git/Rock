@@ -1,0 +1,590 @@
+#!/usr/bin/env python3
+"""Report on the visual keyframe DB layout and what is reclaimable. READ-ONLY.
+
+This script NEVER writes, moves, renames or deletes anything. It opens every
+file read-only and only prints a human-readable report (or JSON with --json).
+Archiving is a separate, opt-in script (db_archive_promoted.py); this is the
+"look before you touch" half, per plan 9.3-10.
+
+What it reports
+  * per-area bytes / files / entries for the visual DB tree
+  * the version list, with each manifest's creation time AND WHICH FIELD IT CAME
+    FROM (see the created_at note below)
+  * the candidate pool split into absorbed / rejected / pending, using the same
+    predicate the promote path itself uses (see ABSORBED below)
+  * redundancy: the whole-tree-copy versions, and the duplicate legacy trees
+  * the build-session JSONs in state/ (state + stop_reason), which is also the
+    P0-1 no-session-in-progress gate
+
+What it deliberately does NOT do
+  * No deletion, no move, no archive. Not even with a flag. Archiving is a
+    separate script by design, so that "this one never writes" stays a property
+    of the file rather than a promise about a flag.
+  * No thresholds and no policy. It prints numbers; it does not decide. Any
+    "keep the newest N" or "older than N days" rule would be a new threshold,
+    and red line 11 says those come from measured calibration, not from a
+    report script. (In particular it does NOT reuse web_server.py's
+    KEEP_DAYS = 14 -- that is telemetry retention for a different tree.)
+  * It does not read manifest['appearance_count']. That key exists on
+    v1.1..v1.6 and equals keyframe_count on every one of them, so it is a
+    keyframe count under an appearance-sounding name; reading it as an
+    appearance count would be wrong. See plan 7.13-2. (The report does print
+    keyframe_count, which is the honest number.)
+
+created_at: manifest.yaml comes in two shapes. The version manifests
+(schema_version 3) carry BOTH `created_at` (when that version was minted) and
+`created` (inherited from the legacy seed, and identical -- 1788772543.4354334
+-- on every single version). The root manifest.yaml and legacy_seed/manifest.yaml
+(schema_version 2) carry ONLY `created`. So every read of a creation time here
+falls back created_at -> created -> the manifest file's mtime, and reports which
+one it used, so the number is never silently wrong. This section reports those
+two non-version manifests explicitly, which is where the fallback actually fires.
+
+ABSORBED: a candidate is "absorbed" when it has already been copied into a
+version tree. The promote path's own test for that is
+c1_validate_promote.py:_candidate_already_decided -- `promoted_as` or
+`version_promoted_to` non-empty. This script uses the same test rather than
+inventing one. Two facts about the result, both measured 2026-09-22, both
+load-bearing for the archiver:
+
+  * absorbed candidates PERSIST in candidate/keyframes/ -- promote does not
+    remove them. That is the whole reason there is anything to archive.
+  * `version_promoted_to` naming a version OTHER than the active one is the
+    NORMAL case, not an anomaly: measured 22 candidates name the active v1.6
+    while 47 name v1.3..v1.5 -- they were promoted into those versions as those
+    versions were minted. (An earlier draft of this file said "only possible
+    after a rollback" here. That was wrong; see the note at the call site too.)
+  * every absorbed candidate's `promoted_as` IS present in the current active
+    index (measured 69/69). That follows from the version trees being
+    whole-tree copies -- c1_validate_promote.py: build_promoted_version ->
+    shutil.copytree(active_root, dest, symlinks=False) then append -- so each
+    version's descriptors/index.json is a SUPERSET of its predecessor's kf_ ids.
+    The "and promoted_as is in the active index" conjunct is therefore vacuous
+    while versions only ever move forward, and becomes restrictive only when the
+    pointer goes BACKWARDS (a rollback). Both readings are reported below so the
+    two regimes stay distinguishable.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import time
+from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+DEFAULT_ROOT = '/ros2_ws/maps/vp/visual'
+POINTER_NAME = 'current_active_version'
+
+# Areas reported, in the order they are printed. All of these live directly
+# under the visual root. `descriptors` and `keyframes` are the ROOT-level ones
+# (not to be confused with versions/<v>/descriptors or candidate/keyframes) --
+# they hold a third copy of the 37 legacy frames and are easy to miss.
+AREAS = ('versions', 'candidate', 'state', 'rejected', 'legacy_seed',
+         'descriptors', 'keyframes')
+
+# Manifests that live outside versions/. These are the schema_version 2 ones
+# that have no `created_at` -- i.e. the ones the fallback exists for.
+NON_VERSION_MANIFESTS = (('root', '.'), ('legacy_seed', 'legacy_seed'))
+
+
+# --------------------------------------------------------------------------
+# small helpers
+# --------------------------------------------------------------------------
+
+def _walk_stats(path: str) -> Tuple[int, int]:
+    """(bytes, files) under path. Sums st_size, so it is the logical size and
+    will be SMALLER than `du` (which counts whole blocks). followlinks=False:
+    current_active_version is a symlink and must not be counted twice."""
+    total = count = 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            try:
+                st = os.stat(os.path.join(root, name))
+            except OSError:
+                continue
+            total += st.st_size
+            count += 1
+    return total, count
+
+
+def _entries(path: str) -> int:
+    try:
+        return len(os.listdir(path))
+    except OSError:
+        return 0
+
+
+def _mib(n: int) -> str:
+    return f'{n / (1024 * 1024):.2f}'
+
+
+def _iso(ts: Optional[float]) -> str:
+    if ts is None:
+        return 'n/a'
+    try:
+        return time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(float(ts)))
+    except (ValueError, OSError, OverflowError):
+        return f'<bad ts {ts!r}>'
+
+
+def _read_yaml(path: str) -> Optional[Dict[str, Any]]:
+    """Read-only YAML load. Returns None (never raises) on missing/unparseable,
+    because a report that dies on one bad file reports nothing at all."""
+    try:
+        import yaml
+    except ImportError:
+        return None
+    try:
+        with open(path, 'r', encoding='utf-8') as fh:
+            doc = yaml.safe_load(fh)
+    except Exception:  # noqa: BLE001 - any parse error just means "unknown"
+        return None
+    return doc if isinstance(doc, dict) else None
+
+
+def _read_json(path: str) -> Optional[Any]:
+    try:
+        with open(path, 'r', encoding='utf-8') as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def _creation(manifest: Optional[Dict[str, Any]],
+              manifest_path: str) -> Tuple[Optional[float], str]:
+    """created_at -> created -> manifest.yaml mtime, and WHICH one was used."""
+    if manifest is not None:
+        for key in ('created_at', 'created'):
+            v = manifest.get(key)
+            if v is None:
+                continue
+            try:
+                return float(v), key
+            except (TypeError, ValueError):
+                continue
+    try:
+        return os.stat(manifest_path).st_mtime, 'manifest-mtime'
+    except OSError:
+        return None, 'unknown'
+
+
+def _manifest_row(label: str, mpath: str,
+                  vdir: Optional[str] = None) -> Dict[str, Any]:
+    """One row per manifest, with the creation time and its provenance."""
+    man = _read_yaml(mpath)
+    ts, src = _creation(man, mpath)
+    row = {'label': label, 'path': mpath, 'present': man is not None,
+           'schema_version': (man or {}).get('schema_version'),
+           'created_at': ts, 'created_at_source': src,
+           'keyframe_count': (man or {}).get('keyframe_count')}
+    if vdir is not None:
+        row['version'] = (man or {}).get('version')
+    return row
+
+
+# --------------------------------------------------------------------------
+# the promote path's own "already decided" test, reproduced (not invented)
+# --------------------------------------------------------------------------
+# NOTE: this tiny predicate is duplicated in db_archive_promoted.py. That is
+# deliberate -- the archiver moves files and must not inherit a behaviour change
+# from a future edit to a read-only report. If you change it here, change it
+# there too, and re-check both against
+# c1_validate_promote.py:_candidate_already_decided.
+
+def _absorbed(meta: Dict[str, Any]) -> bool:
+    """c1_validate_promote.py:_candidate_already_decided, first clause.
+    Kept deliberately narrow: this is the 'copied into a version tree' test."""
+    return bool(meta.get('promoted_as') or meta.get('version_promoted_to'))
+
+
+def _validation_status(meta: Dict[str, Any]) -> str:
+    val = meta.get('validation')
+    if isinstance(val, dict):
+        return str(val.get('status') or '')
+    return ''
+
+
+# --------------------------------------------------------------------------
+# report sections
+# --------------------------------------------------------------------------
+
+def _sections(root: str, deep: bool) -> Dict[str, Any]:
+    out: Dict[str, Any] = {'root': root, 'sections': {}}
+
+    # -- pointer -----------------------------------------------------------
+    ptr = os.path.join(root, POINTER_NAME)
+    active: Optional[str] = None
+    if os.path.islink(ptr):
+        # readlink gives a PATH; the name stored in meta is bare. Comparing a
+        # path against a bare name is a mistake I already made once in recon
+        # (it reported all 69 promoted candidates as "other version").
+        active = os.path.basename(os.readlink(ptr))
+    out['active'] = active
+
+    # -- areas -------------------------------------------------------------
+    areas: Dict[str, Any] = {}
+    for name in AREAS:
+        p = os.path.join(root, name)
+        if not os.path.isdir(p):
+            areas[name] = {'present': False}
+            continue
+        b, n = _walk_stats(p)
+        areas[name] = {'present': True, 'bytes': b, 'files': n,
+                       'entries': _entries(p)}
+    tb, tn = _walk_stats(root)
+    out['totals'] = {'bytes': tb, 'files': tn}
+    out['sections']['areas'] = areas
+
+    # -- manifests outside versions/ (the created_at fallback fires here) --
+    out['sections']['manifests'] = [
+        # _manifest_row wants the manifest FILE, but NON_VERSION_MANIFESTS names
+        # DIRECTORIES. Passing the directory made _read_yaml() fail every time
+        # (present=False, schema=None), and the mtime fallback then reported the
+        # DIRECTORY's own mtime: 'root' read 2026-09-23 01:03:30 -- the moment
+        # archive/ appeared inside it -- not manifest.yaml's 2026-09-07 09:15:43.
+        _manifest_row(label,
+                      os.path.normpath(os.path.join(root, sub, 'manifest.yaml')))
+        for label, sub in NON_VERSION_MANIFESTS]
+
+    # -- versions ----------------------------------------------------------
+    vroot = os.path.join(root, 'versions')
+    versions: List[Dict[str, Any]] = []
+    if os.path.isdir(vroot):
+        for name in sorted(os.listdir(vroot)):
+            vdir = os.path.join(vroot, name)
+            if not os.path.isdir(vdir):
+                continue
+            mpath = os.path.join(vdir, 'manifest.yaml')
+            man = _read_yaml(mpath)
+            ts, src = _creation(man, mpath)
+            idx = _read_json(os.path.join(vdir, 'descriptors', 'index.json'))
+            ids: List[str] = []
+            if isinstance(idx, list):
+                ids = [str(e.get('id')) for e in idx
+                       if isinstance(e, dict) and e.get('id')]
+            b, n = _walk_stats(vdir)
+            versions.append({
+                'version': name,
+                'is_active': name == active,
+                'manifest_present': man is not None,
+                'created_at': ts,
+                'created_at_source': src,
+                'keyframe_count_manifest': (man or {}).get('keyframe_count'),
+                'keyframe_ids_in_index': len(ids),
+                'validation_status': (man or {}).get('validation_status'),
+                'candidate_promoted_count': (man or {}).get(
+                    'candidate_promoted_count'),
+                'bytes': b,
+                'files': n,
+                'ids': ids,
+            })
+    out['sections']['versions'] = versions
+
+    # -- candidates --------------------------------------------------------
+    croot = os.path.join(root, 'candidate')
+    kfroot = os.path.join(croot, 'keyframes')
+    absorbed: List[Dict[str, Any]] = []
+    rejected: List[Dict[str, Any]] = []
+    pending: List[Dict[str, Any]] = []
+    bad: List[str] = []
+    if os.path.isdir(kfroot):
+        for name in sorted(os.listdir(kfroot)):
+            meta = _read_yaml(os.path.join(kfroot, name, 'meta.yaml'))
+            if meta is None:
+                bad.append(name)
+                continue
+            b, n = _walk_stats(os.path.join(kfroot, name))
+            row = {'id': name, 'bytes': b, 'files': n,
+                   'promoted_as': meta.get('promoted_as'),
+                   'version_promoted_to': meta.get('version_promoted_to'),
+                   'validation_status': _validation_status(meta),
+                   # reported because D1 will consume it; null on every frame
+                   # captured so far, which is what makes D1 a no-op for them
+                   'appearance_id': meta.get('appearance_id'),
+                   'possible_new_appearance': meta.get('possible_new_appearance')}
+            if _absorbed(meta):
+                absorbed.append(row)
+            elif str(row['validation_status']).startswith('REJECTED'):
+                rejected.append(row)
+            else:
+                pending.append(row)
+    cidx = _read_json(os.path.join(croot, 'index.json'))
+    out['sections']['candidates'] = {
+        'index_present': isinstance(cidx, list),
+        'index_entries': len(cidx) if isinstance(cidx, list) else 0,
+        'dirs': _entries(kfroot),
+        'unreadable': bad,
+        'absorbed': absorbed,
+        'rejected': rejected,
+        'pending': pending,
+    }
+
+    # -- state -------------------------------------------------------------
+    sd = os.path.join(root, 'state')
+    sessions: List[Dict[str, Any]] = []
+    if os.path.isdir(sd):
+        for name in sorted(os.listdir(sd)):
+            fp = os.path.join(sd, name)
+            row: Dict[str, Any] = {'name': name}
+            try:
+                st = os.stat(fp)
+                row.update({'bytes': st.st_size, 'mtime': st.st_mtime})
+            except OSError:
+                row.update({'bytes': None, 'mtime': None})
+            if name.startswith('build_') and name.endswith('.json'):
+                doc = _read_json(fp)
+                if isinstance(doc, dict):
+                    row.update({'session_id': doc.get('build_session_id'),
+                                'state': doc.get('state'),
+                                'stop_reason': doc.get('stop_reason'),
+                                'end_time': doc.get('end_time')})
+            sessions.append(row)
+    out['sections']['state'] = sessions
+
+    # -- redundancy --------------------------------------------------------
+    red: Dict[str, Any] = {}
+
+    # the three trees holding the legacy frames: root/, legacy_seed/, v1.0/
+    red['legacy_trees'] = {}
+    tree_paths: List[Tuple[str, str]] = [
+        ('root', os.path.join(root, 'keyframes')),
+        ('legacy_seed', os.path.join(root, 'legacy_seed', 'keyframes'))]
+    if versions:
+        tree_paths.append(('versions/' + versions[0]['version'],
+                           os.path.join(vroot, versions[0]['version'],
+                                        'keyframes')))
+    for label, p in tree_paths:
+        if not os.path.isdir(p):
+            continue
+        b, n = _walk_stats(p)
+        ids = sorted(os.listdir(p))
+        red['legacy_trees'][label] = {'count': len(ids), 'bytes': b,
+                                      'files': n, 'ids': ids}
+    base_label: Optional[str] = None
+    base_ids: set = set()
+    for label, row in red['legacy_trees'].items():
+        if base_label is None:
+            base_label, base_ids = label, set(row['ids'])
+            continue
+        red.setdefault('legacy_tree_vs', {})[f'{label} vs {base_label}'] = {
+            'identical_id_sets': set(row['ids']) == base_ids,
+            'only_in_this': sorted(set(row['ids']) - base_ids),
+            'only_in_base': sorted(base_ids - set(row['ids'])),
+        }
+
+    # per version: which kf_ ids are NEW relative to the previous version, and
+    # how many bytes those new keyframe dirs account for. No rule is applied to
+    # it -- the whole-tree copies are reported, not narrowed.
+    prev: set = set()
+    vred = []
+    for v in versions:
+        cur = set(v['ids'])
+        new = sorted(cur - prev)
+        nb = 0
+        for kid in new:
+            kb, _ = _walk_stats(os.path.join(vroot, v['version'], 'keyframes',
+                                             kid))
+            nb += kb
+        vred.append({'version': v['version'], 'total_ids': len(cur),
+                     'new_ids_vs_prev': len(new), 'new_bytes': nb,
+                     'bytes': v['bytes'], 'super_set_of_prev': prev <= cur})
+        prev = cur
+    red['version_chain'] = vred
+
+    # absorbed candidate's promoted_as present in the active index?
+    vids: set = set()
+    for v in versions:
+        if v['is_active']:
+            vids = set(v['ids'])
+    red['absorbed_in_active_index'] = {
+        'found': sum(1 for r in absorbed if r['promoted_as'] in vids),
+        'total': len(absorbed), 'active': active}
+    # And separately: how many absorbed candidates name a version OTHER than the
+    # active one. Measured 47/69 on 2026-09-22 (active = v1.6) -- that is the
+    # NORMAL case, not an anomaly: those 47 were promoted into v1.3..v1.5 as
+    # those versions were minted. A rollback would change the reason this number
+    # is nonzero, not the number itself. (I first labelled this "only after a
+    # rollback"; the measurement says otherwise, so the label is gone.)
+    other = [r['id'] for r in absorbed if r['version_promoted_to'] != active]
+    red['absorbed_naming_other_version'] = {'count': len(other),
+                                            'sample': other[:5]}
+
+    if deep:
+        red['deep_md5_mismatches'] = _deep_compare(kfroot, vroot, absorbed)
+
+    out['sections']['redundancy'] = red
+    return out
+
+
+def _deep_compare(kfroot: str, vroot: str,
+                  absorbed: List[Dict[str, Any]]) -> List[Tuple[str, str]]:
+    """md5 the payload files of each absorbed candidate against the copy that
+    landed in its version tree.
+
+    This is the evidence for the archiver's central safety claim: moving a
+    candidate out of candidate/keyframes/ loses nothing, because the version
+    tree already holds the same bytes. A mismatch means the claim is false for
+    that frame, and it must NOT be archived."""
+    import hashlib
+
+    payloads = ('descriptors.npy', 'keypoints.npy', 'rgb.jpg', 'scan.npz')
+    mism: List[Tuple[str, str]] = []
+    for r in absorbed:
+        dest = None
+        for ver in os.listdir(vroot):
+            if ver == r['version_promoted_to']:
+                dest = os.path.join(vroot, ver, 'keyframes',
+                                    str(r['promoted_as']))
+        src = os.path.join(kfroot, r['id'])
+        if not dest or not os.path.isdir(dest):
+            mism.append((r['id'], 'no counterpart'))
+            continue
+        for fname in payloads:
+            a = os.path.join(src, fname)
+            b = os.path.join(dest, fname)
+            if not (os.path.isfile(a) and os.path.isfile(b)):
+                continue
+            try:
+                with open(a, 'rb') as fh:
+                    ha = hashlib.md5(fh.read()).hexdigest()
+                with open(b, 'rb') as fh:
+                    hb = hashlib.md5(fh.read()).hexdigest()
+            except OSError:
+                continue
+            if ha != hb:
+                mism.append((r['id'], fname))
+    return mism
+
+
+def _fmt(data: Dict[str, Any]) -> str:
+    L: List[str] = []
+    a = L.append
+    a(f'visual DB maintenance report   root={data["root"]}')
+    a(f'active = {data.get("active")}')
+    a(f'total  = {_mib(data["totals"]["bytes"])} MiB in '
+      f'{data["totals"]["files"]} files')
+    a('')
+
+    a('== areas ==')
+    a(f'{"area":16}{"MiB":>10}{"files":>8}{"entries":>9}')
+    for name, v in data['sections']['areas'].items():
+        if not v.get('present'):
+            a(f'{name:16}{"ABSENT":>10}')
+        else:
+            a(f'{name:16}{_mib(v["bytes"]):>10}{v["files"]:>8}'
+              f'{v["entries"]:>9}')
+    a('')
+
+    a('== manifests outside versions/ (the created_at fallback fires here) ==')
+    for m in data['sections']['manifests']:
+        a(f'  {m["label"]:14} schema={m["schema_version"]}  '
+          f'created_at_source={m["created_at_source"]:16} '
+          f'-> {_iso(m["created_at"])}   (used fallback: '
+          f'{m["created_at_source"] != "created_at"})')
+    a('')
+
+    a('== versions ==')
+    a(f'{"version":18}{"act":>4}{"kf_idx":>8}{"kf_man":>8}{"promoted":>9}'
+      f'{"MiB":>8}  {"created_at":20}{"src":16}{"status"}')
+    for v in data['sections']['versions']:
+        a(f'{v["version"]:18}{"*" if v["is_active"] else "":>4}'
+          f'{v["keyframe_ids_in_index"]:>8}'
+          f'{str(v["keyframe_count_manifest"]):>8}'
+          f'{str(v["candidate_promoted_count"]):>9}'
+          f'{_mib(v["bytes"]):>8}  {_iso(v["created_at"]):20}'
+          f'{v["created_at_source"]:16}{v["validation_status"]}')
+    a('')
+
+    c = data['sections']['candidates']
+    a('== candidates ==')
+    a(f'  index.json entries = {c["index_entries"]}   keyframe dirs = '
+      f'{c["dirs"]}   unreadable meta = {len(c["unreadable"])}')
+    if c['unreadable']:
+        a(f'    unreadable: {c["unreadable"][:10]}')
+    for label, rows in (('absorbed', c['absorbed']),
+                        ('rejected', c['rejected']),
+                        ('pending', c['pending'])):
+        a(f'  {label:10} n={len(rows):4}  '
+          f'{_mib(sum(r["bytes"] for r in rows)):>7} MiB')
+    if c['absorbed']:
+        a(f'    absorbed with non-null appearance_id  = '
+          f'{sum(1 for r in c["absorbed"] if r["appearance_id"] is not None)}')
+        a(f'    absorbed with possible_new_appearance = '
+          f'{sum(1 for r in c["absorbed"] if r["possible_new_appearance"])}')
+    a('')
+
+    a('== state/ ==')
+    for s in data['sections']['state']:
+        if 'state' in s:
+            a(f'  {s["name"]:40} {str(s.get("state")):14} '
+              f'{str(s.get("stop_reason")):24} end={_iso(s.get("end_time"))}')
+        else:
+            a(f'  {s["name"]:40} {_mib(s["bytes"] or 0)} MiB')
+    a('')
+
+    r = data['sections']['redundancy']
+    a('== redundancy ==')
+    for k, v in r['legacy_trees'].items():
+        a(f'  {k:34} ids={v["count"]:4}  {_mib(v["bytes"]):>7} MiB  '
+          f'{v["files"]} files')
+    for k, v in (r.get('legacy_tree_vs') or {}).items():
+        a(f'    {k}: identical_id_sets={v["identical_id_sets"]}')
+    a('  version chain (each version is a whole-tree copy of the previous):')
+    a(f'    {"version":18}{"ids":>6}{"new":>6}{"MiB_new":>10}{"MiB_tot":>10}  '
+      f'superset')
+    for v in r['version_chain']:
+        a(f'    {v["version"]:18}{v["total_ids"]:>6}'
+          f'{v["new_ids_vs_prev"]:>6}{_mib(v["new_bytes"]):>10}'
+          f'{_mib(v["bytes"]):>10}  {v["super_set_of_prev"]}')
+    ai = r['absorbed_in_active_index']
+    a(f'  absorbed whose promoted_as is in the active index: '
+      f'{ai["found"]}/{ai["total"]}')
+    ov = r['absorbed_naming_other_version']
+    a(f'  absorbed naming a version OTHER than active ({data.get("active")}): '
+      f'{ov["count"]}   <- normal: promoted into earlier versions')
+    if ov['count']:
+        a(f'    sample: {ov["sample"]}')
+    if 'deep_md5_mismatches' in r:
+        mm = r['deep_md5_mismatches']
+        a(f'  deep md5 mismatches (candidate copy vs version copy): {len(mm)}')
+        for x in mm[:10]:
+            a(f'    {x}')
+    a('')
+    a('== NOT DONE (by construction) ==')
+    a('  nothing deleted / moved / renamed; no thresholds; no appearance_count;')
+    a('  no KEEP_DAYS. Archiving is db_archive_promoted.py, a separate step.')
+    return '\n'.join(L)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    ap = argparse.ArgumentParser(
+        description='Read-only report on the visual keyframe DB.')
+    ap.add_argument('--root', default=DEFAULT_ROOT,
+                    help=f'visual DB root (default {DEFAULT_ROOT})')
+    ap.add_argument('--json', action='store_true',
+                    help='emit machine-readable JSON instead of the table')
+    ap.add_argument('--deep', action='store_true',
+                    help='also md5-compare absorbed candidates against their '
+                         'promoted copies (slower)')
+    args = ap.parse_args(argv)
+
+    if not os.path.isdir(args.root):
+        print(f'ABORT: not a directory: {args.root}')
+        return 2
+
+    data = _sections(args.root, args.deep)
+    if args.json:
+        # the per-version id lists are large and duplicated; drop them
+        for v in data['sections']['versions']:
+            v.pop('ids', None)
+        for v in data['sections']['redundancy']['legacy_trees'].values():
+            v.pop('ids', None)
+        print(json.dumps(data, indent=2, sort_keys=False, default=str))
+    else:
+        print(_fmt(data))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
