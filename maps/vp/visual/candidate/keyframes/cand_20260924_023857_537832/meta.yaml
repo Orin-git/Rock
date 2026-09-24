@@ -1,0 +1,44 @@
+keyframe_id: cand_20260924_023857_537832
+lifecycle: CANDIDATE
+map_name: vp
+map_hash: 35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd
+camera_id: front_up
+x: -7.462503276673361
+y: -2.0488990330680354
+yaw: 0.16871478890702674
+timestamp: 1790217537.8327436
+laser_verified: true
+laser_score: 0.5670275141422915
+laser_matched_ratio: 0.7309417040358744
+laser_valid_beams: 223
+scan_stamp: 1790217537.5886226
+amcl_cov_xy: 0.04237536649628707
+amcl_cov_yaw: 0.007287843196556988
+localization_status: 0
+phase2c_state: READY
+image_quality:
+  sharpness: 160.74374344885084
+  brightness: 108.02416015625
+  underexposure_ratio: 0.01806640625
+  overexposure_ratio: 0.000400390625
+  orb_features: 1000
+  occlusion_ratio: null
+  reasons: []
+source: auto_patrol
+build_session_id: build_20260924_023803_72cf0b
+spatial_cell: cell_-8_-3
+yaw_bin: 0
+appearance_id: cell_-8_-3/0/1
+possible_new_appearance: true
+capture_decision:
+  reason: CAPTURE_VISUAL_NOVELTY
+  nearest_keyframe_id: cand_20260924_023841_521593
+  nearest_distance_m: 0.17018279909240933
+  nearest_yaw_delta_deg: 0.08849769285400452
+  visual_difference: 0.712
+  possible_new_appearance: true
+validation:
+  status: pending
+version_promoted_to: null
+retrieval_ready: true
+scan_ref: scan.npz

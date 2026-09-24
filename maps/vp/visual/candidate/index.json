@@ -1330,5 +1330,293 @@
     "source": "auto_patrol",
     "timestamp": 1790064993.685106,
     "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260924_013613_773444",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -1.4040912566465766,
+      "y": -0.8721688913857388,
+      "yaw": -2.9757915743591714
+    },
+    "spatial_cell": "cell_-2_-1",
+    "yaw_bin": 4,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.5099331573382416,
+    "orb_features": 1000,
+    "source": "v8_probe_write",
+    "timestamp": 1790213773.444188,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260924_013938_978671",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -1.4038204234615315,
+      "y": -0.8721855935875523,
+      "yaw": -2.975747147181999
+    },
+    "spatial_cell": "cell_-2_-1",
+    "yaw_bin": 4,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.5511125447970489,
+    "orb_features": 1000,
+    "source": "v8_probe_write2",
+    "timestamp": 1790213978.6707437,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_023841_521593",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.928298250624771,
+      "y": -2.0727056689254084,
+      "yaw": 0.13675433157870884
+    },
+    "spatial_cell": "cell_-8_-3",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.633971544939316,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217521.5936291,
+    "capture_reason": "CAPTURE_NEW_CELL"
+  },
+  {
+    "id": "cand_20260924_023847_527421",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.97632286902051,
+      "y": -2.0783921127648752,
+      "yaw": 1.6077081550659658
+    },
+    "spatial_cell": "cell_-8_-3",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.3958066441145949,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217527.4213398,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260924_023857_537832",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.462503276673361,
+      "y": -2.0488990330680354,
+      "yaw": 0.16871478890702674
+    },
+    "spatial_cell": "cell_-8_-3",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.5670275141422915,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217537.8327436,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_023903_543635",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -7.462221928121228,
+      "y": -2.0278990985519796,
+      "yaw": 1.707392466348743
+    },
+    "spatial_cell": "cell_-8_-3",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.6502943573672506,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217543.6206675,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_023936_576629",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -10.932271927653073,
+      "y": -1.3297178908692049,
+      "yaw": 0.5792694039486872
+    },
+    "spatial_cell": "cell_-11_-2",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.6980305871554485,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217576.6295476,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_023941_581893",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -10.961159541711794,
+      "y": -1.334018658144431,
+      "yaw": 1.7454053102553946
+    },
+    "spatial_cell": "cell_-11_-2",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.6896897737583971,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217581.8932304,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_024009_609172",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -8.431294078038135,
+      "y": -1.9452566522331929,
+      "yaw": -2.548492588169864
+    },
+    "spatial_cell": "cell_-9_-2",
+    "yaw_bin": 4,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.6050381925174428,
+    "orb_features": 977,
+    "source": "auto_patrol",
+    "timestamp": 1790217609.1719515,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260924_024034_634632",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -10.938527050176438,
+      "y": -1.3400822761298508,
+      "yaw": -2.9311214433944937
+    },
+    "spatial_cell": "cell_-11_-2",
+    "yaw_bin": 4,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.6333438336233462,
+    "orb_features": 730,
+    "source": "auto_patrol",
+    "timestamp": 1790217634.6323006,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260924_024240_760619",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -0.2601859269541131,
+      "y": -0.852955946461551,
+      "yaw": 0.11542699958826586
+    },
+    "spatial_cell": "cell_-1_-1",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.42476936403966986,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217760.6183972,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_024339_819075",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -0.12232013074277637,
+      "y": -0.8032459482799696,
+      "yaw": 2.2880179670974856
+    },
+    "spatial_cell": "cell_-1_-1",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.41817405697181625,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217819.0755057,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_024431_871469",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -11.238383149751641,
+      "y": -2.4749795272235517,
+      "yaw": 2.154668637165461
+    },
+    "spatial_cell": "cell_-12_-3",
+    "yaw_bin": 2,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.7700907641959237,
+    "orb_features": 994,
+    "source": "auto_patrol",
+    "timestamp": 1790217871.4617157,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
+  },
+  {
+    "id": "cand_20260924_024437_877435",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -11.225649714753333,
+      "y": -2.5053175940614154,
+      "yaw": 0.6782204218390815
+    },
+    "spatial_cell": "cell_-12_-3",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.5895451249153566,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217877.4241369,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260924_024440_880273",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -11.246886834477301,
+      "y": -2.526921843539971,
+      "yaw": 0.9356817378989009
+    },
+    "spatial_cell": "cell_-12_-3",
+    "yaw_bin": 1,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.5790876277697241,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217880.272882,
+    "capture_reason": "CAPTURE_NEW_YAW"
+  },
+  {
+    "id": "cand_20260924_024527_927443",
+    "lifecycle": "CANDIDATE",
+    "pose": {
+      "x": -1.8466212615704736,
+      "y": 0.1828229682849391,
+      "yaw": 0.2523211241616645
+    },
+    "spatial_cell": "cell_-2_0",
+    "yaw_bin": 0,
+    "map_name": "vp",
+    "map_hash": "35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd",
+    "laser_score": 0.4298245140838821,
+    "orb_features": 1000,
+    "source": "auto_patrol",
+    "timestamp": 1790217927.4431863,
+    "capture_reason": "CAPTURE_VISUAL_NOVELTY"
   }
 ]

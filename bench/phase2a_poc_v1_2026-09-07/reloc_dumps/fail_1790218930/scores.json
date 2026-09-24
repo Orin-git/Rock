@@ -1,0 +1,37 @@
+{
+  "decision": "UNKNOWN",
+  "reason": "lone_cluster_below_bar",
+  "mode": "visual_laser",
+  "cluster_accept": {
+    "status": "UNKNOWN",
+    "reason": "lone_cluster_below_bar",
+    "cluster_margin": 0.0,
+    "single_cluster_min_score": 0.55,
+    "cluster_count": 1,
+    "best_cluster": {
+      "cluster_id": 0,
+      "center": [
+        1.3027830827845153,
+        0.4003887721073634,
+        -3.007615275223111
+      ],
+      "best_laser_score": 0.455805613247207,
+      "median_laser_score": 0.455805613247207,
+      "support_count": 1,
+      "member_ids": [
+        "kf_000006"
+      ],
+      "member_regions": [
+        "charger_room"
+      ],
+      "visual_ranks": [
+        6
+      ],
+      "pose_spread_xy_m": 0.0,
+      "pose_spread_yaw_rad": 0.0
+    },
+    "second_cluster": null,
+    "survivor_count": 1,
+    "rejected_count": 9
+  }
+}
