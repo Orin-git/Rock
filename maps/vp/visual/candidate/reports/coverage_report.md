@@ -7,12 +7,12 @@
 ## Totals
 
 - Active frames: **106**
-- Candidate frames: **90**
+- Candidate frames: **88**
 - Occupied spatial cells: **82**
 - Active occupied cells: **42**
 - Candidate-only new cells: **40**
 - Active yaw coverage ratio (over Active cells): **0.259**
-- Candidate new yaw bins (not in Active): **80**
+- Candidate new yaw bins (not in Active): **79**
 
 ## Capture / Dedup stats (this model session)
 
@@ -79,7 +79,7 @@
 | `cell_-3_8` | 0 | 2 | `10100000` | [] | [0, 2] |
 | `cell_-3_9` | 0 | 1 | `10000000` | [] | [0] |
 | `cell_-2_-2` | 3 | 0 | `10100000` | [0, 2] | [] |
-| `cell_-2_-1` | 2 | 2 | `10101000` | [0, 2] | [4] |
+| `cell_-2_-1` | 2 | 0 | `10100000` | [0, 2] | [] |
 | `cell_-2_0` | 1 | 1 | `10000000` | [0] | [0] |
 | `cell_-2_8` | 0 | 2 | `10100000` | [] | [0, 2] |
 | `cell_-2_9` | 0 | 1 | `10000000` | [] | [0] |

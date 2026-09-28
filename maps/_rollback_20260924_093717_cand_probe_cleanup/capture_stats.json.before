@@ -1,0 +1,16 @@
+{
+  "accepted": 16,
+  "rejected_pose": 2,
+  "rejected_laser": 2,
+  "rejected_blur": 0,
+  "rejected_dark": 0,
+  "rejected_overexposed": 0,
+  "rejected_low_features": 2,
+  "rejected_invalid_frame": 0,
+  "skip_duplicate": 0,
+  "skip_covered": 0,
+  "skip_cell_yaw_quota": 0,
+  "skip_session_quota": 0,
+  "capture_visual_novelty": 9,
+  "dry_run": 0
+}

@@ -188,43 +188,19 @@ class MapManagerNode(Node):
         except (KeyError, TypeError, ValueError):
             return None
 
-    # ROS 三值编码里 unknown 是灰度 205 ⇒ occupancy = (255-205)/255 = 0.19608，
-    # 所以 0.196 才是"把未探测区如实读成 unknown"的那个值。map_saver_cli 自带的
-    # 默认值却是 0.25，一旦写进 yaml，65.7% 的 unknown 会被当成 free
-    # （2026-09-22 修过一次：vp.yaml 0.25 → 0.196）。保存时一律沿用该图既有的
-    # 口径，读不到才回退到标准值，避免手滑点一次「保存地图」就复发。
-    _FREE_THRESH_FALLBACK = 0.196
-
-    def _resolve_free_thresh(self, map_name: str) -> float:
-        yaml_f = self._root / f'{map_name}.yaml'
-        try:
-            meta = yaml.safe_load(yaml_f.read_text(encoding='utf-8')) or {}
-            val = float(meta['free_thresh'])
-            src = 'existing'
-        except (OSError, KeyError, TypeError, ValueError, yaml.YAMLError):
-            val = self._FREE_THRESH_FALLBACK
-            src = 'fallback'
-        self.get_logger().info(
-            f'map_saver free_thresh={val} ({src}) for {map_name}'
-        )
-        return val
-
     def _run_map_saver(self, map_name: str) -> Tuple[bool, str]:
         map_path = str(self._root / map_name)
-        free_thresh = self._resolve_free_thresh(map_name)
         cmds = [
             [
                 'timeout', '20',
                 'ros2', 'run', 'nav2_map_server', 'map_saver_cli',
                 '-f', map_path, '-t', '/map',
-                '--free', str(free_thresh),
                 '--ros-args', '-p', 'map_subscribe_transient_local:=false',
             ],
             [
                 'timeout', '20',
                 'ros2', 'run', 'nav2_map_server', 'map_saver_cli',
                 '-f', map_path, '-t', '/map',
-                '--free', str(free_thresh),
             ],
         ]
         last_out = ''

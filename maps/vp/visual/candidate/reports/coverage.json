@@ -1,22 +1,22 @@
 {
-  "generated_at": 1790217974.732048,
+  "generated_at": 1790558100.2704117,
   "map_name": "vp",
   "cell_size_m": 1.0,
   "yaw_bins": 8,
   "summary": {
     "active_frames": 106,
-    "candidate_frames": 90,
+    "candidate_frames": 88,
     "occupied_spatial_cells": 82,
     "active_occupied_cells": 42,
-    "candidate_occupied_cells": 51,
+    "candidate_occupied_cells": 50,
     "yaw_bins": 8,
     "active_yaw_bin_occupancy": 87,
     "active_yaw_coverage_ratio": 0.25892857142857145,
-    "multi_appearance_slots": 9,
-    "multi_appearance_cells": 6,
+    "multi_appearance_slots": 8,
+    "multi_appearance_cells": 5,
     "cell_size_m": 1.0,
     "candidate_new_cells": 40,
-    "candidate_new_yaw_bins": 80,
+    "candidate_new_yaw_bins": 79,
     "duplicate_skips": 0,
     "novelty_captures": 0,
     "quota_skips": 0,
@@ -2540,25 +2540,22 @@
       "cell_x": -2,
       "cell_y": -1,
       "active_count": 2,
-      "candidate_count": 2,
+      "candidate_count": 0,
       "covered_yaw_bins": [
         0,
-        2,
-        4
+        2
       ],
       "active_yaw_bins": [
         0,
         2
       ],
-      "candidate_yaw_bins": [
-        4
-      ],
+      "candidate_yaw_bins": [],
       "yaw_mask": [
         1,
         0,
         1,
         0,
-        1,
+        0,
         0,
         0,
         0
@@ -2578,12 +2575,12 @@
         0,
         0,
         0,
-        1,
+        0,
         0,
         0,
         0
       ],
-      "yaw_coverage_ratio": 0.375
+      "yaw_coverage_ratio": 0.25
     },
     {
       "spatial_cell": "cell_-2_0",
