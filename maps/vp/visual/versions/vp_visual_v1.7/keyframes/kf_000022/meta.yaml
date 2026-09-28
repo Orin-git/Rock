@@ -1,0 +1,53 @@
+keyframe_id: kf_000022
+timestamp: 1788772556.046689
+stamp_rgb: 1788772555.9271188
+stamp_depth: 1788772555.562668
+pair_dt_sec: 0.36445069313049316
+map_pose:
+  x: -9.169071968797404
+  y: 0.8790759262927991
+  yaw: -2.516900367292072
+camera_pose:
+  x: -9.372668892810035
+  y: 0.7322791533970889
+  yaw: 2.1954849398875145
+  extrinsic_status: EXTRINSIC_UNCALIBRATED
+camera_info:
+  width: 640
+  height: 480
+  k:
+  - 595.9639892578125
+  - 0.0
+  - 348.6986999511719
+  - 0.0
+  - 596.2553100585938
+  - 234.91893005371094
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  frame_id: ascamera_hp60c_color_0
+retrieval_ready: true
+geometry_ready: false
+quality:
+  orb_features: 998
+  orb_with_valid_depth: 568
+  orb_depth_coverage_ratio: 0.5691382765531062
+  depth_valid_ratio: 0.5197102864583333
+  pair_dt_sec: 0.36445069313049316
+  amcl_cov_xy: 0.015457378301640593
+  amcl_cov_yaw: 0.0066056789976589566
+  reasons:
+  - pair_dt
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+region_id: similar_corridor_wp3
+region_class: visual_similar
+location_id: similar_corridor_wp3_A
+yaw_rel_rad: 0.4
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+scan_ref: scan.npz

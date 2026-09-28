@@ -1,0 +1,54 @@
+keyframe_id: kf_000093
+lifecycle: ACTIVE
+map_name: vp
+map_hash: 35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd
+camera_id: front_up
+x: -4.8422425727647855
+y: -1.3419116416134922
+yaw: 0.01133385675382737
+timestamp: 1790064987.0619872
+laser_verified: true
+laser_score: 0.406265974086122
+laser_matched_ratio: 0.6118721461187214
+laser_valid_beams: 219
+scan_stamp: 1790064986.8229733
+amcl_cov_xy: 0.08185237988520565
+amcl_cov_yaw: 0.005731291865805937
+localization_status: 0
+phase2c_state: READY
+image_quality:
+  sharpness: 188.67801104430094
+  brightness: 111.88685872395833
+  underexposure_ratio: 0.0181640625
+  overexposure_ratio: 0.00017903645833333332
+  orb_features: 1000
+  occlusion_ratio: null
+  reasons: []
+source: auto_patrol
+build_session_id: build_20260922_080639_be07f6
+spatial_cell: cell_-5_-2
+yaw_bin: 0
+appearance_id: null
+possible_new_appearance: false
+capture_decision:
+  reason: CAPTURE_NEW_YAW
+  nearest_keyframe_id: kf_000018
+  nearest_distance_m: 0.5709086427186124
+  nearest_yaw_delta_deg: 141.70250749769758
+  visual_difference: null
+  possible_new_appearance: false
+validation:
+  status: PROMOTED
+  phase: Phase2D-C2
+version_promoted_to: vp_visual_v1.6
+retrieval_ready: true
+scan_ref: scan.npz
+map_pose:
+  x: -4.8422425727647855
+  y: -1.3419116416134922
+  yaw: 0.01133385675382737
+region_id: cell_-5_-2
+region_class: auto_patrol
+location_id: cell_-5_-2_yb0
+geometry_ready: false
+promoted_from: cand_20260922_081627_987062

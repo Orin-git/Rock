@@ -1,0 +1,4 @@
+2026-09-28T01:25:20.405Z SAMPLER_START gap_thresholds={'odom': 0.5, 'scan': 0.5, 'battery': 4.0} tick=5.0s
+2026-09-28T01:25:20.566Z GATE loc_status: None -> 0
+2026-09-28T01:26:20.616Z GATE_MISSING 这些闸门 60s 内一条都没收到（值为 None，勿当"正常"）: ['goals_blocked', 'phase2c']
+2026-09-28T01:29:05.537Z SAMPLER_STOP clean exit

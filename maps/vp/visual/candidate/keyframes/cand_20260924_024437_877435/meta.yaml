@@ -38,7 +38,9 @@ capture_decision:
   visual_difference: null
   possible_new_appearance: false
 validation:
-  status: pending
-version_promoted_to: null
+  status: PROMOTED
+  phase: Phase2D-C2
+version_promoted_to: vp_visual_v1.7
 retrieval_ready: true
 scan_ref: scan.npz
+promoted_as: kf_000116

@@ -38,7 +38,9 @@ capture_decision:
   visual_difference: null
   possible_new_appearance: false
 validation:
-  status: pending
+  status: REJECTED_CONFUSION
+  reasons:
+  - loo_self_only_no_new_cell
 version_promoted_to: null
 retrieval_ready: true
 scan_ref: scan.npz

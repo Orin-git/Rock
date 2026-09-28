@@ -1,0 +1,51 @@
+keyframe_id: cand_20260924_024009_609172
+lifecycle: EVAL_CANDIDATE
+map_name: vp
+map_hash: 35949e3f3403dc7f0253addc37afbd3c5b42b3a96d8000c35ceaa03eebce6cfd
+camera_id: front_up
+x: -8.431294078038135
+y: -1.9452566522331929
+yaw: -2.548492588169864
+timestamp: 1790217609.1719515
+laser_verified: true
+laser_score: 0.6050381925174428
+laser_matched_ratio: 0.7477477477477478
+laser_valid_beams: 222
+scan_stamp: 1790217608.9342823
+amcl_cov_xy: 0.042078169483790444
+amcl_cov_yaw: 0.008804419150476058
+localization_status: 0
+phase2c_state: READY
+image_quality:
+  sharpness: 279.4388496208083
+  brightness: 87.7846875
+  underexposure_ratio: 0.026471354166666666
+  overexposure_ratio: 0.0004947916666666667
+  orb_features: 977
+  occlusion_ratio: null
+  reasons: []
+source: auto_patrol
+build_session_id: build_20260924_023803_72cf0b
+spatial_cell: cell_-9_-2
+yaw_bin: 4
+appearance_id: null
+possible_new_appearance: false
+capture_decision:
+  reason: CAPTURE_NEW_YAW
+  nearest_keyframe_id: cand_20260924_023847_527421
+  nearest_distance_m: 0.47405047398556893
+  nearest_yaw_delta_deg: 121.86723860345106
+  visual_difference: null
+  possible_new_appearance: false
+validation:
+  status: pending
+version_promoted_to: null
+retrieval_ready: true
+scan_ref: scan.npz
+map_pose:
+  x: -8.431294078038135
+  y: -1.9452566522331929
+  yaw: -2.548492588169864
+region_id: cell_-9_-2
+region_class: auto_patrol_candidate
+location_id: cell_-9_-2_yb4

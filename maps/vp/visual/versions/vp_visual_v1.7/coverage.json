@@ -1,0 +1,100 @@
+{
+  "summary": {
+    "frames": 117,
+    "cells": 44,
+    "yaw_occupancy": 93,
+    "yaw_coverage_ratio": 0.26420454545454547,
+    "cell_ids": [
+      "cell_-10_-1",
+      "cell_-10_-2",
+      "cell_-10_0",
+      "cell_-10_3",
+      "cell_-11_-1",
+      "cell_-11_-2",
+      "cell_-11_-3",
+      "cell_-12_-3",
+      "cell_-1_-1",
+      "cell_-1_0",
+      "cell_-1_5",
+      "cell_-1_6",
+      "cell_-1_9",
+      "cell_-2_-1",
+      "cell_-2_-2",
+      "cell_-2_0",
+      "cell_-3_-1",
+      "cell_-3_-2",
+      "cell_-3_0",
+      "cell_-4_-1",
+      "cell_-4_-2",
+      "cell_-4_0",
+      "cell_-5_-2",
+      "cell_-5_0",
+      "cell_-5_5",
+      "cell_-6_-2",
+      "cell_-7_-2",
+      "cell_-8_-1",
+      "cell_-8_-2",
+      "cell_-8_-3",
+      "cell_-8_3",
+      "cell_-8_4",
+      "cell_-9_-1",
+      "cell_-9_-2",
+      "cell_-9_3",
+      "cell_0_-1",
+      "cell_0_0",
+      "cell_0_1",
+      "cell_0_6",
+      "cell_1_-1",
+      "cell_1_0",
+      "cell_2_-1",
+      "cell_2_0",
+      "cell_3_-1"
+    ]
+  },
+  "promoted": [
+    {
+      "candidate_id": "cand_20260924_023841_521593",
+      "active_id": "kf_000107"
+    },
+    {
+      "candidate_id": "cand_20260924_023847_527421",
+      "active_id": "kf_000108"
+    },
+    {
+      "candidate_id": "cand_20260924_023857_537832",
+      "active_id": "kf_000109"
+    },
+    {
+      "candidate_id": "cand_20260924_023903_543635",
+      "active_id": "kf_000110"
+    },
+    {
+      "candidate_id": "cand_20260924_023936_576629",
+      "active_id": "kf_000111"
+    },
+    {
+      "candidate_id": "cand_20260924_023941_581893",
+      "active_id": "kf_000112"
+    },
+    {
+      "candidate_id": "cand_20260924_024240_760619",
+      "active_id": "kf_000113"
+    },
+    {
+      "candidate_id": "cand_20260924_024339_819075",
+      "active_id": "kf_000114"
+    },
+    {
+      "candidate_id": "cand_20260924_024431_871469",
+      "active_id": "kf_000115"
+    },
+    {
+      "candidate_id": "cand_20260924_024437_877435",
+      "active_id": "kf_000116"
+    },
+    {
+      "candidate_id": "cand_20260924_024440_880273",
+      "active_id": "kf_000117"
+    }
+  ]
+}

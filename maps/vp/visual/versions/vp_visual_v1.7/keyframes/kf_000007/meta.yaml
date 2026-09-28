@@ -1,0 +1,53 @@
+keyframe_id: kf_000007
+timestamp: 1788771922.915789
+stamp_rgb: 1788771920.7555919
+stamp_depth: 1788771920.7555919
+pair_dt_sec: 0.0
+map_pose:
+  x: 0.14492601607481603
+  y: -0.5379024281484402
+  yaw: 2.9115548231341846
+camera_pose:
+  x: -0.09946208414876526
+  y: -0.48067082438698006
+  yaw: 1.3407548231341846
+  extrinsic_status: EXTRINSIC_UNCALIBRATED
+camera_info:
+  width: 640
+  height: 480
+  k:
+  - 595.9639892578125
+  - 0.0
+  - 348.6986999511719
+  - 0.0
+  - 596.2553100585938
+  - 234.91893005371094
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  frame_id: ascamera_hp60c_color_0
+retrieval_ready: true
+geometry_ready: false
+quality:
+  orb_features: 1000
+  orb_with_valid_depth: 0
+  orb_depth_coverage_ratio: 0.0
+  depth_valid_ratio: 0.022083333333333333
+  pair_dt_sec: 0.0
+  amcl_cov_xy: 0.04026947175326545
+  amcl_cov_yaw: 0.00555201105427235
+  reasons:
+  - depth_or_orb_coverage
+map_hash: 4b9e99b8b81992fd3ea1e6d378dc072b4688c1998180d36fcf4fd45cd468a73f
+region_id: doorway_wp9
+region_class: doorway
+location_id: doorway_wp9_A
+yaw_rel_rad: -0.4
+extrinsic_status: EXTRINSIC_UNCALIBRATED
+scan_ref: scan.npz

@@ -1,0 +1,20 @@
+2026-09-28T01:42:04Z LOAD_WINDOW_INTERIM_START 沙箱 promote 第一次尝试（231%% CPU, 缓冲输出, timeout 900）
+2026-09-28T01:42:07Z LOAD_WINDOW_START 沙箱 promote 正式开始（nice 15, 预计数分钟~数十分钟）
+2026-09-28T02:00:47Z LOAD_WINDOW_END 沙箱 promote 结束
+2026-09-28T02:04:36Z NOTE 02:00:47.9-02:00:49.7 出现 odom gap=1.349s / scan gap=1.365s，
+     与沙箱 promote 进程 02:00:47Z 退出【同一秒】。沙箱负载窗口见上方 LOAD_WINDOW_START/END。
+     ⇒ 这次间隙【高度可疑为我自己的负载所致】，不得计为机器人自身故障；如需计入必须另行论证。
+     闸门三项在此期间均未变（loc_status=0 / goals_blocked=False / phase2c=READY）。
+2026-09-28T02:12:24Z LOAD_WINDOW_START 生产 promote（no nice，含 reload+rollback test）
+2026-09-28T02:30:31Z LOAD_WINDOW_END 生产 promote 结束
+----------------------------------------------------------------
+2026-09-28T02:36:05Z CORRECTION 撤回上面对 02:12:56 那次间隙的「我方负载」豁免。
+  理由：同一形态在负载窗口【之外】复现了两次——02:24:13（窗内）、02:33:18（窗外，比 promote 退出晚 2m47s）。
+  已证：promote 进程 02:30:31Z EXIT=0 后零残留；宿主 systemd timers/cron 三刻均未触发。
+  归因【未定】：(a) 调度饥饿 vs (b) 链路层事件，两条都活着，不裁。
+  新口径：三次（02:12:56 / 02:24:13 / 02:33:18）一律按「定位抖动 + 3.9~4.2s 短缺口」记账，
+          【不豁免】、【也不计入停摆统计】（缺口 <7s、无 BMS 行、无相机停流、无 ekf 报告）。
+  本窗口仍标记为「我方负载区间」这一点不变——只是窗内的间隙不再因此免责。
+----------------------------------------------------------------
+2026-09-28T02:37:42Z LOAD_WINDOW_START rtabmap 装包（apt-get update + install，不 upgrade）
+2026-09-28T02:46:59Z LOAD_WINDOW_END rtabmap 装包结束
