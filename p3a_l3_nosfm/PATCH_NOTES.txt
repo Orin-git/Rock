@@ -1,0 +1,5 @@
+launch: '--Mem/StereoFromMotion','true'
+     -> '--Mem/StereoFromMotion','false','--Mem/UseOdomFeatures','false'
+
+run:    ros2 launch /ros2_ws/p3a_l3/rtabmap_l3.launch.py
+     -> ros2 launch /ros2_ws/p3a_l3_nosfm/rtabmap_l3.launch.py

@@ -200,11 +200,38 @@ fi
 current_branch="$(git rev-parse --abbrev-ref HEAD)"
 step "    当前分支: ${current_branch}"
 
+# ★ 2026-09-29 修复（根因）：此前 pull 失败时，--autostash 收走的未提交改动【不会弹回】
+#   ⇒ 工作区被静默写回 HEAD，改动只留在悬空提交里（09-28 09:00:43 实测吃掉两个 launch 补丁；
+#   证据：.git/rebase-merge/autostash 待办条 + 悬空提交 50c7b49）。
+#   对策：pull 前先记录是否已有【历史遗留】的 rebase 状态（有则一律不干预）；
+#   只有当【本次 pull 自己】留下半途 rebase 时才 abort 以夺回改动，并写 ALERT。
+REBASE_PRE="no"
+if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then REBASE_PRE="yes"; fi
+if [ "$REBASE_PRE" = "yes" ]; then
+  step "    ！注意: 已存在历史遗留的 rebase 状态（本次不干预它）"
+fi
+
 if git rev-parse --verify "origin/${current_branch}" >/dev/null 2>&1; then
   if git pull --rebase --autostash origin "$current_branch" 2>&1 | tee -a "$LOG_DIR/git_sync.log" "$PROGRESS_FILE"; then
     step "    pull 完成"
   else
-    step "    警告: pull --rebase 失败，继续尝试本地提交"
+    step "    ！警告: pull --rebase 失败"
+    if [ "$REBASE_PRE" = "yes" ]; then
+      step "    ！存在历史遗留 rebase 状态 ⇒ 不自动回滚，需人工处理"
+      log "ALERT: pull --rebase 失败，且已有历史遗留 rebase 状态，未自动 abort —— 未提交改动可能已被 autostash 收走"
+    elif git rebase --abort >>"$LOG_DIR/git_sync.log" 2>&1; then
+      step "    已 abort 本次半途 rebase"
+      if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+        step "    ！abort 后 rebase 状态仍在 ⇒ 改动可能未弹回，请人工检查"
+        log "ALERT: rebase --abort 后状态仍在，改动可能未回弹"
+      else
+        step "    rebase 状态已清；abort 后工作区改动条数: $(git status --porcelain 2>/dev/null | wc -l)"
+        log "已自动 abort 本次失败的 rebase（autostash 应已弹回，工作区改动未丢）"
+      fi
+    else
+      step "    ！abort 也失败"
+      log "ALERT: pull --rebase 失败且 rebase --abort 也失败，未提交改动可能已被 autostash 收走"
+    fi
   fi
 else
   step "    远程尚无此分支，跳过 pull"

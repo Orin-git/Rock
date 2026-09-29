@@ -54,7 +54,9 @@ def generate_launch_description() -> LaunchDescription:
         GroupAction([
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
-                    os.path.join(bringup_dir, 'launch', 'localization_launch.py')
+                    # xw fork（见该文件抬头）：唯一改动 = 给 LM 补 bond_timeout=10.0。
+                    # 用自家 share 而非原厂 bringup_dir —— 原厂文件被 apt upgrade 覆盖会冲掉补丁。
+                    os.path.join(share, 'launch', 'localization_gen2_launch.py')
                 ),
                 launch_arguments={
                     'namespace': namespace,
@@ -96,7 +98,9 @@ def generate_launch_description() -> LaunchDescription:
                     'use_sim_time': False,
                     'autostart': True,
                     'node_names': ['collision_monitor'],
-                    'bond_timeout': 4.0,
+                    # xw: 与 localization 同因——4s 门限在 Rock 5T 上过紧（DDS 投递静默会超 4s）。
+                    # 它死了 => /xw/cmd/nav 静默 => 没有东西在命令车动 => 反是 fail-safe。
+                    'bond_timeout': 10.0,
                 }],
             ),
         ]),

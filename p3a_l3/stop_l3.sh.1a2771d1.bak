@@ -20,44 +20,6 @@ OD_PID=$(pgrep -f 'rtabmap_odom/rgbd_odometry' | head -1)
 LP_PID=$(pgrep -f 'rtabmap_l3.launch.py' | head -1)
 echo "  RT_PID=${RT_PID:-none}  OD_PID=${OD_PID:-none}  LAUNCH_PID=${LP_PID:-none}"
 
-# ═══════════ ★ 优雅收尾（2026-09-29 新增，纯增量）═══════════
-# 证据：librtabmap_slam_plugins.so 里实测存在符号（strings 精确整行，阳性对照 6/6 通过）
-#   pause / pauseRtabmapCallback / is_rtabmap_paused
-#   resume / resumeRtabmapCallback
-#   backup / backupDatabaseCallback      ← 存库，且会打印 'Total loop closures' 汇总行
-#   reset  / resetRtabmapCallback
-# 目的：
-#   ① pause 在【源头】掐掉节点创建 ⇒ 收尾期间不再堆同姿态站桩节点（v4 的 node 75~87 病根）
-#   ② backup 拿到实跑的汇总行 —— kill 路径【永远拿不到】那一行（只在正常关闭时打印）
-# ★★ 顺序不可颠倒：pause 必须最先，否则探测/备份的几十秒里 rtabmap 照样造站桩节点。
-# ★ 服务【类型】不写死 —— 用 `ros2 service type` 现场发现（不许猜，红线 10）。
-# ★★ 命名空间【必须】限定在 rtabmap 自己：裸的 '/(pause|...)$' 会匹配到【别的节点】的
-#    /xxx/reset、/pause ⇒ 等于去动没被点名授权的工作负载。故用 /rtabmap(_slam)?/ 前缀,
-#    既容许命名空间前缀，又把 /rtabmap_odom/reset 这类排除在外（_odom 后不是 '/'）。
-# ★ 全部 best-effort：任何一步失败都只是打印，【不改变】下面的 kill 序列。
-echo "--- ★ 优雅收尾尝试（rtabmap 自带服务；best-effort，失败不影响后面 kill）---"
-SVCS=$(timeout 25 ros2 service list 2>/dev/null | grep -aE '/rtabmap(_slam)?/(pause|resume|backup|reset)$' | sort)
-echo "  探测到的生命周期服务："
-if [ -n "$SVCS" ]; then echo "$SVCS" | sed 's/^/    /'; else echo "    （空 —— 服务名不同或节点未起）"; fi
-
-svc_call() {   # $1=服务名  $2=标签
-  local S="$1" L="$2" T RC
-  [ -n "$S" ] || { echo "  [$L] 无此服务，跳过"; return 0; }
-  T=$(timeout 20 ros2 service type "$S" 2>/dev/null | head -1)
-  [ -n "$T" ] || { echo "  [$L] $S —— 取类型失败，跳过"; return 0; }
-  echo "  [$L] call $S  (type=$T)"
-  timeout 45 ros2 service call "$S" "$T" '{}' >"/tmp/p3a_svc_${L}.txt" 2>&1
-  RC=$?
-  echo "        exit=$RC  输出: $(tail -3 "/tmp/p3a_svc_${L}.txt" 2>/dev/null | tr '\n' ' ' | cut -c1-200)"
-}
-
-PAUSE_S=$(echo "$SVCS"  | grep -aE '/pause$'  | head -1)
-BACKUP_S=$(echo "$SVCS" | grep -aE '/backup$' | head -1)
-svc_call "$PAUSE_S"  pause     # ① 先掐节点创建
-svc_call "$BACKUP_S" backup    # ② 再存库（顺带拿汇总行）
-echo "  ↑ 若 backup 输出里出现 'Total loop closures'，那是【实跑自己的】汇总行"
-echo
-
 for P in ${RT_PID:-} ${OD_PID:-} ${LP_PID:-}; do
   [ -n "$P" ] || continue
   if kill -TERM "$P" 2>/dev/null; then echo "  TERM -> $P 发出"; else echo "  TERM -> $P 失败"; fi

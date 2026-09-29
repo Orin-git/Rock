@@ -82,7 +82,8 @@ def generate_launch_description() -> LaunchDescription:
                     'use_sim_time': False,
                     'autostart': True,
                     'node_names': ['collision_monitor'],
-                    'bond_timeout': 4.0,
+                    # xw: 与 localization 同因——4s 门限在 Rock 5T 上过紧。
+                    'bond_timeout': 10.0,
                 }],
             ),
         ]),

@@ -65,7 +65,7 @@ echo
 WARM=$!
 
 cd /tmp
-nohup ros2 launch /ros2_ws/p3a_l3/rtabmap_l3.launch.py \
+nohup ros2 launch /ros2_ws/p3a_l3_nosfm/rtabmap_l3.launch.py \
   rgb_topic:=/ascamera_hp60c/camera_publisher/rgb0/image \
   depth_topic:=/ascamera_hp60c/camera_publisher/depth0/image_raw \
   camera_info_topic:=/ascamera_hp60c/camera_publisher/rgb0/camera_info \
