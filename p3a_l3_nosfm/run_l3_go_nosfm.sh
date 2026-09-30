@@ -130,8 +130,11 @@ else
     *)   echo "✗ 实际 = $C"; FAIL=1;;
   esac
 fi
-printf "  闸D rtabmap 输入必须读 /odom（EKF）           : "
-if echo "$RARGV" | grep -qx 'odom:=/odom'; then echo "✓ [remap]"; else echo "✗ 实际: $(echo "$RARGV" | grep -a '^odom:=' || echo 无)"; FAIL=1; fi
+EXP_ODOM_IN="${P3A_ODOM_IN_TOPIC:-/odom}"
+# ★ 期望值由环境变量决定（2026-09-30 用户点名授权「nosfm 臂补 R1–R5」；不设 = 改前行为 /odom）。
+#   仍是硬断言一个确定值，不是放宽。臂别可从本行日志追溯。
+printf "  闸D rtabmap 输入必须读 %s（期望，由 P3A_ODOM_IN_TOPIC 决定）           : " "$EXP_ODOM_IN"
+if echo "$RARGV" | grep -qx "odom:=$EXP_ODOM_IN"; then echo "✓ [remap]"; else echo "✗ 实际: $(echo "$RARGV" | grep -a '^odom:=' || echo 无)"; FAIL=1; fi
 printf "  闸E rtabmap 仍订阅 OdomInfo（SFM 原料）       : "
 E=$(param_all subscribe_odom_info)
 if echo "$RARGV" | grep -qx 'subscribe_odom_info:=True\|subscribe_odom_info:=true'; then echo "✓ [argv] $E"
