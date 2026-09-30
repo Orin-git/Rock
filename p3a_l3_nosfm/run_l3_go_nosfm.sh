@@ -140,6 +140,26 @@ E=$(param_all subscribe_odom_info)
 if echo "$RARGV" | grep -qx 'subscribe_odom_info:=True\|subscribe_odom_info:=true'; then echo "✓ [argv] $E"
 elif [ -n "$E" ]; then echo "✓ [params-file] $E"
 else echo "… 未确认 —— 由推起后的 OdomInfo.local_map_size 兜底"; fi
+# ── 闸F：协方差中继必须活着 + 脚本指纹对（零 DDS 开销 ⇒ 不拖慢"可以推了"）──
+#    ★ 本臂（nosfm）只移植了进程/指纹这道闸；主臂的「推起后发布者计数」块【未】移植。
+#    ★ 放置＝闸E 链【之外】（主臂 F1 规格 A1+F1）＝无条件执行；勿插进 elif/else 分支内。
+printf "  闸F relay 必须活着 + 脚本指纹对             : "
+if [ "$EXP_ODOM_IN" != "/odom_cov_norm" ]; then
+  echo "… 臂未开（EXP_ODOM_IN=$EXP_ODOM_IN）⇒ 不适用"
+else
+  FP=$(pgrep -f 'p3a_l3/odom_cov_norm\.py' | head -1)
+  FM=$(md5sum /ros2_ws/p3a_l3/odom_cov_norm.py 2>/dev/null | cut -d' ' -f1)
+  FL=$(grep -ac 'odom_cov_norm 起' "$LOG" 2>/dev/null)
+  if [ -z "${FP:-}" ]; then
+    echo "✗ relay 进程不在（launch 里那条 ExecuteProcess 没起来？）"; FAIL=1
+  elif [ "$FM" != "7c976740633a2a5d099772688cc0666d" ]; then
+    echo "✗ relay 脚本 md5 = ${FM:-拿不到}（应 7c976740633a2a5d099772688cc0666d）"; FAIL=1
+  elif [ "${FL:-0}" = "0" ]; then
+    echo "✓ [proc] PID=$FP md5✓  ⚠ 日志无起报行（非阻断，relay 进程在即兜底）"
+  else
+    echo "✓ [proc] PID=$FP md5✓ 日志起报✓"
+  fi
+fi
 if [ "$FAIL" != "0" ]; then
   echo
   echo "  ★★★ 有闸红了 —— 立刻收尾，不许推。"
