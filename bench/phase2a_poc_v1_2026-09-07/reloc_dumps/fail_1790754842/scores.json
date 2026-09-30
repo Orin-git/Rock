@@ -1,0 +1,48 @@
+{
+  "decision": "UNKNOWN",
+  "reason": "lone_cluster_below_bar",
+  "mode": "visual_laser",
+  "cluster_accept": {
+    "status": "UNKNOWN",
+    "reason": "lone_cluster_below_bar",
+    "cluster_margin": 0.0,
+    "single_cluster_min_score": 0.55,
+    "cluster_count": 1,
+    "best_cluster": {
+      "cluster_id": 0,
+      "center": [
+        -4.323022526535657,
+        -1.6480343433635771,
+        -2.8981737704115296
+      ],
+      "best_laser_score": 0.4701482429844396,
+      "median_laser_score": 0.46762976465513184,
+      "support_count": 6,
+      "member_ids": [
+        "kf_000018",
+        "kf_000038",
+        "kf_000014",
+        "kf_000017",
+        "kf_000015",
+        "kf_000016"
+      ],
+      "member_regions": [
+        "corridor_wp2",
+        "cell_-4_-1"
+      ],
+      "visual_ranks": [
+        7,
+        3,
+        5,
+        1,
+        6,
+        10
+      ],
+      "pose_spread_xy_m": 0.13460018646733782,
+      "pose_spread_yaw_rad": 0.020790112983493977
+    },
+    "second_cluster": null,
+    "survivor_count": 6,
+    "rejected_count": 4
+  }
+}

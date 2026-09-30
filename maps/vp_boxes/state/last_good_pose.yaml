@@ -1,0 +1,18 @@
+map_name: vp_boxes
+map_hash: f58de39d2269bbc71738bf1682e1065b1da6b871c9d2d2eacce5adf6473a7ec9
+timestamp: 1790757527.9142857
+x: -2.117816908893953
+y: -1.5488505816354083
+yaw: 2.6795572905860356
+covariance:
+- 0.1596932835865294
+- 0.1596932835865294
+- 0.015278211099063535
+source: amcl
+quality: 0.7839229219376631
+laser_verified: true
+laser_score_at_write: 0.9511744797193041
+laser_matched_ratio: 0.9911894273127754
+laser_valid_beams: 227
+scan_stamp: 1790757527.7374306
+note: "PROPOSAL_ONLY \u2014 must laser-verify before /initialpose"
