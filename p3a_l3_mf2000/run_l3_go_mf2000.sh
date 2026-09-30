@@ -130,12 +130,34 @@ else
     *)   echo "✗ 实际 = $C"; FAIL=1;;
   esac
 fi
-printf "  闸D rtabmap 输入必须读 /odom（EKF）           : "
-if echo "$RARGV" | grep -qx 'odom:=/odom'; then echo "✓ [remap]"; else echo "✗ 实际: $(echo "$RARGV" | grep -a '^odom:=' || echo 无)"; FAIL=1; fi
+EXP_ODOM_IN="${P3A_ODOM_IN_TOPIC:-/odom}"
+# ★ 期望值由环境变量决定（2026-09-30 用户点名授权「R4R5改」；不设 = 改前行为 /odom）。
+#   仍是硬断言一个确定值，不是放宽。臂别可从本行日志追溯。
+printf "  闸D rtabmap 输入必须读 %s（期望，由 P3A_ODOM_IN_TOPIC 决定）           : " "$EXP_ODOM_IN"
+if echo "$RARGV" | grep -qx "odom:=$EXP_ODOM_IN"; then echo "✓ [remap]"; else echo "✗ 实际: $(echo "$RARGV" | grep -a '^odom:=' || echo 无)"; FAIL=1; fi
 printf "  闸E rtabmap 仍订阅 OdomInfo（SFM 原料）       : "
 E=$(param_all subscribe_odom_info)
 if echo "$RARGV" | grep -qx 'subscribe_odom_info:=True\|subscribe_odom_info:=true'; then echo "✓ [argv] $E"
 elif [ -n "$E" ]; then echo "✓ [params-file] $E"
+# ── 闸F：协方差中继必须活着 + 脚本指纹对（零 DDS 开销 ⇒ 不拖慢"可以推了"）──
+#    ★ 本臂（B′）只移植了进程/指纹这道闸；主臂的「推起后发布者计数」块【未】移植。
+printf "  闸F relay 必须活着 + 脚本指纹对             : "
+if [ "$EXP_ODOM_IN" != "/odom_cov_norm" ]; then
+  echo "… 臂未开（EXP_ODOM_IN=$EXP_ODOM_IN）⇒ 不适用"
+else
+  FP=$(pgrep -f 'p3a_l3/odom_cov_norm\.py' | head -1)
+  FM=$(md5sum /ros2_ws/p3a_l3/odom_cov_norm.py 2>/dev/null | cut -d' ' -f1)
+  FL=$(grep -ac 'odom_cov_norm 起' "$LOG" 2>/dev/null)
+  if [ -z "${FP:-}" ]; then
+    echo "✗ relay 进程不在（launch 里那条 ExecuteProcess 没起来？）"; FAIL=1
+  elif [ "$FM" != "7c976740633a2a5d099772688cc0666d" ]; then
+    echo "✗ relay 脚本 md5 = ${FM:-拿不到}（应 7c976740633a2a5d099772688cc0666d）"; FAIL=1
+  elif [ "${FL:-0}" = "0" ]; then
+    echo "✓ [proc] PID=$FP md5✓  ⚠ 日志无起报行（非阻断，relay 进程在即兜底）"
+  else
+    echo "✓ [proc] PID=$FP md5✓ 日志起报✓"
+  fi
+fi
 else echo "… 未确认 —— 由推起后的 OdomInfo.local_map_size 兜底"; fi
 if [ "$FAIL" != "0" ]; then
   echo

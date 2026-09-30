@@ -6,8 +6,8 @@
 import os
 
 from launch import LaunchDescription, Substitution, LaunchContext
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, LogInfo, OpaqueFunction
-from launch.substitutions import LaunchConfiguration, ThisLaunchFileDir, PythonExpression
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, LogInfo, OpaqueFunction, ExecuteProcess
+from launch.substitutions import LaunchConfiguration, ThisLaunchFileDir, PythonExpression, EnvironmentVariable
 from launch.conditions import IfCondition, UnlessCondition
 from launch_ros.actions import Node
 from launch_ros.actions import SetParameter
@@ -343,7 +343,7 @@ def launch_setup(context, *args, **kwargs):
                 ("tag_detections", LaunchConfiguration('tag_topic')),
                 ("fiducial_transforms", LaunchConfiguration('fiducial_topic')),
                 ("env_sensor", LaunchConfiguration('env_sensor_topic')),
-                ("odom", "/odom"),
+                ("odom", LaunchConfiguration('odom_in_topic')),
                 ("imu", LaunchConfiguration('imu_topic')),
                 ("goal_out", LaunchConfiguration('output_goal_topic'))],
             arguments=['--Mem/StereoFromMotion','false','--Mem/UseOdomFeatures','false','--Vis/MaxFeatures','2000','--Vis/DepthAsMask','false','--Mem/DepthAsMask','false', "--ros-args", "--log-level", [LaunchConfiguration('namespace'), '.rtabmap:=', LaunchConfiguration('log_level')], "--log-level", ['rtabmap:=', LaunchConfiguration('log_level')]],
@@ -445,6 +445,28 @@ def generate_launch_description():
 
         DeclareLaunchArgument('frame_id',       default_value='base_link',          description='Fixed frame id of the robot (base frame), you may set "base_link" or "base_footprint" if they are published. For camera-only config, this could be "camera_link".'),
         DeclareLaunchArgument('odom_frame_id',  default_value='',                   description='If set, TF is used to get odometry instead of the topic.'),
+        # ★ P3A L3 协方差修复实验专用（2026-09-30 用户点名授权）。
+        # 主 SLAM 节点订阅的里程计话题。不设环境变量 P3A_ODOM_IN_TOPIC 时
+        # 默认 '/odom'，行为与本行加入前【逐字相同】⇒ 对既有轮次零行为变化。
+        # 修复实验在起 run_l3_go.sh 前 export P3A_ODOM_IN_TOPIC=/odom_cov_norm。
+        DeclareLaunchArgument('odom_in_topic',
+            default_value=EnvironmentVariable('P3A_ODOM_IN_TOPIC', default_value='/odom'),
+            description='Main SLAM node odometry input topic (P3A L3 covariance-rootfix arm switch).'),
+        # ★ P3A L3 协方差修复：把 relay 固化进 launch（2026-09-30 用户点名授权「R4R5改」）。
+        # 仅当主 SLAM 节点读 /odom_cov_norm 时才起中继（即 P3A_ODOM_IN_TOPIC=/odom_cov_norm）。
+        # 不设该环境变量 ⇒ odom_in_topic='/odom' ⇒ 条件为假 ⇒ 起停面与改动前【逐字相同】。
+        # cmd 与主臂（p3a_l3/rtabmap_l3.launch.py）逐字一致：relay 脚本共享
+        #   /ros2_ws/p3a_l3/odom_cov_norm.py（本臂目录下无副本；md5 由 runner 闸F 校验）。
+        # relay 退出 ⇒ 只留明亮标记、不打断（用户 2026-09-30 选择）：轮次继续 ⇒ 仍可
+        # pause→backup 救回半张图；标记落进 launch 日志（run_l3_go_mf2000.sh 的 $LOG）。
+        ExecuteProcess(
+            cmd=['python3', '/ros2_ws/p3a_l3/odom_cov_norm.py',
+                 '--ros-args', '-p', 'in_topic:=/odom', '-p', 'out_topic:=/odom_cov_norm'],
+            condition=IfCondition(PythonExpression(
+                ["'", LaunchConfiguration('odom_in_topic'), "' == '/odom_cov_norm'"])),
+            output='screen',
+            on_exit=LogInfo(msg='★★★ relay(odom_cov_norm) 退出 ⇒ 本轮 rtabmap 里程计输入已断，本轮作废'),
+        ),
         DeclareLaunchArgument('map_frame_id',   default_value='map',                description='Output map frame id (TF).'),
         DeclareLaunchArgument('map_topic',      default_value='map',                description='Map topic name.'),
         DeclareLaunchArgument('publish_tf_map', default_value='true',               description='Publish TF between map and odomerty.'),
