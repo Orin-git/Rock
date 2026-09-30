@@ -130,13 +130,37 @@ else
     *)   echo "✗ 实际 = $C"; FAIL=1;;
   esac
 fi
-printf "  闸D rtabmap 输入必须读 /odom（EKF）           : "
-if echo "$RARGV" | grep -qx 'odom:=/odom'; then echo "✓ [remap]"; else echo "✗ 实际: $(echo "$RARGV" | grep -a '^odom:=' || echo 无)"; FAIL=1; fi
+EXP_ODOM_IN="${P3A_ODOM_IN_TOPIC:-/odom}"
+# ★ 期望值由环境变量决定（2026-09-30 用户点名授权；不设 = 改前行为 /odom）。
+#   仍是硬断言一个确定值，不是放宽。臂别可从本行日志追溯。
+printf "  闸D rtabmap 输入必须读 %s（期望，由 P3A_ODOM_IN_TOPIC 决定）           : " "$EXP_ODOM_IN"
+if echo "$RARGV" | grep -qx "odom:=$EXP_ODOM_IN"; then echo "✓ [remap]"; else echo "✗ 实际: $(echo "$RARGV" | grep -a '^odom:=' || echo 无)"; FAIL=1; fi
 printf "  闸E rtabmap 仍订阅 OdomInfo（SFM 原料）       : "
 E=$(param_all subscribe_odom_info)
 if echo "$RARGV" | grep -qx 'subscribe_odom_info:=True\|subscribe_odom_info:=true'; then echo "✓ [argv] $E"
 elif [ -n "$E" ]; then echo "✓ [params-file] $E"
 else echo "… 未确认 —— 由推起后的 OdomInfo.local_map_size 兜底"; fi
+
+# ── 闸F：协方差中继必须活着 + 脚本指纹对（零 DDS 开销 ⇒ 不拖慢"可以推了"）──
+#    ★ 发布者计数【故意】不在这里：ros2 topic info 受 daemon 冷启动影响可达 ~20 s，
+#      放进闸区会把"可以推了"推迟到 T 之后 ⇒ 挪到推起后的确认块。
+printf "  闸F relay 必须活着 + 脚本指纹对             : "
+if [ "$EXP_ODOM_IN" != "/odom_cov_norm" ]; then
+  echo "… 臂未开（EXP_ODOM_IN=$EXP_ODOM_IN）⇒ 不适用"
+else
+  FP=$(pgrep -f 'p3a_l3/odom_cov_norm\.py' | head -1)
+  FM=$(md5sum /ros2_ws/p3a_l3/odom_cov_norm.py 2>/dev/null | cut -d' ' -f1)
+  FL=$(grep -ac 'odom_cov_norm 起' "$LOG" 2>/dev/null)
+  if [ -z "${FP:-}" ]; then
+    echo "✗ relay 进程不在（launch 里那条 ExecuteProcess 没起来？）"; FAIL=1
+  elif [ "$FM" != "7c976740633a2a5d099772688cc0666d" ]; then
+    echo "✗ relay 脚本 md5 = ${FM:-拿不到}（应 7c976740633a2a5d099772688cc0666d）"; FAIL=1
+  elif [ "${FL:-0}" = "0" ]; then
+    echo "✓ [proc] PID=$FP md5✓  ⚠ 日志无起报行（非阻断，由推后发布者计数兜底）"
+  else
+    echo "✓ [proc] PID=$FP md5✓ 日志起报✓"
+  fi
+fi
 if [ "$FAIL" != "0" ]; then
   echo
   echo "  ★★★ 有闸红了 —— 立刻收尾，不许推。"
@@ -171,6 +195,10 @@ echo
   echo "=== PROTOCOL v2 确认报告 $(date -u +%FT%TZ) ==="
   echo "--- /odom 发布者（应为 1；变 2 = 生产被污染）---"
   timeout 25 ros2 topic info /odom 2>/dev/null
+  if [ "$EXP_ODOM_IN" = "/odom_cov_norm" ]; then
+    echo "--- /odom_cov_norm 发布者（闸F 臂开时 应=1）---"
+    timeout 25 ros2 topic info /odom_cov_norm 2>/dev/null
+  fi
   echo "--- /tf child frame 分布（不许出现 rgbd_odom）---"
   timeout 8 ros2 topic echo /tf 2>/dev/null | grep -a 'child_frame_id' | sort | uniq -c | sort -rn | head -8
   echo "--- 新话题 ---"
@@ -191,6 +219,17 @@ elif [ -n "${PUB:-}" ]; then
   echo "    ★★★ 警告：/odom 发布者 = $PUB（应=1）！立刻 bash /ros2_ws/p3a_l3/stop_l3.sh"
 else
   echo "    … /odom 发布者数没拿到 —— 报告在 $GATE"
+fi
+
+if [ "$EXP_ODOM_IN" = "/odom_cov_norm" ]; then
+  PUBF=$(awk '/^--- \/odom_cov_norm 发布者/{f=1;next} /^--- \/tf/{f=0} f' "$GATE" | grep -a -m1 'Publisher count:' | grep -ao '[0-9]*$')
+  if [ "${PUBF:-}" = "1" ]; then
+    echo "    ✓ /odom_cov_norm 发布者=1（relay 真在转发）"
+  elif [ -n "${PUBF:-}" ]; then
+    echo "    ★★★ 警告：/odom_cov_norm 发布者 = ${PUBF:-}（应=1）！relay 没在转发 ⇒ 本轮里程计输入存疑"
+  else
+    echo "    … /odom_cov_norm 发布者数没拿到 —— 报告在 $GATE"
+  fi
 fi
 if awk '/^--- \/tf child frame/{f=1;next} /^--- 新话题/{f=0} f' "$GATE" | grep -aq 'rgbd_odom'; then
   echo "    ★★★ 警告：/tf 里出现了 rgbd_odom 帧！立刻 bash /ros2_ws/p3a_l3/stop_l3.sh"
