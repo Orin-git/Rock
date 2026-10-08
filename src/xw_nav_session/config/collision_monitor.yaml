@@ -80,13 +80,19 @@ collision_monitor:
       visualize: False
       polygon_pub_topic: "front_cm_near_polygon"
       enabled: True
-    # Inner edge 0.18 → 0.22. Robot half-width is 0.175, so 0.18 left 5 mm of
-    # clearance: brushing a door frame tripped slowdown 0.45, the robot crawled,
-    # the progress checker (under 2 cm in 5 s) declared "Failed to make
-    # progress", and nav recovery looped. 0.22 gives 4.5 cm. ⚠️ This is
-    # geometric reasoning, NOT a measured calibration — it is backed by
-    # acceptance test ④ (narrow-corridor transit) and goes back to 0.18 if that
-    # test does not support it.
+    # FOOTPRINT-MEASURED-2026-10-08 -- inner edge 0.22 is the CABLE line, not a clearance guess.
+    # Tape, 2026-10-08: rigid body half-width 0.2066; the cable routing adds
+    # 1~2 cm per side (run outboard so it does not block the lidar) => the true
+    # envelope is 0.2166~0.2266. 0.22 sits on that envelope: a side obstacle
+    # inside it is about to touch the cable.
+    # WARNING: the 0.18 -> 0.22 change is NOT a measured calibration and it does
+    #   NOT "fix" door-frame slowdown loops. An obstacle can never come closer
+    #   than the envelope, so 0.18 and 0.22 share the same reachable window
+    #   ([envelope, 0.28]) to within 3.4 mm. The door-frame risk was the costmap
+    #   footprint (0.175 -> fixed 2026-10-08), not this polygon.
+    # WARNING: acceptance test 4 (narrow-corridor transit) stayed GEOMETRICALLY
+    #   NULL -- four rounds, the Side polygons were never touched once.
+    # WARNING / 注意: 测试机、走线裸露，开模装壳后重调。
     SideLeft:
       type: "polygon"
       points: [0.20, 0.28, 0.20, 0.22, -0.10, 0.22, -0.10, 0.28]

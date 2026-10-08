@@ -219,8 +219,25 @@ local_costmap:
       width: 4
       height: 4
       resolution: 0.05
-      # 0.45 x 0.35 body (URDF collision box)
-      footprint: "[[0.225, 0.175], [0.225, -0.175], [-0.225, -0.175], [-0.225, 0.175]]"
+      # --- FOOTPRINT-MEASURED-2026-10-08 (tape measure, NOT the URDF value) ---
+      # Width  y: rigid body half-width 0.2066  (the URDF 0.45 x 0.35 box says
+      #           0.175 -- that is 3.2 cm per side too narrow)
+      #           + cable routing 1~2 cm per side, run OUTBOARD so it does not
+      #           block the lidar   =>  half-width 0.2266
+      # Length x: body is symmetric about base_link (= the lidar centre plane),
+      #           half = 0.18135
+      #           + 5 cm tow hook at the REAR  =>  -0.2314
+      #           + ~8 cm camera bracket at the FRONT, ABOVE the scan plane
+      #                                        =>  +0.2614   (approx)
+      # WARNING / 注意: 测试机、走线裸露。TEST MACHINE, EXPOSED CABLE ROUTING.
+      #   Once it is cased / moulded the cables move inside the shell, so
+      #   RE-MEASURE and re-tune. 开模装壳后必须重新测量、重新调这几个数，
+      #   不要照抄。
+      # WARNING: this is ONE OF FOUR identical copies. grep FOOTPRINT-MEASURED-2026-10-08
+      #   and change them together:
+      #     xw_nav_session/config/nav2_params.yaml       (local + global)
+      #     xw_explore/config/nav2_params_explore.yaml   (local + global)
+      footprint: "[[0.2614, 0.2266], [0.2614, -0.2266], [-0.2314, -0.2266], [-0.2314, 0.2266]]"
       plugins: ["obstacle_layer", "inflation_layer"]
       always_send_full_costmap: False
       inflation_layer:
@@ -315,7 +332,9 @@ global_costmap:
       robot_base_frame: base_link
       use_sim_time: False
       transform_tolerance: 0.3
-      footprint: "[[0.225, 0.175], [0.225, -0.175], [-0.225, -0.175], [-0.225, 0.175]]"
+      # FOOTPRINT-MEASURED-2026-10-08 -- one of FOUR copies, keep identical.
+      # Full note is on the local costmap footprint above.
+      footprint: "[[0.2614, 0.2266], [0.2614, -0.2266], [-0.2314, -0.2266], [-0.2314, 0.2266]]"
       resolution: 0.05
       unknown_cost_value: 255
       track_unknown_space: true
