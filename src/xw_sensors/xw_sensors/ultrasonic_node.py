@@ -135,7 +135,12 @@ class UltrasonicNode(Node):
 
         arr = UltrasonicArray()
         arr.stamp = self.get_clock().now().to_msg()
-        arr.labels = ['front_left', 'front_right', 'rear_left', 'rear_right']
+        # A..D = probes 1..4; measured 2026-10-08: channels A and D face FORWARD,
+        # B and C face REAR (parked on standoffs). The parked pair is named so that
+        # safety_gate's substring groups (front/rear/left/right) do NOT pick it up --
+        # rear stays data-only until the mold-stage re-mount. front_left/front_right
+        # side assignment is provisional (unverified).
+        arr.labels = ['front_left', 'parked_b', 'parked_c', 'front_right']
         # Protocol: 30..255 cm valid; 0x00 probe lost; 0x01 blind zone.
         # Never publish blind/lost as ~0.01 m — that falsely trips safety_gate.
         arr.ranges = [self._byte_to_meters(v) for v in self._dists]
