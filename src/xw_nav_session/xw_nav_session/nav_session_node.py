@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
+from lifecycle_msgs.srv import GetState
 from nav2_msgs.action import NavigateToPose
 from nav2_msgs.srv import ManageLifecycleNodes
 from rclpy.action import ActionClient
@@ -134,6 +135,18 @@ class NavSessionNode(Node):
             '/lifecycle_manager_localization/is_active',
             callback_group=self._cb,
         )
+        # Ground-truth lifecycle state straight from the nodes: the LMs'
+        # is_active service can report false while every node is ACTIVE
+        # (2026-10-09 map-switch false negative -> 90 s recovery storm).
+        self._get_state_clis = (
+            ('bt_navigator', self.create_client(
+                GetState, '/bt_navigator/get_state', callback_group=self._cb)),
+            ('amcl', self.create_client(
+                GetState, '/amcl/get_state', callback_group=self._cb)),
+            ('planner_server', self.create_client(
+                GetState, '/planner_server/get_state', callback_group=self._cb)),
+        )
+        self._lm_unstick_last = 0.0
 
         # map_name from supervisor payload is not on enable topic — publish side-channel
         self.create_subscription(
@@ -490,26 +503,88 @@ class NavSessionNode(Node):
         return bool(res is not None and res.success)
 
     def _nav2_lifecycle_is_active(self, timeout_sec: float = 3.0) -> bool:
-        """Both localization (map/amcl) and navigation LMs must be active."""
-        if not self._cli_is_active(self._nav_active_cli, timeout_sec=timeout_sec):
-            return False
-        # Require localization so /map + map→odom exist (orphans can fake nav LM).
-        return self._cli_is_active(self._loc_active_cli, timeout_sec=timeout_sec)
+        """Both localization (map/amcl) and navigation LMs must be active.
 
-    def _nav2_manage(self, command: int, timeout_sec: float = 60.0) -> bool:
-        if not self._nav_lifecycle_cli.wait_for_service(timeout_sec=5.0):
-            self.get_logger().warn('lifecycle_manager_navigation/manage_nodes unavailable')
+        A false from the LM services is not believed when the nodes themselves
+        report ACTIVE (false negative seen 2026-10-09 after a map switch: both
+        LMs said false while all nodes were ACTIVE, and every goal fell into
+        the 90 s recovery storm). Then unstick via PAUSE->RESUME and re-check.
+        """
+        if self._cli_is_active(self._nav_active_cli, timeout_sec=timeout_sec):
+            # Require localization so /map + map→odom exist (orphans can fake nav LM).
+            if self._cli_is_active(self._loc_active_cli, timeout_sec=timeout_sec):
+                return True
+        if not self._nodes_truly_active(timeout_sec=1.0):
+            return False
+        self.get_logger().warn(
+            'LM is_active=false but nodes report ACTIVE — false negative; PAUSE→RESUME both LMs'
+        )
+        self._lm_unstick_pause_resume(timeout_sec=15.0)
+        return self._cli_is_active(self._nav_active_cli, timeout_sec=2.0) and self._cli_is_active(
+            self._loc_active_cli, timeout_sec=2.0
+        )
+
+    def _manage_on(self, cli, command: int, timeout_sec: float = 60.0, tag: str = '') -> bool:
+        if not cli.wait_for_service(timeout_sec=min(5.0, timeout_sec)):
+            self.get_logger().warn(f'manage_nodes{tag} unavailable')
             return False
         req = ManageLifecycleNodes.Request()
         req.command = command
-        fut = self._nav_lifecycle_cli.call_async(req)
+        fut = cli.call_async(req)
         if not self._wait_future(fut, timeout_sec):
-            self.get_logger().warn(f'manage_nodes cmd={command} timed out')
+            self.get_logger().warn(f'manage_nodes{tag} cmd={command} timed out')
             return False
         res = fut.result()
         ok = bool(res is not None and res.success)
-        self.get_logger().info(f'manage_nodes cmd={command} success={ok}')
+        self.get_logger().info(f'manage_nodes{tag} cmd={command} success={ok}')
         return ok
+
+    def _nav2_manage(self, command: int, timeout_sec: float = 60.0) -> bool:
+        return self._manage_on(self._nav_lifecycle_cli, command, timeout_sec, tag='')
+
+    def _nodes_truly_active(self, timeout_sec: float = 1.0) -> bool:
+        """Ground truth from the nodes themselves (bt_navigator/amcl/planner_server).
+
+        Needed because the lifecycle managers' is_active service can report
+        false while every node is genuinely ACTIVE (2026-10-09 map-switch
+        false negative: it sent every goal into a 90 s recovery storm).
+        """
+        for _name, cli in self._get_state_clis:
+            if not cli.wait_for_service(timeout_sec=timeout_sec):
+                return False
+            fut = cli.call_async(GetState.Request())
+            if not self._wait_future(fut, timeout_sec):
+                return False
+            res = fut.result()
+            if res is None or res.current_state.id != 3:  # 3 = ACTIVE
+                return False
+        return True
+
+    def _lm_unstick_pause_resume(self, timeout_sec: float = 20.0) -> None:
+        """PAUSE->RESUME on both LMs, throttled.
+
+        The known unlock for an LM whose is_active latched false while its
+        nodes stayed ACTIVE. Deactivate only (no cleanup): AMCL keeps its
+        pose -- unlike RESET, whose cleanup wiped the pose and caused the
+        2026-10-09 LOST (nav goals blocked right after a recovery storm).
+        """
+        now = time.monotonic()
+        if now - self._lm_unstick_last < 60.0:
+            self.get_logger().warn('LM unstick throttled (<60 s since last attempt)')
+            return
+        self._lm_unstick_last = now
+        for cli, tag in (
+            (self._nav_lifecycle_cli, ''),
+            (self._loc_lifecycle_cli, '(localization)'),
+        ):
+            if not self._manage_on(
+                cli, ManageLifecycleNodes.Request.PAUSE, timeout_sec=timeout_sec, tag=tag
+            ):
+                continue
+            time.sleep(0.5)
+            self._manage_on(
+                cli, ManageLifecycleNodes.Request.RESUME, timeout_sec=timeout_sec, tag=tag
+            )
 
     def _ensure_nav2_active(self, deadline_sec: float = 90.0, map_name: str = '') -> bool:
         """Wait for Nav2 lifecycle; retry STARTUP if bringup aborted (Rock 5T DDS load).
@@ -533,6 +608,7 @@ class NavSessionNode(Node):
 
         attempts = 0
         seeded = False
+        false_negative_tried = False
         last_mgmt = time.monotonic()
         last_seed = 0.0
         last_report = 0.0
@@ -543,6 +619,17 @@ class NavSessionNode(Node):
                 return False
             loc_ok = self._cli_is_active(self._loc_active_cli, timeout_sec=1.5)
             nav_ok = self._cli_is_active(self._nav_active_cli, timeout_sec=1.5)
+            if not loc_ok and not nav_ok and not false_negative_tried:
+                # Both LMs false with the nodes fine (2026-10-09 false negative):
+                # unstick now instead of burning the deadline into a RESET storm.
+                if self._nodes_truly_active(timeout_sec=1.0):
+                    self.get_logger().warn(
+                        'both LMs report inactive while nodes report ACTIVE — '
+                        'PAUSE→RESUME both LMs'
+                    )
+                    self._lm_unstick_pause_resume(timeout_sec=20.0)
+                    false_negative_tried = True
+                    continue
             if time.monotonic() - last_report >= 15.0:
                 last_report = time.monotonic()
                 self.get_logger().info(
@@ -575,6 +662,16 @@ class NavSessionNode(Node):
             if (attempts >= 2 and attempts % 2 == 0 and
                     time.monotonic() - last_mgmt >= 75.0):
                 last_mgmt = time.monotonic()
+                if self._nodes_truly_active(timeout_sec=1.0):
+                    # False negative: nodes ACTIVE, LM bookkeeping is not. Never
+                    # RESET here — RESET = deactivate+cleanup wipes AMCL's pose
+                    # (2026-10-09 LOST); PAUSE->RESUME keeps the pose.
+                    self.get_logger().warn(
+                        f'Nav2 LMs report inactive but nodes are ACTIVE — PAUSE→RESUME '
+                        f'(attempt {attempts}, {remaining():.0f}s left)'
+                    )
+                    self._lm_unstick_pause_resume(timeout_sec=20.0)
+                    continue
                 self.get_logger().warn(
                     f'Nav2 not active — retry STARTUP (attempt {attempts}, '
                     f'{remaining():.0f}s left)'
