@@ -132,6 +132,11 @@ public:
     declare_parameter<double>("lidar_yaw_offset_rad", 3.141592653589793);
     declare_parameter<double>("lidar_ignore_below_m", 0.20);
     declare_parameter<double>("ultrasonic_stop_m", 0.25);
+    // ★ 2026-10-08: front-group ultrasonic non-finite readings are treated
+    // as BLOCKED instead of being silently dropped (see ultra_min_for and
+    // build_sectors). Live-tunable escape hatch; false restores the old
+    // drop-the-reading behaviour.
+    declare_parameter<bool>("ultrasonic_deadzone_is_blocked", true);
     declare_parameter<bool>("use_lidar", true);
     declare_parameter<bool>("use_ultrasonic", true);
     // ── Depth evidence: the floor plane of the DOWNWARD camera ──────────────
@@ -603,7 +608,8 @@ private:
 
   std::optional<double> ultra_min_for(
     const xw_interfaces::msg::UltrasonicArray & ultra,
-    const std::vector<std::string> & keys) const
+    const std::vector<std::string> & keys,
+    bool * invalid_seen = nullptr) const
   {
     if (!get_parameter("use_ultrasonic").as_bool() || ultra.ranges.empty()) {
       return std::nullopt;
@@ -626,10 +632,21 @@ private:
         continue;
       }
       const float r = ultra.ranges[i];
-      // Valid module range starts ~0.30 m; skip NaN / lost / blind ghosts.
+      // ★ 2026-10-08 fail-closed fix. The ultrasonic driver encodes THREE
+      // distinct facts as a non-finite reading: a measured value below 30 cm,
+      // a probe-lost status (0x00), and the 0x01 blind zone. The old line here
+      // ("skip NaN / lost / blind ghosts") silently dropped all three, so
+      // once an obstacle entered the <30 cm dead zone the front group produced
+      // no reading at all and the sector fell back to the lidar's 0.40 m --
+      // which at the bumper is only ~0.15 m -- opening a legal-pass gap
+      // (measured on 189, 2026-10-08, 807.958 s). A non-finite front-group
+      // reading is now reported through `invalid_seen` and build_sectors
+      // treats the front sector as BLOCKED. No distance is forged.
       if (std::isfinite(r) && r >= 0.15f) {
         best = std::min(best, static_cast<double>(r));
         any = true;
+      } else {
+        if (invalid_seen) *invalid_seen = true;
       }
     }
     if (!any) {
@@ -726,8 +743,12 @@ private:
     }
 
     std::optional<double> ultra_front, ultra_rear, ultra_left, ultra_right;
+    // ★ Front group only: a non-finite reading there is a failure to
+    // exclude, see the fail-closed note in ultra_min_for(). rear/left/right
+    // keep the old behaviour (no flag passed).
+    bool ultra_front_invalid = false;
     if (ultra.has_value()) {
-      ultra_front = ultra_min_for(*ultra, {"front", "前"});
+      ultra_front = ultra_min_for(*ultra, {"front", "前"}, &ultra_front_invalid);
       ultra_rear = ultra_min_for(*ultra, {"rear", "back", "aft", "后"});
       ultra_left = ultra_min_for(*ultra, {"left", "左"});
       ultra_right = ultra_min_for(*ultra, {"right", "右"});
@@ -742,6 +763,19 @@ private:
     out.front = make_sector(
       "front", lidar_front, ultra_front, d_depth, std::nullopt,
       stop_lidar, stop_ultra, stop_depth, turn_stop);
+    // ★ 2026-10-08: front fail-closed. A non-finite ultrasonic reading in
+    // the front group means the obstacle is inside the <30 cm dead zone, the
+    // probe is lost, or the module reports its blind zone -- in every case the
+    // front sector is forced BLOCKED with no forged distance. stop_m is the
+    // ultrasonic stop threshold so telemetry and the slowdown band stay keyed
+    // to the source that caused the block. Disable live with
+    //   ros2 param set /xw_safety_gate ultrasonic_deadzone_is_blocked false
+    if (ultra_front_invalid && get_parameter("ultrasonic_deadzone_is_blocked").as_bool()) {
+      out.front.blocked = true;
+      out.front.source = "ultra";
+      out.front.range_m = std::nullopt;
+      out.front.stop_m = stop_ultra;
+    }
     out.rear = make_sector(
       "rear", lidar_rear, ultra_rear, std::nullopt, std::nullopt,
       stop_lidar, stop_ultra, stop_depth, turn_stop);
@@ -1203,6 +1237,17 @@ private:
     // nav_safety_distance and stop_m. Note it is a property of the sectors, so
     // it is reported for every mode, including teleop.
     payload["nav_blocked"] = nav_blocked;
+    // U9 残余「进遥测」：前向盲区公示字段（静态、带口径标签，不参与任何判决）。
+    // 数字口径 = 2026-09-15 实测姿态；出处 FINDING_u9_u10_2026-10-08.md §U9-6/T5。
+    payload["blind_zone"] = {
+      {"convention", "measured-2026-09-15"},
+      {"D_max_m", 1.18},
+      {"h_lo_m", 0.19},
+      {"h_hi_m", 0.41},
+      {"lidar_in_zone_D", {0.53, 0.98}},
+      {"ultrasonic", "unmeasured"},
+      {"measured_on", "2026-10-08"},
+    };
     if (d_depth.has_value()) {
       payload["depth_m"] = std::round(*d_depth * 1000.0) / 1000.0;
     } else {

@@ -8,6 +8,12 @@
     lidar_yaw_offset_rad: 3.141592653589793
     lidar_ignore_below_m: 0.20
     ultrasonic_stop_m: 0.35
+    # ★ 2026-10-08：前组超声「非有限读数」按挡处理（fail-closed）。驱动把
+    # <30cm 实测值 / 0x00 探头失联 / 0x01 盲区三种情况都编码成 NaN；旧行为
+    # 静默丢弃，物进 <30cm 后前扇区掉回雷达 0.40（车头系仅 ~0.15m），出现
+    # 合法放行空档（2026-10-08 实测 807.958s）。默认开；现场应急可：
+    #   ros2 param set /xw_safety_gate ultrasonic_deadzone_is_blocked false
+    ultrasonic_deadzone_is_blocked: true
     use_lidar: true
     use_ultrasonic: true
     use_depth: true
