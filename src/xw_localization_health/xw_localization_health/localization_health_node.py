@@ -292,6 +292,11 @@ class LocalizationHealthNode(Node):
         self._laser_reason = ''
         self._last_raw = 1
         self._last_jump = False
+        # 诊断（修点①）：raw==2 的子触发与数值，供 status2 ENTER / 闩锁行取用。
+        self._last_jump_m = 0.0
+        self._raw2_why = ''
+        self._raw2_enter_why = ''
+        self._raw2_entry_logged = False
         self._g_tf_ok = False
         self._g_amcl_fresh = False
         self._g_outside = False
@@ -692,17 +697,21 @@ class LocalizationHealthNode(Node):
 
     def _pose_jump(self) -> bool:
         if self._amcl is None:
+            self._last_jump_m = 0.0
             return False
         x = self._amcl.pose.pose.position.x
         y = self._amcl.pose.pose.position.y
         if self._last_xy is None:
             self._last_xy = (x, y)
+            self._last_jump_m = 0.0
             return False
         dx = x - self._last_xy[0]
         dy = y - self._last_xy[1]
         self._last_xy = (x, y)
         lim = float(self.get_parameter('pose_jump_m').value)
-        return math.hypot(dx, dy) > lim
+        # 诊断（修点①）：留下幅度供 raw==2 子触发落日志；返回值不变。
+        self._last_jump_m = math.hypot(dx, dy)
+        return self._last_jump_m > lim
 
     def _maybe_force_amcl_update(self) -> None:
         """Keep amcl_pose live while NAV/FOLLOW/recovery is armed.
@@ -1080,14 +1089,27 @@ class LocalizationHealthNode(Node):
         # _pose_jump 会推进 _last_xy，只能在这里调一次；诊断读存下来的结果。
         self._last_jump = self._pose_jump()
         if self._last_jump:
+            # 诊断（修点①）：记录 raw==2 的子触发与数值（jump 幅度/协方差）。
+            self._raw2_why = (
+                f'pose_jump {self._last_jump_m:.3f}m'
+                f' | cov_xy={xy:.4f} cov_yaw={yaw:.4f}'
+            )
             return 2
         if xy >= float(self.get_parameter('cov_xy_bad').value) or yaw >= float(
             self.get_parameter('cov_yaw_bad').value
         ):
+            self._raw2_why = (
+                f'cov_bad xy={xy:.4f} yaw={yaw:.4f}'
+                f' | jump={self._last_jump_m:.3f}m'
+            )
             return 2
         if xy >= float(self.get_parameter('cov_xy_warn').value) or yaw >= float(
             self.get_parameter('cov_yaw_warn').value
         ):
+            self._raw2_why = (
+                f'cov_warn xy={xy:.4f} yaw={yaw:.4f}'
+                f' | jump={self._last_jump_m:.3f}m'
+            )
             return 2
         return 0
 
@@ -1139,7 +1161,12 @@ class LocalizationHealthNode(Node):
             self._heal_started = now
             self._heal_phase = 'spin'
             self._emit(1, 'loc_self_heal', 'status2 start spin+reinit')
-            if self._reinit.service_is_ready():
+            reinit1 = self._reinit.service_is_ready()
+            self.get_logger().info(
+                f'loc_self_heal START phase=spin reinit#1 sent={reinit1} '
+                f'enter_why={self._raw2_enter_why} now_why={self._raw2_why}'
+            )
+            if reinit1:
                 self._reinit.call_async(Empty.Request())
             return
 
@@ -1157,7 +1184,8 @@ class LocalizationHealthNode(Node):
                 f'status-3 LATCH SET (self-heal timeout {elapsed:.1f}s > {timeout:.1f}s) '
                 f'raw={self._last_raw} through='
                 f'{None if self._rc is None else round(self._rc.through_ratio, 4)} '
-                f'old_score={self._laser_score}'
+                f'old_score={self._laser_score} '
+                f'enter_why={self._raw2_enter_why} now_why={self._raw2_why}'
             )
             self._emit(2, 'loc_needs_attention', 'self-heal timeout → status 3')
             return
@@ -1169,7 +1197,11 @@ class LocalizationHealthNode(Node):
             if elapsed >= spin_sec:
                 self._heal_phase = 'wait'
                 self._stop_motion()
-                if self._reinit.service_is_ready():
+                reinit2 = self._reinit.service_is_ready()
+                self.get_logger().info(
+                    f'loc_self_heal SPIN→WAIT elapsed={elapsed:.1f}s reinit#2 sent={reinit2}'
+                )
+                if reinit2:
                     self._reinit.call_async(Empty.Request())
         else:
             self._stop_motion()
@@ -1403,6 +1435,9 @@ class LocalizationHealthNode(Node):
         # raw == 2
         if self._raw_bad_since is None:
             self._raw_bad_since = now
+            # 诊断（修点①）：本段 raw==2 的**起始**子触发（与成型时的现值分开记录）。
+            self._raw2_enter_why = self._raw2_why
+            self._raw2_entry_logged = False
         hold = float(self.get_parameter('status2_hold_sec').value)
         if now - self._raw_bad_since < hold:
             # Avoid flicker: hold soft-ok until sustained, then surface 2.
@@ -1416,6 +1451,13 @@ class LocalizationHealthNode(Node):
 
         self._status = 2
         self._publish_status(2)
+        if not self._raw2_entry_logged:
+            # 诊断（修点①）：软保持满、raw==2 成型 —— 每段只报一次（边沿）。
+            self._raw2_entry_logged = True
+            self.get_logger().warn(
+                f'status2 ENTER (raw==2 held {hold:.1f}s): '
+                f'enter_why={self._raw2_enter_why} now_why={self._raw2_why}'
+            )
         if self._heal_execution_allowed():
             self._self_heal_tick()
         elif not self._nav_mode:
@@ -1429,7 +1471,8 @@ class LocalizationHealthNode(Node):
                     f'{now - self._raw_bad_since:.1f}s) raw={self._last_raw} '
                     f'through='
                     f'{None if self._rc is None else round(self._rc.through_ratio, 4)} '
-                    f'old_score={self._laser_score}'
+                    f'old_score={self._laser_score} '
+                    f'enter_why={self._raw2_enter_why} now_why={self._raw2_why}'
                 )
                 self._emit(2, 'loc_needs_attention', 'drift while idle')
 
