@@ -1135,8 +1135,11 @@
       ev.preventDefault();
       const hit = findWaypointHit(ev.clientX, ev.clientY, view);
       if (hit != null) {
+        const wasSelected = selectedWpIdx === hit;
         selectedWpIdx = hit;
-        dragState = { type: 'wp', idx: hit };
+        // 记下按下点：松开时若几乎没动（纯点击）且点的是已选中航点，说明用户很可能是
+        // 「以为在查看模式、想点航点发车」——那是纯静默空操作，必须在 pointerup 说出来。
+        dragState = { type: 'wp', idx: hit, tapX: ev.clientX, tapY: ev.clientY, reTap: wasSelected };
         notifyMode();
         notifyYaw();
         drawOverlay();
@@ -1206,6 +1209,13 @@
       const wp = waypoints[dragState.idx];
       wp.bad = !isClearanceOk(wp.x, wp.y, OBSTACLE_CLEARANCE_M);
       if (wp.bad) setStatus(`航点 ${wp.name || dragState.idx + 1} 为坏点（<0.3m 障碍）`);
+      else if (
+        dragState.reTap
+        && Math.hypot(ev.clientX - dragState.tapX, ev.clientY - dragState.tapY) < 6
+      ) {
+        console.log(`[goalclick] edit_wp tap-not-send idx=${dragState.idx}`);
+        setStatus('当前为「编辑航点」模式：点航点不会发点；要发点请先切回「查看」工具');
+      }
       notifyMode();
     }
     if (dragState.type === 'pose') notifyMode();
@@ -1462,6 +1472,13 @@
     overlayCtx = overlayCanvas.getContext('2d');
     resizeCanvases();
 
+    // 自愈：edit_wp/initial_pose 是粘性模式——进入后没有任何自动回落路径，一旦停在
+    // 里面，地图上点航点会被当作编辑/设位姿动作而不是发点，只有整页刷新能解。
+    // 重挂地图时强制回「查看」，把粘性状态限制在单次挂载内。
+    if (interactMode !== 'view') {
+      setInteractMode('view');
+    }
+
     if (options.interactive) {
       setInteractive(true, clickCb);
     }
@@ -1555,6 +1572,9 @@
     containerEl = null;
     latestMap = null;
     pointerBound = false;
+    // 粘性模式自愈：停用时回中性态，重挂不会带着旧工具模式复活。
+    interactMode = 'view';
+    dragState = null;
   }
 
   global.XwMapCanvas = {

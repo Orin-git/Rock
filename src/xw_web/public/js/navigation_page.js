@@ -163,6 +163,8 @@ function syncNavSessionFromState(s) {
 const ORIENTATION_ROTATE_SPEED = Math.PI / 2;
 
 function flash(msg, kind = 'info', ms = 5000) {
+  // SPA 换页后 navFlash 可能已从 DOM 上摘下（变量还指向旧节点）⇒ 重查一次，别让提示静默消失。
+  if (!navFlash || !navFlash.isConnected) navFlash = $('navFlash');
   if (!navFlash) return;
   navFlash.hidden = false;
   navFlash.className = `nav-flash is-${kind}`;
@@ -1078,10 +1080,19 @@ function wireNavigation(ctx) {
     const hasChecked = checkedWpIdx.size > 0;
     const hasSingle = selectedWpIdx != null && waypoints[selectedWpIdx];
     $('deleteWp').disabled = !(hasChecked || hasSingle);
+    // 禁用按钮收不到 click ⇒ 用 title 说明为什么点不了（否则又是一处静默）。
+    const gotoBtn = $('gotoSelectedWp');
     if (hasSingle) {
-      $('gotoSelectedWp').disabled = !!waypoints[selectedWpIdx].bad;
+      const bad = !!waypoints[selectedWpIdx].bad;
+      gotoBtn.disabled = bad;
+      gotoBtn.title = bad
+        ? '坏点不可前往（距障碍 <0.3m）'
+        : navActive
+          ? '前往选中的航点'
+          : '进入导航后才能前往';
     } else {
-      $('gotoSelectedWp').disabled = true;
+      gotoBtn.disabled = true;
+      gotoBtn.title = '请先在列表中选择一个航点';
     }
   }
 
@@ -1177,7 +1188,14 @@ function wireNavigation(ctx) {
       }
       row.onclick = () => {
         selectWaypoint(idx, false);
-        if (navActive && !bad) goToWaypoint(idx);
+        if (navActive && !bad) {
+          goToWaypoint(idx);
+        } else if (bad) {
+          console.log(`[goalclick] row blocked idx=${idx} navActive=${navActive} bad=${bad}`);
+          flash('坏点不可前往（距障碍 <0.3m）', 'err');
+        } else {
+          console.log(`[goalclick] row select-only idx=${idx} navActive=${navActive}`);
+        }
       };
       const label = row.querySelector('.nav-wp-name-label');
       if (label && !charger) {
@@ -1223,6 +1241,13 @@ function wireNavigation(ctx) {
 
   async function goToWaypoint(idx) {
     const wp = waypoints[idx != null ? idx : selectedWpIdx];
+    console.log(
+      `[goalclick] goToWaypoint idx=${idx} wp=${wp ? wp.name : '-'} navActive=${navActive} bad=${
+        wp ? !!wp.bad : '-'
+      } mode=${window.XwMapCanvas ? window.XwMapCanvas.getInteractMode() : '?'} loc=${
+        lastNavState ? locCodeOf(lastNavState) : '?'
+      }`,
+    );
     if (!wp) {
       flash('请先选中航点', 'err');
       return;
@@ -1623,8 +1648,14 @@ function wireNavigation(ctx) {
       },
       onWaypointClick: (wp, idx) => {
         selectWaypoint(idx, true);
-        if (window.XwMapCanvas.getInteractMode() === 'view') {
+        const mode = window.XwMapCanvas.getInteractMode();
+        if (mode === 'view' || mode === 'goal') {
           goToWaypoint(idx);
+        } else {
+          // 兜底：非查看/目标模式点航点不会发点（编辑/设位姿模式内由画布另行提示），
+          // 以前这里是静默吞掉——必须明确说出来。
+          console.log(`[goalclick] marker blocked idx=${idx} mode=${mode}`);
+          flash('当前不是「查看」模式：点航点不会发点，请先切回「查看」工具', 'err', 6000);
         }
       },
     });

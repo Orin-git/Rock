@@ -829,11 +829,20 @@ export async function setExploreEnabled(enabled, mapName = '') {
 /** Publish nav goal → /api/goal → /xw/goal_pose */
 export async function publishGoal(x, y, yaw = 0, frame_id = 'map') {
   try {
-    const r = await fetch(`${apiBase()}/api/goal`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ x, y, yaw, frame_id }),
-    });
+    // 10 秒超时：没有它时请求一旦悬挂（连接黑洞），点击会永远静默、无任何反馈。
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 10000);
+    let r;
+    try {
+      r = await fetch(`${apiBase()}/api/goal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x, y, yaw, frame_id }),
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(tid);
+    }
     const j = await r.json();
     if (j.ok) {
       emitTask('去那边', { force: true });
@@ -841,9 +850,11 @@ export async function publishGoal(x, y, yaw = 0, frame_id = 'map') {
       emitTask(`前往失败 · ${zhMessage(j.message) || '没发出去'}`.replace(/\s·\s$/, ''), { force: true });
     }
     return j;
-  } catch (_) {
-    emitTask('前往请求失败');
-    return { ok: false };
+  } catch (err) {
+    const aborted = err && err.name === 'AbortError';
+    console.warn(`[goalclick] publishGoal ${aborted ? 'timeout(10s)' : 'request error'}`, err);
+    emitTask(aborted ? '前往请求超时（10 秒无响应）' : '前往请求失败');
+    return { ok: false, message: aborted ? '发送超时（10 秒无响应），请重试' : '网络请求失败' };
   }
 }
 
