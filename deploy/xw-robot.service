@@ -11,15 +11,19 @@ User=radxa
 Group=docker
 Environment=HOME=/home/radxa
 Environment=XW_CONTAINER=ros2_humble_dev
+# Map board (192.168.0.51): no chassis/lidar/IMU/cameras — keep Web+map stack up.
 Environment=USE_SIM_HW=true
-Environment=USE_SIM_LIDAR=false
-Environment=LIDAR_PORT=/dev/radar
-Environment=LIDAR_BAUDRATE=1000000
+Environment=FORCE_SIM_HW=1
+Environment=USE_SIM_LIDAR=true
+Environment=USE_IMU=false
+Environment=USE_EKF=false
+Environment=USE_DEPTH_CAM=false
+Environment=USE_DEPTH_CAM_2=false
+Environment=PHASE2C_LOCALIZATION_ENABLED=false
 Environment=USE_WEB=true
 Environment=USE_FOXGLOVE=true
 Environment=PROFILE=normal
-# Delay lidar motor after Web is up (inrush can brown-out / drop SSH)
-Environment=XW_LIDAR_START_DELAY=30
+Environment=XW_LIDAR_START_DELAY=0
 # Give docker a moment after boot
 ExecStartPre=/bin/sleep 8
 ExecStart=/home/radxa/ros2_ws/scripts/start_robot_host.sh

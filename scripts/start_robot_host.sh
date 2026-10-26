@@ -26,11 +26,41 @@ fi
 USE_DEPTH_CAM="${USE_DEPTH_CAM:-true}"
 USE_DEPTH_CAM_2="${USE_DEPTH_CAM_2:-true}"
 USE_WEB="${USE_WEB:-true}"
+PHASE2C_LOCALIZATION_ENABLED="${PHASE2C_LOCALIZATION_ENABLED:-true}"
 # systemd may still export USE_SIM_HW=true; prefer real MCU when present
 # (set FORCE_SIM_HW=1 to keep mock despite /dev/chassis|/dev/ttyACM0).
 if [[ "${FORCE_SIM_HW:-0}" != "1" ]]; then
   if [[ -e /dev/chassis || -e /dev/ttyACM0 ]]; then
     USE_SIM_HW=false
+  fi
+fi
+# Map-only board: no chassis/lidar/IMU — keep Web :9000 up; sensors report missing.
+# Set XW_REQUIRE_SENSORS=1 to keep hard-fail / real-device launch on a bare board.
+if [[ "${XW_REQUIRE_SENSORS:-0}" != "1" ]]; then
+  _have_chassis=0
+  _have_lidar=0
+  _have_imu=0
+  [[ -e /dev/chassis || -e /dev/ttyACM0 ]] && _have_chassis=1
+  [[ -e /dev/radar || -e "${LIDAR_PORT}" ]] && _have_lidar=1
+  [[ -e /dev/imu || -e "${IMU_PORT}" ]] && _have_imu=1
+  if [[ "${_have_chassis}" -eq 0 && "${_have_lidar}" -eq 0 ]]; then
+    echo "[start_robot_host] no chassis/lidar detected → map-only mode (sim hw/lidar, cams/imu/ekf/phase2c off)"
+    USE_SIM_HW=true
+    FORCE_SIM_HW=1
+    USE_SIM_LIDAR=true
+    USE_DEPTH_CAM=false
+    USE_DEPTH_CAM_2=false
+    USE_IMU=false
+    USE_EKF=false
+    PHASE2C_LOCALIZATION_ENABLED=false
+    CHASSIS_ODOM_TOPIC=odom
+    CHASSIS_PUBLISH_ODOM_TF=true
+  elif [[ "${_have_imu}" -eq 0 && "${USE_IMU}" == "true" ]]; then
+    echo "[start_robot_host] IMU missing → use_imu/use_ekf=false (do not block boot)"
+    USE_IMU=false
+    USE_EKF=false
+    CHASSIS_ODOM_TOPIC=odom
+    CHASSIS_PUBLISH_ODOM_TF=true
   fi
 fi
 # Mapping Live canvas needs Foxglove WS :8765. Old unit files may set false — override
@@ -47,8 +77,6 @@ USE_POINTCLOUD="${USE_POINTCLOUD:-false}"
 USE_LEGACY_DEPTH_BRIDGE="${USE_LEGACY_DEPTH_BRIDGE:-true}"
 # Delay real lidar motor start after Web is up (inrush can brown-out SBC / drop SSH)
 XW_LIDAR_START_DELAY="${XW_LIDAR_START_DELAY:-30}"
-# Phase2C-C4B production master switch (true=BOOT+LOST; false=legacy blind seed rollback)
-PHASE2C_LOCALIZATION_ENABLED="${PHASE2C_LOCALIZATION_ENABLED:-true}"
 
 # Wait for Docker daemon
 for _ in $(seq 1 60); do

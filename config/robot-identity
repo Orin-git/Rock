@@ -1,0 +1,4 @@
+# Map-board identity (192.168.0.51) — no sensors; web/map stack only.
+ROBOT_ID=rbt-rock5t-map51
+ROS_DOMAIN_ID=98
+# VISION_DOMAIN_ID reserved for later multi-domain

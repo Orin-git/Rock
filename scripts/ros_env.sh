@@ -32,6 +32,11 @@ if [[ -f /etc/robot-identity ]]; then
   # shellcheck disable=SC1091
   source /etc/robot-identity
   set +a
+elif [[ -f "${XW_WS}/config/robot-identity" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${XW_WS}/config/robot-identity"
+  set +a
 elif [[ -f "${XW_WS}/config/robot-identity.example" ]]; then
   set -a
   # shellcheck disable=SC1091
@@ -39,7 +44,7 @@ elif [[ -f "${XW_WS}/config/robot-identity.example" ]]; then
   set +a
 fi
 
-export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-99}"
+export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-98}"
 
 # ── RMW 实现：2026-09-18 由 Fast DDS 换为 CycloneDDS ────────────────────────────
 # 换的理由只有一条，但是硬的：Fast DDS 2.6.11 的 EKF futex 死锁

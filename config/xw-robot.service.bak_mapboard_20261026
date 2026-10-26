@@ -1,0 +1,29 @@
+[Unit]
+Description=Xiaowei Gen2 robot stack (Docker ros2_humble_dev + Web :9000)
+Documentation=file:///home/radxa/ros2_ws/doc/ARCHITECTURE.md
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=radxa
+Group=docker
+Environment=HOME=/home/radxa
+Environment=XW_CONTAINER=ros2_humble_dev
+Environment=USE_SIM_HW=false
+Environment=USE_WEB=true
+Environment=USE_FOXGLOVE=true
+Environment=PROFILE=normal
+ExecStartPre=/bin/sleep 3
+ExecStart=/home/radxa/ros2_ws/scripts/start_robot_host.sh
+ExecStop=/usr/bin/docker exec ros2_humble_dev bash -c 'pkill -f robot.launch.py 2>/dev/null || pkill -f xw_bringup 2>/dev/null || true'
+Restart=on-failure
+RestartSec=8
+TimeoutStartSec=120
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xw-robot
+
+[Install]
+WantedBy=multi-user.target
