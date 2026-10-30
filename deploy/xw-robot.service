@@ -11,7 +11,7 @@ User=radxa
 Group=docker
 Environment=HOME=/home/radxa
 Environment=XW_CONTAINER=ros2_humble_dev
-# Map board (192.168.0.51): no chassis/lidar/IMU/cameras — keep Web+map stack up.
+# Map board (192.168.0.53): no chassis/lidar/IMU/cameras — keep Web+map stack up.
 Environment=USE_SIM_HW=true
 Environment=FORCE_SIM_HW=1
 Environment=USE_SIM_LIDAR=true

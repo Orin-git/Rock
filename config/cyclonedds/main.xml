@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Gen2 / map-board 51：CycloneDDS 主域配置（由 189 生产配置改板）。
+<!-- Gen2 / map-board 53：CycloneDDS 主域配置（由 189 生产配置改板）。
      形状 = 一代 70 的生产配置 + 钉死网卡 / 大 participant / 跨机 peer。
      原则：**多一行都要有理由**。每一条见下。
 
      与一代的关键差异：一代设 ROS_LOCALHOST_ONLY=1（主动放弃跨机可见性），
      本板必须**保持 0 / 不设** —— 要跟其它主机跨机通信。
-     所以只能自己把网卡钉死（当前板 eth = 192.168.0.51）。 -->
+     所以只能自己把网卡钉死（当前板 = 192.168.0.53）。 -->
 <CycloneDDS xmlns="https://cdds.io/config">
   <Domain id="any">
     <General>
@@ -22,7 +22,7 @@
            为什么要钉：P1 —— 本机 docker0 是 linkdown 却持有 172.17.0.1/16，
            正是 CycloneDDS 自动选网卡会踩的经典坑（选到一个没有载波的地址，
            发现报文发不出去，表现为「节点活着但互相看不见」）。
-           地图板当前有线口是 192.168.0.51（勿再写旧板 189）。
+           地图板当前地址是 192.168.0.53（勿再写旧板 189 / 误写的 51）。
 
            ⚠️⚠️ 2026-09-18 实测：**绝不要把 lo 列进来。**
               加了 lo 之后 CycloneDDS 打印
@@ -34,7 +34,7 @@
               单条 1200006 字节完整到达。
               ⇒ 同机 57 个节点的环回流量交给默认行为，**不要手动加 lo**。 -->
       <Interfaces>
-        <NetworkInterface address="192.168.0.51"/>
+        <NetworkInterface address="192.168.0.53"/>
       </Interfaces>
     </General>
     <Discovery>
